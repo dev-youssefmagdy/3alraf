@@ -24,7 +24,7 @@ return [
     | may even configure multiple disks for the same driver. Examples for
     | most supported storage drivers are configured here for reference.
     |
-    | Supported drivers: "local", "ftp", "sftp", "s3"
+    | Only the "local" driver is used (no S3 package installed)
     |
     */
 
@@ -56,37 +56,12 @@ return [
             'report' => false,
         ],
 
-        // Public media (CDN origin). MEDIA_DRIVER=local serves a directory through a static-only vhost; =s3 uses any S3-compatible store (R2/MinIO/S3).
-        'media' => env('MEDIA_DRIVER', 'local') === 's3' ? [
-            'driver' => 's3',
-            'key' => env('MEDIA_KEY', env('AWS_ACCESS_KEY_ID')),
-            'secret' => env('MEDIA_SECRET', env('AWS_SECRET_ACCESS_KEY')),
-            'region' => env('MEDIA_REGION', env('AWS_DEFAULT_REGION', 'auto')),
-            'bucket' => env('MEDIA_BUCKET', env('AWS_BUCKET')),
-            'endpoint' => env('MEDIA_ENDPOINT', env('AWS_ENDPOINT')),
-            'use_path_style_endpoint' => (bool) env('MEDIA_PATH_STYLE', false),
-            'url' => env('MEDIA_URL'),
-            'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
-        ] : [
+        // Public media (CDN origin): always a local directory served by a static-only vhost (deploy/nginx/cdn.conf) or the public/media symlink in dev.
+        'media' => [
             'driver' => 'local',
             'root' => env('MEDIA_ROOT', storage_path('app/media')),
             'url' => env('MEDIA_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/media'),
             'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
-        ],
-
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
             'report' => false,
         ],

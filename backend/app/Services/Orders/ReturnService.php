@@ -141,10 +141,21 @@ class ReturnService
     public function refundable(OrderReturn $ret): string
     {
         $order = $ret->order;
-        $cap = Money::add((string) $ret->return_value, $this->taxShare($order, (string) $ret->return_value), $ret->refund_shipping ? (string) $order->shipping_net : '0');
+        $cap = Money::add((string) $ret->return_value, $this->taxShare($order, (string) $ret->return_value), $this->shippingRefundable($ret) ? (string) $order->shipping_net : '0');
         $left = Money::sub((string) $order->paid_amount, (string) $order->refunded_amount);
 
         return Money::max('0', Money::min($cap, $left));
+    }
+
+    /** Shipping is refunded at most ONCE per order: false when this return has no refund_shipping flag or an earlier return already refunded it. */
+    private function shippingRefundable(OrderReturn $ret): bool
+    {
+        if (! $ret->refund_shipping) {
+            return false;
+        }
+
+        return ! OrderReturn::where('order_id', $ret->order_id)->whereKeyNot($ret->id)
+            ->where('refund_shipping', true)->where('status', ReturnStatus::REFUNDED)->exists();
     }
 
     public function refund(OrderReturn $ret, ?string $amount = null): OrderReturn
@@ -161,7 +172,7 @@ class ReturnService
             }
 
             // Online money goes back through the provider; mark refunded ONLY on provider success.
-            $res = $this->refunds->refundOnline($order, $amount, (bool) $ret->refund_shipping);
+            $res = $this->refunds->refundOnline($order, $amount, $this->shippingRefundable($ret));
             if ($res !== null && $res->status !== 'refunded') {
                 throw ValidationException::withMessages(['amount' => __('orders.refund_failed')]);
             }

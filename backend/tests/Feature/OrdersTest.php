@@ -36,6 +36,7 @@ beforeEach(function () {
     Storage::fake('media');
     Storage::fake('private');
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/ar';
     app()->instance('currentTenant', $this->tenant);

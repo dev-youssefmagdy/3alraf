@@ -32,6 +32,7 @@ beforeEach(function () {
     Storage::fake('private');
     Storage::fake('media');
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/ar';
     app()->instance('currentTenant', $this->tenant);
@@ -91,12 +92,15 @@ function fawryBody(Order $o, array $over = []): array
     return $p;
 }
 
-function fawryHook(Order $o, array $over = [], bool $badSig = false)
+function fawryHook(Order $o, array $over = [], bool $badSig = false, ?array $statusReply = null)
 {
     $p = fawryBody($o, $over);
     if ($badSig) {
         $p['messageSignature'] = str_repeat('a', 64);
     }
+
+    // Fawry status/v2 re-query answers with the same facts as the (legit) webhook unless a test passes $statusReply
+    fakeHttp(['*/payments/status/v2*' => Http::response($statusReply ?? ['orderStatus' => $p['orderStatus'], 'paymentAmount' => $p['paymentAmount'], 'fawryRefNumber' => $p['fawryRefNumber']])]);
 
     return test()->postJson('http://egy.3alraf.test/webhooks/payments/'.test()->fawry->id, $p);
 }
@@ -187,6 +191,19 @@ it('verifies FawryPay signatures, cross-checks amount/reference and settles exac
     fawryHook($order)->assertOk()->assertJson(['duplicate' => true]);                                  // replay
     fawryHook($order, ['orderStatus' => 'FAILED'])->assertOk();                                        // late failure never un-pays
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::PAID);
+});
+
+it('re-queries FawryPay and rejects a webhook the provider does not confirm', function () {
+    $order = ($this->place)(1, ['paymentMethodId' => $this->fawry->id])['order'];
+    fawryHook($order, [], false, ['orderStatus' => 'UNPAID', 'paymentAmount' => 0, 'fawryRefNumber' => '9900123'])->assertStatus(422);   // forged PAID
+    fawryHook($order, [], false, ['orderStatus' => 'PAID', 'paymentAmount' => 1.0, 'fawryRefNumber' => '9900123'])->assertStatus(422);    // amount differs at provider
+    expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);
+    fawryHook($order)->assertOk();
+    expect($order->fresh()->payment_status)->toBe(PaymentStatus::PAID);
+    $b = ($this->place)(1, ['paymentMethodId' => $this->fawry->id])['order'];
+    fakeHttp(['*/payments/status/v2*' => Http::response([], 500)]);
+    $this->postJson('http://egy.3alraf.test/webhooks/payments/'.$this->fawry->id, fawryBody($b))->assertStatus(422);   // provider unreachable => rejected, Fawry retries
+    expect($b->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);
 });
 
 it('does not accept another tenant\'s webhook / method id and stubs unimplemented gateways', function () {
@@ -394,4 +411,61 @@ it('queues the admin notification listeners', function () {
     foreach ([\App\Listeners\NotifyAdminsOfNewOrder::class, \App\Listeners\NotifyAdminsOfPaymentProof::class, \App\Listeners\NotifyAdminsOfStatusChange::class] as $l) {
         expect(new $l)->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
     }
+});
+
+// ------------------------------------------------------------------ COD upfront: the REAL default (no phpunit override)
+
+it('defaults COD shipping prepay to UPFRONT when the tenant has no setting, honours an explicit false and the env fallback', function () {
+    $this->tenant->update(['settings' => []]);                                      // pristine tenant: no cod_collect_shipping_upfront key
+    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeTrue()
+        ->and(config('payments.cod_upfront_default'))->toBeTrue();                  // phpunit.xml no longer overrides it
+    expect(fn () => ($this->place)(2))->toThrow(ValidationException::class);        // prepay method now required by default
+    $o = ($this->place)(2, ['prepayMethodId' => $this->wallet->id])['order'];
+    expect((string) $o->prepaid_shipping)->toBe('40.00')->and((string) $o->cod_amount)->toBe('200.00');
+
+    codUpfront($this->tenant, false);                                               // explicit false: carrier collects the full total
+    $full = ($this->place)(2)['order'];
+    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeFalse()
+        ->and((string) $full->prepaid_shipping)->toBe('0.00')->and((string) $full->cod_amount)->toBe((string) $full->total);
+
+    $this->tenant->update(['settings' => []]);                                      // env fallback is only used when the setting is absent
+    config(['payments.cod_upfront_default' => false]);
+    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeFalse();
+    expect((string) ($this->place)(2)['order']->cod_amount)->toBe('240.00');
+    codUpfront($this->tenant, true);                                                // an explicit setting beats the env fallback
+    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeTrue();
+});
+
+// ------------------------------------------------------------------ refund shipping only once
+
+it('refunds shipping only once when a second return also asks for refund_shipping', function () {
+    $order = deliveredOnline($this, $this->paymob, 'paymob');                       // 2 x 100 + shipping 40 paid online
+    $rs = app(ReturnService::class);
+    $item = $order->items->first();
+    $mk = function () use ($rs, $order, $item) {
+        $r = $rs->request($order->fresh(), ReturnRequestData::fromArray(['items' => [$item->id => ['quantity' => 1]], 'restock' => true, 'refund_shipping' => true]));
+        $rs->approve($r);
+
+        return $r->fresh();
+    };
+    $r1 = $mk();
+    $r2 = $mk();
+    expect($rs->refundable($r1))->toBe('140.00');
+    fakeHttp(['*/api/auth/tokens' => Http::response(['token' => 'AUTH']), '*/void_refund/refund' => Http::response(['success' => true, 'id' => 77])]);
+    $rs->refund($r1);
+    expect($rs->refundable($r2->fresh()))->toBe('100.00');                           // shipping already refunded with the first return
+    $rs->refund($r2->fresh());
+    expect((string) $order->fresh()->refunded_amount)->toBe('240.00');
+    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/void_refund/refund') && $r['amount_cents'] === 14000);
+    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/void_refund/refund') && $r['amount_cents'] === 10000);
+});
+
+it('releases the unique code / e-mail of soft-deleted discount codes and customers', function () {
+    $mk = fn () => \App\Models\DiscountCode::create(['code' => 'SAVE10', 'type' => 'percent', 'value' => 10, 'scope' => 'all', 'is_active' => true]);
+    $mk()->delete();
+    $again = $mk();                                                                  // would violate unique(tenant_id, code) without the tombstone
+    expect($again->exists)->toBeTrue()->and(\App\Models\DiscountCode::withTrashed()->where('code', 'SAVE10')->count())->toBe(1);
+    $c = \App\Models\Customer::create(['name' => 'A', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true]);
+    $c->delete();
+    expect(\App\Models\Customer::create(['name' => 'B', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true])->exists)->toBeTrue();
 });

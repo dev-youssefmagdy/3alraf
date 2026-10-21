@@ -32,6 +32,7 @@ beforeEach(function () {
     Storage::fake('private');
     Storage::fake('media');
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     app()->instance('currentTenant', $this->tenant);
     $this->api = 'http://egy.3alraf.test/api/v1';     // tenant from the host
     $this->hdr = 'http://3alraf.test/api/v1';         // tenant from X-Tenant

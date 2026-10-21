@@ -78,7 +78,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function sales(ReportFilter $f): array
     {
-        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, 'o.net_profit')} as net_profit")
+        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.net_profit')} as net_profit")
             ->groupBy(DB::raw('DATE(o.created_at)'))->orderBy('day'));
     }
 

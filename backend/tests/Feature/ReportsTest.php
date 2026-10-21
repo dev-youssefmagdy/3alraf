@@ -25,6 +25,7 @@ use Spatie\Permission\Models\Role;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     $this->t = 'http://egy.3alraf.test/admin';
     $this->c = 'http://3alraf.test/admin';
     app()->instance('currentTenant', $this->tenant);
@@ -190,4 +191,19 @@ it('manages roles and staff per tenant without leaking across tenants', function
     $this->get("{$this->c}/roles")->assertOk()->assertDontSee('Support');
     $this->postJson("{$this->c}/roles", ['name' => 'Editors', 'permissions' => ['products.view']])->assertOk();
     $this->get("{$this->c}/admins")->assertOk();
+});
+
+it('shows the COD extra fee as its own Sales report column, card and CSV value, separate from payment fees', function () {
+    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_collect_shipping_upfront' => false, 'cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '15', 'cod_extra_fee_bearer' => 'customer'])]);
+    $o = ($this->deliver)(($this->place)(2));
+    expect((string) $o->cod_fee)->toBe('15.00');
+    $sales = reportData($this, "{$this->t}/reports/sales");
+    expect(card($sales, 'cod_fee'))->toBe('15.00')->and(card($sales, 'fees'))->toBe('0.00')
+        ->and(array_column($sales['columns'], 'data'))->toContain('cod_fee')
+        ->and($sales['rows'][0]['cod_fee'])->toBe('15.00')
+        ->and(card($sales, 'sales'))->toBe(number_format((float) $o->total, 2));       // fee is part of the total
+    $this->get("{$this->t}/reports/sales/export")->assertOk()->assertSee('15.00');
+
+    $this->actingAs(CentralAdmin::first(), 'central');                                    // central view converts like every money column
+    expect(card(reportData($this, "{$this->c}/reports/sales"), 'cod_fee'))->toBe('15.00');
 });

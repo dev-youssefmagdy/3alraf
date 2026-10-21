@@ -41,7 +41,7 @@ The 8 backend phases are well built and follow the layering rules. What is missi
 - Missing FKs: reviews, wishlist, product lists, custom page products, affiliate clicks → product. `orders.branch_id` nullOnDelete breaks cancel; use restrict.
 - Soft-deleted product/variant `slug/sku/barcode` stay reserved forever.
 - Order number derives from the global order id (leaks volume, has gaps); consider per-tenant counter.
-- Images use hardcoded `public` disk; make disk configurable (S3/CDN). `APP_URL` for storage URLs is single-host.
+- Images use hardcoded `public` disk; make disk configurable (CDN; local-only decision 2026-10-21, S3 removed). `APP_URL` for storage URLs is single-host.
 - `/up` health check only on non-domain routes; verify on central host.
 - Logging: daily channel + error tracker. `footer()` runs 2 uncached queries/page; `categoryRails` is N+1.
 - Smoke script is manual, has no assertions, doesn't exit non-zero, English only.

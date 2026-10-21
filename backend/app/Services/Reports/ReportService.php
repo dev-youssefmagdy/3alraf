@@ -121,9 +121,9 @@ class ReportService
             'cards' => [
                 $this->card('orders', number_format($orders), 'slate'), $this->card('sales', $this->money($this->sum($rows, 'total'))), $this->card('costs', $this->money($this->sum($rows, 'cogs')), 'slate'),
                 $this->card('discounts', $this->money($this->sum($rows, 'discount')), 'slate'), $this->card('shipping', $this->money($this->sum($rows, 'shipping')), 'slate'),
-                $this->card('fees', $this->money($this->sum($rows, 'fees')), 'slate'), $this->card('net_profit', $this->money($this->sum($rows, 'net_profit')), 'emerald'),
+                $this->card('fees', $this->money($this->sum($rows, 'fees')), 'slate'), $this->card('cod_fee', $this->money($this->sum($rows, 'cod_fee')), 'slate'), $this->card('net_profit', $this->money($this->sum($rows, 'net_profit')), 'emerald'),
             ],
-            'columns' => [$this->col('day', 'date'), $this->col('orders', 'int'), $this->col('subtotal', 'money'), $this->col('total', 'money'), $this->col('cogs', 'money'), $this->col('discount', 'money'), $this->col('shipping', 'money'), $this->col('fees', 'money'), $this->col('net_profit', 'money')],
+            'columns' => [$this->col('day', 'date'), $this->col('orders', 'int'), $this->col('subtotal', 'money'), $this->col('total', 'money'), $this->col('cogs', 'money'), $this->col('discount', 'money'), $this->col('shipping', 'money'), $this->col('fees', 'money'), $this->col('cod_fee', 'money'), $this->col('net_profit', 'money')],
             'rows' => $rows,
             'chart' => ['type' => 'line', 'labels' => array_column($rows, 'day'), 'datasets' => [['label' => __('reports.col.total'), 'data' => $this->nums($rows, 'total')], ['label' => __('reports.col.net_profit'), 'data' => $this->nums($rows, 'net_profit')]]],
         ];

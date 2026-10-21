@@ -24,6 +24,7 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     $this->egy = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->egy, false);   // legacy tests: carrier collects the full total
     $this->central = 'http://3alraf.test';
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/ar';

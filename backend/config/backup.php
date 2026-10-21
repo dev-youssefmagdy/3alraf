@@ -31,7 +31,7 @@ return [
                 // Database is the main payload; files = private uploads (payment proofs, expense receipts) + the media dir when it is local.
                 'include' => array_values(array_filter([
                     storage_path('app/private'),
-                    env('MEDIA_DRIVER', 'local') === 'local' ? (env('MEDIA_ROOT') ?: storage_path('app/media')) : null,
+                    env('MEDIA_ROOT') ?: storage_path('app/media'),
                 ])),
 
                 /*
@@ -310,7 +310,7 @@ return [
         /*
         [
             'name' => 'name of the second app',
-            'disks' => ['local', 's3'],
+            'disks' => ['local'],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,

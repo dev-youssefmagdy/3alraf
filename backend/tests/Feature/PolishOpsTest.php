@@ -34,6 +34,7 @@ beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/en';
     app()->instance('currentTenant', $this->tenant);
@@ -217,7 +218,7 @@ it('soft deletes orders, customers and discount codes and hides them from report
     $order->forceFill(['customer_id' => $cust->id, 'discount_code_id' => $code->id, 'status' => S::CONFIRMED])->save();
     $code->delete();
     $cust->delete();
-    expect(DiscountCode::where('code', 'X1')->count())->toBe(0)->and(DiscountCode::withTrashed()->where('code', 'X1')->count())->toBe(1)->and(Customer::where('email', 'c@x.test')->count())->toBe(0);
+    expect(DiscountCode::where('code', 'X1')->count())->toBe(0)->and(DiscountCode::withTrashed()->find($code->id)->code)->toBe('X1')->and(Customer::where('email', 'c@x.test')->count())->toBe(0);
     expect(Order::find($order->id)->customer->email)->toBe('c@x.test')->and(Order::find($order->id)->discountCode->code)->toBe('X1'); // history keeps its links
 
     $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), false, [$this->tenant->id]);

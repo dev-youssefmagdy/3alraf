@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\FreesUniqueOnDelete;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
@@ -11,13 +12,21 @@ use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
-    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, SoftDeletes;
+    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes;
+
+    protected array $freedOnDelete = ['email'];
 
     protected string $guard_name = 'web';
 
     protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
 
     protected $hidden = ['password', 'remember_token'];
+
+    /** Hide the soft-delete tombstone suffix (see FreesUniqueOnDelete) from every display. */
+    public function getEmailAttribute($v): ?string
+    {
+        return $v === null ? null : preg_replace('/#del\d+$/', '', $v);
+    }
 
     protected function casts(): array
     {

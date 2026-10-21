@@ -25,6 +25,7 @@ beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
     $this->tenant = Tenant::where('slug', 'egy')->first();
+    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
     $this->s = 'http://egy.3alraf.test/ar';
     app()->instance('currentTenant', $this->tenant);
     $this->branch = Branch::first();

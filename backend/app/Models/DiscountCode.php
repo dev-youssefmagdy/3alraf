@@ -6,15 +6,24 @@ use App\Enums\DiscountScope;
 use App\Enums\DiscountType;
 use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\FreesUniqueOnDelete;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DiscountCode extends Model
 {
-    use Audited, BelongsToTenant, SoftDeletes;
+    use Audited, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes;
+
+    protected array $freedOnDelete = ['code'];
 
     protected $fillable = ['code', 'type', 'value', 'min_order', 'max_discount', 'usage_limit', 'per_customer_limit', 'used_count',
         'starts_at', 'ends_at', 'scope', 'product_ids', 'category_ids', 'free_shipping', 'is_active'];
+
+    /** Hide the soft-delete tombstone suffix (see FreesUniqueOnDelete) from every display. */
+    public function getCodeAttribute($v): ?string
+    {
+        return $v === null ? null : preg_replace('/#del\d+$/', '', $v);
+    }
 
     protected function casts(): array
     {

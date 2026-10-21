@@ -98,7 +98,18 @@ class FawryPayGateway extends AbstractGateway
         if (! $this->amountEquals($request->input('orderAmount'), $expectedAmount)) {
             throw new PaymentMismatchException('fawrypay: amount mismatch');
         }
-        $provider = strtoupper((string) $request->input('orderStatus'));
+        // Never trust the callback body alone (parity with Paymob): re-query the order status from Fawry and cross-check it.
+        $q = $this->queryStatus($order->number);
+        $provider = strtoupper((string) ($q['orderStatus'] ?? $q['paymentStatus'] ?? ''));
+        if ($provider !== strtoupper((string) $request->input('orderStatus'))) {
+            throw new PaymentMismatchException('fawrypay: status mismatch with provider');
+        }
+        if (isset($q['paymentAmount']) && ! $this->amountEquals($q['paymentAmount'], (string) $request->input('paymentAmount'))) {
+            throw new PaymentMismatchException('fawrypay: paid amount mismatch with provider');
+        }
+        if (! empty($q['fawryRefNumber'] ?? $q['referenceNumber'] ?? null) && (string) ($q['fawryRefNumber'] ?? $q['referenceNumber']) !== (string) $request->input('fawryRefNumber')) {
+            throw new PaymentMismatchException('fawrypay: reference mismatch with provider');
+        }
         $status = match ($provider) {
             'PAID', 'DELIVERED' => 'paid',
             'NEW', 'UNPAID' => 'pending',
@@ -113,6 +124,20 @@ class FawryPayGateway extends AbstractGateway
         $ref = (string) $request->input('fawryRefNumber');
 
         return new PaymentResult($status, $ref, null, ['order_reference' => $order->number], $ref.':'.$provider);
+    }
+
+    /** GET status/v2, signature = SHA256(merchantCode + merchantRefNumber + secureKey). Unreachable provider => reject (Fawry retries the webhook). */
+    private function queryStatus(string $merchantRef): array
+    {
+        $code = $this->credential('merchant_code');
+        try {
+            return (array) $this->send(fn ($h) => $h->get($this->baseUrl().'/ECommerceWeb/Fawry/payments/status/v2', [
+                'merchantCode' => $code, 'merchantRefNumber' => $merchantRef,
+                'signature' => hash('sha256', $code.$merchantRef.$this->credential('secure_key')),
+            ]))->json();
+        } catch (GatewayException $e) {
+            throw new PaymentMismatchException('fawrypay: status re-query failed');
+        }
     }
 
     public function refund(string $gatewayReference, ?string $amount = null): PaymentResult

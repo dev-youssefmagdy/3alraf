@@ -114,3 +114,9 @@
 - Decisions: merchant bearer => nothing charged, cod_fee 0, no extra cost booked (carrier COD charge already in shipping_cost); per-city override = flat amount replacing the formula, bypasses min/max but not free_over; fee never refunded; never in prepaid_shipping.
 - Tests: CodFeeTest.php (7) + 4 calculator unit tests; pest 140 green, routes clean, vite build OK.
 - Gaps: no OpenAPI regen (`api:docs`); admin order create/edit has no manual fee override; Sales report "fees" column unchanged (payment fees only); label only per tenant locale list.
+
+## Cleanup A/D/E (done; QR sections B/C NOT started)
+- A: `media` disk is local-only (filesystems.php s3 disk + MEDIA_DRIVER/KEY/... + AWS_* env lines removed; backup always includes MEDIA_ROOT). No S3 composer package was installed, so nothing to `composer remove`.
+- D: Sales report has `cod_fee` column/card/CSV (separate from payment `fees`); shipping refunded at most once per order across returns (`ReturnService::shippingRefundable`); FawryPay webhook re-queries status/v2 and cross-checks status/amount/ref (provider down => 422 so Fawry retries); soft-deleted discount codes/customers tombstone `code`/`email` as `value#del{id}` (trait `FreesUniqueOnDelete`, display accessor strips it). CALCULATIONS.md updated.
+- E: phpunit.xml no longer sets PAYMENTS_COD_UPFRONT_DEFAULT; legacy tests call `codUpfront($tenant, false)` (tests/Pest.php); new tests for default true / explicit false / env fallback. Fawry status/v2 request shape is from docs, unverified against the real sandbox.
+- 145 tests; routes clean; api:docs regenerated (50 paths); vite build OK.
