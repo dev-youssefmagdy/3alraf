@@ -34,11 +34,18 @@ class OrderPaymentService
 
     // ---------------------------------------------------------------- wallet proof
 
-    public function uploadProof(Order $order, UploadedFile $file): Order
+    /** A wallet-paid order that is not settled / closed yet accepts (or replaces) a transfer proof. */
+    public function canUploadProof(Order $order): bool
     {
         $method = $order->payingMethod();
-        if (! $method || $method->type !== PaymentMethodType::WALLET || in_array($order->status, [OrderStatus::CANCELLED, OrderStatus::RETURNED], true)
-            || in_array($order->payment_status, [PaymentStatus::PAID, PaymentStatus::PARTIALLY_PAID, PaymentStatus::REFUNDED], true)) {
+
+        return $method?->type === PaymentMethodType::WALLET && ! in_array($order->status, [OrderStatus::CANCELLED, OrderStatus::RETURNED], true)
+            && ! in_array($order->payment_status, [PaymentStatus::PAID, PaymentStatus::PARTIALLY_PAID, PaymentStatus::REFUNDED], true);
+    }
+
+    public function uploadProof(Order $order, UploadedFile $file): Order
+    {
+        if (! $this->canUploadProof($order)) {
             throw ValidationException::withMessages(['proof' => __('orders.proof_not_allowed')]);
         }
         if ($order->payment_proof) {

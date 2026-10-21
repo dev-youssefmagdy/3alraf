@@ -5,11 +5,12 @@ namespace App\Models;
 use App\Enums\AffiliateStatus;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
 
 class Affiliate extends Authenticatable
 {
-    use BelongsToTenant;
+    use BelongsToTenant, HasApiTokens;
 
     protected $fillable = ['name', 'email', 'phone', 'password', 'status', 'approved_at'];
 

@@ -16,7 +16,7 @@ class CheckoutRequest extends FormRequest
     {
         $tid = current_tenant()->id;
         $loggedIn = auth('web')->check() && $this->filled('address_id');
-        $quote = $this->routeIs('storefront.cart.quote'); // live totals: selections may be incomplete
+        $quote = $this->routeIs('storefront.cart.quote', 'api.v1.cart.quote', 'api.v1.h.cart.quote'); // live totals: selections may be incomplete
 
         return [
             'address_id' => ['nullable', 'integer', Rule::exists('customer_addresses', 'id')->where('customer_id', auth('web')->id() ?? 0)],

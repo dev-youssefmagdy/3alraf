@@ -7,14 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Storefront\CartItemRequest;
 use App\Http\Requests\Storefront\CheckoutRequest;
 use App\Services\Orders\CartService;
-use App\Services\Orders\OrderQuoteService;
+use App\Services\Orders\CartSummary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /** JSON cart API used by the storefront JS. */
 class CartController extends Controller
 {
-    public function __construct(private CartService $cart, private OrderQuoteService $quotes) {}
+    public function __construct(private CartService $cart, private CartSummary $summary) {}
 
     public function show(Request $request)
     {
@@ -54,14 +54,6 @@ class CartController extends Controller
 
     private function payload(?CheckoutData $d = null): array
     {
-        $out = ['items' => $this->cart->view()];
-        $lines = $this->cart->lines();
-        if ($lines) {
-            $q = $this->quotes->quote($lines, $d ?? new CheckoutData);
-            $out['totals'] = $q['totals']->toArray();
-            $out['flash'] = collect($q['lines'])->contains(fn ($l) => $l['flash']);
-        }
-
-        return $out;
+        return $this->summary->build($d);
     }
 }

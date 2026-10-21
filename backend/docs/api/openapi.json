@@ -1,0 +1,3716 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "3alraf Mobile API",
+        "version": "1.0.0",
+        "description": "JSON API for the Flutter apps.\n\nTenant: use the store host ({tenant}.domain) or the central host plus the `X-Tenant` slug header. GET /api/v1/tenants (central) lists the stores.\nEnvelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\nAuth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable and only work in the tenant that issued them.\nGuests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\nCheckout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (wallet transfer screenshot, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\nMoney values are decimal strings in the store currency. Cost, profit and commission fields are never exposed."
+    },
+    "servers": [
+        {
+            "url": "https://{tenant}.3alraf.loc",
+            "description": "Tenant from the host",
+            "variables": {
+                "tenant": {
+                    "default": "egy"
+                }
+            }
+        },
+        {
+            "url": "https://3alraf.loc",
+            "description": "Central host: send the X-Tenant header"
+        }
+    ],
+    "paths": {
+        "/api/v1/addresses": {
+            "get": {
+                "summary": "Addresses Index",
+                "operationId": "addresses_index_get",
+                "tags": [
+                    "addresses"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Addresses Store",
+                "operationId": "addresses_store_post",
+                "tags": [
+                    "addresses"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/addresses/{id}": {
+            "put": {
+                "summary": "Addresses Update",
+                "operationId": "addresses_update_put",
+                "tags": [
+                    "addresses"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Addresses Destroy",
+                "operationId": "addresses_destroy_delete",
+                "tags": [
+                    "addresses"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/dashboard": {
+            "get": {
+                "summary": "Affiliate Dashboard",
+                "operationId": "affiliate_dashboard_get",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/login": {
+            "post": {
+                "summary": "Affiliate Login",
+                "operationId": "affiliate_login_post",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    },
+                                    "remember": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/logout": {
+            "post": {
+                "summary": "Affiliate Logout",
+                "operationId": "affiliate_logout_post",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/me": {
+            "get": {
+                "summary": "Affiliate Me",
+                "operationId": "affiliate_me_get",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/payouts": {
+            "get": {
+                "summary": "Affiliate Payouts",
+                "operationId": "affiliate_payouts_get",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Affiliate Payouts Request",
+                "operationId": "affiliate_payouts_request_post",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/products": {
+            "get": {
+                "summary": "Affiliate Products",
+                "operationId": "affiliate_products_get",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/products/{slug}/qr": {
+            "get": {
+                "summary": "SVG QR of the affiliate's product link (send the bearer token; render with an SVG widget)",
+                "operationId": "affiliate_qr_get",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "affiliateToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/affiliate/register": {
+            "post": {
+                "summary": "Affiliate Register",
+                "operationId": "affiliate_register_post",
+                "tags": [
+                    "affiliate"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/verification-notification": {
+            "post": {
+                "summary": "Auth Verification Send",
+                "operationId": "auth_verification_send_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/email/verify": {
+            "post": {
+                "summary": "Auth Verification Verify",
+                "operationId": "auth_verification_verify_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "code"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "summary": "Auth Forgot",
+                "operationId": "auth_forgot_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "required": [
+                                    "email"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "summary": "Auth Login",
+                "operationId": "auth_login_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    },
+                                    "remember": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "summary": "Auth Logout",
+                "operationId": "auth_logout_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "summary": "Auth Me",
+                "operationId": "auth_me_get",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "Auth Update",
+                "operationId": "auth_update_put",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "summary": "Auth Register",
+                "operationId": "auth_register_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "summary": "Auth Reset",
+                "operationId": "auth_reset_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "code",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/brands": {
+            "get": {
+                "summary": "Brands",
+                "operationId": "brands_get",
+                "tags": [
+                    "brands"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart": {
+            "get": {
+                "summary": "Cart Show",
+                "operationId": "cart_show_get",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/items": {
+            "post": {
+                "summary": "Cart Add",
+                "operationId": "cart_add_post",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer"
+                                    },
+                                    "variant_id": {
+                                        "type": "integer"
+                                    },
+                                    "quantity": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "quantity"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/items/{item}": {
+            "put": {
+                "summary": "Cart Update",
+                "operationId": "cart_update_put",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "item",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer"
+                                    },
+                                    "variant_id": {
+                                        "type": "integer"
+                                    },
+                                    "quantity": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "quantity"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Cart Remove",
+                "operationId": "cart_remove_delete",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "item",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/merge": {
+            "post": {
+                "summary": "After login: merges the guest cart (X-Cart-Token) into the customer's cart",
+                "operationId": "cart_merge_post",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/quote": {
+            "post": {
+                "summary": "Totals for the current selections (city / shipping / payment / code optional)",
+                "operationId": "cart_quote_post",
+                "tags": [
+                    "cart"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog": {
+            "get": {
+                "summary": "Category page / search: ?category=slug &q= &brands[]= &values[]= &price_min= &price_max= &sort= &per_page= &page=",
+                "operationId": "catalog_get",
+                "tags": [
+                    "catalog"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/facets": {
+            "get": {
+                "summary": "Filter sidebar data for the same scope (brands, attribute values, price range, sort keys)",
+                "operationId": "catalog_facets_get",
+                "tags": [
+                    "catalog"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suggest": {
+            "get": {
+                "summary": "Catalog Suggest",
+                "operationId": "catalog_suggest_get",
+                "tags": [
+                    "catalog"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout": {
+            "post": {
+                "summary": "Checkout Place",
+                "operationId": "checkout_place_post",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout/cities": {
+            "get": {
+                "summary": "Checkout Cities",
+                "operationId": "checkout_cities_get",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout/payment-methods": {
+            "get": {
+                "summary": "Checkout Payment Methods",
+                "operationId": "checkout_payment-methods_get",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout/shipping": {
+            "get": {
+                "summary": "Checkout Shipping",
+                "operationId": "checkout_shipping_get",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout/validate": {
+            "post": {
+                "summary": "Full quote with the strict checkout rules (stock, discount, shipping, COD prepay); 422 with field errors when something is wrong",
+                "operationId": "checkout_validate_post",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/home": {
+            "get": {
+                "summary": "Home",
+                "operationId": "home_get",
+                "tags": [
+                    "home"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/menu": {
+            "get": {
+                "summary": "Menu",
+                "operationId": "menu_get",
+                "tags": [
+                    "menu"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders": {
+            "get": {
+                "summary": "Orders Index",
+                "operationId": "orders_index_get",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{token}": {
+            "get": {
+                "summary": "Orders Show",
+                "operationId": "orders_show_get",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{token}/pay": {
+            "post": {
+                "summary": "New gateway link for an unpaid online order",
+                "operationId": "orders_pay_post",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{token}/proof": {
+            "post": {
+                "summary": "Wallet transfer proof (stays on the private disk; the admin approves it, which is what confirms the payment)",
+                "operationId": "orders_proof_post",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "proof"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{token}/return": {
+            "post": {
+                "summary": "Orders Return",
+                "operationId": "orders_return_post",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {}
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "items"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{token}/track": {
+            "get": {
+                "summary": "Orders Track",
+                "operationId": "orders_track_get",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/pages": {
+            "get": {
+                "summary": "Pages",
+                "operationId": "pages_get",
+                "tags": [
+                    "pages"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/pages/{slug}": {
+            "get": {
+                "summary": "Pages Show",
+                "operationId": "pages_show_get",
+                "tags": [
+                    "pages"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/return/{token}": {
+            "get": {
+                "summary": "Call after the in-app browser comes back from the gateway. Non-authoritative: only the signed webhook marks an order paid, so poll this until `paid` is true",
+                "operationId": "payments_return_get",
+                "tags": [
+                    "payments"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{slug}": {
+            "get": {
+                "summary": "Products Show",
+                "operationId": "products_show_get",
+                "tags": [
+                    "products"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{slug}/reviews": {
+            "get": {
+                "summary": "Products Reviews",
+                "operationId": "products_reviews_get",
+                "tags": [
+                    "products"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Only for delivered purchases; one review per product (edits go back to pending moderation)",
+                "operationId": "products_reviews_store_post",
+                "tags": [
+                    "products"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "rating"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/store": {
+            "get": {
+                "summary": "Store",
+                "operationId": "store_get",
+                "tags": [
+                    "store"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tenants": {
+            "get": {
+                "summary": "GET /api/v1/tenants: public country/store picker for the mobile app",
+                "operationId": "tenants_get",
+                "tags": [
+                    "tenants"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist": {
+            "get": {
+                "summary": "Wishlist Index",
+                "operationId": "wishlist_index_get",
+                "tags": [
+                    "wishlist"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wishlist/{product}/toggle": {
+            "post": {
+                "summary": "Wishlist Toggle",
+                "operationId": "wishlist_toggle_post",
+                "tags": [
+                    "wishlist"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "customerToken": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "Sanctum token with ability `customer` (POST /auth/login)"
+            },
+            "affiliateToken": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "Sanctum token with ability `affiliate` (POST /affiliate/login)"
+            }
+        },
+        "parameters": {
+            "XTenant": {
+                "name": "X-Tenant",
+                "in": "header",
+                "required": false,
+                "description": "Store slug when calling the central host",
+                "schema": {
+                    "type": "string",
+                    "example": "egy"
+                }
+            },
+            "AcceptLanguage": {
+                "name": "Accept-Language",
+                "in": "header",
+                "required": false,
+                "description": "ar | en (limited to the store locales)",
+                "schema": {
+                    "type": "string",
+                    "example": "ar"
+                }
+            },
+            "XCartToken": {
+                "name": "X-Cart-Token",
+                "in": "header",
+                "required": false,
+                "description": "Guest cart token, returned in the X-Cart-Token response header",
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "XAffiliateRef": {
+                "name": "X-Affiliate-Ref",
+                "in": "header",
+                "required": false,
+                "description": "Affiliate ref (uuid) of a shared link, for commission attribution",
+                "schema": {
+                    "type": "string"
+                }
+            }
+        },
+        "schemas": {
+            "Envelope": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "data": {
+                        "nullable": true
+                    },
+                    "meta": {
+                        "type": "object"
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "data": {
+                        "nullable": true
+                    },
+                    "meta": {
+                        "type": "object"
+                    }
+                }
+            }
+        }
+    }
+}

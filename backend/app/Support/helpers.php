@@ -94,3 +94,13 @@ if (! function_exists('private_url')) {
         return \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.files.private', now()->addMinutes($minutes ?? config('media.signed_ttl_minutes')), ['tenant' => current_tenant()?->slug, 'path' => $path]);
     }
 }
+
+if (! function_exists('api_route')) {
+    /** URL of a mobile API route by its short name, in the same flavour (subdomain host / X-Tenant header) as the current request. */
+    function api_route(string $name, array $params = []): string
+    {
+        $header = str_starts_with((string) request()->route()?->getName(), 'api.v1.h.');
+
+        return route('api.v1.'.($header ? 'h.' : '').$name, $params);
+    }
+}

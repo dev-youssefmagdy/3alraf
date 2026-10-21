@@ -14,6 +14,16 @@ final readonly class OrderTotals
         public string $codAmount = '0.00', public string $prepaidShipping = '0.00',
     ) {}
 
+    /** What a shopper may see. NEVER send toArray() to a client: it carries cogs, net profit, carrier cost and affiliate commission. */
+    public function forCustomer(): array
+    {
+        return [
+            'subtotal' => $this->subtotal, 'discount' => $this->discount, 'shipping' => $this->shipping, 'shippingDiscount' => $this->shippingDiscount,
+            'shippingNet' => $this->shippingNet, 'tax' => $this->tax, 'paymentFeeCharged' => $this->paymentFeeCharged, 'total' => $this->total,
+            'codAmount' => $this->codAmount, 'prepaidShipping' => $this->prepaidShipping,
+        ];
+    }
+
     public function toArray(): array
     {
         return get_object_vars($this);

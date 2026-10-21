@@ -26,6 +26,7 @@ final readonly class CatalogFilter
             $ids($r->query('brands')), $ids($r->query('values')),
             $num($r->query('price_min')), $num($r->query('price_max')),
             in_array($sort, self::SORTS, true) ? $sort : 'newest',
+            max(1, min(60, (int) ($r->query('per_page') ?: 24))),
         );
     }
 }

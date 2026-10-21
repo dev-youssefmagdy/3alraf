@@ -8,15 +8,15 @@ use App\Http\Requests\Storefront\CheckoutRequest;
 use App\Services\Orders\CartService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderQuoteService;
+use App\Services\Orders\ShippingOptions;
 use App\Models\City;
 use App\Models\PaymentMethod;
-use App\Models\ShippingRate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes) {}
+    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private ShippingOptions $shipping) {}
 
     public function create(string $locale)
     {
@@ -37,19 +37,7 @@ class CheckoutController extends Controller
     /** Shipping options for a city, each with the order total it would produce (OrderCalculator via the quote service). */
     public function shipping(Request $r): JsonResponse
     {
-        $cityId = (int) $r->query('city_id');
-        $lines = $this->cart->lines();
-        $out = [];
-        if ($cityId && $lines) {
-            $rates = ShippingRate::with('company')->where('city_id', $cityId)->whereHas('company', fn ($q) => $q->where('is_active', true))->get()->sortBy('company.sort_order');
-            foreach ($rates as $rate) {
-                $q = $this->quotes->quote($lines, new CheckoutData(cityId: $cityId, shippingCompanyId: $rate->shipping_company_id));
-                $out[] = ['id' => $rate->shipping_company_id, 'name' => $rate->company->name, 'eta' => $rate->etaLabel(), 'supports_cod' => $rate->supports_cod,
-                    'fee' => $q['totals']->shippingNet, 'free' => bccomp($q['totals']->shippingNet, '0', 2) === 0, 'total' => $q['totals']->total];
-            }
-        }
-
-        return $this->ok(null, null, ['options' => $out]);
+        return $this->ok(null, null, ['options' => $this->shipping->forCity((int) $r->query('city_id'))]);
     }
 
     /** Pre-validate: request rules + a full quote (stock/discount/shipping errors surface here too). */

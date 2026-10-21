@@ -23,16 +23,22 @@ class ResolveTenant
             throw new HttpResponseException(response()->view('errors.store-unavailable', [], 404));
         }
 
+        $this->activate($tenant, $request);
+
+        return $next($request);
+    }
+
+    /** Binds the tenant for this request (also used by the JSON API middleware). */
+    public function activate(\App\Models\Tenant $tenant, Request $request): void
+    {
         app()->instance('currentTenant', $tenant);
         config(['app.timezone' => $tenant->timezone]);
         date_default_timezone_set($tenant->timezone);
         URL::defaults(['tenant' => $tenant->slug]);
         $request->route()?->forgetParameter('tenant');
-
-        return $next($request);
     }
 
-    private function slugFromHost(string $host): ?string
+    public function slugFromHost(string $host): ?string
     {
         $suffix = '.'.central_domain();
 

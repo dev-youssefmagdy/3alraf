@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
-    use HasRoles, Notifiable, BelongsToTenant;
+    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant;
 
     protected string $guard_name = 'web';
 
@@ -19,7 +20,7 @@ class Customer extends Authenticatable
 
     protected function casts(): array
     {
-        return ['password' => 'hashed', 'is_active' => 'bool'];
+        return ['password' => 'hashed', 'is_active' => 'bool', 'email_verified_at' => 'datetime'];
     }
 
     public function addresses()

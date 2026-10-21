@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             $central = config('app.central_domain');
+            // Mobile JSON API: tenant from the subdomain host (names api.v1.*) or from the X-Tenant header on the central host (names api.v1.h.*).
+            // Registered first so a tenant `/api/...` never reaches the storefront custom-page catch-all.
+            Route::middleware(['api', 'api.context'])->domain('{tenant}.'.$central)->prefix('api/v1')->name('api.v1.')->group(base_path('routes/api_v1.php'));
+            Route::middleware(['api', 'api.context'])->domain($central)->prefix('api/v1')->name('api.v1.h.')->group(base_path('routes/api_v1.php'));
             Route::middleware('api')->domain($central)->prefix('api/v1')->group(base_path('routes/api.php'));
             Route::middleware(['web', CentralContext::class])->domain($central)->group(base_path('routes/central.php'));
             Route::middleware(['web', 'tenant.resolve'])->domain('{tenant}.'.$central)->group(function () {
@@ -35,9 +39,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.resolve' => ResolveTenant::class,
             'set.locale' => SetLocale::class,
             'admin.locale' => SetAdminLocale::class,
+            'api.context' => \App\Http\Middleware\Api\ApiContext::class,
+            'api.auth' => \App\Http\Middleware\Api\ApiAuth::class,
             'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
         ]);
         $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('api/*')) {
+                return null; // JSON 401 (ApiExceptionRenderer), never a redirect
+            }
+
             if ($request->is('admin') || $request->is('admin/*')) {
                 return $request->getHost() === central_domain() ? route('central.login') : route('tenant.login', ['tenant' => tenant_slug_from_host($request)]);
             }
@@ -61,6 +71,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(new \App\Exceptions\ApiExceptionRenderer);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

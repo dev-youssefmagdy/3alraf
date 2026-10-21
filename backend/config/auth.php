@@ -54,6 +54,9 @@ return [
             'driver' => 'session',
             'provider' => 'tenant_admins',
         ],
+        // Mobile API (Sanctum bearer tokens); the token type is the provider + ability
+        'customer_api' => ['driver' => 'sanctum', 'provider' => 'customers'],
+        'affiliate_api' => ['driver' => 'sanctum', 'provider' => 'affiliates'],
     ],
 
     /*
