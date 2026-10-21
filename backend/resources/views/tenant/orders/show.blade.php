@@ -11,6 +11,7 @@
                 <x-slot:actions>
                     <span class="badge {{ $order->status->color() }}">{{ $order->status->label() }}</span>
                     <a href="{{ route('tenant.orders.invoice', $order->id) }}" target="_blank" class="btn-sm btn-secondary">{{ __('orders.invoice') }}</a>
+                    <a href="{{ route('tenant.orders.invoice.pdf', $order->id) }}" class="btn-sm btn-secondary">PDF</a>
                 </x-slot:actions>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">

@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
-    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant;
+    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, SoftDeletes;
 
     protected string $guard_name = 'web';
 

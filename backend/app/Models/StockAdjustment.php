@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\AdjustmentType;
+use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class StockAdjustment extends Model
 {
-    use BelongsToTenant;
+    use Audited, BelongsToTenant;
 
     protected $fillable = ['number', 'branch_id', 'type', 'reason', 'note', 'created_by'];
 

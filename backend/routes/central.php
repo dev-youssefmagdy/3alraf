@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\Central\AttributeController;
 use App\Http\Controllers\Central\BrandController;
+use App\Http\Controllers\Central\TagController;
 use App\Http\Controllers\Central\CategoryController;
 use App\Http\Controllers\Central\DashboardController;
 use App\Http\Controllers\Central\LandingController;
@@ -41,6 +42,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
+        Route::get('audit', [\App\Http\Controllers\Access\AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('audit/datatable', [\App\Http\Controllers\Access\AuditLogController::class, 'datatable'])->name('audit.datatable');
+
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/{report}', [ReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
         Route::get('reports/{report}/export', [ReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
@@ -51,7 +55,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
 
         Route::get('barcode/{code}', BarcodeController::class)->where('code', '[0-9]{8,13}')->name('barcode');
 
-        foreach (['brands' => [BrandController::class, 'brand'], 'attributes' => [AttributeController::class, 'attribute'], 'products' => [ProductController::class, 'product']] as $name => [$ctl, $param]) {
+        foreach (['brands' => [BrandController::class, 'brand'], 'tags' => [TagController::class, 'tag'], 'attributes' => [AttributeController::class, 'attribute'], 'products' => [ProductController::class, 'product']] as $name => [$ctl, $param]) {
             Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
             Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
             Route::resource($name, $ctl)->except('show');

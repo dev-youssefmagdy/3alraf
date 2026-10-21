@@ -52,6 +52,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::post('checkout/validate', [CheckoutController::class, 'validateForm'])->middleware('throttle:checkout-validate')->name('checkout.validate');
     Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:20,1')->name('checkout.store');
     Route::get('order/{token}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('order/{token}/invoice.pdf', [OrderController::class, 'invoicePdf'])->middleware('throttle:upload')->name('orders.invoice.pdf');
     Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware('throttle:upload')->name('orders.proof');
     Route::get('order/{token}/proof', [OrderController::class, 'proofFile'])->middleware('throttle:upload')->name('orders.proof.file');
     Route::post('order/{token}/pay', [OrderController::class, 'pay'])->middleware('throttle:upload')->name('orders.pay');
@@ -60,6 +61,8 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
 
     // Phase 7: catalog
     Route::get('category/{slug}', [CatalogController::class, 'category'])->name('category.show');
+    Route::get('brand/{slug}', [CatalogController::class, 'brand'])->name('brand.show');
+    Route::get('tag/{slug}', [CatalogController::class, 'tag'])->name('tag.show');
     Route::get('search', [CatalogController::class, 'results'])->middleware('throttle:search')->name('search');
     Route::get('search/suggest', [CatalogController::class, 'suggest'])->middleware('throttle:search')->name('search.suggest');
 

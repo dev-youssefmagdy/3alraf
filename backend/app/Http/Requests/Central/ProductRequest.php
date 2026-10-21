@@ -29,6 +29,8 @@ class ProductRequest extends FormRequest
             + $this->translatable('meta_title', false, 255) + $this->translatable('meta_description', false, 500) + [
             'type' => ['required', Rule::enum(ProductType::class)],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['integer', 'exists:tags,id'],
             'category_ids' => ['required', 'array', 'min:1'],
             'category_ids.*' => ['integer', 'exists:categories,id'],
             'slug' => ['nullable', 'string', 'max:190', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('products', 'slug')->ignore($product?->id)],

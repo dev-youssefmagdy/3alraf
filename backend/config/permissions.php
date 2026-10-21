@@ -11,6 +11,8 @@ return [
         'languages' => $crud,
         'tenants' => $crud,
         'brands' => $crud,
+        'audit' => ['view'],
+        'tags' => $crud,
         'attributes' => $crud,
         'categories' => $crud,
         'products' => $crud,
@@ -23,6 +25,7 @@ return [
         'roles' => $crud,
         'catalog' => ['view', 'create', 'edit', 'delete'],
         'settings' => ['view', 'edit'],
+        'audit' => ['view'],
         'reports' => ['view', 'export'],
         // Phase 3 operations
         'cities' => $crud,

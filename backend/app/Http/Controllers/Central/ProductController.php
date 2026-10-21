@@ -59,7 +59,7 @@ class ProductController extends Controller implements HasMiddleware
 
     public function edit(Product $product)
     {
-        return view('central.products.form', $this->formData($product->load(['images', 'categories', 'variants.values', 'variants.images'])));
+        return view('central.products.form', $this->formData($product->load(['images', 'categories', 'tags', 'variants.values', 'variants.images'])));
     }
 
     public function update(ProductRequest $request, Product $product): JsonResponse
@@ -88,6 +88,7 @@ class ProductController extends Controller implements HasMiddleware
             'languages' => Language::activeList(),
             'types' => ProductType::options(),
             'brands' => Brand::orderBy('sort_order')->get()->pluck('name', 'id')->all(),
+            'tags' => \App\Models\Tag::orderBy('sort_order')->get()->pluck('name', 'id')->all(),
             'categoryTree' => $this->categories->flatTree(),
             'attributes' => $this->attributes->withValues(),
         ];

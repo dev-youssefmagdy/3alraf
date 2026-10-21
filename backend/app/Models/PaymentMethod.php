@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\FeeBearer;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentProvider;
+use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaymentMethod extends Model
 {
-    use BelongsToTenant, HasTranslations, SoftDeletes;
+    use Audited, BelongsToTenant, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'instructions'];
 

@@ -135,6 +135,7 @@ class CatalogSeeder extends Seeder
         };
         $walk(self::TREE, null);
 
+        $tags = collect([['new', 'جديد', 'New'], ['best-seller', 'الأكثر مبيعاً', 'Best seller'], ['eco', 'صديق للبيئة', 'Eco-friendly']])->map(fn ($t, $k) => \App\Models\Tag::firstOrCreate(['slug' => $t[0]], ['name' => ['ar' => $t[1], 'en' => $t[2]], 'is_active' => true, 'sort_order' => $k]));
         $barcodes = app(BarcodeService::class);
         foreach ($this->products as $i => [$ar, $en, $leaf, $brand, $price, $axes]) {
             $slug = \Illuminate\Support\Str::slug($en) ?: 'product-'.$i;
@@ -147,6 +148,7 @@ class CatalogSeeder extends Seeder
                 'slug' => $slug, 'sku' => sprintf('SKU-%04d', $i + 1), 'barcode' => $axes ? null : $barcodes->generateUnique(), 'weight' => 1 + ($i % 7), 'is_active' => true,
             ]);
             $p->categories()->sync([$cats[$leaf]->id]);
+            $p->tags()->sync([$tags[$i % 3]->id]);
             foreach ([0, 1] as $n) {
                 $p->images()->create(PlaceholderImage::make('catalog/products', "$slug-$n", $en, 800, 800, $n) + ['sort_order' => $n]);
             }

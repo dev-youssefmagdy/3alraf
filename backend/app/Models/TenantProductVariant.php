@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TenantProductVariant extends Model
 {
-    use BelongsToTenant;
+    use Audited, BelongsToTenant;
 
     protected $fillable = ['tenant_product_id', 'product_variant_id', 'price', 'sale_price', 'cost', 'is_active'];
 

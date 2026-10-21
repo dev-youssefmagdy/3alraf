@@ -29,6 +29,7 @@ final readonly class ProductData
         public array $images,
         public array $removeImageIds,
         public array $variants,
+        public array $tagIds = [],
     ) {}
 
     public static function fromRequest(ProductRequest $r): self
@@ -54,6 +55,7 @@ final readonly class ProductData
             $v['slug'] ?? null, $v['sku'], $variable ? null : ($v['barcode'] ?? null),
             isset($v['weight']) ? (string) $v['weight'] : null, ! empty($v['brand_id']) ? (int) $v['brand_id'] : null,
             array_map('intval', $v['category_ids']), $r->boolean('is_active'),
-            $r->file('images', []), array_map('intval', $r->input('remove_images', [])), $variants);
+            $r->file('images', []), array_map('intval', $r->input('remove_images', [])), $variants,
+            array_map('intval', $v['tag_ids'] ?? []));
     }
 }

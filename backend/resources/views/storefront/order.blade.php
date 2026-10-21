@@ -20,6 +20,7 @@
             <p class="mt-1 text-xs text-slate-400">{{ __('store.bookmark') }}</p>
             <div class="mt-4 flex flex-wrap justify-center gap-2">
                 <a class="btn btn-secondary" href="{{ route('storefront.orders.show', ['token' => $order->public_token, 'invoice' => 1]) }}" target="_blank">{{ __('store.print_invoice') }}</a>
+                <a class="btn btn-secondary" href="{{ route('storefront.orders.invoice.pdf', ['token' => $order->public_token]) }}">PDF</a>
                 <a class="btn btn-primary" href="{{ route('storefront.home') }}">{{ __('store.continue_shopping') }}</a>
             </div>
         </div>

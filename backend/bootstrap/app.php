@@ -72,6 +72,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(new \App\Exceptions\ApiExceptionRenderer);
+        // Error tracker: reports to Sentry when SENTRY_LARAVEL_DSN is set (no-op otherwise).
+        \Sentry\Laravel\Integration::handles($exceptions);
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

@@ -57,6 +57,7 @@ return [
     'col' => [
         'in_transit' => 'COD in transit',
         'carrier_fee' => 'Carrier fee',
+        'settled' => 'Settled',
         'owed' => 'Owed to you',
         'affiliate' => 'Affiliate',
         'amount' => 'Amount',
@@ -219,4 +220,7 @@ return [
     ],
     'from' => 'From',
     'last_days' => 'Last :n days',
+    'mark_settled' => 'Mark carrier settled',
+    'settle_confirm' => 'Mark all delivered COD orders of this carrier in the selected dates as settled?',
+    'settled_done' => ':n orders marked as settled.',
 ];

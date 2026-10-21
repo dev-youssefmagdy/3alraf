@@ -8,6 +8,7 @@ use App\Enums\ReviewStatus;
 use App\Models\ProductListItem;
 use App\Models\TenantProduct;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,6 +18,16 @@ use Illuminate\Support\Facades\DB;
 class ProductListResolver
 {
     public const DEFAULT_LIMIT = 12;
+
+    /** Ranking queries are cached per tenant for 5 minutes and capped at 200 ids. */
+    public const RANK_TTL = 300;
+
+    public const RANK_LIMIT = 200;
+
+    private function cached(string $key, \Closure $query): array
+    {
+        return Cache::remember('rank.'.$key.'.'.(current_tenant()?->id ?? 0), self::RANK_TTL, $query);
+    }
 
     public function limitFor(ProductListType $type): int
     {
@@ -72,25 +83,25 @@ class ProductListResolver
     /** Σ(qty − returned) on delivered orders. */
     public function soldRanking(): array
     {
-        return DB::table('order_items as oi')->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->where('o.tenant_id', current_tenant()?->id)->where('o.status', OrderStatus::DELIVERED->value)
+        return $this->cached('sold', fn () => DB::table('order_items as oi')->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->where('o.tenant_id', current_tenant()?->id)->whereNull('o.deleted_at')->where('o.status', OrderStatus::DELIVERED->value)
             ->groupBy('oi.product_id')->selectRaw('oi.product_id, SUM(oi.quantity - oi.returned_qty) as sold')
-            ->havingRaw('SUM(oi.quantity - oi.returned_qty) > 0')->orderByDesc('sold')->orderBy('oi.product_id')->pluck('product_id')->all();
+            ->havingRaw('SUM(oi.quantity - oi.returned_qty) > 0')->orderByDesc('sold')->orderBy('oi.product_id')->limit(self::RANK_LIMIT)->pluck('product_id')->all());
     }
 
     /** Approved review count, then average rating. */
     public function reviewRanking(): array
     {
-        return DB::table('reviews')->where('tenant_id', current_tenant()?->id)->where('status', ReviewStatus::APPROVED->value)
-            ->groupBy('product_id')->selectRaw('product_id, COUNT(*) c, AVG(rating) a')->orderByDesc('c')->orderByDesc('a')->orderBy('product_id')->pluck('product_id')->all();
+        return $this->cached('reviews', fn () => DB::table('reviews')->where('tenant_id', current_tenant()?->id)->where('status', ReviewStatus::APPROVED->value)
+            ->groupBy('product_id')->selectRaw('product_id, COUNT(*) c, AVG(rating) a')->orderByDesc('c')->orderByDesc('a')->orderBy('product_id')->limit(self::RANK_LIMIT)->pluck('product_id')->all());
     }
 
     /** Products bought together with $productId (non-cancelled orders). */
     private function coPurchased(int $productId): array
     {
-        return DB::table('order_items as a')->join('order_items as b', fn ($j) => $j->on('a.order_id', '=', 'b.order_id')->whereColumn('a.product_id', '!=', 'b.product_id'))
-            ->join('orders as o', 'o.id', '=', 'a.order_id')->where('o.tenant_id', current_tenant()?->id)->whereNotIn('o.status', [OrderStatus::CANCELLED->value])
-            ->where('a.product_id', $productId)->groupBy('b.product_id')->selectRaw('b.product_id, COUNT(*) c')->orderByDesc('c')->pluck('product_id')->all();
+        return $this->cached('co.'.$productId, fn () => DB::table('order_items as a')->join('order_items as b', fn ($j) => $j->on('a.order_id', '=', 'b.order_id')->whereColumn('a.product_id', '!=', 'b.product_id'))
+            ->join('orders as o', 'o.id', '=', 'a.order_id')->where('o.tenant_id', current_tenant()?->id)->whereNull('o.deleted_at')->whereNotIn('o.status', [OrderStatus::CANCELLED->value])
+            ->where('a.product_id', $productId)->groupBy('b.product_id')->selectRaw('b.product_id, COUNT(*) c')->orderByDesc('c')->limit(self::RANK_LIMIT)->pluck('product_id')->all());
     }
 
     private function sameCategory(int $productId): array

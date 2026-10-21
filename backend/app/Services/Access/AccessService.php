@@ -99,6 +99,7 @@ class AccessService
             // keep permissions the editor cannot see/grant untouched
             $kept = $role->permissions->pluck('name')->diff($allowed)->all();
             $role->syncPermissions(Permission::where('guard_name', $guard)->whereIn('name', array_merge($perms, $kept))->get());
+            $this->audit($guard, $role, 'role.saved', ['permissions' => $role->permissions->pluck('name')->sort()->values()->all()]);
 
             return $role;
         });
@@ -110,6 +111,7 @@ class AccessService
         if (DB::table('model_has_roles')->where('role_id', $role->id)->exists()) {
             throw ValidationException::withMessages(['name' => __('access.role_in_use')]);
         }
+        $this->audit($guard, $role, 'role.deleted');
         $role->delete();
     }
 
@@ -147,6 +149,7 @@ class AccessService
                 $roles->push(Role::findByName(self::SYSTEM[$guard], $guard));
             }
             $admin->syncRoles($roles);
+            $this->audit($guard, $admin, 'admin.saved', ['roles' => $roles->pluck('name')->all(), 'active' => (bool) $admin->is_active]);
 
             return $admin;
         });
@@ -157,6 +160,17 @@ class AccessService
         if ($admin->getKey() === auth($guard)->id()) {
             throw ValidationException::withMessages(['email' => __('access.cannot_delete_self')]);
         }
+        $this->audit($guard, $admin, 'admin.deleted');
         $admin->delete();
+    }
+
+    /** Audit trail for roles / permissions / staff changes (who, what, which tenant). */
+    private function audit(string $guard, \Illuminate\Database\Eloquent\Model $subject, string $event, array $props = []): void
+    {
+        $activity = activity('access')->performedOn($subject)->event($event)->withProperties($props);
+        if ($causer = auth($guard)->user()) {
+            $activity->causedBy($causer);
+        }
+        $activity->tap(fn ($a) => $a->tenant_id = $guard === 'tenant' ? current_tenant()?->id : null)->log($event);
     }
 }

@@ -13,6 +13,7 @@ use App\Models\StaticPage;
 use App\Models\TenantProduct;
 use App\Services\Lists\ProductListResolver;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /** Data for the shared layout (mega menu, footer) and the home page sections. */
 class StorefrontData
@@ -34,12 +35,14 @@ class StorefrontData
         });
     }
 
+    /** Footer data as plain arrays (cached per tenant + locale for a minute): static pages, ACTIVE payment methods (+icon kind), app store links. */
     public function footer(): array
     {
-        return [
-            'pages' => StaticPage::where('is_active', true)->orderBy('id')->get(['slug', 'title']),
-            'payments' => PaymentMethod::available()->orderBy('sort_order')->get(),
-        ];
+        return Cache::remember('sf.footer.'.current_tenant()?->id.'.'.app()->getLocale(), 60, fn () => [
+            'pages' => StaticPage::where('is_active', true)->orderBy('id')->get(['slug', 'title'])->map(fn ($p) => ['slug' => $p->slug, 'title' => $p->title])->all(),
+            'payments' => PaymentMethod::available()->orderBy('sort_order')->get()->map(fn ($m) => ['name' => $m->name, 'type' => $m->type->value, 'provider' => $m->provider?->value])->all(),
+            'apps' => ['ios' => current_tenant()?->settings['app_links']['ios'] ?? null, 'android' => current_tenant()?->settings['app_links']['android'] ?? null],
+        ]);
     }
 
     public function home(): array
@@ -78,20 +81,40 @@ class StorefrontData
         return $items->isEmpty() ? null : ['sale' => $sale, 'items' => $this->cards->decorate($items)];
     }
 
-    /** Up to 4 root categories that have sellable products, 8 each. */
+    /**
+     * Up to 4 root categories that have sellable products, 8 newest each. Constant number of queries: one for the category tree,
+     * one for (product, category) pairs of sellable products, one to load the chosen cards.
+     */
     private function categoryRails(): array
     {
-        $out = [];
-        foreach (Category::query()->where('is_active', true)->whereNull('parent_id')->orderBy('sort_order')->orderBy('id')->get() as $cat) {
-            $items = $this->search->paginate($this->search->scope($cat), new \App\DTOs\Storefront\CatalogFilter(perPage: 8))->getCollection();
-            if ($items->isNotEmpty()) {
-                $out[] = ['category' => $cat, 'items' => $items];
+        $cats = Category::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+        $roots = $cats->whereNull('parent_id')->values();
+        if ($roots->isEmpty()) {
+            return [];
+        }
+        $rootOf = $cats->mapWithKeys(fn ($c) => [$c->id => (int) explode('/', $c->path)[0]]);
+        $sellable = TenantProduct::query()->where('is_active', true)->whereHas('product', fn ($p) => $p->where('is_active', true))->orderByDesc('id')->get(['id', 'product_id']);
+        $tpByProduct = $sellable->pluck('id', 'product_id');
+        $byRoot = [];
+        foreach (DB::table('category_product')->whereIn('product_id', $tpByProduct->keys())->get(['product_id', 'category_id']) as $row) {
+            if ($root = $rootOf[$row->category_id] ?? null) {
+                $byRoot[$root][$row->product_id] = $tpByProduct[$row->product_id];
             }
-            if (count($out) >= 4) {
+        }
+        $picked = [];
+        foreach ($roots as $root) {
+            if (! empty($byRoot[$root->id])) {
+                $ids = collect($byRoot[$root->id])->sortDesc()->take(8)->values()->all();
+                $picked[$root->id] = $ids;
+            }
+            if (count($picked) >= 4) {
                 break;
             }
         }
+        $cards = $this->cards->decorate(TenantProduct::query()->whereIn('id', collect($picked)->flatten())->with('product.images')->get())->keyBy('id');
 
-        return $out;
+        return $roots->filter(fn ($r) => isset($picked[$r->id]))->map(fn ($r) => [
+            'category' => $r, 'items' => collect($picked[$r->id])->map(fn ($id) => $cards->get($id))->filter()->values(),
+        ])->values()->all();
     }
 }

@@ -17,7 +17,7 @@
     </style>
 </head>
 <body>
-    <div class="actions"><button onclick="window.print()">{{ __('orders.print') }}</button></div>
+    <div class="actions"><button onclick="window.print()">{{ __('orders.print') }}</button> <a class="btn" href="{{ ($public ?? false) ? route('storefront.orders.invoice.pdf', ['locale' => app()->getLocale(), 'token' => $order->public_token]) : route('tenant.orders.invoice.pdf', $order->id) }}">PDF</a></div>
     <div class="sheet">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div><h1 style="margin:0">{{ $tenant?->name }}</h1><div style="color:#64748b;font-size:14px">{{ __('orders.invoice') }} #{{ $order->number }}<br>{{ $order->placed_at?->format('Y-m-d H:i') }}</div></div>

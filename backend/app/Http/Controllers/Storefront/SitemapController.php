@@ -24,6 +24,9 @@ class SitemapController extends Controller
         foreach (Category::where('is_active', true)->get(['slug', 'updated_at']) as $c) {
             $add('storefront.category.show', ['slug' => $c->slug], $c->updated_at?->toDateString());
         }
+        foreach (\App\Models\Brand::where('is_active', true)->get(['slug', 'updated_at']) as $b) {
+            $add('storefront.brand.show', ['slug' => $b->slug], $b->updated_at?->toDateString());
+        }
         $tps = TenantProduct::where('is_active', true)->with('product:id,slug,is_active,updated_at')->get();
         foreach ($tps as $tp) {
             if ($tp->product?->is_active) {

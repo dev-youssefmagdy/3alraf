@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TenantProduct extends Model
 {
-    use BelongsToTenant;
+    use Audited, BelongsToTenant;
 
     protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'is_active'];
 

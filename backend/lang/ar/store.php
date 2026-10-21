@@ -38,4 +38,7 @@ return [
     'about' => 'عن المتجر', 'customer_service' => 'خدمة العملاء', 'follow_us' => 'تابعنا', 'download_app' => 'حمّل التطبيق', 'we_accept' => 'نقبل', 'rights' => 'جميع الحقوق محفوظة.',
     'affiliate_program' => 'برنامج التسويق بالعمولة', 'subscribe' => 'ابقَ على اطلاع على أحدث العروض', 'breadcrumb_home' => 'الرئيسية', 'page_not_found' => 'الصفحة غير موجودة',
     'seo_default_desc' => 'تسوق أفضل المنتجات بأفضل الأسعار مع الدفع عند الاستلام وشحن سريع.',
+    'from_price' => 'ابتداءً من',
+    'coming_soon' => 'قريباً',
+    'tags' => 'الوسوم',
 ];

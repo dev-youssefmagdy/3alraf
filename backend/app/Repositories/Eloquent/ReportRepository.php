@@ -50,7 +50,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     private function orders(ReportFilter $f, ?array $statuses = null, string $dateCol = 'created_at'): Builder
     {
-        $q = $this->base($f, 'orders', 'o')->whereBetween("o.$dateCol", [$f->start(), $f->end()])->whereIn('o.status', $statuses ?? $this->salesStatuses());
+        $q = $this->base($f, 'orders', 'o')->whereNull('o.deleted_at')->whereBetween("o.$dateCol", [$f->start(), $f->end()])->whereIn('o.status', $statuses ?? $this->salesStatuses());
         if ($f->branchId) {
             $q->where('o.branch_id', $f->branchId);
         }
@@ -102,11 +102,13 @@ class ReportRepository implements ReportRepositoryInterface
     public function codSettlement(ReportFilter $f): array
     {
         $q = $this->orders($f, ['shipped', 'delivered'])->where('o.cod_amount', '>', 0)->leftJoin('shipping_companies as sc', 'sc.id', '=', 'o.shipping_company_id');
-        $d = "o.status = 'delivered'";
+        $d = "o.status = 'delivered' AND o.carrier_settled_at IS NULL"; // outstanding: delivered, carrier has not paid us yet
+        $s = "o.status = 'delivered' AND o.carrier_settled_at IS NOT NULL";
 
-        return $this->rows($q->selectRaw("t.name as tenant, COALESCE(NULLIF({$this->nm('sc.name')}, ''), '-') as company, COUNT(*) as orders,
-            {$this->m($f, "CASE WHEN $d THEN o.cod_amount ELSE 0 END")} as collected, {$this->m($f, "CASE WHEN $d THEN 0 ELSE o.cod_amount END")} as in_transit,
-            {$this->m($f, "CASE WHEN $d THEN o.shipping_cost ELSE 0 END")} as carrier_fee, {$this->m($f, "CASE WHEN $d THEN o.cod_amount - o.shipping_cost ELSE 0 END")} as owed")
+        return $this->rows($q->selectRaw("o.shipping_company_id as company_id, t.name as tenant, COALESCE(NULLIF({$this->nm('sc.name')}, ''), '-') as company, COUNT(*) as orders,
+            {$this->m($f, "CASE WHEN $d THEN o.cod_amount ELSE 0 END")} as collected, {$this->m($f, "CASE WHEN o.status = 'shipped' THEN o.cod_amount ELSE 0 END")} as in_transit,
+            {$this->m($f, "CASE WHEN $d THEN o.shipping_cost ELSE 0 END")} as carrier_fee, {$this->m($f, "CASE WHEN $d THEN o.cod_amount - o.shipping_cost ELSE 0 END")} as owed,
+            {$this->m($f, "CASE WHEN $s THEN o.cod_amount - o.shipping_cost ELSE 0 END")} as settled")
             ->groupBy('o.shipping_company_id', 'o.tenant_id', 't.name', DB::raw($this->nm('sc.name')))->orderByDesc('owed'));
     }
 

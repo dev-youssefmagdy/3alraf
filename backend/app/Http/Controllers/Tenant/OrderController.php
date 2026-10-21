@@ -27,7 +27,7 @@ class OrderController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:orders.view', only: ['index', 'datatable', 'show', 'invoice', 'proofFile']),
+            new Middleware('can:orders.view', only: ['index', 'datatable', 'show', 'invoice', 'invoicePdf', 'proofFile']),
             new Middleware('can:orders.edit', only: ['changeStatus', 'validateStatus']),
             new Middleware('can:orders.payments', only: ['approveProof', 'rejectProof']),
             new Middleware('can:returns.create', only: ['createReturn', 'validateReturn']),
@@ -57,6 +57,13 @@ class OrderController extends Controller implements HasMiddleware
     public function invoice(int $id)
     {
         return view('tenant.orders.invoice', ['order' => $this->find($id), 'public' => false]);
+    }
+
+    public function invoicePdf(int $id, \App\Services\Orders\InvoicePdf $pdf)
+    {
+        $order = $this->find($id);
+
+        return $pdf->render($order)->download($pdf->filename($order));
     }
 
     /** Payment proof (private disk) for tenant admins with orders.view; the query is tenant-scoped. */

@@ -88,6 +88,15 @@
                             @endforeach
                         </div>
                     </div>
+                    @if ($tags)
+                        @php($selectedTags = collect(old('tag_ids', $editing ? $product->tags->pluck('id')->all() : []))->map(fn ($x) => (int) $x)->all())
+                        <div data-field>
+                            <div class="form-label">{{ __('admin.tags') }}</div>
+                            <div class="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                                @foreach ($tags as $id => $label)<x-checkbox name="tag_ids[]" :value="$id" :bool="false" :label="$label" :checked="in_array($id, $selectedTags)" />@endforeach
+                            </div>
+                        </div>
+                    @endif
                     <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$product->is_active" />
                 </div>
             </x-card>

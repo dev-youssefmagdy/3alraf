@@ -38,4 +38,7 @@ return [
     'about' => 'About the store', 'customer_service' => 'Customer service', 'follow_us' => 'Follow us', 'download_app' => 'Get the app', 'we_accept' => 'We accept', 'rights' => 'All rights reserved.',
     'affiliate_program' => 'Affiliate program', 'subscribe' => 'Stay up to date with the latest offers', 'breadcrumb_home' => 'Home', 'page_not_found' => 'Page not found',
     'seo_default_desc' => 'Shop the best products at the best prices with cash on delivery and fast shipping.',
+    'from_price' => 'From',
+    'coming_soon' => 'Coming soon',
+    'tags' => 'Tags',
 ];

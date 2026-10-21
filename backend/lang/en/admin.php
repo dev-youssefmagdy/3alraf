@@ -17,6 +17,8 @@ return [
     'languages_cannot_delete_default' => 'The default language cannot be deleted.',
     'owner_account' => 'Store owner account (optional)', 'owner_account_hint' => 'Creates a store admin with full access.',
     'open_store' => 'Open store', 'language' => 'Language', 'home' => 'Home', 'coming_soon' => 'Coming soon',
+    'tags' => 'Tags',
+    'tag' => 'Tag',
     'brands' => 'Brands',
     'attributes' => 'Attributes',
     'categories' => 'Categories',

@@ -13,7 +13,7 @@
     <a href="{{ $url }}" class="mt-2 line-clamp-2 min-h-10 text-sm font-semibold text-slate-800 hover:text-brand-600">{{ $p->name }}</a>
     @if ($d['rating'])<p class="mt-1 text-xs text-amber-500">{{ str_repeat('★', (int) round($d['rating'])) }}<span class="text-slate-300">{{ str_repeat('★', 5 - (int) round($d['rating'])) }}</span> <span class="text-slate-400">({{ $d['reviews'] }})</span></p>@endif
     <div class="mt-1 flex flex-wrap items-baseline gap-x-2">
-        <span class="text-base font-bold {{ $d['flash'] ? 'text-brand-600' : 'text-slate-900' }}">{{ number_format((float) $d['price'], 2) }} <small class="text-xs font-medium">{{ current_tenant()->currency_symbol }}</small></span>
+        <span class="text-base font-bold {{ $d['flash'] ? 'text-brand-600' : 'text-slate-900' }}">@if ($d['from'] ?? false)<small class="text-xs font-medium text-slate-500">{{ __('store.from_price') }}</small> @endif{{ number_format((float) $d['price'], 2) }} <small class="text-xs font-medium">{{ current_tenant()->currency_symbol }}</small></span>
         @if ($d['old'])<span class="text-xs text-slate-400 line-through">{{ number_format((float) $d['old'], 2) }}</span>@endif
     </div>
     @if ($d['flash'] && $d['ends_at'])<p class="mt-1 text-[11px] text-brand-600">{{ __('store.ends_in') }} <span data-countdown="{{ $d['ends_at'] }}" class="font-mono font-bold"></span></p>@endif

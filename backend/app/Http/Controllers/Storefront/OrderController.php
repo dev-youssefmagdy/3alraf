@@ -23,6 +23,13 @@ class OrderController extends Controller
         return view($view, ['order' => $this->order($token), 'public' => true]);
     }
 
+    public function invoicePdf(string $locale, string $token, \App\Services\Orders\InvoicePdf $pdf)
+    {
+        $order = $this->order($token);
+
+        return $pdf->render($order)->download($pdf->filename($order));
+    }
+
     public function uploadProof(ProofRequest $r, string $locale, string $token): JsonResponse
     {
         $this->payments->uploadProof($this->order($token), $r->file('proof'));

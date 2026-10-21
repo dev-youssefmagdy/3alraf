@@ -17,6 +17,8 @@ return [
     'languages_cannot_delete_default' => 'لا يمكن حذف اللغة الافتراضية.',
     'owner_account' => 'حساب مالك المتجر (اختياري)', 'owner_account_hint' => 'ينشئ مدير متجر بصلاحيات كاملة.',
     'open_store' => 'فتح المتجر', 'language' => 'اللغة', 'home' => 'الرئيسية', 'coming_soon' => 'قريباً',
+    'tags' => 'الوسوم',
+    'tag' => 'الوسم',
     'brands' => 'العلامات التجارية',
     'attributes' => 'الخصائص',
     'categories' => 'التصنيفات',

@@ -204,7 +204,7 @@ class ReportService
         return [
             'cards' => [$this->card('cod_collected', $this->money($this->sum($rows, 'collected'))), $this->card('cod_in_transit', $this->money($this->sum($rows, 'in_transit')), 'slate'),
                 $this->card('carrier_fee', $this->money($this->sum($rows, 'carrier_fee')), 'slate'), $this->card('cod_owed', $this->money($this->sum($rows, 'owed')), 'emerald')],
-            'columns' => [$this->col('company', 'text'), $this->col('orders', 'int'), $this->col('collected', 'money'), $this->col('in_transit', 'money'), $this->col('carrier_fee', 'money'), $this->col('owed', 'money')],
+            'columns' => [$this->col('company', 'text'), $this->col('orders', 'int'), $this->col('collected', 'money'), $this->col('in_transit', 'money'), $this->col('carrier_fee', 'money'), $this->col('owed', 'money'), $this->col('settled', 'money')],
             'rows' => $rows, 'chart' => $this->bar($rows, 'company', [['collected', 'collected'], ['owed', 'owed']]),
         ];
     }

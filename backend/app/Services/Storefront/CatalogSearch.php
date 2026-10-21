@@ -6,6 +6,7 @@ use App\DTOs\Storefront\CatalogFilter;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Tag;
 use App\Models\TenantProduct;
 use App\Services\Lists\ProductListResolver;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 /** Storefront listing / search over the tenant's active products, plus the facets that drive the filter sidebar. */
 class CatalogSearch
 {
+    private const STOPWORDS = ['about', 'are', 'com', 'for', 'from', 'how', 'that', 'the', 'this', 'was', 'what', 'when', 'where', 'who', 'will', 'with', 'und', 'the', 'www'];
+
     public function __construct(private ProductListResolver $lists, private CardPresenter $cards) {}
 
     /** Base scope: sellable products in a category subtree (or everywhere) matching the text query. */
@@ -26,11 +29,33 @@ class CatalogSearch
             $query->whereHas('product.categories', fn ($c) => $c->whereIn('categories.id', $ids));
         }
         if ($q !== null) {
-            $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], mb_strtolower($q)).'%';
-            $query->whereHas('product', fn ($p) => $p->where(fn ($w) => $w->whereRaw('LOWER(CAST(name AS CHAR)) like ?', [$like])->orWhere('sku', 'like', $like)->orWhere('barcode', 'like', $like)));
+            $query->whereHas('product', fn ($p) => $this->matchText($p, $q));
         }
 
         return $query;
+    }
+
+    /**
+     * Name search on the generated `name_ar` / `name_en` columns (FULLTEXT, boolean-mode prefix per word). Words shorter than
+     * innodb_ft_min_token_size or InnoDB stopwords cannot be matched by FULLTEXT, so those queries use LIKE on the same columns.
+     * SKU / barcode match by prefix.
+     */
+    private function matchText(Builder $p, string $q): void
+    {
+        $q = mb_strtolower(trim($q));
+        $words = preg_split('/[^\p{L}\p{N}]+/u', $q, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $words = array_slice($words, 0, 6);
+        $esc = fn (string $v) => str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $v);
+        $ft = $words && ! array_filter($words, fn ($w) => mb_strlen($w) < 3 || in_array($w, self::STOPWORDS, true));
+        $p->where(function ($w) use ($q, $words, $esc, $ft) {
+            if ($ft) {
+                $boolean = implode(' ', array_map(fn ($x) => '+'.$x.'*', $words));
+                $w->whereRaw('MATCH(name_ar) AGAINST (? IN BOOLEAN MODE)', [$boolean])->orWhereRaw('MATCH(name_en) AGAINST (? IN BOOLEAN MODE)', [$boolean]);
+            } else {
+                $w->where('name_ar', 'like', '%'.$esc($q).'%')->orWhere('name_en', 'like', '%'.$esc($q).'%');
+            }
+            $w->orWhere('sku', 'like', $esc($q).'%')->orWhere('barcode', 'like', $esc($q).'%');
+        });
     }
 
     public function paginate(Builder $scope, CatalogFilter $f): LengthAwarePaginator
@@ -44,6 +69,9 @@ class CatalogSearch
             foreach ($byAttr as $ids) {
                 $q->whereHas('product.variants.values', fn ($v) => $v->whereIn('attribute_values.id', $ids->pluck('id')->all()));
             }
+        }
+        if ($f->tags) {
+            $q->whereHas('product.tags', fn ($t) => $t->whereIn('tags.id', $f->tags));
         }
         if ($f->priceMin !== null) {
             $q->whereRaw('COALESCE(sale_price, price) >= ?', [$f->priceMin]);
@@ -69,7 +97,7 @@ class CatalogSearch
     {
         $productIds = (clone $scope)->pluck('product_id');
         if ($productIds->isEmpty()) {
-            return ['brands' => collect(), 'attributes' => collect(), 'price' => ['min' => 0, 'max' => 0]];
+            return ['brands' => collect(), 'tags' => collect(), 'attributes' => collect(), 'price' => ['min' => 0, 'max' => 0]];
         }
         $brandIds = DB::table('products')->whereIn('id', $productIds)->whereNotNull('brand_id')->pluck('brand_id');
         $valueRows = DB::table('product_variants as v')->join('product_variant_values as pvv', 'pvv.product_variant_id', '=', 'v.id')
@@ -78,6 +106,7 @@ class CatalogSearch
         $price = (clone $scope)->selectRaw('MIN(COALESCE(sale_price, price)) mn, MAX(COALESCE(sale_price, price)) mx')->first();
 
         return [
+            'tags' => Tag::query()->where('is_active', true)->whereIn('id', DB::table('product_tag')->whereIn('product_id', $productIds)->select('tag_id'))->orderBy('sort_order')->get(),
             'brands' => Brand::query()->whereIn('id', $brandIds)->where('is_active', true)->orderBy('sort_order')->get(),
             'attributes' => $attributes,
             'price' => ['min' => (int) floor((float) $price->mn), 'max' => (int) ceil((float) $price->mx)],

@@ -81,9 +81,13 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
+        Route::get('audit', [\App\Http\Controllers\Access\AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('audit/datatable', [\App\Http\Controllers\Access\AuditLogController::class, 'datatable'])->name('audit.datatable');
+
         // Reports (view-only, date range + CSV export)
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/{report}', [ReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
+        Route::post('reports/cod-settlement/settle', [ReportController::class, 'settleCod'])->name('reports.cod-settle');
         Route::get('reports/{report}/export', [ReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
 
         // Stock (read-only views)
@@ -112,6 +116,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('orders/datatable', [OrderController::class, 'datatable'])->name('orders.datatable');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{id}', [OrderController::class, 'show'])->whereNumber('id')->name('orders.show');
+        Route::get('orders/{id}/invoice.pdf', [OrderController::class, 'invoicePdf'])->whereNumber('id')->name('orders.invoice.pdf');
         Route::get('orders/{id}/invoice', [OrderController::class, 'invoice'])->whereNumber('id')->name('orders.invoice');
         Route::post('orders/{id}/status/validate', [OrderController::class, 'validateStatus'])->name('orders.status.validate');
         Route::post('orders/{id}/status', [OrderController::class, 'changeStatus'])->name('orders.status');

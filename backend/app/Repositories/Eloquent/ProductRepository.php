@@ -15,6 +15,11 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
         $product->categories()->sync($categoryIds);
     }
 
+    public function syncTags(Product $product, array $tagIds): void
+    {
+        $product->tags()->sync($tagIds);
+    }
+
     public function variantsWithTrashed(Product $product): Collection
     {
         return $product->variants()->withTrashed()->get()->keyBy('id');

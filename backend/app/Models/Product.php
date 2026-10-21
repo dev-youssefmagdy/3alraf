@@ -34,6 +34,11 @@ class Product extends Model
         return $this->belongsToMany(Category::class);
     }
 
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)->orderBy('id');

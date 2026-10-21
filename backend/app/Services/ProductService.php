@@ -47,6 +47,7 @@ class ProductService
     private function finish(Product $product, ProductData $dto): Product
     {
         $this->products->syncCategories($product, $dto->categoryIds);
+        $this->products->syncTags($product, $dto->tagIds);
         $this->images->removeByIds($product, $dto->removeImageIds);
         $this->images->attach($product, $dto->images, 'products');
         $this->syncVariants($product, $dto);

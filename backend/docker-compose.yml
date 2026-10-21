@@ -1,0 +1,66 @@
+# Production-like stack: nginx (wildcard + cdn vhosts) -> php-fpm app, queue worker, scheduler, redis, mysql.
+# Usage: cp .env.production.example .env  (fill secrets), then `docker compose up -d --build` and
+#        `docker compose exec app php artisan migrate --force && docker compose exec app php artisan db:seed --class=PermissionSeeder --force`.
+x-app: &app
+  build: { context: ., target: app }
+  image: 3alraf-app:latest
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    mysql: { condition: service_healthy }
+    redis: { condition: service_started }
+  volumes:
+    - storage:/var/www/html/storage
+
+services:
+  app:
+    <<: *app
+    command: ["php-fpm"]
+
+  queue:
+    <<: *app
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--backoff=10", "--max-time=3600", "--memory=192"]
+    stop_grace_period: 60s
+
+  scheduler:
+    <<: *app
+    command: ["php", "artisan", "schedule:work"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/nginx/app.conf:/etc/nginx/conf.d/app.conf:ro
+      - ./deploy/nginx/cdn.conf:/etc/nginx/conf.d/cdn.conf:ro
+      - ./public:/var/www/html/public:ro
+      - storage:/var/www/html/storage:ro
+      - ./certs:/etc/nginx/certs:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes: [redis:/data]
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--innodb-ft-min-token-size=2"]
+    volumes: [mysql:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  storage:
+  redis:
+  mysql:

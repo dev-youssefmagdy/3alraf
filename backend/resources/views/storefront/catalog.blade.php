@@ -1,15 +1,16 @@
 @php
-    $isSearch = $category === null;
-    $pageTitle = $isSearch ? ($filter->q ? __('store.search_results', ['q' => $filter->q]) : __('store.search')) : $category->name;
-    $action = $isSearch ? route('storefront.search') : route('storefront.category.show', $category->slug);
+    $listing = $listing ?? null; // brand / tag landing page: ['title','action','image','description']
+    $isSearch = $category === null && ! $listing;
+    $pageTitle = $listing ? $listing['title'] : ($isSearch ? ($filter->q ? __('store.search_results', ['q' => $filter->q]) : __('store.search')) : $category->name);
+    $action = $listing ? $listing['action'] : ($isSearch ? route('storefront.search') : route('storefront.category.show', $category->slug));
     $selectedValues = $filter->values;
-    $activeCount = count($filter->brands) + count($filter->values) + ($filter->priceMin !== null ? 1 : 0) + ($filter->priceMax !== null ? 1 : 0);
+    $activeCount = count($filter->brands) + count($filter->tags) + count($filter->values) + ($filter->priceMin !== null ? 1 : 0) + ($filter->priceMax !== null ? 1 : 0);
 @endphp
-<x-layouts.storefront :title="$category ? ($category->name) : $pageTitle" :description="$category?->description" :image="$category?->image_url" :noindex="$isSearch">
+<x-layouts.storefront :title="$category ? ($category->name) : $pageTitle" :description="$category?->description ?? ($listing['description'] ?? null)" :image="$category?->image_url ?? ($listing['image'] ?? null)" :noindex="$isSearch">
     <nav class="mb-4 flex flex-wrap items-center gap-1 text-sm text-slate-500" aria-label="breadcrumb">
         <a href="{{ route('storefront.home') }}" class="hover:text-brand-600">{{ __('store.breadcrumb_home') }}</a>
         @foreach ($crumbs as $c)<span>/</span>@if ($loop->last)<span class="font-semibold text-slate-800">{{ $c->name }}</span>@else<a href="{{ route('storefront.category.show', $c->slug) }}" class="hover:text-brand-600">{{ $c->name }}</a>@endif @endforeach
-        @if ($isSearch)<span>/</span><span class="font-semibold text-slate-800">{{ $pageTitle }}</span>@endif
+        @if ($isSearch || $listing)<span>/</span><span class="font-semibold text-slate-800">{{ $pageTitle }}</span>@endif
     </nav>
 
     @if ($children->isNotEmpty())
@@ -29,6 +30,15 @@
                         <div class="max-h-48 space-y-1 overflow-y-auto text-sm">
                             @foreach ($facets['brands'] as $b)
                                 <label class="flex cursor-pointer items-center gap-2"><input type="checkbox" name="brands[]" value="{{ $b->id }}" @checked(in_array($b->id, $filter->brands)) class="accent-brand-600"> {{ $b->name }}</label>
+                            @endforeach
+                        </div></fieldset>
+                @endif
+                @if ($facets['tags']->isNotEmpty())
+                    <fieldset><legend class="mb-2 font-bold">{{ __('store.tags') }}</legend>
+                        <div class="flex flex-wrap gap-2 text-sm">
+                            @foreach ($facets['tags'] as $tg)
+                                <label class="cursor-pointer"><input type="checkbox" name="tags[]" value="{{ $tg->id }}" @checked(in_array($tg->id, $filter->tags)) class="peer sr-only">
+                                    <span class="inline-flex rounded-full border border-slate-300 px-3 py-1 peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-700">{{ $tg->name }}</span></label>
                             @endforeach
                         </div></fieldset>
                 @endif

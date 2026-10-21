@@ -94,6 +94,7 @@ class RepositoryServiceProvider extends ServiceProvider
         LanguageRepositoryInterface::class => LanguageRepository::class,
         TenantRepositoryInterface::class => TenantRepository::class,
         BrandRepositoryInterface::class => BrandRepository::class,
+        \App\Repositories\Contracts\TagRepositoryInterface::class => \App\Repositories\Eloquent\TagRepository::class,
         AttributeRepositoryInterface::class => AttributeRepository::class,
         CategoryRepositoryInterface::class => CategoryRepository::class,
         ProductRepositoryInterface::class => ProductRepository::class,
