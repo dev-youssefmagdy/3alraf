@@ -1,0 +1,8 @@
+Working dir: /var/www/3alraf/backend (Laravel 13, MySQL). Read CLAUDE.md, docs/REQUIREMENTS.md (§9 decisions), docs/PROGRESS.md and docs/GAP_ANALYSIS.md first, and docs/CALCULATIONS.md if touching money/stock/reports. Follow the layering/stack conventions strictly (Controller → FormRequest → DTO → Service → Repository → Model, enums, Blade components, tenant_id isolation). Do only this sprint. Write tests; run `vendor/bin/pest` and `php artisan route:list`. Be token-efficient. At the end append <=15 lines to docs/PROGRESS.md and reply with a <=8 line summary.
+
+SPRINT 2b Media/CDN separation (decision: images/files on a separate system or subdomain acting as our CDN):
+1. config/filesystems.php: new disk 'media' (S3-compatible, e.g. R2/MinIO/S3, or local dir served by a dedicated nginx vhost) with MEDIA_URL=https://cdn.domain.com; ImageUploadService uses config('media.disk') instead of hardcoded 'public'; generated URLs always come from a single helper media_url($path) (no APP_URL/storage). Keep webp + _thumb; add cache-friendly immutable file names (hash) and Cache-Control long max-age headers on the CDN vhost.
+2. Tenant namespacing in paths (tenants/{id}/...) for tenant uploads; central catalog images under catalog/.
+3. Private disk 'private' for payment proofs / invoices / exports (signed temporary URLs).
+4. Artisan command media:migrate-public-to-media to move existing storage/app/public files; update seeders (PlaceholderImage) to the media disk.
+5. Docs: nginx vhost sample for cdn.domain.com (static only, no PHP, CORS for *.domain.com), env vars in .env.production.example. Tests with Storage::fake.

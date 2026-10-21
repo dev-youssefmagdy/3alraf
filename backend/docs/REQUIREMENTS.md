@@ -62,3 +62,10 @@ RTL Arabic default, top promo bar, header (logo, search with suggestions, accoun
 - Pest/PHPUnit feature tests for: tenant isolation, OrderCalculator (every CALCULATIONS.md example), stock ledger, discount rules, affiliate commission tiers, list resolver.
 - Policies/permissions per module. Rate limits on auth/checkout. CSRF everywhere. Escape output.
 - Added by senior review: audit log, soft deletes on core entities, queue for notifications/emails, sitemap per tenant, SEO meta, image upload service with thumbnails, activity log, role/permission UI, tenant-aware cache keys, `php artisan` commands for tenant creation, health seeding.
+
+## 9. Owner decisions (2026-10-21)
+- **Central site**: public landing on the central domain; visitor CHOOSES a country (no geo auto-suggest); choice remembered in a cookie; links to `{slug}.domain.com`. Unknown/inactive tenant → Arabic "store unavailable" page linking back to central.
+- **Payments**: online = Paymob + FawryPay first (Egypt), others later. Offline = wallets (Vodafone Cash, E& Cash, InstaPay, …) requiring a proof-of-payment FILE upload + admin approval. COD always exists by default and collects the delivery fee upfront; the carrier collects the remaining amount. Each method independently active/inactive per tenant.
+- **Profit/sales** count on order date, only for orders confirmed by an admin (customer-submitted `pending` orders never count). Returns reduce affiliate commission and tier sales.
+- **Media/CDN**: all images and files live on a separate system/subdomain (`cdn.domain.com` or object storage behind a CDN), never served by the app servers. Payment proofs go to a PRIVATE disk (signed URLs), not the CDN.
+See `docs/CALCULATIONS.md` (updated) and `docs/GAP_ANALYSIS.md`; build prompts in `docs/prompts/09..13`.
