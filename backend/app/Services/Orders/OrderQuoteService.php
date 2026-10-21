@@ -47,7 +47,7 @@ class OrderQuoteService
         $discountModel = null;
         $rule = null;
         if ($d->discountCode) {
-            $res = $this->discounts->validate($d->discountCode, $lines, $d->customerId, $lock);
+            $res = $this->discounts->validate($d->discountCode, $lines, $d->customerId, $lock, $d->email, $d->phone);
             $discountModel = $res['model'];
             $rule = $res['rule'];
             foreach ($lines as &$l) {

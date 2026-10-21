@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             $central = config('app.central_domain');
+            Route::middleware('api')->domain($central)->prefix('api/v1')->group(base_path('routes/api.php'));
             Route::middleware(['web', CentralContext::class])->domain($central)->group(base_path('routes/central.php'));
             Route::middleware(['web', 'tenant.resolve'])->domain('{tenant}.'.$central)->group(function () {
                 // order matters: /admin first, then the /{locale} storefront
@@ -27,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: ['webhooks/*']);
+        // Behind nginx/LB: trust only configured proxies (default: private ranges + loopback) and only our own hosts.
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES') === '*' ? '*' : array_filter(explode(',', (env('TRUSTED_PROXIES') ?: '127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'))));
+        $middleware->trustHosts(at: fn () => ['^(.+\.)?'.preg_quote((string) config('app.central_domain'), '/').'$'], subdomains: false);
         $middleware->alias([
             'tenant.resolve' => ResolveTenant::class,
             'set.locale' => SetLocale::class,

@@ -103,16 +103,25 @@ class OrderCalculator
         $discount = ($cap !== null && $cap !== '') ? Money::min($raw, $cap) : $raw;
         $discount = Money::min($discount, $base);
 
-        // proportional distribution, last eligible line takes the rounding remainder
+        // proportional distribution; last eligible line takes the rounding remainder, but no line_discount may exceed its
+        // line_subtotal (any excess is pushed to eligible lines that still have room, so Σ shares == discount)
         $shares = [];
         $given = '0.00';
         foreach ($eligible as $n => $i) {
-            if ($n === array_key_last($eligible)) {
-                $shares[$in->lines[$i]['key']] = Money::sub($discount, $given);
-            } else {
-                $shares[$in->lines[$i]['key']] = Money::round(bcdiv(bcmul($discount, $lineSub[$i], 8), $base, 8));
-                $given = Money::add($given, $shares[$in->lines[$i]['key']]);
+            $key = $in->lines[$i]['key'];
+            $raw = $n === array_key_last($eligible) ? Money::sub($discount, $given) : Money::round(bcdiv(bcmul($discount, $lineSub[$i], 8), $base, 8));
+            $shares[$key] = Money::min($raw, $lineSub[$i]);
+            $given = Money::add($given, $shares[$key]);
+        }
+        $left = Money::sub($discount, $given);
+        foreach ($eligible as $i) {
+            if (Money::cmp($left, '0') <= 0) {
+                break;
             }
+            $key = $in->lines[$i]['key'];
+            $take = Money::min($left, Money::sub($lineSub[$i], $shares[$key]));
+            $shares[$key] = Money::add($shares[$key], $take);
+            $left = Money::sub($left, $take);
         }
 
         return [$discount, $shares, false];

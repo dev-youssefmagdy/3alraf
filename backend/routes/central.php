@@ -6,6 +6,7 @@ use App\Http\Controllers\Central\AttributeController;
 use App\Http\Controllers\Central\BrandController;
 use App\Http\Controllers\Central\CategoryController;
 use App\Http\Controllers\Central\DashboardController;
+use App\Http\Controllers\Central\LandingController;
 use App\Http\Controllers\Central\ProductController;
 use App\Http\Controllers\Central\LanguageController;
 use App\Http\Controllers\Central\TenantController;
@@ -14,12 +15,13 @@ use App\Http\Controllers\Access\AdminUserController;
 use App\Http\Controllers\Access\RoleController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin');
+Route::get('/', [LandingController::class, 'index'])->name('central.landing');
+Route::get('choose/{slug}', [LandingController::class, 'choose'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('central.choose');
 
 Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(function () {
     Route::middleware('guest:central')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
-        Route::post('login/validate', [LoginController::class, 'validateForm'])->name('login.validate');
+        Route::post('login/validate', [LoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
         Route::post('login', [LoginController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
     });
 

@@ -86,4 +86,22 @@ return [
         'sale_price' => 'Sale price',
         'cost' => 'Cost',
     ],
+
+    'site' => [
+    'title' => 'Choose your country',
+    'headline' => 'Shop your local store',
+    'sub' => 'Pick a country to open its local store with the right currency and language.',
+    'currency' => 'Currency',
+    'languages' => 'Languages',
+    'go' => 'Enter store',
+    'last_choice' => 'Your last choice',
+    'empty' => 'No stores are available right now.',
+    'admin' => 'Admin login',
+    'switch_lang' => 'العربية',
+    'not_found' => 'Page not found',
+    'not_found_text' => 'Sorry, the page you are looking for does not exist.',
+    'unavailable' => 'Store unavailable',
+    'unavailable_text' => 'This store is unavailable or does not exist. Pick another store from the home page.',
+    'back_central' => 'Back to home page',
+    ],
 ];

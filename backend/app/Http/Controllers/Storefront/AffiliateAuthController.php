@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Storefront;
 
 use App\DTOs\AffiliateRegisterData;
 use App\Enums\AffiliateStatus;
+use App\Http\Controllers\Concerns\GuardsLogins;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\Storefront\AffiliateRegisterRequest;
@@ -18,6 +19,8 @@ use Illuminate\Validation\ValidationException;
 /** Affiliate guard: login (approved accounts only) and registration (waits for admin approval). */
 class AffiliateAuthController extends Controller
 {
+    use GuardsLogins;
+
     public function __construct(private AffiliateService $service) {}
 
     public function showLogin()
@@ -32,10 +35,14 @@ class AffiliateAuthController extends Controller
 
     public function login(LoginRequest $r): JsonResponse
     {
-        $a = Affiliate::where('email', strtolower(trim($r->input('email'))))->first();
+        $email = strtolower(trim($r->input('email')));
+        $this->assertNotLockedOut('affiliate', $email);
+        $a = Affiliate::where('email', $email)->first();
         if (! $a || ! Hash::check($r->input('password'), $a->password)) {
+            $this->recordLoginFailure('affiliate', $email);
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
+        $this->clearLoginFailures('affiliate', $email);
         if ($a->status !== AffiliateStatus::APPROVED) {
             throw ValidationException::withMessages(['email' => __('growth.login_'.$a->status->value)]);
         }
@@ -64,8 +71,7 @@ class AffiliateAuthController extends Controller
 
     public function logout(Request $r)
     {
-        Auth::guard('affiliate')->logout();
-        $r->session()->regenerateToken();
+        $this->signOut($r, 'affiliate');
 
         return redirect()->route('storefront.affiliate.login');
     }

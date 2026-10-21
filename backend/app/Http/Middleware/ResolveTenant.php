@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Closure;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,10 +17,11 @@ class ResolveTenant
     public function handle(Request $request, Closure $next): Response
     {
         $slug = $request->route('tenant') ?? $this->slugFromHost($request->getHost());
-        abort_if(! $slug, 404);
-
-        $tenant = $this->tenants->findBySlug((string) $slug);
-        abort_if(! $tenant, 404);
+        $tenant = $slug ? $this->tenants->findBySlug((string) $slug) : null;
+        if (! $tenant) {
+            // unknown or inactive store: friendly Arabic page linking back to the central landing
+            throw new HttpResponseException(response()->view('errors.store-unavailable', [], 404));
+        }
 
         app()->instance('currentTenant', $tenant);
         config(['app.timezone' => $tenant->timezone]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Concerns\GuardsLogins;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 /** One login controller for the three guards; guard comes from the route name prefix (central./tenant./storefront.). */
 class LoginController extends Controller
 {
+    use GuardsLogins;
+
     private function guard(Request $r): string
     {
         return match (explode('.', $r->route()->getName())[0]) {
@@ -42,9 +45,12 @@ class LoginController extends Controller
         $guard = $this->guard($request);
         $creds = $request->only('email', 'password') + ['is_active' => true];
 
+        $this->assertNotLockedOut($guard, $creds['email']);
         if (! Auth::guard($guard)->attempt($creds, $request->boolean('remember'))) {
+            $this->recordLoginFailure($guard, $creds['email']);
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
+        $this->clearLoginFailures($guard, $creds['email']);
         $request->session()->regenerate();
 
         return $this->ok(__('admin.welcome_back'), redirect()->intended($this->home($guard))->getTargetUrl());
@@ -53,8 +59,7 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         $guard = $this->guard($request);
-        Auth::guard($guard)->logout();
-        $request->session()->regenerateToken();
+        $this->signOut($request, $guard);
 
         return redirect()->route($this->routePrefix($guard).'login');
     }

@@ -29,9 +29,8 @@ class StockLedger
         }
 
         return DB::transaction(function () use ($branchId, $productId, $variantId, $type, $qty, $unitCost, $reference, $note, $userId) {
-            $tenantId = current_tenant()?->id ?? \App\Models\Branch::withoutGlobalScopes()->findOrFail($branchId)->tenant_id;
-            $level = StockLevel::withoutGlobalScopes()->where(['branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId])->lockForUpdate()->first()
-                ?? StockLevel::withoutGlobalScopes()->create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId, 'on_hand' => 0, 'reserved' => 0, 'avg_cost' => 0]);
+            $tenantId = $this->tenantIdFor($branchId);
+            $level = $this->lockedLevel($branchId, $productId, $variantId, $tenantId);
 
             $onHand = (int) $level->on_hand;
             $avg = (string) $level->avg_cost;
@@ -129,12 +128,34 @@ class StockLedger
         });
     }
 
-    private function lockedLevel(int $branchId, int $productId, int $variantId): StockLevel
+    /**
+     * Row-locked stock level. Missing first-ever rows are created with INSERT IGNORE (the unique key makes a concurrent
+     * creator harmless) and then re-read FOR UPDATE, so two requests can never 500 on a duplicate insert.
+     */
+    private function lockedLevel(int $branchId, int $productId, int $variantId, ?int $tenantId = null): StockLevel
     {
-        $tenantId = current_tenant()?->id ?? \App\Models\Branch::withoutGlobalScopes()->findOrFail($branchId)->tenant_id;
+        $tenantId ??= $this->tenantIdFor($branchId);
+        $key = ['branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId];
+        $find = fn () => StockLevel::withoutGlobalScopes()->where($key)->lockForUpdate()->first();
 
-        return StockLevel::withoutGlobalScopes()->where(['branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId])->lockForUpdate()->first()
-            ?? StockLevel::withoutGlobalScopes()->create(['tenant_id' => $tenantId, 'branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId, 'on_hand' => 0, 'reserved' => 0, 'avg_cost' => 0]);
+        $level = $find();
+        if (! $level) {
+            DB::table('stock_levels')->insertOrIgnore($key + ['tenant_id' => $tenantId, 'on_hand' => 0, 'reserved' => 0, 'avg_cost' => 0, 'created_at' => now(), 'updated_at' => now()]);
+            $level = $find();
+        }
+
+        return $level;
+    }
+
+    /** Branch trust: the branch must belong to the current tenant (when one is resolved); returns the branch's tenant id. */
+    private function tenantIdFor(int $branchId): int
+    {
+        $owner = \App\Models\Branch::withoutGlobalScopes()->whereKey($branchId)->value('tenant_id');
+        if ($owner === null || (current_tenant() && (int) $owner !== (int) current_tenant()->id)) {
+            throw new \InvalidArgumentException("Branch {$branchId} does not belong to the current tenant.");
+        }
+
+        return (int) $owner;
     }
 
     /** Tenant listing cost = Σ(on_hand×avg)/Σ on_hand over all branches (what orders snapshot as unit_cost). */

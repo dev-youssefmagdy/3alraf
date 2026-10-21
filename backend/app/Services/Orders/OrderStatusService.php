@@ -51,7 +51,7 @@ class OrderStatusService
     /** Deduct stock (sale_out at current avg cost) and drop the reservation. */
     private function ship(Order $order): void
     {
-        foreach ($order->items as $i) {
+        foreach ($order->items->sortBy(fn ($i) => sprintf('%012d-%012d', $i->product_id, $i->product_variant_id)) as $i) {
             $this->ledger->ship($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity, $order);
         }
         $order->stock_deducted = true;
@@ -61,7 +61,7 @@ class OrderStatusService
     /** Before shipping only: release reservations, flash counters, discount usage; whole paid amount (incl. shipping) is to be refunded. */
     private function cancel(Order $order): void
     {
-        foreach ($order->items as $i) {
+        foreach ($order->items->sortBy(fn ($i) => sprintf('%012d-%012d', $i->product_id, $i->product_variant_id)) as $i) {
             $this->ledger->release($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity);
             if ($i->flash_sale_item_id) {
                 FlashSaleItem::whereKey($i->flash_sale_item_id)->where('sold', '>=', $i->quantity)->decrement('sold', $i->quantity);

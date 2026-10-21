@@ -85,7 +85,7 @@ class ReturnService
             $restock ??= $ret->restock;
             $branchId ??= $ret->branch_id ?? $order->branch_id;
 
-            foreach ($ret->items()->with('orderItem')->get() as $ri) {
+            foreach ($ret->items()->with('orderItem')->get()->sortBy(fn ($ri) => sprintf('%012d-%012d', $ri->orderItem->product_id, $ri->orderItem->product_variant_id)) as $ri) {
                 $oi = $ri->orderItem;
                 if ($restock) {
                     $this->ledger->record($branchId, $oi->product_id, $oi->product_variant_id, StockMovementType::RETURN_IN, $ri->quantity, (string) $oi->unit_cost, $ret);
@@ -100,12 +100,9 @@ class ReturnService
                 $order->update(['status' => OrderStatus::RETURNED, 'affiliate_commission' => 0]);
                 $order->histories()->create(['from_status' => $from->value, 'to_status' => OrderStatus::RETURNED->value, 'note' => $ret->number, 'user_id' => auth('tenant')->id()]);
                 DB::afterCommit(fn () => event(new OrderStatusChanged($order, $from, OrderStatus::RETURNED)));
-            } elseif ((float) $order->affiliate_commission > 0) {
-                // partial return: commission reduced pro-rata on returned (line_subtotal - line_discount)
-                $base = Money::sub((string) $order->subtotal, (string) $order->discount);
-                if (Money::cmp($base, '0') > 0) {
-                    $order->update(['affiliate_commission' => Money::sub((string) $order->affiliate_commission, Money::round(bcdiv(bcmul((string) $order->affiliate_commission, (string) $ret->return_value, 8), $base, 8)))]);
-                }
+            } else {
+                // partial return: recomputed from the CUMULATIVE returned value (CALCULATIONS.md §Affiliate commission)
+                app(\App\Services\Affiliates\AffiliateCommissionService::class)->recalculateAfterReturns($order);
             }
 
             app(\App\Services\Affiliates\AffiliateCommissionService::class)->syncOrder($order->refresh());
@@ -122,11 +119,29 @@ class ReturnService
         return $ret;
     }
 
-    /** Max refundable = return_value (+ shipping_net when flagged), never above what was paid and not yet refunded. */
+    /**
+     * Tax refunded with a return (CALCULATIONS.md step 3): exclusive-tax orders refund tax pro-rata
+     * (`tax × return_value / (subtotal − discount)`); tax-inclusive orders refund nothing extra (it is inside return_value).
+     */
+    public function taxShare(Order $order, string $returnValue): string
+    {
+        $base = Money::sub((string) $order->subtotal, (string) $order->discount);
+        if (Money::cmp((string) $order->tax, '0') <= 0 || Money::cmp($base, '0') <= 0) {
+            return '0.00';
+        }
+        $added = Money::sub((string) $order->total, Money::add($base, (string) $order->shipping_net, (string) $order->payment_fee_charged));
+        if (Money::cmp($added, (string) $order->tax) < 0) {
+            return '0.00'; // inclusive: tax was never added on top of the goods
+        }
+
+        return Money::round(bcdiv(bcmul((string) $order->tax, $returnValue, 8), $base, 8));
+    }
+
+    /** Max refundable = return_value + its tax share (+ shipping_net when flagged), never above what was paid and not yet refunded. */
     public function refundable(OrderReturn $ret): string
     {
         $order = $ret->order;
-        $cap = Money::add((string) $ret->return_value, $ret->refund_shipping ? (string) $order->shipping_net : '0');
+        $cap = Money::add((string) $ret->return_value, $this->taxShare($order, (string) $ret->return_value), $ret->refund_shipping ? (string) $order->shipping_net : '0');
         $left = Money::sub((string) $order->paid_amount, (string) $order->refunded_amount);
 
         return Money::max('0', Money::min($cap, $left));

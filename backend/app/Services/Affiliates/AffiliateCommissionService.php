@@ -18,13 +18,15 @@ class AffiliateCommissionService
 
     public function __construct(private AffiliateCommissionRepositoryInterface $commissions) {}
 
-    /** Approved lifetime delivered sales = Σ(subtotal − discount) of the affiliate's delivered orders. */
+    /** Lifetime sales = Σ(subtotal − discount) of the affiliate's delivered orders − Σ return_value of their approved/refunded returns (floored at 0). */
     public function lifetimeSales(Affiliate $a): string
     {
-        $v = Order::query()->where('affiliate_id', $a->id)->where('status', OrderStatus::DELIVERED->value)
-            ->selectRaw('COALESCE(SUM(subtotal - discount), 0) as s')->value('s');
+        $orders = Order::query()->where('affiliate_id', $a->id)->where('status', OrderStatus::DELIVERED->value);
+        $sales = (string) (clone $orders)->selectRaw('COALESCE(SUM(subtotal - discount), 0) as s')->value('s');
+        $returned = (string) \App\Models\OrderReturn::query()->whereIn('status', ['approved', 'refunded'])
+            ->whereIn('order_id', (clone $orders)->select('id'))->sum('return_value');
 
-        return Money::round((string) $v);
+        return Money::max('0', Money::sub(Money::round($sales), Money::round($returned)));
     }
 
     /** Highest tier with min_sales <= sales (per tenant). */
@@ -49,6 +51,21 @@ class AffiliateCommissionService
             'affiliate_id' => $a->id, 'order_id' => $order->id, 'base' => Money::sub((string) $order->subtotal, (string) $order->discount),
             'percent' => $percent, 'amount' => (string) $order->affiliate_commission, 'status' => CommissionStatus::PENDING,
         ]);
+    }
+
+    /**
+     * Partial returns: commission = round((base − cumulative approved/refunded return_value) × percent/100), floored at 0,
+     * always recomputed from the cumulative total (no drift over several partial returns). Paid rows are never altered.
+     */
+    public function recalculateAfterReturns(Order $order): void
+    {
+        $c = $this->commissions->query()->where('order_id', $order->id)->whereIn('status', [CommissionStatus::PENDING->value, CommissionStatus::APPROVED->value])->first();
+        if (! $c) {
+            return;
+        }
+        $returned = Money::round((string) \App\Models\OrderReturn::query()->where('order_id', $order->id)->whereIn('status', ['approved', 'refunded'])->sum('return_value'));
+        $left = Money::max('0', Money::sub((string) $c->base, $returned));
+        $order->update(['affiliate_commission' => Money::percent($left, (string) $c->percent)]);
     }
 
     /** Cancelled / fully returned -> void; partial return -> amount follows orders.affiliate_commission (reduced pro-rata). Paid rows are never touched. */

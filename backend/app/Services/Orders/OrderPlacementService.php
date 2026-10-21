@@ -68,6 +68,8 @@ class OrderPlacementService
                 $k = $l['product_id'].'-'.$l['variant_id'];
                 $reserve[$k] = ($reserve[$k] ?? 0) + $l['qty'];
             }
+            // consistent lock order (product, variant) so concurrent orders can never deadlock on stock rows
+            uksort($reserve, fn ($a, $b) => array_map('intval', explode('-', $a)) <=> array_map('intval', explode('-', $b)));
             foreach ($reserve as $k => $qty) {
                 [$p, $v] = array_map('intval', explode('-', $k));
                 $this->ledger->reserve($branchId, $p, $v, $qty);

@@ -17,9 +17,9 @@ class DiscountValidator
      * @param  array<int,array{key:string|int,product_id:int,unit_price:string,qty:int}>  $lines
      * @return array{model:DiscountCode,rule:array,eligible:array<string|int,bool>}
      */
-    public function validate(string $code, array $lines, ?int $customerId = null, bool $lock = false): array
+    public function validate(string $code, array $lines, ?int $customerId = null, bool $lock = false, ?string $email = null, ?string $phone = null): array
     {
-        $q = DiscountCode::query()->whereRaw('LOWER(code) = ?', [mb_strtolower(trim($code))]);
+        $q = DiscountCode::query()->where('code', trim($code));
         $dc = ($lock ? $q->lockForUpdate() : $q)->first();
         if (! $dc || ! $dc->is_active) {
             $this->fail('orders.discount.invalid');
@@ -33,7 +33,7 @@ class DiscountValidator
         if ($dc->usage_limit !== null && $dc->used_count >= $dc->usage_limit) {
             $this->fail('orders.discount.usage_limit');
         }
-        if ($dc->per_customer_limit !== null && $customerId && DiscountCodeUsage::where('discount_code_id', $dc->id)->where('customer_id', $customerId)->count() >= $dc->per_customer_limit) {
+        if ($dc->per_customer_limit !== null && $this->customerUses($dc, $customerId, $email, $phone) >= $dc->per_customer_limit) {
             $this->fail('orders.discount.per_customer');
         }
 
@@ -52,6 +52,29 @@ class DiscountValidator
             'rule' => ['type' => $dc->type->value, 'value' => (string) $dc->value, 'min_order' => (string) $dc->min_order,
                 'max_discount' => $dc->max_discount !== null ? (string) $dc->max_discount : null, 'free_shipping' => $dc->free_shipping],
         ];
+    }
+
+    /** Past uses by this shopper: same customer id, OR (for guests too) the same e-mail / phone on the usage's order. */
+    private function customerUses(DiscountCode $dc, ?int $customerId, ?string $email, ?string $phone): int
+    {
+        $email = $email ? mb_strtolower(trim($email)) : null;
+        $phone = $phone ? preg_replace('/\D+/', '', $phone) : null;
+        if (! $customerId && ! $email && ! $phone) {
+            return 0;
+        }
+
+        return DiscountCodeUsage::where('discount_code_id', $dc->id)->where(function ($q) use ($customerId, $email, $phone) {
+            $orders = fn ($sub) => $sub->select('id')->from('orders');
+            if ($customerId) {
+                $q->orWhere('customer_id', $customerId);
+            }
+            if ($email) {
+                $q->orWhereIn('order_id', fn ($sub) => $orders($sub)->whereRaw('LOWER(customer_email) = ?', [$email]));
+            }
+            if ($phone) {
+                $q->orWhereIn('order_id', fn ($sub) => $orders($sub)->whereRaw("REGEXP_REPLACE(customer_phone, '[^0-9]', '') = ?", [$phone]));
+            }
+        })->count();
     }
 
     /** @return array<string|int,bool> */

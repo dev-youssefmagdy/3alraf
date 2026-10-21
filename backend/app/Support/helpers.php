@@ -44,3 +44,26 @@ if (! function_exists('tenant_slug_from_host')) {
         return str_ends_with($host, $suffix) ? substr($host, 0, -strlen($suffix)) : null;
     }
 }
+
+if (! function_exists('central_url')) {
+    function central_url(string $path = '/'): string
+    {
+        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
+        $port = parse_url(config('app.url'), PHP_URL_PORT);
+
+        return $scheme.'://'.central_domain().($port ? ':'.$port : '').'/'.ltrim($path, '/');
+    }
+}
+
+if (! function_exists('country_flag')) {
+    /** ISO-3166 alpha-2 code -> flag emoji (regional indicator symbols). */
+    function country_flag(?string $code): string
+    {
+        $code = strtoupper((string) $code);
+        if (! preg_match('/^[A-Z]{2}$/', $code)) {
+            return '🌍';
+        }
+
+        return mb_chr(0x1F1E6 + ord($code[0]) - 65).mb_chr(0x1F1E6 + ord($code[1]) - 65);
+    }
+}

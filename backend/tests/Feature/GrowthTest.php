@@ -313,3 +313,17 @@ it('manages static pages, tiers, affiliates and payouts from the tenant admin', 
     expect(AffiliateCommission::first()->status)->toBe(CommissionStatus::PAID);
     $this->postJson("{$this->t}/affiliate-payouts/{$p2->id}/pay")->assertStatus(422);
 });
+
+it('recomputes the commission from the CUMULATIVE returned value and lets returns reduce lifetime sales', function () {
+    $svc = app(AffiliateCommissionService::class);
+    $ret = app(\App\Services\Orders\ReturnService::class);
+    $o = ($this->place)(4, $this->aff->id);                    // 400 @5% = 20.00
+    ($this->deliver)($o);
+    $c = AffiliateCommission::where('order_id', $o->id)->first();
+    $itemId = $o->items->first()->id;
+    $ret->approve($ret->request($o->refresh(), new \App\DTOs\Orders\ReturnRequestData([$itemId => 1], 'x', true, false)));
+    $ret->approve($ret->request($o->refresh(), new \App\DTOs\Orders\ReturnRequestData([$itemId => 1], 'y', true, false)));
+    // (400 - 200) x 5% = 10.00, mirrored on the order
+    expect((string) $c->fresh()->amount)->toBe('10.00')->and((string) $o->fresh()->affiliate_commission)->toBe('10.00');
+    expect($svc->lifetimeSales($this->aff))->toBe('200.00');   // 400 delivered - 200 returned
+});
