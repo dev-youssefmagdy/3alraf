@@ -43,6 +43,7 @@ class CategoryService
             throw ValidationException::withMessages(['category' => __('admin.category_has_children')]);
         }
         $this->images->deletePath($category->image);
+        $this->categories->update($category, ['image' => null]);
         $this->categories->delete($category);
     }
 

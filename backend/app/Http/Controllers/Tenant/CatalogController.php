@@ -10,6 +10,8 @@ use App\Http\Requests\Tenant\BulkEnableRequest;
 use App\Http\Requests\Tenant\TenantProductRequest;
 use App\Models\TenantProduct;
 use App\Repositories\Contracts\TenantProductRepositoryInterface;
+use App\Http\Requests\Qr\QrDownloadRequest;
+use App\Services\Qr\QrCodeManager;
 use App\Services\TenantCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,12 +20,12 @@ use Illuminate\Routing\Controllers\Middleware;
 
 class CatalogController extends Controller implements HasMiddleware
 {
-    public function __construct(private TenantCatalogService $service, private TenantProductRepositoryInterface $listings) {}
+    public function __construct(private TenantCatalogService $service, private TenantProductRepositoryInterface $listings, private QrCodeManager $qr) {}
 
     public static function middleware(): array
     {
         return [
-            new Middleware('can:catalog.view', only: ['index', 'datatable']),
+            new Middleware('can:catalog.view', only: ['index', 'datatable', 'qr']),
             new Middleware('can:catalog.create', only: ['available', 'bulkStore', 'validateBulk']),
             new Middleware('can:catalog.edit', only: ['edit', 'update', 'validateForm']),
             new Middleware('can:catalog.delete', only: ['destroy']),
@@ -63,7 +65,17 @@ class CatalogController extends Controller implements HasMiddleware
         $this->service->syncVariantRows($tenantProduct);
         $tenantProduct->load(['product.images', 'variants.variant.values']);
 
-        return view('tenant.catalog.form', ['tp' => $tenantProduct]);
+        return view('tenant.catalog.form', ['tp' => $tenantProduct, 'qrCodes' => $this->qr->listingCodes($tenantProduct)]);
+    }
+
+    /** PNG download of the product QR (or `?variant={tenant variant row id}`); generated on demand when missing. */
+    public function qr(QrDownloadRequest $request, TenantProduct $tenantProduct)
+    {
+        $tenantProduct->load('product');
+        $file = $this->qr->tenantDownload($tenantProduct, $request->variantId());
+        abort_if($file === null, 404);
+
+        return response($file[0], 200, ['Content-Type' => 'image/png', 'Content-Disposition' => 'attachment; filename="'.$file[1].'"', 'Cache-Control' => 'private, no-store']);
     }
 
     public function update(TenantProductRequest $request, TenantProduct $tenantProduct): JsonResponse

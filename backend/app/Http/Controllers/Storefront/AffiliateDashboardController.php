@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\Affiliates\AffiliateTracker;
-use App\Services\QrCodeService;
+use App\Http\Requests\Qr\QrDownloadRequest;
+use App\Services\Qr\QrCodeManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -29,13 +29,13 @@ class AffiliateDashboardController extends Controller
         return view('storefront.affiliate.products', ['affiliate' => $a, 'items' => $this->service->products($a)]);
     }
 
-    /** QR image (SVG) of the affiliate's unique link for a product. */
-    public function qr(string $locale, string $slug, QrCodeService $qr): Response
+    /** Stored PNG QR of the affiliate's unique link for a product (or ?variant=ID); generated on demand if it is missing. */
+    public function qr(string $locale, string $slug, QrDownloadRequest $request, QrCodeManager $qr): Response
     {
-        $product = Product::where('slug', $slug)->firstOrFail();
-        $url = $this->tracker->productUrl(auth('affiliate')->user(), $product);
+        $png = $qr->affiliatePng(auth('affiliate')->user(), $slug, $request->variantId());
+        abort_if($png === null, 404);
 
-        return response($qr->svg($url), 200, ['Content-Type' => 'image/svg+xml', 'Cache-Control' => 'private, max-age=3600']);
+        return response($png, 200, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, max-age=3600']);
     }
 
     public function requestPayout(): JsonResponse

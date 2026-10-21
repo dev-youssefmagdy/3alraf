@@ -29,6 +29,19 @@ class TenantProduct extends Model
         return $this->hasMany(TenantProductVariant::class);
     }
 
+    /** Make sure a tenant_product_variants row exists for every live central variant. */
+    public function ensureVariantRows(): void
+    {
+        $product = Product::query()->find($this->product_id);
+        if (! $product?->isVariable()) {
+            return;
+        }
+        $have = $this->variants()->pluck('product_variant_id')->all();
+        foreach ($product->variants()->whereNotIn('id', $have ?: [0])->pluck('id') as $variantId) {
+            $this->variants()->create(['product_variant_id' => $variantId, 'is_active' => true]);
+        }
+    }
+
     /** Effective selling price (sale if set and lower). */
     public function effectivePrice(): string
     {

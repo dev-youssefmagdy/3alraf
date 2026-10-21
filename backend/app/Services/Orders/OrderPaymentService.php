@@ -48,10 +48,11 @@ class OrderPaymentService
         if (! $this->canUploadProof($order)) {
             throw ValidationException::withMessages(['proof' => __('orders.proof_not_allowed')]);
         }
-        if ($order->payment_proof) {
-            Storage::disk(self::PROOF_DISK)->delete($order->payment_proof);
-        }
+        $old = $order->payment_proof;
         $path = $file->store('tenants/'.$order->tenant_id.'/payment-proofs', self::PROOF_DISK);
+        if ($old && $old !== $path) {
+            Storage::disk(self::PROOF_DISK)->delete($old);
+        }
         $order->update(['payment_proof' => $path, 'proof_status' => ProofStatus::PENDING, 'payment_status' => PaymentStatus::REVIEW]);
         event(new OrderPaymentProofUploaded($order));
 

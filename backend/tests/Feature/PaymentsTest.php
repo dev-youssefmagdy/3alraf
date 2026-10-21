@@ -358,6 +358,14 @@ it('keeps proofs on the private disk, served only to tenant admins and the order
     $order->refresh();
     Storage::disk('private')->assertExists($order->payment_proof);
     Storage::disk('media')->assertMissing($order->payment_proof);
+    // re-uploading replaces: the previous proof file is deleted (no orphan on the private disk)
+    $first = $order->payment_proof;
+    $bad(UploadedFile::fake()->create('second.pdf', 100, 'application/pdf'))->assertOk();
+    $order->refresh();
+    expect($order->payment_proof)->not->toBe($first);
+    Storage::disk('private')->assertMissing($first);
+    Storage::disk('private')->assertExists($order->payment_proof);
+    expect(Storage::disk('private')->allFiles())->toHaveCount(1);
     $this->get("{$this->s}/order/{$order->public_token}/proof")->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
     $this->get("{$this->s}/order/".\Illuminate\Support\Str::uuid().'/proof')->assertNotFound();
     $this->get("{$this->t}/orders/{$order->id}/proof")->assertRedirect();                                              // guests are sent to login

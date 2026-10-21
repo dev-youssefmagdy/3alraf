@@ -120,5 +120,6 @@ class RepositoryServiceProvider extends ServiceProvider
         CustomerRepositoryInterface::class => CustomerRepository::class,
         CustomerAddressRepositoryInterface::class => CustomerAddressRepository::class,
         CartRepositoryInterface::class => CartRepository::class,
+        \App\Repositories\Contracts\QrCodeRepositoryInterface::class => \App\Repositories\Eloquent\QrCodeRepository::class,
     ];
 }

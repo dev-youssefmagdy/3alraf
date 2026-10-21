@@ -189,7 +189,9 @@ function init() {
             } else $f.addClass('hidden');
         }
         // preselect the first in-stock variant
-        const start = picker.variants.find((v) => v.in_stock) || picker.variants[0];
+        // (a QR / shared link can carry ?variant={product_variant_id} to preselect that variant)
+        const wanted = parseInt(new URLSearchParams(location.search).get('variant'), 10);
+        const start = (wanted && picker.variants.find((v) => v.id === wanted)) || picker.variants.find((v) => v.in_stock) || picker.variants[0];
         if (nGroups && start) picker.options.forEach((o) => { const val = o.values.find((x) => start.values.includes(x.id)); if (val) sel[o.id] = val.id; });
         $p.on('click', '[data-option]', function () {
             const gid = $(this).closest('[data-option-group]').data('option-group'), id = $(this).data('option');

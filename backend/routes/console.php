@@ -17,3 +17,6 @@ Schedule::command('backup:monitor')->dailyAt('03:30');
 Schedule::command('activitylog:clean')->dailyAt('04:00');
 Schedule::command('queue:prune-failed --hours=336')->dailyAt('04:15');
 Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('04:30');
+
+// Media hygiene: weekly report of unreferenced files (dry run; delete manually with `media:prune-orphans`).
+Schedule::command('media:prune-orphans --dry-run')->weeklyOn(0, '05:00');

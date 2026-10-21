@@ -42,4 +42,24 @@
             <x-form-actions :cancel="route('tenant.catalog.index')" />
         </form>
     </x-card>
+    @php($pq = $qrCodes->get(\App\Models\TenantProduct::class.':'.$tp->id))
+    <x-card class="mt-4 max-w-4xl">
+        <h3 class="mb-1 font-semibold">{{ __('admin.qr_code') }}</h3>
+        <p class="mb-3 text-xs text-slate-500">{{ __('admin.qr_hint') }}</p>
+        <div class="flex flex-wrap gap-6">
+            <div class="text-center">
+                <img src="{{ $pq?->file_url ?? route('tenant.catalog.qr', $tp) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
+                <div class="mt-1 text-xs text-slate-500">{{ __('admin.qr_product') }}</div>
+                <a href="{{ route('tenant.catalog.qr', $tp) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+            </div>
+            @foreach ($tp->variants->filter(fn ($tv) => $tv->is_active && $tv->variant && ! $tv->variant->trashed() && $tv->variant->is_active) as $tv)
+                @php($vq = $qrCodes->get(\App\Models\TenantProductVariant::class.':'.$tv->id))
+                <div class="text-center">
+                    <img src="{{ $vq?->file_url ?? route('tenant.catalog.qr', [$tp, 'variant' => $tv->id]) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
+                    <div class="mt-1 text-xs text-slate-500">{{ $tv->variant->label() }}</div>
+                    <a href="{{ route('tenant.catalog.qr', [$tp, 'variant' => $tv->id]) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+                </div>
+            @endforeach
+        </div>
+    </x-card>
 </x-layouts.admin>

@@ -7,6 +7,7 @@ use App\DTOs\ProductVariantData;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Services\Qr\QrCodeManager;
 use App\Support\Slug;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,7 @@ class ProductService
         private ProductRepositoryInterface $products,
         private ImageUploadService $images,
         private BarcodeService $barcodes,
+        private QrCodeManager $qr,
     ) {}
 
     public function create(ProductData $dto): Product
@@ -31,8 +33,10 @@ class ProductService
     {
         return DB::transaction(function () use ($product, $dto) {
             $product = $this->products->update($product, $this->payload($dto, $product));
+            $product = $this->finish($product, $dto);
+            $this->qr->queueCatalogProduct($product->id); // slug / variants / status may have changed: refresh every tenant's codes
 
-            return $this->finish($product, $dto);
+            return $product;
         });
     }
 
@@ -103,8 +107,9 @@ class ProductService
     private function attachVariantImage(ProductVariant $variant, ProductVariantData $row): void
     {
         if ($row->image) {
-            $this->images->removeByIds($variant, $variant->images()->pluck('id')->all());
-            $this->images->attach($variant, [$row->image], 'variants');
+            $old = $variant->images()->pluck('id')->all();
+            $this->images->attach($variant, [$row->image], 'variants'); // new first, then drop the replaced files
+            $this->images->removeByIds($variant, $old);
         }
     }
 }

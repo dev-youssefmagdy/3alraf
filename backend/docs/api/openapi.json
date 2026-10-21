@@ -779,7 +779,7 @@
         },
         "/api/v1/affiliate/products/{slug}/qr": {
             "get": {
-                "summary": "SVG QR of the affiliate's product link (send the bearer token; render with an SVG widget)",
+                "summary": "PNG QR (logo, high error correction) of the affiliate's product link; `?variant=ID` for one variant. Send the bearer token",
                 "operationId": "affiliate_qr_get",
                 "tags": [
                     "affiliate"

@@ -13,6 +13,9 @@ class AffiliateProductResource extends JsonResource
         $p = $this->product;
 
         return ['id' => $p->id, 'slug' => $p->slug, 'name' => $p->name, 'image' => $p->primaryImageUrl(), 'price' => (string) $this->effectivePrice(),
-            'link' => $this->affiliate_url, 'qr_url' => api_route('affiliate.qr', ['slug' => $p->slug])];
+            'link' => $this->affiliate_url,
+            // stored PNG on the media CDN; the authenticated route below regenerates it on demand if it is missing
+            'qr_url' => $this->qr_url ?? api_route('affiliate.qr', ['slug' => $p->slug]),
+            'variants' => collect($this->variant_links)->map(fn ($v) => $v + ['qr_url' => $v['qr_url'] ?? api_route('affiliate.qr', ['slug' => $p->slug]).'?variant='.$v['id']])->all()];
     }
 }

@@ -397,7 +397,7 @@ it('keeps customer and affiliate tokens apart and serves the affiliate area', fu
     $this->getJson("{$this->api}/affiliate/dashboard", $h)->assertOk()->assertJsonStructure(['data' => ['affiliate', 'stats' => ['clicks', 'orders', 'tier', 'commissions'], 'payouts']]);
     $p = $this->getJson("{$this->api}/affiliate/products", $h)->assertOk();
     expect($p->json('data.0.link'))->toContain('http')->and($p->json('data.0.qr_url'))->toContain('/api/v1/affiliate/products/');
-    $this->get("{$this->api}/affiliate/products/cheap/qr", $h)->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
+    $this->get("{$this->api}/affiliate/products/cheap/qr", $h)->assertOk()->assertHeader('Content-Type', 'image/png');
     $this->postJson("{$this->api}/affiliate/payouts", [], $h)->assertStatus(422);   // nothing approved to pay out
     $this->getJson("{$this->api}/affiliate/payouts", $h)->assertOk();
     $this->postJson("{$this->api}/affiliate/logout", [], $h)->assertOk();

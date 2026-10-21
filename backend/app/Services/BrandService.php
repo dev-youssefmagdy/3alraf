@@ -27,6 +27,8 @@ class BrandService
         if ($brand->products()->exists()) {
             throw ValidationException::withMessages(['brand' => __('admin.brand_has_products')]);
         }
+        $this->images->deletePath($brand->logo); // soft delete has no restore UI: do not keep the file
+        $this->brands->update($brand, ['logo' => null]);
         $this->brands->delete($brand);
     }
 

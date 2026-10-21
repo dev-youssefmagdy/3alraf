@@ -6,11 +6,12 @@ use App\Models\Image;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Format;
 use Intervention\Image\ImageManager;
 
-/** Stores uploads on the `media` (CDN) disk as webp (max 1600px) + 400px thumbnail, content-hashed names (immutable), namespaced tenants/{id}/ or catalog/. */
+/** Stores uploads on the `media` (CDN) disk as webp (max 1600px) + 400px thumbnail, names = content hash + random suffix (unique per upload => immutable for CDN caching and never shared between two owners, so deleting one owner's file cannot break another), namespaced tenants/{id}/ or catalog/. */
 class ImageUploadService
 {
     private ImageManager $manager;
@@ -41,7 +42,7 @@ class ImageUploadService
 
         $img = $this->manager->decodePath($file->getRealPath());
         $main = (string) (clone $img)->scaleDown(1600, 1600)->encodeUsingFormat(Format::WEBP, quality: 85);
-        $name = substr(hash('sha256', $main), 0, 40); // content hash: same bytes => same URL, safe for `immutable` caching
+        $name = substr(hash('sha256', $main), 0, 32).'-'.Str::lower(Str::random(8)); // unique per upload: safe for `immutable` caching, never shared between owners
         $disk->put("$dir/$name.webp", $main);
         $disk->put("$dir/{$name}_thumb.webp", (string) (clone $img)->cover(400, 400)->encodeUsingFormat(Format::WEBP, quality: 80));
 
@@ -51,9 +52,10 @@ class ImageUploadService
     /** Store a single file for a plain column (logo/category image); returns path. */
     public function storeSingle(UploadedFile $file, string $dir, ?string $old = null): string
     {
+        $path = $this->store($file, $dir)['path']; // store first: a failing upload must not cost the old file
         $this->deletePath($old);
 
-        return $this->store($file, $dir)['path'];
+        return $path;
     }
 
     /** Attach uploaded files to any model using HasImages. @param  UploadedFile[]  $files */

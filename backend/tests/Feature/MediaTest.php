@@ -28,11 +28,11 @@ it('stores tenant uploads under tenants/{id} with content-hash names and catalog
     $svc = new ImageUploadService;
     $file = UploadedFile::fake()->image('a.jpg', 900, 900);
     $r = $svc->store($file, 'banners');
-    expect($r['path'])->toStartWith("tenants/{$this->tenant->id}/banners/")->and($r['path'])->toMatch('#/[0-9a-f]{40}\.webp$#')
+    expect($r['path'])->toStartWith("tenants/{$this->tenant->id}/banners/")->and($r['path'])->toMatch('#/[0-9a-f]{32}-[a-z0-9]{8}\.webp$#')
         ->and($r['thumb_path'])->toEndWith('_thumb.webp');
     Storage::disk('media')->assertExists([$r['path'], $r['thumb_path']]);
     Storage::disk('public')->assertMissing($r['path']);
-    expect($svc->store($file, 'banners')['path'])->toBe($r['path']); // deterministic => immutable cache friendly
+    expect($svc->store($file, 'banners')['path'])->not->toBe($r['path']); // unique per upload: two owners never share (and delete) one file
 
     app()->forgetInstance('currentTenant');
     app()->offsetUnset('currentTenant');

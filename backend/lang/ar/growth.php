@@ -25,6 +25,7 @@ return [
     'commission_pending' => 'عمولة معلّقة', 'commission_approved' => 'عمولة معتمدة', 'commission_paid' => 'عمولة مدفوعة',
     'pending_hint' => 'تُعتمد بعد :days يوماً من التسليم', 'available' => 'متاح للسحب', 'request_payout' => 'طلب سحب', 'commissions' => 'العمولات',
     'dashboard' => 'لوحة التحكم', 'my_links' => 'المنتجات والروابط', 'links_intro' => 'شارك هذه الروابط أو رموز QR الخاصة بك. الطلبات خلال 30 يوماً من النقرة تمنحك عمولة.',
+    'variant_links' => 'روابط وQR المتغيرات',
     'copy' => 'نسخ الرابط', 'copied' => 'تم نسخ الرابط.',
     'join_program' => 'انضم لبرنامج التسويق بالعمولة', 'register' => 'تسجيل', 'no_account' => 'ليس لديك حساب؟',
     'register_intro' => 'أنشئ حسابك ويمكنك الدخول بعد موافقة المتجر.', 'registered_pending' => 'تم التسجيل. حسابك بانتظار الموافقة.',

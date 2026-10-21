@@ -9,11 +9,10 @@ use App\Http\Resources\Api\AffiliateDashboardResource;
 use App\Http\Resources\Api\AffiliateProductResource;
 use App\Http\Resources\Api\AffiliateResource;
 use App\Http\Resources\Api\PayoutResource;
-use App\Models\Product;
 use App\Services\Affiliates\AffiliateService;
-use App\Services\Affiliates\AffiliateTracker;
 use App\Services\Api\ApiAuthService;
-use App\Services\QrCodeService;
+use App\Http\Requests\Qr\QrDownloadRequest;
+use App\Services\Qr\QrCodeManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -62,12 +61,13 @@ class AffiliateController extends ApiController
         return $this->list(AffiliateProductResource::collection($this->service->products($r->user())));
     }
 
-    /** SVG QR of the affiliate's product link (send the bearer token; render with an SVG widget). */
-    public function qr(Request $r, string $slug, AffiliateTracker $tracker, QrCodeService $qr): Response
+    /** PNG QR (logo, high error correction) of the affiliate's product link; `?variant=ID` for one variant. Send the bearer token. */
+    public function qr(QrDownloadRequest $request, string $slug, QrCodeManager $qr): Response
     {
-        $url = $tracker->productUrl($r->user(), Product::where('slug', $slug)->where('is_active', true)->firstOrFail());
+        $png = $qr->affiliatePng($request->user(), $slug, $request->variantId());
+        abort_if($png === null, 404);
 
-        return response($qr->svg($url), 200, ['Content-Type' => 'image/svg+xml', 'Cache-Control' => 'private, max-age=3600']);
+        return response($png, 200, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, max-age=3600']);
     }
 
     public function payouts(Request $r): JsonResponse

@@ -25,6 +25,7 @@ return [
     'commission_pending' => 'Pending commission', 'commission_approved' => 'Approved commission', 'commission_paid' => 'Paid commission',
     'pending_hint' => 'Approved :days days after delivery', 'available' => 'Available for payout', 'request_payout' => 'Request payout', 'commissions' => 'Commissions',
     'dashboard' => 'Dashboard', 'my_links' => 'Products & links', 'links_intro' => 'Share these unique links or QR codes. Orders placed within 30 days of a click earn you commission.',
+    'variant_links' => 'Variant links & QR',
     'copy' => 'Copy link', 'copied' => 'Link copied.',
     'join_program' => 'Join the affiliate program', 'register' => 'Register', 'no_account' => 'No account yet?',
     'register_intro' => 'Create your account. You can sign in once the store approves it.', 'registered_pending' => 'Registered. Your account is awaiting approval.',

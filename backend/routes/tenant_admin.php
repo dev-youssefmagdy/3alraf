@@ -57,6 +57,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('catalog/available', [CatalogController::class, 'available'])->name('catalog.available');
         Route::post('catalog/bulk/validate', [CatalogController::class, 'validateBulk'])->name('catalog.bulk.validate');
         Route::post('catalog/bulk', [CatalogController::class, 'bulkStore'])->name('catalog.bulk.store');
+        Route::get('catalog/{tenantProduct}/qr', [CatalogController::class, 'qr'])->name('catalog.qr');
         Route::post('catalog/validate/{tenantProduct}', [CatalogController::class, 'validateForm'])->name('catalog.validate');
         Route::resource('catalog', CatalogController::class)->only(['index', 'edit', 'update', 'destroy'])->parameters(['catalog' => 'tenantProduct']);
 

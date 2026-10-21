@@ -4,15 +4,15 @@ namespace App\Services;
 
 use App\DTOs\BulkEnableData;
 use App\DTOs\TenantProductData;
-use App\Models\Product;
 use App\Models\TenantProduct;
 use App\Repositories\Contracts\TenantProductRepositoryInterface;
+use App\Services\Qr\QrCodeManager;
 use Illuminate\Support\Facades\DB;
 
 /** Tenant listing of central products: price / sale price / cost / status (+ per-variant overrides). */
 class TenantCatalogService
 {
-    public function __construct(private TenantProductRepositoryInterface $listings) {}
+    public function __construct(private TenantProductRepositoryInterface $listings, private QrCodeManager $qr) {}
 
     /** @return int number of products enabled */
     public function enableBulk(BulkEnableData $dto): int
@@ -28,6 +28,7 @@ class TenantCatalogService
                     'cost' => $row['cost'], 'is_active' => $row['is_active'],
                 ]);
                 $this->syncVariantRows($tp);
+                $this->qr->listingSaved($tp);
                 $n++;
             }
 
@@ -47,6 +48,8 @@ class TenantCatalogService
                 ]);
             }
 
+            $this->qr->listingSaved($tp);
+
             return $tp;
         });
     }
@@ -54,19 +57,13 @@ class TenantCatalogService
     /** Disable the product for this tenant (removes the listing). */
     public function delete(TenantProduct $tp): void
     {
+        $this->qr->deleteFor($tp);
         $this->listings->delete($tp);
     }
 
     /** Make sure a tenant_product_variants row exists for every live central variant. */
     public function syncVariantRows(TenantProduct $tp): void
     {
-        $product = Product::query()->find($tp->product_id);
-        if (! $product?->isVariable()) {
-            return;
-        }
-        $have = $tp->variants()->pluck('product_variant_id')->all();
-        foreach ($product->variants()->whereNotIn('id', $have ?: [0])->pluck('id') as $variantId) {
-            $tp->variants()->create(['product_variant_id' => $variantId, 'is_active' => true]);
-        }
+        $tp->ensureVariantRows();
     }
 }

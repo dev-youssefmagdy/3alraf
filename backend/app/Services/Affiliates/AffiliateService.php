@@ -12,6 +12,7 @@ use App\Models\TenantProduct;
 use App\Repositories\Contracts\AffiliateCommissionRepositoryInterface;
 use App\Repositories\Contracts\AffiliatePayoutRepositoryInterface;
 use App\Repositories\Contracts\AffiliateRepositoryInterface;
+use App\Services\Qr\QrCodeManager;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +25,7 @@ class AffiliateService
         private AffiliateCommissionRepositoryInterface $commissions,
         private AffiliateCommissionService $commissionService,
         private AffiliateTracker $tracker,
+        private QrCodeManager $qr,
     ) {}
 
     public function find(int|string $id): Affiliate
@@ -39,11 +41,15 @@ class AffiliateService
 
     public function setStatus(Affiliate $a, AffiliateStatus $status): Affiliate
     {
-        return $this->affiliates->update($a, ['status' => $status, 'approved_at' => $status === AffiliateStatus::APPROVED ? ($a->approved_at ?? now()) : $a->approved_at]);
+        $a = $this->affiliates->update($a, ['status' => $status, 'approved_at' => $status === AffiliateStatus::APPROVED ? ($a->approved_at ?? now()) : $a->approved_at]);
+        $this->qr->affiliateChanged($a); // approved => QR for every product/variant, otherwise removed
+
+        return $a;
     }
 
     public function delete(Affiliate $a): void
     {
+        $this->qr->deleteForAffiliate($a);
         $this->affiliates->delete($a);
     }
 
@@ -64,12 +70,22 @@ class AffiliateService
         ];
     }
 
-    /** Sellable products with the affiliate's unique link. */
+    /** Sellable products with the affiliate's unique link + stored QR (->qr_url) and, for variable products, per-variant links/QR (->variant_links). */
     public function products(Affiliate $a)
     {
+        $codes = $this->qr->affiliateCodes($a);
+
         return TenantProduct::query()->where('is_active', true)->whereHas('product', fn ($q) => $q->where('is_active', true))
-            ->with(['product.images'])->latest('id')->get()
-            ->each(fn ($tp) => $tp->setAttribute('affiliate_url', $this->tracker->productUrl($a, $tp->product)));
+            ->with(['product.images', 'variants.variant.values'])->latest('id')->get()
+            ->each(function (TenantProduct $tp) use ($a, $codes) {
+                $tp->setAttribute('affiliate_url', $this->tracker->productUrl($a, $tp->product));
+                $tp->setAttribute('qr_url', $codes->get($this->qr->codeKey($tp))?->file_url);
+                $tp->setAttribute('variant_links', $tp->variants->filter(fn ($tv) => $tv->is_active && $tv->variant && ! $tv->variant->trashed() && $tv->variant->is_active)->map(fn ($tv) => [
+                    'id' => $tv->product_variant_id, 'label' => $tv->variant->label(), 'sku' => $tv->variant->sku,
+                    'link' => $this->qr->url(current_tenant(), $tp->product->slug, $tv->product_variant_id, $a),
+                    'qr_url' => $codes->get($this->qr->codeKey($tv))?->file_url,
+                ])->values()->all());
+            });
     }
 
     /** Pays out every approved, not yet requested commission. */
