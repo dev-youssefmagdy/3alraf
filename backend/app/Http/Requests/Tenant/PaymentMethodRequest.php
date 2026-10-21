@@ -5,6 +5,7 @@ namespace App\Http\Requests\Tenant;
 use App\Enums\FeeBearer;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentProvider;
+use App\Models\PaymentMethod;
 use Illuminate\Validation\Rule;
 
 class PaymentMethodRequest extends BaseRequest
@@ -13,7 +14,16 @@ class PaymentMethodRequest extends BaseRequest
     {
         $type = PaymentMethodType::tryFrom((string) $this->input('type'));
         $rules = $this->translatable('name') + $this->translatable('instructions', false, 2000) + [
-            'type' => ['required', Rule::enum(PaymentMethodType::class)],
+            'type' => ['required', Rule::enum(PaymentMethodType::class), function ($attr, $value, $fail) {
+                // exactly one COD per tenant (the default one): no second COD, and the default one cannot be turned into something else
+                $existing = $this->id() ? PaymentMethod::find($this->id()) : null;
+                if ($value === 'cod' && PaymentMethod::where('type', 'cod')->when($existing, fn ($q) => $q->whereKeyNot($existing->id))->exists()) {
+                    $fail(__('ops.cod_exists'));
+                }
+                if ($existing?->type === PaymentMethodType::COD && $value !== 'cod') {
+                    $fail(__('ops.cod_cannot_change'));
+                }
+            }],
             'provider' => ['required', Rule::in($type ? array_keys(PaymentProvider::forType($type)) : [])],
             'account_number' => [$type === PaymentMethodType::WALLET ? 'required' : 'nullable', 'string', 'max:100'],
             'requires_proof' => ['nullable', 'boolean'],

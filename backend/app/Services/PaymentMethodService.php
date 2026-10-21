@@ -12,6 +12,20 @@ class PaymentMethodService extends CrudService
         parent::__construct($repo);
     }
 
+    public function toggle(Model $method): Model
+    {
+        $method->update(['is_active' => ! $method->is_active]);
+
+        return $method;
+    }
+
+    protected function guardDelete(Model $model): void
+    {
+        if ($model->type === \App\Enums\PaymentMethodType::COD) {
+            $this->block('ops.cod_cannot_delete');
+        }
+    }
+
     /** Credentials are stored encrypted (model cast). Blank secret on edit keeps the stored value; switching provider drops the old ones. */
     protected function payload(object $dto, ?Model $model = null): array
     {

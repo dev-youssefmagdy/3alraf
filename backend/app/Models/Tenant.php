@@ -34,4 +34,10 @@ class Tenant extends Model
 
         return (bool) $lang?->isRtl();
     }
+
+    /** settings.cod_collect_shipping_upfront (default true; PAYMENTS_COD_UPFRONT_DEFAULT only changes the fallback, e.g. legacy test env). */
+    public function codCollectsShippingUpfront(): bool
+    {
+        return (bool) (($this->settings ?? [])['cod_collect_shipping_upfront'] ?? config('payments.cod_upfront_default', true));
+    }
 }

@@ -72,10 +72,11 @@ it('computes the sales and net profit reports from orders per CALCULATIONS.md', 
     $total = number_format((float) ($delivered->total + $confirmed->total), 2);
     expect(card($sales, 'sales'))->toBe($total)->and(card($sales, 'orders'))->toBe('2')
         ->and(card($sales, 'costs'))->toBe(number_format((float) ($delivered->cogs + $confirmed->cogs), 2))
-        ->and(card($sales, 'net_profit'))->toBe(number_format((float) $delivered->net_profit, 2));   // profit only on delivered
+        ->and(card($sales, 'net_profit'))->toBe(number_format((float) ($delivered->net_profit + $confirmed->refresh()->net_profit), 2));   // profit on every ADMIN-confirmed order (not pending/cancelled)
+    expect((string) $pending->refresh()->net_profit)->toBe('0.00')->and((float) $confirmed->net_profit)->toBeGreaterThan(0);
 
     $np = reportData($this, "{$this->t}/reports/net-profit");
-    expect(card($np, 'net_profit'))->toBe(number_format((float) $delivered->net_profit - 10, 2))
+    expect(card($np, 'net_profit'))->toBe(number_format((float) ($delivered->net_profit + $confirmed->net_profit) - 10, 2))
         ->and(card($np, 'expenses'))->toBe('10.00');
 
     $prod = reportData($this, "{$this->t}/reports/products");

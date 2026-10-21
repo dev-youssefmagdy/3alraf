@@ -19,7 +19,7 @@
 
     <div data-for-type="wallet" class="grid gap-4 sm:grid-cols-2">
         <x-input name="account_number" :label="__('ops.fields.account_number')" :value="$model->account_number" />
-        <div class="flex items-end"><x-checkbox name="requires_proof" :label="__('ops.fields.requires_proof')" :checked="$model->requires_proof" /></div>
+        <p class="flex items-end text-xs text-slate-500">{{ __('ops.proof_always_required') }}</p>
     </div>
 
     <div class="space-y-3 border-t border-slate-100 pt-4">

@@ -2,6 +2,16 @@
 
 // Phase 4 orders strings
 return [
+    'confirm_payment_required' => 'يجب استلام الدفع والتحقق منه قبل تأكيد الطلب.',
+    'prepay_unavailable' => 'طريقة دفع رسوم الشحن المختارة غير متاحة.',
+    'prepay_required' => 'اختر طريقة دفع إلكترونية أو محفظة لدفع رسوم التوصيل مقدماً.',
+    'payment_start_failed' => 'تعذر بدء الدفع، حاول مرة أخرى بعد قليل.',
+    'refund_failed' => 'لم تؤكد بوابة الدفع الاسترداد. لم يتم تسجيل أي استرداد.',
+    'cancel_refund_failed_note' => 'تم الإلغاء لكن استرداد البوابة فشل: استرد يدوياً أو أعد المحاولة.',
+    'paid_after_cancel_note' => 'تم استلام دفعة بعد إلغاء الطلب: يجب ردها.',
+    'pay_now' => 'ادفع الآن',
+    'prepaid_shipping' => 'رسوم التوصيل المدفوعة مقدماً',
+    'cod_amount' => 'المبلغ عند الاستلام',
     'orders' => 'الطلبات',
     'order' => 'طلب',
     'returns' => 'المرتجعات',
@@ -130,6 +140,7 @@ return [
         'payment_status' => [
             'unpaid' => 'غير مدفوع',
             'pending_review' => 'قيد المراجعة',
+            'partially_paid' => 'مدفوع جزئياً (الباقي عند الاستلام)',
             'paid' => 'مدفوع',
             'failed' => 'فشل',
             'partially_refunded' => 'مسترد جزئياً',

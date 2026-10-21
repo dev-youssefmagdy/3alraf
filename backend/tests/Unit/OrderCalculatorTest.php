@@ -58,3 +58,15 @@ it('handles exclusive and inclusive tax', function () {
     $in = calc(['discount' => null, 'shipping' => null, 'feePercent' => '0', 'feeFixed' => '0', 'taxRate' => '14', 'pricesIncludeTax' => true, 'affiliatePercent' => '0']);
     expect($in->tax)->toBe('30.70')->and($in->total)->toBe('250.00');   // 250 * 14/114 = 30.70 (included)
 });
+
+it('splits COD: customer prepays shipping_net, the carrier collects the rest (worked example extended)', function () {
+    $t = calc(['isCod' => true, 'codCollectShippingUpfront' => true]);
+    expect($t->total)->toBe('267.50')->and($t->prepaidShipping)->toBe('30.00')->and($t->codAmount)->toBe('237.50')   // 267.50 - 30
+        ->and($t->netProfit)->toBe('73.50');                                                                        // split never changes profit
+    $full = calc(['isCod' => true, 'codCollectShippingUpfront' => false]);                                          // setting off: carrier collects it all
+    expect($full->prepaidShipping)->toBe('0.00')->and($full->codAmount)->toBe('267.50');
+    $free = calc(['isCod' => true, 'shipping' => ['price' => '30', 'cost' => '25', 'free_over' => '200']]);          // free shipping: nothing to prepay
+    expect($free->shippingNet)->toBe('0.00')->and($free->prepaidShipping)->toBe('0.00')->and($free->codAmount)->toBe($free->total);
+    $card = calc();                                                                                                 // non-COD: no cod_amount
+    expect($card->codAmount)->toBe('0.00')->and($card->prepaidShipping)->toBe('0.00');
+});

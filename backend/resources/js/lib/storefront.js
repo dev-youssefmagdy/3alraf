@@ -221,6 +221,9 @@ function init() {
         if (Number(t.tax) > 0) h += row(T.tax, money(t.tax));
         if (Number(t.paymentFeeCharged) > 0) h += row(T.payment_fee, money(t.paymentFeeCharged));
         h += row(T.total, '<span class="text-brand-600">' + money(t.total) + '</span>', 'border-t border-slate-100 pt-2 text-base font-extrabold');
+        if (Number(t.prepaidShipping) > 0 && Number(t.codAmount) > 0) { // COD split: delivery fee now, the rest on delivery
+            h += row(T.prepaid_now, money(t.prepaidShipping), 'text-sm') + row(T.cod_balance, money(t.codAmount), 'text-sm');
+        }
         $dl.html(h);
     }
 
@@ -260,9 +263,10 @@ function init() {
             return $a.length && $a.val() ? String($a.data('city')) : String($f.find('[name=city_id]').val() || '');
         };
         const quote = (fromApply) => {
-            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, [name=discount_code]').serialize();
+            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, input[name=prepay_method_id]:checked, [name=discount_code]').serialize();
             return $.post(sf.routes.quote, data).done((r) => {
                 renderTotals($f.find('[data-totals]'), r.data.totals, { shipping: true });
+                togglePrepay(r.data.totals);
                 if (fromApply && $f.find('[name=discount_code]').val()) toastr.success(T.code_applied);
             }).fail((xhr) => {
                 const errs = xhr.responseJSON?.errors || {};
@@ -272,6 +276,12 @@ function init() {
         };
         function renderLines(c) {
             $f.find('[data-checkout-lines]').html(c.items.map((i) => '<div class="flex justify-between gap-2 py-2"><span>' + esc(i.name) + ' <span class="text-slate-400">&times; ' + i.qty + '</span></span><b>' + money(i.qty * i.unit_price) + '</b></div>').join(''));
+        }
+        function togglePrepay(t) { // COD with a delivery fee to prepay: ask for the online/wallet method
+            const cod = $f.find('input[name=payment_method_id]:checked').data('type') === 'cod';
+            const need = cod && t && Number(t.prepaidShipping) > 0;
+            $f.find('[data-prepay]').toggleClass('hidden', !need);
+            if (!need) $f.find('input[name=prepay_method_id]').prop('checked', false);
         }
         function applyCodRule() {
             $f.find('[data-method-row]').each(function () {
@@ -300,7 +310,7 @@ function init() {
             applyCodRule(); quote();
         }
         $f.on('change', 'input[name=ship_opt]', function () { selectShipping(this.value); });
-        $f.on('change', 'input[name=payment_method_id]', () => quote());
+        $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => quote());
         $f.on('change', 'input[name=address_id]', function () {
             $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
             loadShipping();
@@ -313,6 +323,13 @@ function init() {
         // initial state (a saved address may be preselected)
         $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
         loadShipping();
+    });
+
+    /* ---------- retry an online payment from the order page ---------- */
+    $(document).on('click', '[data-pay-action]', function () {
+        const $b = $(this).prop('disabled', true);
+        $.post($b.data('pay-action')).done((r) => { location.href = r.data?.pay_url || r.redirect; })
+            .fail((xhr) => { toastr.error(firstError(xhr)); $b.prop('disabled', false); });
     });
 
     loadCart();

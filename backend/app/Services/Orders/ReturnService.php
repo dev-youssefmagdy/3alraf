@@ -4,7 +4,6 @@ namespace App\Services\Orders;
 
 use App\DTOs\Orders\ReturnRequestData;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Enums\StockMovementType;
@@ -13,7 +12,7 @@ use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Repositories\Contracts\OrderReturnRepositoryInterface;
-use App\Services\Payments\PaymentGatewayFactory;
+use App\Services\Payments\RefundService;
 use App\Services\Stock\StockLedger;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 /** Returns (requested -> approved [restock] | rejected) and refunds (approved -> refunded). Math: docs/CALCULATIONS.md §Returns & refunds. */
 class ReturnService
 {
-    public function __construct(private OrderReturnRepositoryInterface $returns, private StockLedger $ledger, private PaymentGatewayFactory $gateways) {}
+    public function __construct(private OrderReturnRepositoryInterface $returns, private StockLedger $ledger, private RefundService $refunds, private OrderProfitService $profit) {}
 
     public function find(int|string $id): OrderReturn
     {
@@ -106,6 +105,7 @@ class ReturnService
             }
 
             app(\App\Services\Affiliates\AffiliateCommissionService::class)->syncOrder($order->refresh());
+            $this->profit->recalculate($order->refresh()); // returns reduce orders.net_profit
 
             return $ret->refresh();
         });
@@ -160,8 +160,10 @@ class ReturnService
                 throw ValidationException::withMessages(['amount' => __('orders.refund_exceeds', ['max' => $max])]);
             }
 
-            if ($order->paymentMethod?->type === PaymentMethodType::ONLINE && $order->gateway_reference) {
-                $this->gateways->make($order->paymentMethod)->refund($order->gateway_reference, $amount);
+            // Online money goes back through the provider; mark refunded ONLY on provider success.
+            $res = $this->refunds->refundOnline($order, $amount, (bool) $ret->refund_shipping);
+            if ($res !== null && $res->status !== 'refunded') {
+                throw ValidationException::withMessages(['amount' => __('orders.refund_failed')]);
             }
 
             $refunded = Money::add((string) $order->refunded_amount, $amount);

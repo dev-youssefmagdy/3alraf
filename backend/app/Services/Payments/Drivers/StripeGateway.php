@@ -2,22 +2,13 @@
 
 namespace App\Services\Payments\Drivers;
 
-use App\Services\Payments\AbstractGateway;
+use App\Services\Payments\NotImplementedGateway;
 
-class StripeGateway extends AbstractGateway
+/** Not implemented yet (see NotImplementedGateway). */
+class StripeGateway extends NotImplementedGateway
 {
     public function key(): string
     {
         return 'stripe';
-    }
-
-    protected function secretKey(): string
-    {
-        return 'webhook_secret';
-    }
-
-    protected function signatureHeader(): string
-    {
-        return 'Stripe-Signature';
     }
 }

@@ -3,10 +3,8 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\CheckoutData;
-use App\DTOs\Payments\PaymentIntentData;
 use App\DTOs\Payments\PaymentResult;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Events\OrderPlaced;
 use App\Models\Branch;
@@ -14,7 +12,6 @@ use App\Models\DiscountCodeUsage;
 use App\Models\FlashSaleItem;
 use App\Models\Order;
 use App\Repositories\Contracts\OrderRepositoryInterface;
-use App\Services\Payments\PaymentGatewayFactory;
 use App\Services\Stock\StockLedger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,8 +24,8 @@ class OrderPlacementService
         private OrderQuoteService $quotes,
         private OrderRepositoryInterface $orders,
         private StockLedger $ledger,
-        private PaymentGatewayFactory $gateways,
         private \App\Services\Affiliates\AffiliateCommissionService $affiliates,
+        private OrderPaymentService $payments,
     ) {}
 
     /** @return array{order:Order,payment:?PaymentResult} */
@@ -40,17 +37,18 @@ class OrderPlacementService
 
         $order = DB::transaction(function () use ($d, $cartLines) {
             $q = $this->quotes->quote($cartLines, $d, true);
+            $this->quotes->assertPrepay($q);
             $t = $q['totals'];
             $branchId = $this->pickBranch($q['lines']);
 
             $order = $this->orders->create([
                 'public_token' => (string) Str::uuid(), 'customer_id' => $d->customerId, 'customer_name' => $d->name, 'customer_phone' => $d->phone,
                 'customer_email' => $d->email, 'city_id' => $d->cityId, 'address' => $d->address, 'notes' => $d->notes, 'branch_id' => $branchId,
-                'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id,
+                'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'prepay_method_id' => ($t->prepaidShipping > 0 && $q['prepay']) ? $q['prepay']->id : null, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id,
                 'status' => OrderStatus::PENDING, 'payment_status' => PaymentStatus::UNPAID,
                 'subtotal' => $t->subtotal, 'discount' => $t->discount, 'shipping' => $t->shipping, 'shipping_discount' => $t->shippingDiscount, 'shipping_net' => $t->shippingNet,
-                'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'total' => $t->total,
-                'cogs' => $t->cogs, 'affiliate_commission' => $t->affiliateCommission, 'net_profit' => $t->netProfit,
+                'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'total' => $t->total, 'cod_amount' => $t->codAmount, 'prepaid_shipping' => $t->prepaidShipping,
+                'cogs' => $t->cogs, 'affiliate_commission' => $t->affiliateCommission, 'net_profit' => 0, // computed when an admin confirms (OrderProfitService)
                 'currency' => current_tenant()?->currency_code, 'placed_at' => now(),
             ]);
             $order->update(['number' => sprintf('ORD-%06d', $order->id)]);
@@ -87,17 +85,7 @@ class OrderPlacementService
             return $order;
         });
 
-        $payment = null;
-        $method = $order->paymentMethod;
-        if ($method->type === PaymentMethodType::ONLINE) {
-            $payment = $this->gateways->make($method)->createPayment(new PaymentIntentData(
-                $order->number, (string) $order->total, (string) $order->currency,
-                ['name' => $order->customer_name, 'email' => $order->customer_email, 'phone' => $order->customer_phone],
-                tenant_url(current_tenant(), '/'.app()->getLocale().'/payments/return/'.$order->public_token),
-                tenant_url(current_tenant(), '/webhooks/payments/'.$method->id),
-            ));
-            $order->update(['gateway_reference' => $payment->gatewayReference]);
-        }
+        $payment = $this->payments->startOnline($order); // null for COD/wallet or when the provider is unreachable (customer can retry from the order page)
 
         event(new OrderPlaced($order));
 

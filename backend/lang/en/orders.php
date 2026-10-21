@@ -2,6 +2,16 @@
 
 // Phase 4 orders strings
 return [
+    'confirm_payment_required' => 'Payment must be received and verified before this order can be confirmed.',
+    'prepay_unavailable' => 'The selected shipping-prepayment method is not available.',
+    'prepay_required' => 'Choose an online or wallet method to prepay the delivery fee.',
+    'payment_start_failed' => 'Could not start the payment, please try again shortly.',
+    'refund_failed' => 'The payment provider did not confirm the refund. Nothing was marked as refunded.',
+    'cancel_refund_failed_note' => 'Cancelled, but the provider refund FAILED: refund manually or retry.',
+    'paid_after_cancel_note' => 'Payment received after the order was cancelled: refund it.',
+    'pay_now' => 'Pay now',
+    'prepaid_shipping' => 'Prepaid delivery fee',
+    'cod_amount' => 'Cash on delivery',
     'orders' => 'Orders',
     'order' => 'Order',
     'returns' => 'Returns',
@@ -130,6 +140,7 @@ return [
         'payment_status' => [
             'unpaid' => 'Unpaid',
             'pending_review' => 'Under review',
+            'partially_paid' => 'Prepaid (balance on delivery)',
             'paid' => 'Paid',
             'failed' => 'Failed',
             'partially_refunded' => 'Partially refunded',

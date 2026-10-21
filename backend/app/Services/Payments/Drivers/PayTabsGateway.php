@@ -2,22 +2,13 @@
 
 namespace App\Services\Payments\Drivers;
 
-use App\Services\Payments\AbstractGateway;
+use App\Services\Payments\NotImplementedGateway;
 
-class PayTabsGateway extends AbstractGateway
+/** Not implemented yet (see NotImplementedGateway). */
+class PayTabsGateway extends NotImplementedGateway
 {
     public function key(): string
     {
         return 'paytabs';
-    }
-
-    protected function secretKey(): string
-    {
-        return 'server_key';
-    }
-
-    protected function signatureHeader(): string
-    {
-        return 'Signature';
     }
 }

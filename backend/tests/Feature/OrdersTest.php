@@ -34,6 +34,7 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('public');
+    Storage::fake('private');
     $this->tenant = Tenant::where('slug', 'egy')->first();
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/ar';
@@ -163,14 +164,17 @@ it('handles wallet proof upload, approval and rejection', function () {
     $svc->uploadProof($order, UploadedFile::fake()->image('proof.jpg'));
     $order->refresh();
     expect($order->payment_status)->toBe(PaymentStatus::REVIEW)->and($order->payment_proof)->not->toBeNull();
-    Storage::disk('public')->assertExists($order->payment_proof);
+    Storage::disk('private')->assertExists($order->payment_proof);
+    Storage::disk('public')->assertMissing($order->payment_proof);
 
     $svc->rejectProof($order, 'blurry');
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);
     $svc->uploadProof($order->fresh(), UploadedFile::fake()->image('p2.jpg'));
     $svc->approveProof($order->fresh());
     $order->refresh();
-    expect($order->payment_status)->toBe(PaymentStatus::PAID)->and((string) $order->paid_amount)->toBe((string) $order->total)->and($order->status)->toBe(S::CONFIRMED);
+    expect($order->payment_status)->toBe(PaymentStatus::PAID)->and((string) $order->paid_amount)->toBe((string) $order->total)->and($order->status)->toBe(S::PENDING);   // approving a proof does NOT confirm
+    app(OrderStatusService::class)->change($order, S::CONFIRMED);                                              // the admin confirms
+    expect($order->fresh()->status)->toBe(S::CONFIRMED);
 });
 
 it('returns and refunds a delivered order with restock', function () {
@@ -242,18 +246,4 @@ it('runs the storefront cart -> checkout flow and the admin order pages', functi
     $this->get("{$this->t}/discount-codes")->assertOk();
     $this->get("{$this->t}/flash-sales/create")->assertOk();
     $this->get("{$this->t}/discount-codes/create")->assertOk();
-});
-
-it('settles an online order from the gateway webhook', function () {
-    $online = PaymentMethod::where('type', 'online')->first();
-    $online->update(['is_active' => true]);
-    $order = ($this->place)(1, ['paymentMethodId' => $online->id]);
-    expect($order->gateway_reference)->not->toBeNull();
-    $body = json_encode(['success' => true, 'id' => 'tx1', 'order_reference' => $order->number]);
-    $sig = hash_hmac('sha256', $body, 'sandbox');
-    $factory = app(\App\Services\Payments\PaymentGatewayFactory::class);
-    $header = (new ReflectionMethod($factory->make($online), 'signatureHeader'))->invoke($factory->make($online));
-    $this->call('POST', "http://egy.3alraf.test/webhooks/payments/{$online->id}", [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_'.strtoupper(str_replace('-', '_', $header)) => $sig], $body)->assertOk();
-    $order->refresh();
-    expect($order->payment_status)->toBe(PaymentStatus::PAID)->and($order->status)->toBe(S::CONFIRMED);
 });

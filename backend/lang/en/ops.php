@@ -2,6 +2,12 @@
 
 // Phase 3 operations strings
 return [
+    'cod_cannot_delete' => 'The default cash-on-delivery method cannot be deleted (you can deactivate it).',
+    'cod_exists' => 'A cash-on-delivery method already exists.',
+    'cod_cannot_change' => 'The cash-on-delivery method cannot change its type.',
+    'proof_always_required' => 'Wallet payments always require a proof-of-payment file and admin approval.',
+    'activate' => 'Activate',
+    'deactivate' => 'Deactivate',
     "cities" => 'Cities',
     "branches" => 'Branches',
     "suppliers" => 'Suppliers',
@@ -174,6 +180,8 @@ return [
             "cod" => 'Cash on delivery',
             "vodafone_cash" => 'Vodafone Cash',
             "instapay" => 'InstaPay',
+            "etisalat_cash" => 'e& Cash',
+            "wallet" => 'Other wallet / bank transfer',
             "paymob" => 'Paymob',
             "fawrypay" => 'FawryPay',
             "paypal" => 'PayPal',

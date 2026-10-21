@@ -48,6 +48,19 @@
                         </label>
                     @endforeach
                 </div>
+                @if ($codUpfront)
+                    <div class="mt-4 hidden space-y-2 border-t border-slate-100 pt-3 text-sm" data-prepay>
+                        <h3 class="font-bold">{{ __('store.prepay_title') }}</h3>
+                        <p class="text-xs text-slate-500">{{ __('store.prepay_hint') }}</p>
+                        @foreach ($methods->whereIn('type', [\App\Enums\PaymentMethodType::ONLINE, \App\Enums\PaymentMethodType::WALLET]) as $m)
+                            <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">
+                                <input type="radio" name="prepay_method_id" value="{{ $m->id }}" class="mt-1 accent-brand-600">
+                                <span><b>{{ $m->name }}</b>
+                                    @if ($m->account_number)<span class="mt-1 block text-xs text-slate-600">{{ __('store.transfer_to') }}: <b>{{ $m->account_number }}</b></span>@endif</span>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
             </x-card>
         </div>
 

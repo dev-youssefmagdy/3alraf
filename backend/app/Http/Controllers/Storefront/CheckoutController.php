@@ -27,7 +27,8 @@ class CheckoutController extends Controller
 
         return view('storefront.checkout', [
             'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
-            'methods' => PaymentMethod::where('is_active', true)->orderBy('sort_order')->get(),
+            'methods' => PaymentMethod::available()->orderBy('sort_order')->get(),
+            'codUpfront' => current_tenant()->codCollectsShippingUpfront(),
             'addresses' => $customer ? $customer->addresses()->with('city')->get() : collect(),
             'customer' => $customer,
         ]);
@@ -54,7 +55,7 @@ class CheckoutController extends Controller
     /** Pre-validate: request rules + a full quote (stock/discount/shipping errors surface here too). */
     public function validateForm(CheckoutRequest $r): JsonResponse
     {
-        $this->quotes->quote($this->cart->lines(), CheckoutData::fromRequest($r));
+        $this->quotes->assertPrepay($this->quotes->quote($this->cart->lines(), CheckoutData::fromRequest($r)));
 
         return $this->ok();
     }

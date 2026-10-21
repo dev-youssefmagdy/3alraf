@@ -58,7 +58,7 @@ class OperationsSeeder extends Seeder
             PaymentMethod::withoutGlobalScopes()->create($base + ['type' => 'wallet', 'provider' => 'vodafone_cash', 'name' => ['ar' => 'فودافون كاش', 'en' => 'Vodafone Cash'], 'account_number' => '01000000000', 'requires_proof' => true, 'sort_order' => 2]);
             PaymentMethod::withoutGlobalScopes()->create($base + ['type' => 'wallet', 'provider' => 'instapay', 'name' => ['ar' => 'إنستا باي', 'en' => 'InstaPay'], 'account_number' => 'demo@instapay', 'requires_proof' => true, 'sort_order' => 3]);
             PaymentMethod::withoutGlobalScopes()->create(['tenant_id' => $t->id, 'type' => 'online', 'provider' => 'paymob', 'name' => ['ar' => 'بطاقة ائتمان (باي موب)', 'en' => 'Card (Paymob)'], 'fee_percent' => 2.5, 'fee_fixed' => 1, 'fee_bearer' => 'customer',
-                'credentials' => ['api_key' => 'sandbox', 'integration_id' => '0', 'hmac_secret' => 'sandbox'], 'is_sandbox' => true, 'is_active' => false, 'sort_order' => 4]);
+                'credentials' => ['api_key' => 'sandbox', 'integration_id' => '0', 'iframe_id' => '0', 'hmac_secret' => 'sandbox'], 'is_sandbox' => true, 'is_active' => false, 'sort_order' => 4]);
             }
         }
 

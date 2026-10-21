@@ -12,7 +12,7 @@ class Order extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'proof_status', 'gateway_reference', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'cancelled_at'];
+    protected $fillable = ['number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'cancelled_at'];
 
     protected function casts(): array
     {
@@ -61,6 +61,23 @@ class Order extends Model
     public function paymentMethod()
     {
         return $this->belongsTo(PaymentMethod::class)->withTrashed();
+    }
+
+    public function prepayMethod()
+    {
+        return $this->belongsTo(PaymentMethod::class, 'prepay_method_id')->withTrashed();
+    }
+
+    /** The method the customer pays through right now: the prepay method for COD-with-upfront-shipping, else the order's method. */
+    public function payingMethod(): ?PaymentMethod
+    {
+        return $this->prepay_method_id ? $this->prepayMethod : $this->paymentMethod;
+    }
+
+    /** Amount the customer must pay online / by wallet now (prepaid shipping for COD-upfront, else the total). */
+    public function payableNow(): string
+    {
+        return $this->prepay_method_id ? (string) $this->prepaid_shipping : (string) $this->total;
     }
 
     public function discountCode()

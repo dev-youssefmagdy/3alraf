@@ -11,6 +11,7 @@ enum PaymentStatus: string
 
     case UNPAID = 'unpaid';
     case REVIEW = 'pending_review';
+    case PARTIALLY_PAID = 'partially_paid'; // COD: prepaid shipping received, balance due on delivery
     case PAID = 'paid';
     case FAILED = 'failed';
     case PARTIALLY_REFUNDED = 'partially_refunded';

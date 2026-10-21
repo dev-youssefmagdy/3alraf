@@ -57,19 +57,34 @@ class OrderCalculator
         $base = Money::add($afterDiscount, $shippingNet, $taxAdded);
         $fee = Money::round(bcadd(bcdiv(bcmul($base, $in->feePercent, 8), '100', 8), $in->feeFixed, 8));
         $feeCharged = $in->feeBearer === 'customer' ? $fee : '0.00';
+        $codFee = $in->isCod ? $this->codExtraFee($in, $base) : '0.00';
 
         // 5/6. Total, due
-        $total = Money::add($afterDiscount, $shippingNet, $taxAdded, $feeCharged);
+        $total = Money::add($afterDiscount, $shippingNet, $taxAdded, $feeCharged, $codFee);
         $due = Money::sub($total, $in->paidAmount);
+
+        // COD split: customer prepays shipping_net (online/wallet), the carrier collects the rest
+        $prepaid = ($in->isCod && $in->codCollectShippingUpfront) ? $shippingNet : '0.00';
+        $codAmount = $in->isCod ? Money::sub($total, $prepaid) : '0.00';
 
         // Affiliate commission on goods after discount
         $commission = bccomp($in->affiliatePercent, '0', 6) > 0 ? Money::percent($afterDiscount, $in->affiliatePercent) : '0.00';
 
         // Profit: (revenue_goods - cogs) + shipping_net - shipping_cost - fee - commission + fee_charged
-        $net = Money::sub(Money::add(Money::sub($afterDiscount, $cogs), $shippingNet, $feeCharged), Money::add($shippingCost, $fee, $commission));
+        $net = Money::sub(Money::add(Money::sub($afterDiscount, $cogs), $shippingNet, $feeCharged, $codFee), Money::add($shippingCost, $fee, $commission));
 
         return new OrderTotals($subtotal, $cogs, $discount, $shipping, $shippingDiscount, $shippingNet, $shippingCost, $tax, $fee, $feeCharged,
-            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts);
+            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid);
+    }
+
+    /**
+     * HOOK (not implemented): per-tenant COD extra fee. When added, return the customer-charged amount here (e.g. from a
+     * `cod_fee_percent`/`cod_fee_fixed` CalculatorInput field applied to $base). It is automatically part of `total`,
+     * `cod_amount` (the carrier collects it) and income in `net` above; no other formula changes. See CALCULATIONS.md.
+     */
+    private function codExtraFee(CalculatorInput $in, string $base): string
+    {
+        return '0.00';
     }
 
     /** @return array{0:string,1:array,2:bool} [discount, per-line shares, free shipping?] */

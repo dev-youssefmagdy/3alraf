@@ -7,7 +7,7 @@ use App\Models\TenantAdmin;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Gate;
 
-/** Notifies the active admins of the order's tenant that may view orders. Runs synchronously (DB insert only). */
+/** Notifies the active admins of the order's tenant that may view orders. Called from queued listeners. */
 trait ResolvesOrderAdmins
 {
     protected function notify(Order $order, Notification $notification): void

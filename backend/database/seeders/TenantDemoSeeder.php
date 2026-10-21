@@ -124,6 +124,7 @@ class TenantDemoSeeder extends Seeder
         $city = City::orderBy('id')->first();
         $company = ShippingCompany::first();
         $cod = PaymentMethod::where('type', 'cod')->first();
+        $wallet = PaymentMethod::where('type', 'wallet')->first(); // demo: shipping prepaid by an (already approved) wallet transfer
         $tps = TenantProduct::with('product.variants')->orderBy('id')->get();
         $path = [OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED];
         // final status index: -1 pending, 0..3 along $path, 9 cancelled
@@ -134,8 +135,11 @@ class TenantDemoSeeder extends Seeder
                 $p = $tps[$idx]->product;
                 $lines[] = ['product_id' => $p->id, 'variant_id' => $p->isVariable() ? $p->variants->first()->id : 0, 'qty' => 1 + $n % 2];
             }
-            $d = new CheckoutData($customer?->id, $customer?->name ?? 'Demo', '0100000000'.$n, $customer?->email, $city->id, 'Demo street '.$n, null, $company->id, $cod->id);
+            $d = new CheckoutData($customer?->id, $customer?->name ?? 'Demo', '0100000000'.$n, $customer?->email, $city->id, 'Demo street '.$n, null, $company->id, $cod->id, prepayMethodId: $wallet?->id);
             $order = $placer->place($d, $lines)['order'];
+            if ($order->prepay_method_id) {
+                $order->forceFill(['proof_status' => 'approved', 'payment_status' => 'partially_paid', 'paid_amount' => $order->prepaid_shipping])->save();
+            }
             if ($final === 9) {
                 $status->change($order, OrderStatus::CANCELLED, 'Demo cancel');
             } else {

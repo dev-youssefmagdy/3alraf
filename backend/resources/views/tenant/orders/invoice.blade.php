@@ -39,7 +39,7 @@
             <div><span>{{ __('orders.fields.due') }}</span><span>{{ $m($order->due()) }}</span></div>
         </div>
         <p style="margin-top:24px;font-size:13px;color:#64748b">{{ $order->paymentMethod?->name }} - {{ $order->payment_status->label() }} - {{ $order->status->label() }}</p>
-        @if (($public ?? false) && $order->paymentMethod?->type === \App\Enums\PaymentMethodType::WALLET && ! in_array($order->payment_status, [\App\Enums\PaymentStatus::PAID, \App\Enums\PaymentStatus::REFUNDED]) && ! in_array($order->status, [\App\Enums\OrderStatus::CANCELLED]))
+        @if (($public ?? false) && $order->payingMethod()?->type === \App\Enums\PaymentMethodType::WALLET && ! in_array($order->payment_status, [\App\Enums\PaymentStatus::PAID, \App\Enums\PaymentStatus::REFUNDED]) && ! in_array($order->status, [\App\Enums\OrderStatus::CANCELLED]))
             <div class="actions" style="margin:12px 0 0;display:block;font-size:14px">
                 <p>{{ $order->paymentMethod->instructions }} {{ $order->paymentMethod->account_number }}</p>
                 <form data-ajax-form action="{{ route('storefront.orders.proof', ['locale' => app()->getLocale(), 'token' => $order->public_token]) }}" method="POST" enctype="multipart/form-data">

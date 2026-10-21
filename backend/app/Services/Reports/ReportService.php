@@ -16,13 +16,13 @@ use Illuminate\Support\Str;
  */
 class ReportService
 {
-    public const KEYS = ['sales', 'net-profit', 'purchases', 'discounts', 'shipping', 'payment-fees', 'returns', 'refunds', 'expenses', 'stock', 'products', 'categories', 'affiliates', 'flash-sales', 'customers', 'branches', 'payment-methods'];
+    public const KEYS = ['sales', 'net-profit', 'purchases', 'discounts', 'shipping', 'cod-settlement', 'payment-fees', 'returns', 'refunds', 'expenses', 'stock', 'products', 'categories', 'affiliates', 'flash-sales', 'customers', 'branches', 'payment-methods'];
 
     /** Reports that ignore the date range (snapshot of now). */
     public const SNAPSHOT = ['stock'];
 
     /** Reports where a branch filter is meaningful (tenant context only). */
-    public const BRANCHABLE = ['sales', 'net-profit', 'purchases', 'discounts', 'shipping', 'payment-fees', 'returns', 'refunds', 'expenses', 'stock', 'products', 'categories', 'flash-sales', 'customers', 'payment-methods'];
+    public const BRANCHABLE = ['sales', 'net-profit', 'purchases', 'discounts', 'shipping', 'cod-settlement', 'payment-fees', 'returns', 'refunds', 'expenses', 'stock', 'products', 'categories', 'flash-sales', 'customers', 'payment-methods'];
 
     public function __construct(private ReportRepositoryInterface $repo) {}
 
@@ -194,6 +194,18 @@ class ReportService
             'cards' => [$this->card('shipping_collected', $this->money($this->sum($rows, 'collected'))), $this->card('shipping_paid', $this->money($this->sum($rows, 'cost')), 'slate'), $this->card('shipping_margin', $this->money($this->sum($rows, 'margin')), 'emerald'), $this->card('orders', number_format((int) $this->sum($rows, 'orders')), 'slate')],
             'columns' => [$this->col('company', 'text'), $this->col('orders', 'int'), $this->col('collected', 'money'), $this->col('cost', 'money'), $this->col('margin', 'money')],
             'rows' => $rows, 'chart' => $this->bar($rows, 'company', [['collected', 'collected'], ['cost', 'cost']]),
+        ];
+    }
+
+    private function buildCodSettlement(ReportFilter $f): array
+    {
+        $rows = $this->repo->codSettlement($f);
+
+        return [
+            'cards' => [$this->card('cod_collected', $this->money($this->sum($rows, 'collected'))), $this->card('cod_in_transit', $this->money($this->sum($rows, 'in_transit')), 'slate'),
+                $this->card('carrier_fee', $this->money($this->sum($rows, 'carrier_fee')), 'slate'), $this->card('cod_owed', $this->money($this->sum($rows, 'owed')), 'emerald')],
+            'columns' => [$this->col('company', 'text'), $this->col('orders', 'int'), $this->col('collected', 'money'), $this->col('in_transit', 'money'), $this->col('carrier_fee', 'money'), $this->col('owed', 'money')],
+            'rows' => $rows, 'chart' => $this->bar($rows, 'company', [['collected', 'collected'], ['owed', 'owed']]),
         ];
     }
 

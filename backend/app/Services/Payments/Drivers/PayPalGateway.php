@@ -2,22 +2,13 @@
 
 namespace App\Services\Payments\Drivers;
 
-use App\Services\Payments\AbstractGateway;
+use App\Services\Payments\NotImplementedGateway;
 
-class PayPalGateway extends AbstractGateway
+/** Not implemented yet (see NotImplementedGateway). */
+class PayPalGateway extends NotImplementedGateway
 {
     public function key(): string
     {
         return 'paypal';
-    }
-
-    protected function secretKey(): string
-    {
-        return 'webhook_id';
-    }
-
-    protected function signatureHeader(): string
-    {
-        return 'Paypal-Transmission-Sig';
     }
 }

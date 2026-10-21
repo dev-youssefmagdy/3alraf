@@ -3,7 +3,6 @@
 namespace App\Services\Payments;
 
 use App\Enums\PaymentMethodType;
-use App\Enums\PaymentProvider;
 use App\Models\PaymentMethod;
 use App\Services\Payments\Drivers\FawryPayGateway;
 use App\Services\Payments\Drivers\PaymobGateway;
@@ -14,7 +13,7 @@ use InvalidArgumentException;
 
 class PaymentGatewayFactory
 {
-    /** @var array<string,class-string<AbstractGateway>> */
+    /** @var array<string,class-string<AbstractGateway>> real drivers first, then clean "not implemented" stubs */
     private const DRIVERS = [
         'paymob' => PaymobGateway::class,
         'fawrypay' => FawryPayGateway::class,

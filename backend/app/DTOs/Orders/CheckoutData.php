@@ -17,6 +17,7 @@ final readonly class CheckoutData
         public ?int $paymentMethodId = null,
         public ?string $discountCode = null,
         public ?int $affiliateId = null,
+        public ?int $prepayMethodId = null, // online/wallet method paying the shipping upfront for COD
     ) {}
 
     public static function fromRequest(\App\Http\Requests\Storefront\CheckoutRequest $r): self
@@ -36,6 +37,7 @@ final readonly class CheckoutData
             $r->filled('payment_method_id') ? (int) $r->input('payment_method_id') : null,
             $r->filled('discount_code') ? trim($r->input('discount_code')) : null,
             app(\App\Services\Affiliates\AffiliateTracker::class)->attributedId($r, $customer?->email, $r->input('email')),
+            $r->filled('prepay_method_id') ? (int) $r->input('prepay_method_id') : null,
         );
     }
 }

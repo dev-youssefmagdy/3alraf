@@ -9,6 +9,7 @@ use App\Events\OrderStatusChanged;
 use App\Models\DiscountCodeUsage;
 use App\Models\FlashSaleItem;
 use App\Models\Order;
+use App\Services\Payments\RefundService;
 use App\Services\Stock\StockLedger;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 /** Order status machine (OrderStatus::next) with history, stock reservation/deduction side effects. */
 class OrderStatusService
 {
-    public function __construct(private StockLedger $ledger) {}
+    public function __construct(private StockLedger $ledger, private OrderProfitService $profit, private RefundService $refunds) {}
 
     public function change(Order $order, OrderStatus $to, ?string $note = null, ?int $userId = null, bool $force = false): Order
     {
@@ -29,6 +30,10 @@ class OrderStatusService
                 throw ValidationException::withMessages(['status' => __('orders.invalid_transition')]);
             }
 
+            if ($to === OrderStatus::CONFIRMED && ! $force) {
+                $this->assertPaymentSettled($locked);
+            }
+
             match ($to) {
                 OrderStatus::SHIPPED => $this->ship($locked),
                 OrderStatus::CANCELLED => $this->cancel($locked),
@@ -37,6 +42,7 @@ class OrderStatusService
             };
 
             $locked->update(['status' => $to]);
+            $this->profit->recalculate($locked); // net_profit: computed on admin confirmation, 0 again on cancel
             $locked->histories()->create(['from_status' => $from->value, 'to_status' => $to->value, 'note' => $note, 'user_id' => $userId ?? auth('tenant')->id()]);
             $order->setRawAttributes($locked->fresh()->getAttributes(), true);
 
@@ -46,6 +52,20 @@ class OrderStatusService
         event(new OrderStatusChanged($order, $from, $to));
 
         return $order;
+    }
+
+    /** Confirmation gate (CALCULATIONS.md §Payment methods): online/wallet must be paid & verified, COD needs its prepaid shipping settled. */
+    private function assertPaymentSettled(Order $order): void
+    {
+        $type = $order->paymentMethod?->type;
+        $ok = match (true) {
+            $type === PaymentMethodType::ONLINE, $type === PaymentMethodType::WALLET => $order->payment_status === PaymentStatus::PAID,
+            $order->prepay_method_id !== null => Money::cmp((string) $order->paid_amount, (string) $order->prepaid_shipping) >= 0,
+            default => true,
+        };
+        if (! $ok) {
+            throw ValidationException::withMessages(['status' => __('orders.confirm_payment_required')]);
+        }
     }
 
     /** Deduct stock (sale_out at current avg cost) and drop the reservation. */
@@ -76,7 +96,13 @@ class OrderStatusService
         $paid = (string) $order->paid_amount;
         $order->fill(['cancelled_at' => now(), 'affiliate_commission' => 0]);
         if (Money::cmp($paid, '0') > 0) {
-            $order->fill(['refunded_amount' => $paid, 'payment_status' => PaymentStatus::REFUNDED]);
+            // online money goes back through the provider and is marked refunded ONLY on provider success; wallet money is moved manually
+            $res = $this->refunds->refundOnline($order, $paid);
+            if ($res === null || $res->status === 'refunded') {
+                $order->fill(['refunded_amount' => $paid, 'payment_status' => PaymentStatus::REFUNDED]);
+            } else {
+                $order->histories()->create(['from_status' => $order->status->value, 'to_status' => OrderStatus::CANCELLED->value, 'note' => __('orders.cancel_refund_failed_note')]);
+            }
         }
         $order->save();
     }

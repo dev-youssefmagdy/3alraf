@@ -23,7 +23,7 @@ class OrderQuoteService
 
     /**
      * @param  array<int,array{product_id:int,variant_id:int,qty:int}>  $cartLines
-     * @return array{affiliate:?Affiliate,affiliate_percent:string,lines:array,totals:OrderTotals,discount:?\App\Models\DiscountCode,rate:?ShippingRate,method:?PaymentMethod}
+     * @return array{affiliate:?Affiliate,affiliate_percent:string,lines:array,totals:OrderTotals,discount:?\App\Models\DiscountCode,rate:?ShippingRate,method:?PaymentMethod,prepay:?PaymentMethod}
      */
     public function quote(array $cartLines, CheckoutData $d, bool $lock = false): array
     {
@@ -67,12 +67,20 @@ class OrderQuoteService
 
         $method = null;
         if ($d->paymentMethodId) {
-            $method = PaymentMethod::where('is_active', true)->find($d->paymentMethodId);
+            $method = PaymentMethod::available()->find($d->paymentMethodId);
             if (! $method) {
                 throw ValidationException::withMessages(['payment_method_id' => __('orders.payment_unavailable')]);
             }
             if ($method->type === PaymentMethodType::COD && $rate && ! $rate->supports_cod) {
                 throw ValidationException::withMessages(['payment_method_id' => __('orders.cod_unavailable')]);
+            }
+        }
+
+        $prepay = null;
+        if ($d->prepayMethodId && $method?->type === PaymentMethodType::COD) {
+            $prepay = PaymentMethod::available()->whereIn('type', [PaymentMethodType::ONLINE->value, PaymentMethodType::WALLET->value])->find($d->prepayMethodId);
+            if (! $prepay) {
+                throw ValidationException::withMessages(['prepay_method_id' => __('orders.prepay_unavailable')]);
             }
         }
 
@@ -90,8 +98,18 @@ class OrderQuoteService
             feeFixed: $method ? (string) $method->fee_fixed : '0',
             feeBearer: $method ? $method->fee_bearer->value : 'customer',
             affiliatePercent: $affiliatePercent,
+            isCod: $method?->type === PaymentMethodType::COD,
+            codCollectShippingUpfront: (bool) (current_tenant()?->codCollectsShippingUpfront() ?? true),
         ));
 
-        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent];
+        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent, 'prepay' => $prepay];
+    }
+
+    /** COD with a shipping fee to prepay needs a chosen online/wallet method (strict checkout only; live quotes stay lenient). */
+    public function assertPrepay(array $quote): void
+    {
+        if ($quote['method']?->type === PaymentMethodType::COD && bccomp($quote['totals']->prepaidShipping, '0', 2) > 0 && ! $quote['prepay']) {
+            throw ValidationException::withMessages(['prepay_method_id' => __('orders.prepay_required')]);
+        }
     }
 }

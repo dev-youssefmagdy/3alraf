@@ -2,6 +2,10 @@
 
 // Phase 7 storefront strings (Arabic)
 return [
+    'prepay_title' => 'ادفع رسوم التوصيل الآن',
+    'prepay_hint' => 'الدفع عند الاستلام: ادفع رسوم التوصيل إلكترونياً أو بمحفظة الآن والباقي عند التسليم.',
+    'cod_balance' => 'الدفع عند التسليم',
+    'prepaid_now' => 'ادفع الآن (التوصيل)',
     'promo' => 'شحن سريع لجميع المحافظات | الدفع عند الاستلام متاح',
     'search_placeholder' => 'ابحث عن منتج، ماركة أو قسم...', 'search' => 'بحث', 'search_results' => 'نتائج البحث عن ":q"', 'type_to_search' => 'اكتب كلمة للبحث.',
     'suggest_products' => 'منتجات', 'suggest_categories' => 'أقسام',

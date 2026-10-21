@@ -24,6 +24,13 @@ class PaymentMethodController extends ResourceController
         parent::__construct($service);
     }
 
+    public function toggle(int $id): \Illuminate\Http\JsonResponse
+    {
+        $this->service->toggle($this->service->find($id));
+
+        return $this->ok(__('admin.saved'));
+    }
+
     protected function blank(): Model
     {
         return new PaymentMethod(['is_active' => true, 'is_sandbox' => true, 'type' => 'cod', 'provider' => 'cod', 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer', 'requires_proof' => true]);

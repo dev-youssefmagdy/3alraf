@@ -28,6 +28,7 @@ class CheckoutRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:255'],
             'shipping_company_id' => [$quote ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
             'payment_method_id' => [$quote ? 'nullable' : 'required', Rule::exists('payment_methods', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
+            'prepay_method_id' => ['nullable', Rule::exists('payment_methods', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
             'discount_code' => ['nullable', 'string', 'max:50'],
         ];
     }

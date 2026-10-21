@@ -30,6 +30,24 @@ class OrderController extends Controller
         return $this->ok(__('orders.proof_uploaded'), route('storefront.orders.show', compact('locale', 'token')));
     }
 
+    /** Proof file for the order's owner (unguessable public token); streamed from the private disk. */
+    public function proofFile(string $locale, string $token)
+    {
+        return $this->payments->proofResponse($this->order($token));
+    }
+
+    /** New payment link for an unpaid online order (first attempt failed / expired / customer came back). */
+    public function pay(string $locale, string $token): JsonResponse
+    {
+        $order = $this->order($token);
+        $payment = $this->payments->startOnline($order);
+        if (! $payment?->redirectUrl) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['payment' => __('orders.payment_start_failed')]);
+        }
+
+        return $this->ok(null, $payment->redirectUrl, ['pay_url' => $payment->redirectUrl]);
+    }
+
     public function requestReturn(ReturnRequest $r, string $locale, string $token): JsonResponse
     {
         $order = $this->order($token);

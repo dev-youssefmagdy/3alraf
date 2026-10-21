@@ -11,6 +11,7 @@ final readonly class OrderTotals
         public string $shippingNet, public string $shippingCost, public string $tax, public string $paymentFee, public string $paymentFeeCharged,
         public string $total, public string $paidAmount, public string $due, public string $affiliateCommission, public string $netProfit,
         public array $lineDiscounts = [],
+        public string $codAmount = '0.00', public string $prepaidShipping = '0.00',
     ) {}
 
     public function toArray(): array

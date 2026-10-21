@@ -17,6 +17,7 @@ class TenantService
     {
         return DB::transaction(function () use ($dto) {
             $tenant = $this->tenants->create($dto->toArray());
+            \App\Models\PaymentMethod::ensureDefaultCod($tenant->id);
             if ($dto->adminEmail && $dto->adminPassword) {
                 $admin = TenantAdmin::withoutGlobalScopes()->create([
                     'tenant_id' => $tenant->id, 'name' => $dto->adminName ?: $dto->name,

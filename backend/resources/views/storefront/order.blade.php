@@ -4,7 +4,9 @@
     $flow = [S::PENDING, S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED];
     $idx = collect($flow)->search(fn ($s) => $s === $order->status);
     $mine = $order->customer_id && $order->customer_id === auth('web')->id();
-    $isWallet = $order->paymentMethod?->type?->value === 'wallet';
+    $payer = $order->payingMethod();
+    $isWallet = $payer?->type?->value === 'wallet';
+    $canPayOnline = $payer?->type?->value === 'online' && in_array($order->payment_status->value, ['unpaid', 'failed'], true) && ! in_array($order->status, [S::CANCELLED, S::RETURNED], true);
     $canProof = $isWallet && in_array($order->payment_status->value, ['unpaid', 'failed'], true) && ! in_array($order->status, [S::CANCELLED, S::RETURNED], true);
     $money = fn ($v) => number_format((float) $v, 2).' '.$cur;
 @endphp
@@ -47,12 +49,20 @@
                 <p class="text-slate-500">{{ $order->shippingCompany?->name }}</p>
                 <h2 class="mb-2 mt-4 font-extrabold">{{ __('store.payment_method') }}</h2>
                 <p>{{ $order->paymentMethod?->name }} <span class="badge badge-muted">{{ $order->payment_status->label() }}</span></p>
-                @if ($order->paymentMethod?->instructions)<p class="text-xs text-slate-500">{{ $order->paymentMethod->instructions }}</p>@endif
-                @if ($isWallet && $order->paymentMethod->account_number)<p>{{ __('store.transfer_to') }}: <b>{{ $order->paymentMethod->account_number }}</b></p>@endif
+                @if ($order->prepay_method_id)
+                    <p>{{ __('orders.prepaid_shipping') }}: <b>{{ $money($order->prepaid_shipping) }}</b> ({{ $payer?->name }})</p>
+                    <p>{{ __('orders.cod_amount') }}: <b>{{ $money($order->cod_amount) }}</b></p>
+                @endif
+                @if ($payer?->instructions)<p class="text-xs text-slate-500">{{ $payer->instructions }}</p>@endif
+                @if ($isWallet && $payer->account_number)<p>{{ __('store.transfer_to') }}: <b>{{ $payer->account_number }}</b></p>@endif
+                @if ($order->payment_proof)<a class="text-brand-600 underline" target="_blank" href="{{ route('storefront.orders.proof.file', $order->public_token) }}">{{ __('orders.view_proof') }}</a> <span class="badge badge-muted">{{ $order->proof_status?->label() }}</span>@endif
+                @if ($canPayOnline)
+                    <button type="button" class="btn btn-primary mt-3" data-pay-action="{{ route('storefront.orders.pay', $order->public_token) }}">{{ __('orders.pay_now') }}</button>
+                @endif
                 @if ($canProof)
                     <form data-ajax-form action="{{ route('storefront.orders.proof', $order->public_token) }}" method="POST" enctype="multipart/form-data" class="mt-3 space-y-2" novalidate>
                         @csrf
-                        <x-input name="proof" type="file" accept="image/*" :label="__('store.upload_proof')" />
+                        <x-input name="proof" type="file" accept="image/*,.pdf" :label="__('store.upload_proof')" />
                         <button class="btn btn-primary">{{ __('store.send') }}</button>
                     </form>
                 @endif

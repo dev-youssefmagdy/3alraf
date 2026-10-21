@@ -15,6 +15,8 @@ interface ReportRepositoryInterface
 
     public function shipping(ReportFilter $f): array;
 
+    public function codSettlement(ReportFilter $f): array;
+
     public function paymentFees(ReportFilter $f): array;
 
     public function netProfit(ReportFilter $f): array;

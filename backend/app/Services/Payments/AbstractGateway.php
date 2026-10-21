@@ -2,64 +2,68 @@
 
 namespace App\Services\Payments;
 
-use App\DTOs\Payments\PaymentIntentData;
-use App\DTOs\Payments\PaymentResult;
+use App\Exceptions\GatewayException;
 use App\Models\PaymentMethod;
-use Illuminate\Http\Request;
+use App\Support\Money;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 
-/**
- * Sandbox-ready skeleton. Concrete drivers declare the signature header/secret and fill the TODO API calls.
- * Credentials come from the (encrypted) payment_methods.credentials of the tenant.
- */
+/** Shared plumbing for real drivers: credentials (encrypted on the method), sandbox/live base URL, HTTP with timeout. */
 abstract class AbstractGateway implements PaymentGatewayInterface
 {
     public function __construct(protected PaymentMethod $method) {}
 
-    protected function credential(string $key): ?string
+    protected function credential(string $key): string
     {
-        return $this->method->credentials[$key] ?? null;
+        return (string) ($this->method->credentials[$key] ?? '');
     }
 
-    protected function sandbox(): bool
+    protected function baseUrl(): string
     {
-        return $this->method->is_sandbox;
+        return rtrim((string) config('payments.'.$this->key().($this->method->is_sandbox ? '.sandbox' : '.live')), '/');
     }
 
-    /** Credential key holding the webhook signing secret. */
-    abstract protected function secretKey(): string;
-
-    /** Header carrying the signature (or request key for gateways that sign in the payload). */
-    abstract protected function signatureHeader(): string;
-
-    public function createPayment(PaymentIntentData $data): PaymentResult
+    protected function http(): PendingRequest
     {
-        // TODO: call the provider API (sandbox when is_sandbox) and return its redirect/iframe URL.
-        return new PaymentResult('pending', 'stub-'.$this->key().'-'.$data->orderReference, null, ['sandbox' => $this->sandbox(), 'order_reference' => $data->orderReference]);
+        return Http::acceptJson()->asJson()->timeout((int) config('payments.timeout', 15));
     }
 
-    /** Default stub: HMAC-SHA256 of the raw body vs signature header. Override per provider spec. */
-    public function verifyWebhook(Request $request): bool
+    /** @throws GatewayException */
+    protected function send(callable $call): Response
     {
-        $secret = $this->credential($this->secretKey());
-        $given = (string) $request->header($this->signatureHeader(), $request->input($this->signatureHeader(), ''));
-        if (! $secret || $given === '') {
-            return false;
+        try {
+            $res = $call($this->http());
+        } catch (ConnectionException $e) {
+            throw new GatewayException($this->key().': connection failed', 0, $e);
+        }
+        if (! $res->successful()) {
+            throw new GatewayException($this->key().': HTTP '.$res->status());
         }
 
-        return hash_equals(hash_hmac('sha256', $request->getContent(), $secret), $given);
+        return $res;
     }
 
-    public function parseWebhook(Request $request): PaymentResult
+    /** Amount string -> smallest unit (x100) as int. */
+    protected function cents(string $amount): int
     {
-        // TODO: map provider payload -> status. Skeleton trusts a normalised payload.
-        $paid = filter_var($request->input('success', false), FILTER_VALIDATE_BOOL);
-
-        return new PaymentResult($paid ? 'paid' : 'failed', (string) $request->input('id'), null, ['order_reference' => $request->input('order_reference'), 'payload' => $request->all()]);
+        return (int) bcmul(Money::round($amount), '100', 0);
     }
 
-    public function refund(string $gatewayReference, ?string $amount = null): PaymentResult
+    protected function amountEquals(mixed $given, string $expected): bool
     {
-        // TODO: call provider refund API.
-        return new PaymentResult('pending', $gatewayReference, null, ['amount' => $amount]);
+        return is_numeric($given) && Money::cmp(Money::round((string) $given), Money::round($expected)) === 0;
+    }
+
+    /** Order numbers get a `-R{n}` suffix when a payment is retried (providers reject duplicate merchant references). */
+    protected function stripRetry(?string $ref): ?string
+    {
+        return $ref === null ? null : preg_replace('/-R\d+$/', '', $ref);
+    }
+
+    protected function constantEquals(string $expected, string $given): bool
+    {
+        return $given !== '' && hash_equals($expected, $given);
     }
 }

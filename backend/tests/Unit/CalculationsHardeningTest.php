@@ -31,7 +31,7 @@ it('never gives a line a discount larger than its subtotal and always distribute
 });
 
 it('refunds tax pro-rata only on tax-exclusive orders', function () {
-    $svc = new ReturnService(Mockery::mock(\App\Repositories\Contracts\OrderReturnRepositoryInterface::class), Mockery::mock(\App\Services\Stock\StockLedger::class), Mockery::mock(\App\Services\Payments\PaymentGatewayFactory::class));
+    $svc = new ReturnService(Mockery::mock(\App\Repositories\Contracts\OrderReturnRepositoryInterface::class), Mockery::mock(\App\Services\Stock\StockLedger::class), Mockery::mock(\App\Services\Payments\RefundService::class), new \App\Services\Orders\OrderProfitService);
     // exclusive: goods 200, 14% tax = 28 added on top (total 228); returning 100 of goods refunds 14 tax
     $excl = (new Order)->forceFill(['subtotal' => '200.00', 'discount' => '0.00', 'tax' => '28.00', 'shipping_net' => '0.00', 'payment_fee_charged' => '0.00', 'total' => '228.00']);
     expect($svc->taxShare($excl, '100.00'))->toBe('14.00');

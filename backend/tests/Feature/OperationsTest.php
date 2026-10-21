@@ -204,7 +204,7 @@ it('stores payment gateway credentials encrypted and routes webhooks through the
         ->assertJsonValidationErrors(['provider', 'account_number']);
 
     $payload = ['type' => 'online', 'provider' => 'paymob', 'name' => ['ar' => 'بطاقة'], 'fee_percent' => '2.5', 'fee_fixed' => '1', 'fee_bearer' => 'customer', 'is_active' => 1, 'is_sandbox' => 1,
-        'credentials' => ['api_key' => 'KEY-123', 'integration_id' => '77', 'hmac_secret' => 'topsecret']];
+        'credentials' => ['api_key' => 'KEY-123', 'integration_id' => '77', 'iframe_id' => '5', 'hmac_secret' => 'topsecret']];
     $this->postJson("{$this->t}/payment-methods", $payload)->assertOk();
     $pm = PaymentMethod::where('provider', 'paymob')->latest('id')->first();
     expect($pm->credentials['api_key'])->toBe('KEY-123');
@@ -212,7 +212,7 @@ it('stores payment gateway credentials encrypted and routes webhooks through the
     expect($raw)->not->toContain('KEY-123')->and($raw)->not->toContain('topsecret');
 
     // blank secret on edit keeps stored value
-    $this->putJson("{$this->t}/payment-methods/{$pm->id}", ['credentials' => ['api_key' => '', 'integration_id' => '88', 'hmac_secret' => ''], 'fee_percent' => '3'] + $payload)->assertOk();
+    $this->putJson("{$this->t}/payment-methods/{$pm->id}", ['credentials' => ['api_key' => '', 'integration_id' => '88', 'iframe_id' => '5', 'hmac_secret' => ''], 'fee_percent' => '3'] + $payload)->assertOk();
     $pm->refresh();
     expect($pm->credentials['hmac_secret'])->toBe('topsecret')->and($pm->credentials['integration_id'])->toBe('88')->and((string) $pm->fee_percent)->toBe('3.000');
     $this->get("{$this->t}/payment-methods/{$pm->id}/edit")->assertOk()->assertDontSee('topsecret');
@@ -224,10 +224,12 @@ it('stores payment gateway credentials encrypted and routes webhooks through the
     // factory + webhook signature
     expect(app(PaymentGatewayFactory::class)->make($pm)->key())->toBe('paymob');
     expect(fn () => app(PaymentGatewayFactory::class)->make(PaymentMethod::where('provider', PaymentProvider::COD)->first()))->toThrow(InvalidArgumentException::class);
-    $body = json_encode(['id' => 'x1', 'success' => true, 'order_reference' => 'ORD-1']);
+    $obj = ['id' => 991, 'amount_cents' => 10000, 'currency' => 'EGP', 'success' => true, 'pending' => false, 'order' => ['id' => 5, 'merchant_order_id' => 'ORD-UNKNOWN']];
+    $body = json_encode(['type' => 'TRANSACTION', 'obj' => $obj]);
     $url = "http://egy.3alraf.test/webhooks/payments/{$pm->id}";
-    $this->call('POST', $url, [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_HMAC' => 'bad'], $body)->assertStatus(400);
-    $this->call('POST', $url, [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_HMAC' => hash_hmac('sha256', $body, 'topsecret')], $body)->assertOk()->assertJson(['success' => true]);
+    $this->call('POST', $url.'?hmac=bad', [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertStatus(400);
+    $good = \App\Services\Payments\Drivers\PaymobGateway::hmac($obj, 'topsecret');
+    $this->call('POST', $url.'?hmac='.$good, [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertOk()->assertJson(['ignored' => true]); // unknown order: acked, nothing settled
 
     $this->get("{$this->t}/payment-methods")->assertOk();
     $this->get("{$this->t}/payment-methods/create")->assertOk();

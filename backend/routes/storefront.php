@@ -53,6 +53,8 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:20,1')->name('checkout.store');
     Route::get('order/{token}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware('throttle:upload')->name('orders.proof');
+    Route::get('order/{token}/proof', [OrderController::class, 'proofFile'])->middleware('throttle:upload')->name('orders.proof.file');
+    Route::post('order/{token}/pay', [OrderController::class, 'pay'])->middleware('throttle:upload')->name('orders.pay');
     Route::post('order/{token}/return', [OrderController::class, 'requestReturn'])->middleware(['auth:web', 'throttle:returns'])->name('orders.return');
     Route::get('payments/return/{token}', [OrderController::class, 'paymentReturn'])->name('payments.return');
 

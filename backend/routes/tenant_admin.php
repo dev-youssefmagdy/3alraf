@@ -72,6 +72,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
+        Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
+
         // Roles & staff accounts (Access\*Controller, guard from route-name prefix)
         foreach (['roles' => RoleController::class, 'admins' => AdminUserController::class] as $uri => $ctl) {
             Route::post("$uri/validate/{id?}", [$ctl, 'validateForm'])->name("$uri.validate");
@@ -110,6 +112,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('orders/{id}/invoice', [OrderController::class, 'invoice'])->whereNumber('id')->name('orders.invoice');
         Route::post('orders/{id}/status/validate', [OrderController::class, 'validateStatus'])->name('orders.status.validate');
         Route::post('orders/{id}/status', [OrderController::class, 'changeStatus'])->name('orders.status');
+        Route::get('orders/{id}/proof', [OrderController::class, 'proofFile'])->whereNumber('id')->name('orders.proof.file');
         Route::post('orders/{id}/proof/approve', [OrderController::class, 'approveProof'])->name('orders.proof.approve');
         Route::post('orders/{id}/proof/reject', [OrderController::class, 'rejectProof'])->name('orders.proof.reject');
         Route::post('orders/{id}/returns/validate', [OrderController::class, 'validateReturn'])->name('orders.returns.validate');

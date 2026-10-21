@@ -78,7 +78,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function sales(ReportFilter $f): array
     {
-        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, "CASE WHEN o.status = 'delivered' THEN o.net_profit ELSE 0 END")} as net_profit")
+        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, 'o.net_profit')} as net_profit")
             ->groupBy(DB::raw('DATE(o.created_at)'))->orderBy('day'));
     }
 
@@ -98,6 +98,18 @@ class ReportRepository implements ReportRepositoryInterface
             ->groupBy('o.shipping_company_id', 'o.tenant_id', 't.name', DB::raw($this->nm('sc.name')))->orderByDesc('collected'));
     }
 
+    /** COD carrier settlement: cash collected by each carrier vs owed to the merchant (CALCULATIONS.md §Payment methods). */
+    public function codSettlement(ReportFilter $f): array
+    {
+        $q = $this->orders($f, ['shipped', 'delivered'])->where('o.cod_amount', '>', 0)->leftJoin('shipping_companies as sc', 'sc.id', '=', 'o.shipping_company_id');
+        $d = "o.status = 'delivered'";
+
+        return $this->rows($q->selectRaw("t.name as tenant, COALESCE(NULLIF({$this->nm('sc.name')}, ''), '-') as company, COUNT(*) as orders,
+            {$this->m($f, "CASE WHEN $d THEN o.cod_amount ELSE 0 END")} as collected, {$this->m($f, "CASE WHEN $d THEN 0 ELSE o.cod_amount END")} as in_transit,
+            {$this->m($f, "CASE WHEN $d THEN o.shipping_cost ELSE 0 END")} as carrier_fee, {$this->m($f, "CASE WHEN $d THEN o.cod_amount - o.shipping_cost ELSE 0 END")} as owed")
+            ->groupBy('o.shipping_company_id', 'o.tenant_id', 't.name', DB::raw($this->nm('sc.name')))->orderByDesc('owed'));
+    }
+
     public function paymentFees(ReportFilter $f): array
     {
         $q = $this->orders($f)->leftJoin('payment_methods as pm', 'pm.id', '=', 'o.payment_method_id');
@@ -108,7 +120,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function netProfit(ReportFilter $f): array
     {
-        $o = (array) $this->orders($f, ['delivered'])->selectRaw("COUNT(*) as orders, {$this->m($f, 'o.subtotal - o.discount')} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
+        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, 'o.subtotal - o.discount')} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
 
         $r = $this->base($f, 'order_returns', 'r')->join('orders as o', 'o.id', '=', 'r.order_id')->whereIn('r.status', ['approved', 'refunded'])->whereBetween('r.created_at', [$f->start(), $f->end()]);
         if ($f->branchId) {

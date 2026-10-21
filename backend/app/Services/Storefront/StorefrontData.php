@@ -38,7 +38,7 @@ class StorefrontData
     {
         return [
             'pages' => StaticPage::where('is_active', true)->orderBy('id')->get(['slug', 'title']),
-            'payments' => PaymentMethod::where('is_active', true)->orderBy('sort_order')->get(),
+            'payments' => PaymentMethod::available()->orderBy('sort_order')->get(),
         ];
     }
 

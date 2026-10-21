@@ -4,10 +4,11 @@ namespace App\Events;
 
 use App\Models\Order;
 use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
 class OrderPaymentProofUploaded
 {
-    use Dispatchable;
+    use Dispatchable, SerializesModels;
 
     public function __construct(public Order $order) {}
 }

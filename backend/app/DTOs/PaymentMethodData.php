@@ -26,7 +26,7 @@ final readonly class PaymentMethodData
         return new self(
             $type, $provider, $r->cleanTranslations($r->input('name')), $r->cleanTranslations($r->input('instructions')),
             $type === PaymentMethodType::WALLET ? $r->input('account_number') : null,
-            $type === PaymentMethodType::WALLET && $r->boolean('requires_proof'),
+            $type === PaymentMethodType::WALLET, // proof of payment is ALWAYS required for wallets
             (string) $r->input('fee_percent', 0), (string) $r->input('fee_fixed', 0), FeeBearer::from($r->input('fee_bearer')), $creds,
             $r->boolean('is_sandbox'), $r->boolean('is_active'), (int) $r->input('sort_order', 0),
         );

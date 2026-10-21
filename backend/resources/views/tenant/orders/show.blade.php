@@ -92,8 +92,13 @@
             <x-card :title="__('orders.fields.payment')">
                 <div class="space-y-2 text-sm">
                     <div>{{ $order->paymentMethod?->name }} <span class="badge {{ $order->payment_status === PaymentStatus::PAID ? 'badge-success' : 'badge-muted' }}">{{ $order->payment_status->label() }}</span></div>
+                    @if ($order->prepay_method_id)
+                        <div class="text-slate-600">{{ __('orders.prepaid_shipping') }}: <b>{{ number_format((float) $order->prepaid_shipping, 2) }}</b> ({{ $order->prepayMethod?->name }}) | {{ __('orders.cod_amount') }}: <b>{{ number_format((float) $order->cod_amount, 2) }}</b></div>
+                    @elseif ((float) $order->cod_amount > 0)
+                        <div class="text-slate-600">{{ __('orders.cod_amount') }}: <b>{{ number_format((float) $order->cod_amount, 2) }}</b></div>
+                    @endif
                     @if ($order->payment_proof)
-                        <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($order->payment_proof) }}" target="_blank" class="text-brand-600 underline">{{ __('orders.view_proof') }}</a>
+                        <a href="{{ route('tenant.orders.proof.file', $order->id) }}" target="_blank" class="text-brand-600 underline">{{ __('orders.view_proof') }}</a>
                         <span class="badge badge-muted">{{ $order->proof_status?->label() }}</span>
                         @if ($order->payment_status === PaymentStatus::REVIEW)
                             @can('orders.payments')

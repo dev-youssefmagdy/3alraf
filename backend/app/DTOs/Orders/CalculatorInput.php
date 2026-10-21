@@ -22,5 +22,7 @@ final readonly class CalculatorInput
         public string $feeBearer = 'customer', // customer|merchant
         public string $affiliatePercent = '0',
         public string $paidAmount = '0',
+        public bool $isCod = false,                    // payment method type is COD
+        public bool $codCollectShippingUpfront = true, // settings.cod_collect_shipping_upfront
     ) {}
 }

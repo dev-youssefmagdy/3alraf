@@ -33,7 +33,17 @@ class PaymentMethodDataTable extends BaseDataTable
             ->addColumn('provider_label', fn (PaymentMethod $m) => e($m->provider->label()))
             ->addColumn('fee', fn (PaymentMethod $m) => e(rtrim(rtrim((string) $m->fee_percent, '0'), '.').'% + '.$this->money($m->fee_fixed).' ('.$m->fee_bearer->label().')'))
             ->addColumn('status', fn (PaymentMethod $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (PaymentMethod $m) => $this->tenantActions($m, 'tenant.payment-methods', 'payment_methods'));
+            ->addColumn('actions', function (PaymentMethod $m) {
+                $u = auth('tenant')->user();
+                $toggle = $u?->can('payment_methods.edit')
+                    ? '<button type="button" class="btn-sm btn-secondary" data-post-action="'.e(route('tenant.payment-methods.toggle', $m->id)).'">'.e($m->is_active ? __('ops.deactivate') : __('ops.activate')).'</button>' : '';
+                $actions = $this->tenantActions($m, 'tenant.payment-methods', 'payment_methods');
+                if ($m->type === \App\Enums\PaymentMethodType::COD) { // default COD can be deactivated, never deleted
+                    $actions = preg_replace('/<button[^>]*data-delete[^>]*>.*?<\/button>/', '', $actions);
+                }
+
+                return '<div class="flex items-center gap-2">'.$toggle.$actions.'</div>';
+            });
     }
 
     protected function rawColumns(): array

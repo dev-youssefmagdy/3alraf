@@ -2,6 +2,10 @@
 
 // Phase 7 storefront strings (English)
 return [
+    'prepay_title' => 'Pay the delivery fee now',
+    'prepay_hint' => 'Cash on delivery: pay the delivery fee online or by wallet now; the rest is paid on delivery.',
+    'cod_balance' => 'Pay on delivery',
+    'prepaid_now' => 'Pay now (delivery)',
     'promo' => 'Fast delivery to all governorates | Cash on delivery available',
     'search_placeholder' => 'Search products, brands or categories...', 'search' => 'Search', 'search_results' => 'Results for ":q"', 'type_to_search' => 'Type a keyword to search.',
     'suggest_products' => 'Products', 'suggest_categories' => 'Categories',
