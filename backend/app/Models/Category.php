@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 /** Unlimited-depth tree: parent_id + materialized `path` ("1/5/9", ids incl. self) + `depth`. */
 class Category extends Model
@@ -60,6 +59,6 @@ class Category extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        return $this->image ? Storage::disk('public')->url($this->image) : null;
+        return $this->image ? media_url($this->image) : null;
     }
 }

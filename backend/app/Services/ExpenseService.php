@@ -17,10 +17,10 @@ class ExpenseService extends CrudService
     {
         $data = $dto->toArray();
         if ($dto->attachment) {
-            $model?->attachment && Storage::disk('public')->delete($model->attachment);
-            $data['attachment'] = $dto->attachment->store('expenses', 'public');
+            $model?->attachment && Storage::disk(config('media.private_disk'))->delete($model->attachment);
+            $data['attachment'] = $dto->attachment->store('tenants/'.current_tenant()?->id.'/expenses', config('media.private_disk'));
         } elseif ($dto->removeAttachment && $model?->attachment) {
-            Storage::disk('public')->delete($model->attachment);
+            Storage::disk(config('media.private_disk'))->delete($model->attachment);
             $data['attachment'] = null;
         }
         if (! $model) {
@@ -32,6 +32,6 @@ class ExpenseService extends CrudService
 
     protected function guardDelete(Model $model): void
     {
-        $model->attachment && Storage::disk('public')->delete($model->attachment);
+        $model->attachment && Storage::disk(config('media.private_disk'))->delete($model->attachment);
     }
 }

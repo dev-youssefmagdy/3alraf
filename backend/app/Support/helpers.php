@@ -67,3 +67,30 @@ if (! function_exists('country_flag')) {
         return mb_chr(0x1F1E6 + ord($code[0]) - 65).mb_chr(0x1F1E6 + ord($code[1]) - 65);
     }
 }
+
+if (! function_exists('media_url')) {
+    /** The ONLY way to build a public media URL: CDN base (MEDIA_URL) + stored path. */
+    function media_url(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        return config('media.url').'/'.ltrim($path, '/');
+    }
+}
+
+if (! function_exists('private_url')) {
+    /** Signed, expiring URL for a file on the private disk (served only to authenticated tenant admins). */
+    function private_url(?string $path, ?int $minutes = null): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.files.private', now()->addMinutes($minutes ?? config('media.signed_ttl_minutes')), ['tenant' => current_tenant()?->slug, 'path' => $path]);
+    }
+}

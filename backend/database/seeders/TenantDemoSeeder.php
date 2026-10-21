@@ -96,7 +96,7 @@ class TenantDemoSeeder extends Seeder
         foreach ($defs as $i => [$place, $en, $ar, $w, $h, $link]) {
             $images = [];
             foreach (['ar', 'en'] as $loc) {
-                $images[$loc] = PlaceholderImage::banner('banners', $t->slug.'-'.$i.'-'.$loc, $en, $w, $h, $i);
+                $images[$loc] = PlaceholderImage::banner("tenants/{$t->id}/banners", $t->slug.'-'.$i.'-'.$loc, $en, $w, $h, $i);
             }
             Banner::create(['placement' => $place, 'title' => ['ar' => $ar, 'en' => $en], 'images' => $images, 'link_url' => $link, 'sort_order' => $i, 'is_active' => true]);
         }

@@ -6,16 +6,13 @@ use App\Models\Image;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Format;
 use Intervention\Image\ImageManager;
 
-/** Stores uploads on the `public` disk as webp (max 1600px) + 400px thumbnail. */
+/** Stores uploads on the `media` (CDN) disk as webp (max 1600px) + 400px thumbnail, content-hashed names (immutable), namespaced tenants/{id}/ or catalog/. */
 class ImageUploadService
 {
-    public const DISK = 'public';
-
     private ImageManager $manager;
 
     public function __construct()
@@ -23,15 +20,29 @@ class ImageUploadService
         $this->manager = new ImageManager(new Driver);
     }
 
+    public static function disk(): \Illuminate\Contracts\Filesystem\Filesystem
+    {
+        return Storage::disk(config('media.disk'));
+    }
+
+    /** Tenant uploads live under tenants/{id}/, central (no tenant) ones under catalog/. */
+    private function namespace(): string
+    {
+        $t = current_tenant();
+
+        return $t ? "tenants/{$t->id}/" : 'catalog/';
+    }
+
     /** @return array{path:string,thumb_path:string} */
     public function store(UploadedFile $file, string $dir): array
     {
-        $name = Str::uuid()->toString();
-        $dir = trim($dir, '/').'/'.date('Y/m');
-        $disk = Storage::disk(self::DISK);
+        $dir = $this->namespace().trim($dir, '/').'/'.date('Y/m');
+        $disk = self::disk();
 
         $img = $this->manager->decodePath($file->getRealPath());
-        $disk->put("$dir/$name.webp", (string) (clone $img)->scaleDown(1600, 1600)->encodeUsingFormat(Format::WEBP, quality: 85));
+        $main = (string) (clone $img)->scaleDown(1600, 1600)->encodeUsingFormat(Format::WEBP, quality: 85);
+        $name = substr(hash('sha256', $main), 0, 40); // content hash: same bytes => same URL, safe for `immutable` caching
+        $disk->put("$dir/$name.webp", $main);
         $disk->put("$dir/{$name}_thumb.webp", (string) (clone $img)->cover(400, 400)->encodeUsingFormat(Format::WEBP, quality: 80));
 
         return ['path' => "$dir/$name.webp", 'thumb_path' => "$dir/{$name}_thumb.webp"];
@@ -70,7 +81,7 @@ class ImageUploadService
     public function deletePath(?string $path): void
     {
         if ($path) {
-            Storage::disk(self::DISK)->delete([$path, str_replace('.webp', '_thumb.webp', $path)]);
+            self::disk()->delete([$path, str_replace('.webp', '_thumb.webp', $path)]);
         }
     }
 }

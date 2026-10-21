@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Brand extends Model
 {
@@ -27,6 +26,6 @@ class Brand extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo ? Storage::disk('public')->url($this->logo) : null;
+        return $this->logo ? media_url($this->logo) : null;
     }
 }

@@ -33,7 +33,7 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    Storage::fake('public');
+    Storage::fake('media');
     Storage::fake('private');
     $this->tenant = Tenant::where('slug', 'egy')->first();
     $this->t = 'http://egy.3alraf.test/admin';
@@ -165,7 +165,7 @@ it('handles wallet proof upload, approval and rejection', function () {
     $order->refresh();
     expect($order->payment_status)->toBe(PaymentStatus::REVIEW)->and($order->payment_proof)->not->toBeNull();
     Storage::disk('private')->assertExists($order->payment_proof);
-    Storage::disk('public')->assertMissing($order->payment_proof);
+    Storage::disk('media')->assertMissing($order->payment_proof);
 
     $svc->rejectProof($order, 'blurry');
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);

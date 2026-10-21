@@ -125,7 +125,7 @@ class CatalogSeeder extends Seeder
             foreach ($nodes as $slug => $n) {
                 $c = Category::firstOrCreate(['slug' => $slug], ['parent_id' => $parent?->id, 'name' => ['ar' => $n[0], 'en' => $n[1]], 'depth' => $parent ? $parent->depth + 1 : 0, 'path' => '', 'sort_order' => $i++, 'is_active' => true]);
                 $c->forceFill(['path' => ($parent ? $parent->path.'/' : '').$c->id, 'depth' => $parent ? $parent->depth + 1 : 0])->save();
-                $c->image = $c->image ?: PlaceholderImage::make('categories', $slug, $n[1], 600, 600)['path'];
+                $c->image = $c->image ?: PlaceholderImage::make('catalog/categories', $slug, $n[1], 600, 600)['path'];
                 $c->save();
                 $cats[$slug] = $c;
                 if (isset($n[2])) {
@@ -148,7 +148,7 @@ class CatalogSeeder extends Seeder
             ]);
             $p->categories()->sync([$cats[$leaf]->id]);
             foreach ([0, 1] as $n) {
-                $p->images()->create(PlaceholderImage::make('products', "$slug-$n", $en, 800, 800, $n) + ['sort_order' => $n]);
+                $p->images()->create(PlaceholderImage::make('catalog/products', "$slug-$n", $en, 800, 800, $n) + ['sort_order' => $n]);
             }
 
             if ($axes) {

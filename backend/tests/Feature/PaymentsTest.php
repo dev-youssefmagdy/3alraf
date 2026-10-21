@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
-    Storage::fake('public');
+    Storage::fake('media');
     $this->tenant = Tenant::where('slug', 'egy')->first();
     $this->t = 'http://egy.3alraf.test/admin';
     $this->s = 'http://egy.3alraf.test/ar';
@@ -340,7 +340,7 @@ it('keeps proofs on the private disk, served only to tenant admins and the order
     $bad(UploadedFile::fake()->create('ok.pdf', 100, 'application/pdf'))->assertOk();
     $order->refresh();
     Storage::disk('private')->assertExists($order->payment_proof);
-    Storage::disk('public')->assertMissing($order->payment_proof);
+    Storage::disk('media')->assertMissing($order->payment_proof);
     $this->get("{$this->s}/order/{$order->public_token}/proof")->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
     $this->get("{$this->s}/order/".\Illuminate\Support\Str::uuid().'/proof')->assertNotFound();
     $this->get("{$this->t}/orders/{$order->id}/proof")->assertRedirect();                                              // guests are sent to login

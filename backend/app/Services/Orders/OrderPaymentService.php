@@ -44,7 +44,7 @@ class OrderPaymentService
         if ($order->payment_proof) {
             Storage::disk(self::PROOF_DISK)->delete($order->payment_proof);
         }
-        $path = $file->store('payment-proofs/'.$order->tenant_id, self::PROOF_DISK);
+        $path = $file->store('tenants/'.$order->tenant_id.'/payment-proofs', self::PROOF_DISK);
         $order->update(['payment_proof' => $path, 'proof_status' => ProofStatus::PENDING, 'payment_status' => PaymentStatus::REVIEW]);
         event(new OrderPaymentProofUploaded($order));
 

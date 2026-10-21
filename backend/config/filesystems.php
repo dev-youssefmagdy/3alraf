@@ -56,6 +56,28 @@ return [
             'report' => false,
         ],
 
+        // Public media (CDN origin). MEDIA_DRIVER=local serves a directory through a static-only vhost; =s3 uses any S3-compatible store (R2/MinIO/S3).
+        'media' => env('MEDIA_DRIVER', 'local') === 's3' ? [
+            'driver' => 's3',
+            'key' => env('MEDIA_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('MEDIA_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('MEDIA_REGION', env('AWS_DEFAULT_REGION', 'auto')),
+            'bucket' => env('MEDIA_BUCKET', env('AWS_BUCKET')),
+            'endpoint' => env('MEDIA_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => (bool) env('MEDIA_PATH_STYLE', false),
+            'url' => env('MEDIA_URL'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ] : [
+            'driver' => 'local',
+            'root' => env('MEDIA_ROOT', storage_path('app/media')),
+            'url' => env('MEDIA_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/media'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -84,6 +106,7 @@ return [
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
+        public_path('media') => storage_path('app/media'),
     ],
 
 ];

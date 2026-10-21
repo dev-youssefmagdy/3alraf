@@ -4,7 +4,7 @@ namespace Database\Seeders\Support;
 
 use Illuminate\Support\Facades\Storage;
 
-/** Generates local gradient placeholder images (GD, no network) onto the public disk as webp. */
+/** Generates local gradient placeholder images (GD, no network) onto the media disk as webp. */
 class PlaceholderImage
 {
     private const FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
@@ -14,7 +14,7 @@ class PlaceholderImage
     {
         $path = "$dir/$key.webp";
         $thumb = "$dir/{$key}_thumb.webp";
-        $disk = Storage::disk('public');
+        $disk = Storage::disk(config('media.disk'));
         if ($disk->exists($path) && $disk->exists($thumb)) {
             return ['path' => $path, 'thumb_path' => $thumb];
         }
@@ -31,7 +31,7 @@ class PlaceholderImage
     public static function banner(string $dir, string $key, string $label, int $w = 1600, int $h = 500, int $seed = 0): string
     {
         $path = "$dir/$key.webp";
-        $disk = Storage::disk('public');
+        $disk = Storage::disk(config('media.disk'));
         if (! $disk->exists($path)) {
             $disk->put($path, self::encode(self::render($w, $h, (crc32($key) + $seed * 61) % 360, $label)));
         }

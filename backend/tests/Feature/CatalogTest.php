@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    Storage::fake('public');
+    Storage::fake('media');
     $this->c = 'http://3alraf.test/admin';
     $this->t = 'http://egy.3alraf.test/admin';
     $this->actingAs(CentralAdmin::first(), 'central');
@@ -36,7 +36,7 @@ it('validates and creates brands, attributes and a category tree', function () {
     $this->post("{$this->c}/brands", ['name' => ['ar' => 'سوني', 'en' => 'Sony'], 'is_active' => 1, 'logo' => UploadedFile::fake()->image('l.png', 50, 50)], ['Accept' => 'application/json'])->assertOk();
     $brand = Brand::first();
     expect($brand->slug)->toBe('sony');
-    Storage::disk('public')->assertExists($brand->logo);
+    Storage::disk('media')->assertExists($brand->logo);
 
     $this->postJson("{$this->c}/attributes", [
         'name' => ['ar' => 'اللون', 'en' => 'Color'], 'code' => 'color', 'type' => 'color',
@@ -114,8 +114,8 @@ it('creates a simple product with auto barcode and images, and lists datatable',
     ], ['Accept' => 'application/json'])->assertOk();
     $p = Product::with('images')->first();
     expect(BarcodeService::isValidEan13($p->barcode))->toBeTrue()->and($p->images)->toHaveCount(2);
-    Storage::disk('public')->assertExists($p->images[0]->path);
-    Storage::disk('public')->assertExists($p->images[0]->thumb_path);
+    Storage::disk('media')->assertExists($p->images[0]->path);
+    Storage::disk('media')->assertExists($p->images[0]->thumb_path);
     $this->postJson("{$this->c}/products/validate", ['type' => 'simple', 'name' => ['ar' => 'x'], 'sku' => 'HP-1', 'category_ids' => [$cat->id], 'barcode' => '1234567890123'])
         ->assertJsonValidationErrors(['sku', 'barcode']);
     $this->getJson("{$this->c}/products/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 1);

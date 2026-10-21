@@ -22,7 +22,8 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    Storage::fake('public');
+    Storage::fake('media');
+    Storage::fake('private');
     $this->tenant = Tenant::where('slug', 'egy')->first();
     $this->t = 'http://egy.3alraf.test/admin';
     app()->instance('currentTenant', $this->tenant);
@@ -169,18 +170,18 @@ it('manages cities, branches, suppliers, shipping prices, expenses and banners w
     $this->post("{$this->t}/expenses", ['expense_category_id' => $cat->id, 'amount' => '150.50', 'expense_date' => '2026-10-05', 'attachment' => UploadedFile::fake()->create('r.pdf', 20, 'application/pdf')], ['Accept' => 'application/json'])->assertOk();
     $exp = \App\Models\Expense::first();
     expect((string) $exp->amount)->toBe('150.50');
-    Storage::disk('public')->assertExists($exp->attachment);
+    Storage::disk('private')->assertExists($exp->attachment);
     $this->deleteJson("{$this->t}/expense-categories/{$cat->id}")->assertStatus(422);
     $this->get("{$this->t}/expenses/{$exp->id}/edit")->assertOk();
     $this->deleteJson("{$this->t}/expenses/{$exp->id}")->assertOk();
-    Storage::disk('public')->assertMissing($exp->attachment);
+    Storage::disk('private')->assertMissing($exp->attachment);
 
     // banners: per-locale image + schedule validation
     $this->postJson("{$this->t}/banners/validate", ['placement' => 'home_hero'])->assertJsonValidationErrors(['images']);
     $this->post("{$this->t}/banners", ['placement' => 'home_hero', 'title' => ['ar' => 'عرض'], 'images' => ['ar' => UploadedFile::fake()->image('b.jpg', 800, 300)], 'starts_at' => '2026-10-02 10:00', 'ends_at' => '2026-10-01 10:00'], ['Accept' => 'application/json'])->assertJsonValidationErrors(['ends_at']);
     $this->post("{$this->t}/banners", ['placement' => 'home_hero', 'title' => ['ar' => 'عرض'], 'images' => ['ar' => UploadedFile::fake()->image('b.jpg', 800, 300)], 'is_active' => 1], ['Accept' => 'application/json'])->assertOk();
     $banner = \App\Models\Banner::first();
-    Storage::disk('public')->assertExists($banner->images['ar']);
+    Storage::disk('media')->assertExists($banner->images['ar']);
     expect(\App\Models\Banner::live()->count())->toBe(1)->and($banner->imageUrl('ar'))->not->toBeNull();
     $this->get("{$this->t}/banners/{$banner->id}/edit")->assertOk();
     $this->get("{$this->t}/banners")->assertOk();

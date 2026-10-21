@@ -10,6 +10,7 @@ use App\Http\Controllers\Tenant\ExpenseCategoryController;
 use App\Http\Controllers\Tenant\ExpenseController;
 use App\Http\Controllers\Tenant\PaymentMethodController;
 use App\Http\Controllers\Tenant\PurchaseController;
+use App\Http\Controllers\Tenant\PrivateFileController;
 use App\Http\Controllers\Tenant\ShippingCompanyController;
 use App\Http\Controllers\Tenant\StockAdjustmentController;
 use App\Http\Controllers\Tenant\StockController;
@@ -104,6 +105,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('stock-transfers/{id}/receive', [StockTransferController::class, 'receive'])->name('stock-transfers.receive');
         Route::post('stock-transfers/{id}/cancel', [StockTransferController::class, 'cancel'])->name('stock-transfers.cancel');
         Route::resource('stock-adjustments', StockAdjustmentController::class)->only(['index', 'create', 'store', 'show'])->parameters(['stock-adjustments' => 'id']);
+
+        Route::get('files/{path}', [PrivateFileController::class, 'show'])->where('path', '.*')->middleware('signed')->name('files.private');
 
         // Phase 4: orders, returns, customers, notifications
         Route::get('orders/datatable', [OrderController::class, 'datatable'])->name('orders.datatable');

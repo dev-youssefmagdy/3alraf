@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class Expense extends Model
 {
@@ -29,6 +28,6 @@ class Expense extends Model
 
     public function getAttachmentUrlAttribute(): ?string
     {
-        return $this->attachment ? Storage::disk('public')->url($this->attachment) : null;
+        return $this->attachment ? private_url($this->attachment) : null;
     }
 }

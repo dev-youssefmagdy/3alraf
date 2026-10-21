@@ -6,7 +6,6 @@ use App\Enums\BannerPlacement;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class Banner extends Model
 {
@@ -26,7 +25,7 @@ class Banner extends Model
         $imgs = $this->images ?? [];
         $path = $imgs[$locale ?? app()->getLocale()] ?? $imgs[current_tenant()?->default_locale ?? ''] ?? collect($imgs)->first();
 
-        return $path ? Storage::disk('public')->url($path) : null;
+        return $path ? media_url($path) : null;
     }
 
     /** Active flag + schedule window. */
