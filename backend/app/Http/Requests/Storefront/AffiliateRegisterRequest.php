@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Storefront;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use App\Models\Affiliate;
 
 class AffiliateRegisterRequest extends FormRequest
 {
@@ -12,11 +12,18 @@ class AffiliateRegisterRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email')) {
+            $this->merge(['email' => Affiliate::normalizeEmail($this->input('email'))]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:190', Rule::unique('affiliates', 'email')->where('tenant_id', current_tenant()->id)],
+            'email' => Affiliate::emailRules($this->user('affiliate')?->id),
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];

@@ -21,6 +21,23 @@ class Affiliate extends Authenticatable
         static::creating(fn (self $a) => $a->uuid ??= (string) Str::uuid());
     }
 
+    /** Single place where affiliate e-mails are normalised (trim + lowercase) - every write goes through this mutator. */
+    public static function normalizeEmail(?string $email): string
+    {
+        return mb_strtolower(trim((string) $email));
+    }
+
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = self::normalizeEmail($value);
+    }
+
+    /** Validation rules for an affiliate e-mail: unique per tenant (the unique index is case-insensitive), optionally ignoring one row. */
+    public static function emailRules(?int $ignoreId = null): array
+    {
+        return ['required', 'email', 'max:190', \Illuminate\Validation\Rule::unique('affiliates', 'email')->where('tenant_id', current_tenant()->id)->ignore($ignoreId)];
+    }
+
     protected function casts(): array
     {
         return ['password' => 'hashed', 'status' => AffiliateStatus::class, 'approved_at' => 'datetime'];

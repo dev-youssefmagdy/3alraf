@@ -20,3 +20,6 @@ Schedule::command('sanctum:prune-expired --hours=24')->dailyAt('04:30');
 
 // Media hygiene: weekly report of unreferenced files (dry run; delete manually with `media:prune-orphans`).
 Schedule::command('media:prune-orphans --dry-run')->weeklyOn(0, '05:00');
+
+// Retention: purge / anonymise soft-deleted records older than SOFT_DELETE_RETENTION_DAYS (default 60), off-peak.
+Schedule::command('retention:purge')->dailyAt('04:45')->withoutOverlapping()->onOneServer();
