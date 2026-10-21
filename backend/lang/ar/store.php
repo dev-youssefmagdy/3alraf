@@ -20,7 +20,7 @@ return [
     'add_to_cart' => 'أضف للسلة', 'choose_options' => 'اختر الخيارات', 'unavailable_combo' => 'هذا الاختيار غير متاح', 'off' => 'خصم :p%', 'description' => 'الوصف', 'sold_out' => 'نفدت الكمية',
     'wishlist_login' => 'سجّل الدخول لإضافة المنتج للمفضلة.', 'reviews_count' => ':n تقييم', 'avg_rating' => 'متوسط التقييم',
     'cart_title' => 'سلة التسوق', 'cart_empty' => 'سلتك فارغة', 'continue_shopping' => 'متابعة التسوق', 'remove' => 'حذف', 'unit_price' => 'سعر الوحدة', 'line_total' => 'الإجمالي',
-    'subtotal' => 'المجموع الفرعي', 'discount' => 'الخصم', 'shipping' => 'الشحن', 'tax' => 'الضريبة', 'payment_fee' => 'رسوم الدفع', 'total' => 'الإجمالي', 'free' => 'مجاني',
+    'subtotal' => 'المجموع الفرعي', 'discount' => 'الخصم', 'shipping' => 'الشحن', 'tax' => 'الضريبة', 'cod_fee' => 'رسوم الدفع عند الاستلام', 'payment_fee' => 'رسوم الدفع', 'total' => 'الإجمالي', 'free' => 'مجاني',
     'checkout' => 'إتمام الشراء', 'proceed_checkout' => 'متابعة إلى الدفع', 'flash_note' => 'تشمل سلتك أسعار عروض خاطفة قد تنتهي قريباً.', 'item_unavailable' => 'غير متاح حالياً',
     'discount_code' => 'كود الخصم', 'apply_code' => 'تطبيق', 'code_applied' => 'تم تطبيق الكود.', 'order_summary' => 'ملخص الطلب',
     'contact_info' => 'بيانات التواصل', 'shipping_address' => 'عنوان الشحن', 'saved_addresses' => 'عناوينك المحفوظة', 'new_address' => 'عنوان جديد',

@@ -11,6 +11,7 @@ return [
     'paid_after_cancel_note' => 'Payment received after the order was cancelled: refund it.',
     'pay_now' => 'Pay now',
     'prepaid_shipping' => 'Prepaid delivery fee',
+    'cod_fee_default' => 'COD fee',
     'cod_amount' => 'Cash on delivery',
     'orders' => 'Orders',
     'order' => 'Order',

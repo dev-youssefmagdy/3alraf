@@ -31,6 +31,7 @@
         @if ($order->discount > 0)<tr><td>{{ $t(__('orders.fields.discount')) }}</td><td class="num">- {{ $m($order->discount) }}</td></tr>@endif
         <tr><td>{{ $t(__('orders.fields.shipping')) }}</td><td class="num">{{ $m($order->shipping_net) }}</td></tr>
         @if ($order->tax > 0)<tr><td>{{ $t(__('orders.fields.tax')) }}</td><td class="num">{{ $m($order->tax) }}</td></tr>@endif
+        @if ($order->cod_fee > 0)<tr><td>{{ $t($order->codFeeLabel()) }}</td><td class="num">{{ $m($order->cod_fee) }}</td></tr>@endif
         @if ($order->payment_fee_charged > 0)<tr><td>{{ $t(__('orders.fields.payment_fee')) }}</td><td class="num">{{ $m($order->payment_fee_charged) }}</td></tr>@endif
         <tr class="grand"><td>{{ $t(__('ops.fields.total')) }}</td><td class="num">{{ $m($order->total) }}</td></tr>
         <tr><td>{{ $t(__('orders.fields.paid')) }}</td><td class="num">{{ $m($order->paid_amount) }}</td></tr>

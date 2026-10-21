@@ -15,7 +15,7 @@ class CartSummary
         $out = ['items' => $this->cart->view()];
         if ($lines = $this->cart->lines()) {
             $q = $this->quotes->quote($lines, $d ?? new CheckoutData);
-            $out['totals'] = $q['totals']->forCustomer();
+            $out['totals'] = $q['totals']->forCustomer() + ['codFeeLabel' => $q['cod_fee_label'][app()->getLocale()] ?? reset($q['cod_fee_label'])];
             $out['flash'] = collect($q['lines'])->contains(fn ($l) => $l['flash']);
         }
 

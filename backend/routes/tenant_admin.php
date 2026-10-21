@@ -73,6 +73,10 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
+        Route::get('cod-fees', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
+        Route::put('cod-fees', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
+        Route::post('cod-fees/validate', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
+
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 
         // Roles & staff accounts (Access\*Controller, guard from route-name prefix)

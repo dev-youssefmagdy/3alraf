@@ -196,6 +196,7 @@ return [
         'revenue' => 'Revenue (after discount)',
         'cogs' => 'Cost of goods sold',
         'gross_profit' => 'Gross profit',
+        'cod_fee' => 'COD fee',
         'shipping_collected' => 'Shipping collected',
         'shipping_paid' => 'Shipping paid to carriers',
         'payment_fees' => 'Payment fees (merchant-borne)',

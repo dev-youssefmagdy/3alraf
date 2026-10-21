@@ -129,7 +129,7 @@ class ReturnService
         if (Money::cmp((string) $order->tax, '0') <= 0 || Money::cmp($base, '0') <= 0) {
             return '0.00';
         }
-        $added = Money::sub((string) $order->total, Money::add($base, (string) $order->shipping_net, (string) $order->payment_fee_charged));
+        $added = Money::sub((string) $order->total, Money::add($base, (string) $order->shipping_net, (string) $order->payment_fee_charged, (string) $order->cod_fee));
         if (Money::cmp($added, (string) $order->tax) < 0) {
             return '0.00'; // inclusive: tax was never added on top of the goods
         }

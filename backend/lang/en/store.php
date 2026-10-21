@@ -20,7 +20,7 @@ return [
     'add_to_cart' => 'Add to cart', 'choose_options' => 'Choose options', 'unavailable_combo' => 'This combination is unavailable', 'off' => ':p% off', 'description' => 'Description', 'sold_out' => 'Sold out',
     'wishlist_login' => 'Log in to add this product to your wishlist.', 'reviews_count' => ':n reviews', 'avg_rating' => 'Average rating',
     'cart_title' => 'Shopping cart', 'cart_empty' => 'Your cart is empty', 'continue_shopping' => 'Continue shopping', 'remove' => 'Remove', 'unit_price' => 'Unit price', 'line_total' => 'Total',
-    'subtotal' => 'Subtotal', 'discount' => 'Discount', 'shipping' => 'Shipping', 'tax' => 'Tax', 'payment_fee' => 'Payment fee', 'total' => 'Total', 'free' => 'Free',
+    'subtotal' => 'Subtotal', 'discount' => 'Discount', 'shipping' => 'Shipping', 'tax' => 'Tax', 'cod_fee' => 'COD fee', 'payment_fee' => 'Payment fee', 'total' => 'Total', 'free' => 'Free',
     'checkout' => 'Checkout', 'proceed_checkout' => 'Proceed to checkout', 'flash_note' => 'Your cart includes flash-sale prices that may end soon.', 'item_unavailable' => 'Currently unavailable',
     'discount_code' => 'Discount code', 'apply_code' => 'Apply', 'code_applied' => 'Code applied.', 'order_summary' => 'Order summary',
     'contact_info' => 'Contact details', 'shipping_address' => 'Shipping address', 'saved_addresses' => 'Your saved addresses', 'new_address' => 'New address',

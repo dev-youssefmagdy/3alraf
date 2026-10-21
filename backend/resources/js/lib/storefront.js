@@ -220,6 +220,7 @@ function init() {
         if (opts.shipping) h += row(T.shipping, Number(t.shippingNet) > 0 ? money(t.shippingNet) : esc(T.free));
         if (Number(t.tax) > 0) h += row(T.tax, money(t.tax));
         if (Number(t.paymentFeeCharged) > 0) h += row(T.payment_fee, money(t.paymentFeeCharged));
+        if (Number(t.codFee) > 0) h += row(t.codFeeLabel || T.cod_fee, money(t.codFee));
         h += row(T.total, '<span class="text-brand-600">' + money(t.total) + '</span>', 'border-t border-slate-100 pt-2 text-base font-extrabold');
         if (Number(t.prepaidShipping) > 0 && Number(t.codAmount) > 0) { // COD split: delivery fee now, the rest on delivery
             h += row(T.prepaid_now, money(t.prepaidShipping), 'text-sm') + row(T.cod_balance, money(t.codAmount), 'text-sm');

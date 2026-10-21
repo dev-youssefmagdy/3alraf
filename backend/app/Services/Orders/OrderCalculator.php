@@ -57,7 +57,7 @@ class OrderCalculator
         $base = Money::add($afterDiscount, $shippingNet, $taxAdded);
         $fee = Money::round(bcadd(bcdiv(bcmul($base, $in->feePercent, 8), '100', 8), $in->feeFixed, 8));
         $feeCharged = $in->feeBearer === 'customer' ? $fee : '0.00';
-        $codFee = $in->isCod ? $this->codExtraFee($in, $base) : '0.00';
+        $codFee = $this->codExtraFee($in, $base, $afterDiscount);
 
         // 5/6. Total, due
         $total = Money::add($afterDiscount, $shippingNet, $taxAdded, $feeCharged, $codFee);
@@ -74,17 +74,40 @@ class OrderCalculator
         $net = Money::sub(Money::add(Money::sub($afterDiscount, $cogs), $shippingNet, $feeCharged, $codFee), Money::add($shippingCost, $fee, $commission));
 
         return new OrderTotals($subtotal, $cogs, $discount, $shipping, $shippingDiscount, $shippingNet, $shippingCost, $tax, $fee, $feeCharged,
-            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid);
+            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid, $codFee);
     }
 
     /**
-     * HOOK (not implemented): per-tenant COD extra fee. When added, return the customer-charged amount here (e.g. from a
-     * `cod_fee_percent`/`cod_fee_fixed` CalculatorInput field applied to $base). It is automatically part of `total`,
-     * `cod_amount` (the carrier collects it) and income in `net` above; no other formula changes. See CALCULATIONS.md.
+     * COD extra fee actually CHARGED to the customer (docs/CALCULATIONS.md "COD extra fee"): 0 unless COD + enabled + bearer=customer;
+     * base F = subtotal - discount + shipping_net + tax(exclusive); fixed / percent / both, per-city flat override, min/max clamp,
+     * waived when subtotal - discount >= free_over. Part of total, cod_amount and income in profit.
      */
-    private function codExtraFee(CalculatorInput $in, string $base): string
+    private function codExtraFee(CalculatorInput $in, string $base, string $afterDiscount): string
     {
-        return '0.00';
+        $c = $in->codFee;
+        if (! $in->isCod || ! $c || ! $c->enabled || $c->bearer !== 'customer') {
+            return '0.00';
+        }
+        if ($c->freeOver !== null && Money::cmp($afterDiscount, $c->freeOver) >= 0) {
+            return '0.00';
+        }
+        if ($in->cityId !== null && isset($c->cityFixed[$in->cityId])) {
+            return Money::round($c->cityFixed[$in->cityId]);
+        }
+        $pct = Money::percent($base, $c->percent);
+        $fee = match ($c->type) {
+            'percent' => $pct,
+            'fixed_plus_percent' => Money::add($c->fixed, bcdiv(bcmul($base, $c->percent, 8), '100', 8)),
+            default => Money::round($c->fixed),
+        };
+        if ($c->min !== null) {
+            $fee = Money::max($fee, $c->min);
+        }
+        if ($c->max !== null) {
+            $fee = Money::min($fee, $c->max);
+        }
+
+        return $fee;
     }
 
     /** @return array{0:string,1:array,2:bool} [discount, per-line shares, free shipping?] */

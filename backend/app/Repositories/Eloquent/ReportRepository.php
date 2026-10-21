@@ -122,7 +122,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function netProfit(ReportFilter $f): array
     {
-        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, 'o.subtotal - o.discount')} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
+        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, 'o.subtotal - o.discount')} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
 
         $r = $this->base($f, 'order_returns', 'r')->join('orders as o', 'o.id', '=', 'r.order_id')->whereIn('r.status', ['approved', 'refunded'])->whereBetween('r.created_at', [$f->start(), $f->end()]);
         if ($f->branchId) {

@@ -33,6 +33,7 @@
             @if ($order->discount > 0)<div><span>{{ __('orders.fields.discount') }}</span><span>- {{ $m($order->discount) }}</span></div>@endif
             <div><span>{{ __('orders.fields.shipping') }}</span><span>{{ $m($order->shipping_net) }}</span></div>
             @if ($order->tax > 0)<div><span>{{ __('orders.fields.tax') }}</span><span>{{ $m($order->tax) }}</span></div>@endif
+            @if ($order->cod_fee > 0)<div><span>{{ $order->codFeeLabel() }}</span><span>{{ $m($order->cod_fee) }}</span></div>@endif
             @if ($order->payment_fee_charged > 0)<div><span>{{ __('orders.fields.payment_fee') }}</span><span>{{ $m($order->payment_fee_charged) }}</span></div>@endif
             <div style="font-weight:700;border-top:1px solid #cbd5e1"><span>{{ __('ops.fields.total') }}</span><span>{{ $m($order->total) }}</span></div>
             <div><span>{{ __('orders.fields.paid') }}</span><span>{{ $m($order->paid_amount) }}</span></div>

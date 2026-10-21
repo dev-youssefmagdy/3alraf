@@ -15,7 +15,7 @@ class OrderProfitService
         $net = '0.00';
         if (in_array($order->status, OrderStatus::salesStatuses(), true)) {
             $goods = Money::sub((string) $order->subtotal, (string) $order->discount);
-            $income = Money::add(Money::sub($goods, (string) $order->cogs), (string) $order->shipping_net, (string) $order->payment_fee_charged);
+            $income = Money::add(Money::sub($goods, (string) $order->cogs), (string) $order->shipping_net, (string) $order->payment_fee_charged, (string) $order->cod_fee);
             $net = Money::sub($income, Money::add((string) $order->shipping_cost, (string) $order->payment_fee, (string) $order->affiliate_commission));
 
             $loss = '0';

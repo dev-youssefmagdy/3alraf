@@ -76,6 +76,7 @@
                     @if ((float) $order->discount > 0)<div class="flex justify-between text-emerald-600"><dt>{{ __('store.discount') }}</dt><dd>-{{ $money($order->discount) }}</dd></div>@endif
                     <div class="flex justify-between"><dt>{{ __('store.shipping') }}</dt><dd>{{ (float) $order->shipping_net > 0 ? $money($order->shipping_net) : __('store.free') }}</dd></div>
                     @if ((float) $order->tax > 0)<div class="flex justify-between"><dt>{{ __('store.tax') }}</dt><dd>{{ $money($order->tax) }}</dd></div>@endif
+                    @if ((float) $order->cod_fee > 0)<div class="flex justify-between"><dt>{{ $order->codFeeLabel() }}</dt><dd>{{ $money($order->cod_fee) }}</dd></div>@endif
                     @if ((float) $order->payment_fee_charged > 0)<div class="flex justify-between"><dt>{{ __('store.payment_fee') }}</dt><dd>{{ $money($order->payment_fee_charged) }}</dd></div>@endif
                     <div class="flex justify-between border-t border-slate-100 pt-2 text-base font-extrabold"><dt>{{ __('store.total') }}</dt><dd class="text-brand-600">{{ $money($order->total) }}</dd></div>
                 </dl>

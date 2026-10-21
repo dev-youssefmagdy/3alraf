@@ -70,3 +70,46 @@ it('splits COD: customer prepays shipping_net, the carrier collects the rest (wo
     $card = calc();                                                                                                 // non-COD: no cod_amount
     expect($card->codAmount)->toBe('0.00')->and($card->prepaidShipping)->toBe('0.00');
 });
+
+/* ---------- COD extra fee (CALCULATIONS.md "COD extra fee"); base F = 260 in the worked example ---------- */
+function codCalc(array $cfg = [], array $over = []): \App\DTOs\Orders\OrderTotals
+{
+    $c = \App\DTOs\Orders\CodFeeConfig::fromSettings(array_merge(['cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '10'], $cfg));
+
+    return calc(array_merge(['feePercent' => '0', 'feeFixed' => '0', 'isCod' => true, 'codFee' => $c], $over));
+}
+
+it('COD fee fixed + percent: total, cod_amount (not prepaid shipping) and profit', function () {
+    $t = codCalc(['cod_extra_fee_type' => 'fixed_plus_percent', 'cod_extra_fee_percent' => '2'], ['codCollectShippingUpfront' => false]);
+    expect($t->codFee)->toBe('15.20')->and($t->total)->toBe('275.20')->and($t->prepaidShipping)->toBe('0.00')->and($t->codAmount)->toBe('275.20')
+        ->and($t->netProfit)->toBe('88.70');
+    $u = codCalc(['cod_extra_fee_type' => 'fixed_plus_percent', 'cod_extra_fee_percent' => '2'], ['codCollectShippingUpfront' => true]);
+    expect($u->prepaidShipping)->toBe('30.00')->and($u->codAmount)->toBe('245.20');   // fee is collected by the carrier, never prepaid
+    expect($t->forCustomer())->toHaveKey('codFee')->not->toHaveKeys(['netProfit', 'cogs']);
+});
+
+it('COD fee fixed, percent, min, max, free_over', function () {
+    expect(codCalc()->codFee)->toBe('10.00')->and(codCalc()->total)->toBe('270.00');
+    expect(codCalc(['cod_extra_fee_type' => 'percent', 'cod_extra_fee_percent' => '7'])->codFee)->toBe('18.20');
+    expect(codCalc(['cod_extra_fee_type' => 'percent', 'cod_extra_fee_percent' => '2', 'cod_extra_fee_min' => '20'])->codFee)->toBe('20.00')   // 5.20 floored
+        ->and(codCalc(['cod_extra_fee_type' => 'percent', 'cod_extra_fee_percent' => '10', 'cod_extra_fee_max' => '12'])->codFee)->toBe('12.00') // 26 capped
+        ->and(codCalc(['cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '50', 'cod_extra_fee_max' => '12'])->codFee)->toBe('12.00');
+    expect(codCalc(['cod_extra_fee_free_over' => '230'])->codFee)->toBe('0.00')->and(codCalc(['cod_extra_fee_free_over' => '230.01'])->codFee)->toBe('10.00'); // subtotal-discount = 230
+});
+
+it('COD fee: merchant bearer charges nothing, non-COD and disabled are 0, per-city override replaces the formula', function () {
+    $m = codCalc(['cod_extra_fee_bearer' => 'merchant']);
+    expect($m->codFee)->toBe('0.00')->and($m->total)->toBe('260.00')->and($m->netProfit)->toBe('73.50');
+    expect(codCalc([], ['isCod' => false])->codFee)->toBe('0.00')->and(codCalc([], ['isCod' => false])->total)->toBe('260.00');
+    expect(codCalc(['cod_extra_fee_enabled' => false])->codFee)->toBe('0.00');
+    $city = ['cod_extra_fee_city_fixed' => [5 => '25']];
+    expect(codCalc($city, ['cityId' => 5])->codFee)->toBe('25.00')->and(codCalc($city, ['cityId' => 6])->codFee)->toBe('10.00')
+        ->and(codCalc($city + ['cod_extra_fee_free_over' => '100'], ['cityId' => 5])->codFee)->toBe('0.00');
+});
+
+it('COD fee uses the payment-fee base (incl. exclusive tax) and rounds half-up at the end', function () {
+    // F = 230 + 30 + 14% tax of 230 (32.20) = 292.20 ; 0.333% = 0.97303 -> 0.5 + 0.97303 = 1.47303 -> 1.47
+    $t = codCalc(['cod_extra_fee_type' => 'fixed_plus_percent', 'cod_extra_fee_fixed' => '0.5', 'cod_extra_fee_percent' => '0.333'], ['taxRate' => '14']);
+    expect($t->codFee)->toBe('1.47')->and($t->total)->toBe('293.67');
+    expect(codCalc(['cod_extra_fee_type' => 'percent', 'cod_extra_fee_percent' => '0.333'])->codFee)->toBe('0.87'); // 0.8658
+});

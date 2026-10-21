@@ -47,7 +47,7 @@ class OrderPlacementService
                 'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'prepay_method_id' => ($t->prepaidShipping > 0 && $q['prepay']) ? $q['prepay']->id : null, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id,
                 'status' => OrderStatus::PENDING, 'payment_status' => PaymentStatus::UNPAID,
                 'subtotal' => $t->subtotal, 'discount' => $t->discount, 'shipping' => $t->shipping, 'shipping_discount' => $t->shippingDiscount, 'shipping_net' => $t->shippingNet,
-                'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'total' => $t->total, 'cod_amount' => $t->codAmount, 'prepaid_shipping' => $t->prepaidShipping,
+                'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'cod_fee' => $t->codFee, 'cod_fee_label' => bccomp($t->codFee, '0', 2) > 0 ? $q['cod_fee_label'] : null, 'total' => $t->total, 'cod_amount' => $t->codAmount, 'prepaid_shipping' => $t->prepaidShipping,
                 'cogs' => $t->cogs, 'affiliate_commission' => $t->affiliateCommission, 'net_profit' => 0, // computed when an admin confirms (OrderProfitService)
                 'currency' => current_tenant()?->currency_code, 'placed_at' => now(),
             ]);

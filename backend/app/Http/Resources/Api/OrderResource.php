@@ -18,7 +18,7 @@ class OrderResource extends JsonResource
             'payment_method' => $o->relationLoaded('paymentMethod') && $o->paymentMethod ? ['id' => $o->paymentMethod->id, 'type' => $o->paymentMethod->type->value, 'name' => $o->paymentMethod->name] : null,
             'subtotal' => (string) $o->subtotal, 'discount' => (string) $o->discount, 'shipping' => (string) $o->shipping_net, 'tax' => (string) $o->tax,
             'payment_fee' => (string) $o->payment_fee_charged, 'total' => (string) $o->total, 'paid_amount' => (string) $o->paid_amount, 'due' => $o->due(),
-            'cod_amount' => (string) $o->cod_amount, 'prepaid_shipping' => (string) $o->prepaid_shipping, 'currency' => $o->currency,
+            'cod_fee' => (string) $o->cod_fee, 'cod_fee_label' => (float) $o->cod_fee > 0 ? $o->codFeeLabel() : null, 'cod_amount' => (string) $o->cod_amount, 'prepaid_shipping' => (string) $o->prepaid_shipping, 'currency' => $o->currency,
             'placed_at' => $o->placed_at?->toIso8601String(), 'items_count' => $o->relationLoaded('items') ? (int) $o->items->sum('quantity') : null,
         ];
     }

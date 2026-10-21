@@ -19,7 +19,7 @@ class CartResource extends JsonResource
             'has_flash' => (bool) ($c['flash'] ?? false),
             'totals' => $t ? [
                 'subtotal' => $t['subtotal'], 'discount' => $t['discount'], 'shipping' => $t['shipping'], 'shipping_discount' => $t['shippingDiscount'], 'shipping_net' => $t['shippingNet'],
-                'tax' => $t['tax'], 'payment_fee' => $t['paymentFeeCharged'], 'total' => $t['total'], 'cod_amount' => $t['codAmount'], 'prepaid_shipping' => $t['prepaidShipping'],
+                'tax' => $t['tax'], 'payment_fee' => $t['paymentFeeCharged'], 'total' => $t['total'], 'cod_fee' => $t['codFee'], 'cod_fee_label' => $t['codFeeLabel'] ?? null, 'cod_amount' => $t['codAmount'], 'prepaid_shipping' => $t['prepaidShipping'],
             ] : null,
         ];
     }

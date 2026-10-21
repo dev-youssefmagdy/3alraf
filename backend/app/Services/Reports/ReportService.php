@@ -135,7 +135,7 @@ class ReportService
         $d = $this->repo->netProfit($f);
         $gross = Money::sub($d['revenue'], $d['cogs']);
         $fees = Money::sub($d['fee'], $d['fee_charged']);                  // merchant-borne fee cost (customer-borne fees net to 0)
-        $order = Money::sub(Money::sub(Money::add($gross, $d['shipping_net']), Money::add($d['shipping_cost'], $fees)), $d['commission']);
+        $order = Money::sub(Money::sub(Money::add($gross, $d['shipping_net'], $d['cod_fee']), Money::add($d['shipping_cost'], $fees)), $d['commission']);
         $reversal = Money::sub($d['return_value'], $d['returned_cogs']);
         $net = Money::sub(Money::sub(Money::sub($order, $reversal), $d['return_shipping']), $d['expenses']);
 
@@ -147,7 +147,7 @@ class ReportService
         $l = $this->netProfitLines($f);
         $rows = collect([
             ['revenue', $l['revenue'], 'income'], ['cogs', $l['cogs'], 'cost'], ['gross_profit', $l['gross'], 'total'],
-            ['shipping_collected', $l['shipping_net'], 'income'], ['shipping_paid', $l['shipping_cost'], 'cost'], ['payment_fees', $l['fees'], 'cost'], ['affiliate_commission', $l['commission'], 'cost'],
+            ['shipping_collected', $l['shipping_net'], 'income'], ['cod_fee', $l['cod_fee'], 'income'], ['shipping_paid', $l['shipping_cost'], 'cost'], ['payment_fees', $l['fees'], 'cost'], ['affiliate_commission', $l['commission'], 'cost'],
             ['order_profit', $l['order'], 'total'], ['returns_reversal', $l['reversal'], 'cost'], ['return_shipping', $l['return_shipping'], 'cost'], ['expenses', $l['expenses'], 'cost'], ['net_profit', $l['net'], 'total'],
         ])->map(fn ($r) => ['line' => __('reports.line.'.$r[0]), 'amount' => $r[1], 'kind' => $r[2]])->all();
 

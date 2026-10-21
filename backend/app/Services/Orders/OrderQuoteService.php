@@ -4,6 +4,7 @@ namespace App\Services\Orders;
 
 use App\DTOs\Orders\CalculatorInput;
 use App\DTOs\Orders\CheckoutData;
+use App\DTOs\Orders\CodFeeConfig;
 use App\DTOs\Orders\OrderTotals;
 use App\Enums\PaymentMethodType;
 use App\Enums\AffiliateStatus;
@@ -23,7 +24,7 @@ class OrderQuoteService
 
     /**
      * @param  array<int,array{product_id:int,variant_id:int,qty:int}>  $cartLines
-     * @return array{affiliate:?Affiliate,affiliate_percent:string,lines:array,totals:OrderTotals,discount:?\App\Models\DiscountCode,rate:?ShippingRate,method:?PaymentMethod,prepay:?PaymentMethod}
+     * @return array{affiliate:?Affiliate,affiliate_percent:string,lines:array,totals:OrderTotals,discount:?\App\Models\DiscountCode,rate:?ShippingRate,method:?PaymentMethod,prepay:?PaymentMethod,cod_fee_label:array}
      */
     public function quote(array $cartLines, CheckoutData $d, bool $lock = false): array
     {
@@ -100,9 +101,11 @@ class OrderQuoteService
             affiliatePercent: $affiliatePercent,
             isCod: $method?->type === PaymentMethodType::COD,
             codCollectShippingUpfront: (bool) (current_tenant()?->codCollectsShippingUpfront() ?? true),
+            codFee: CodFeeConfig::fromSettings($settings),
+            cityId: $d->cityId,
         ));
 
-        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent, 'prepay' => $prepay];
+        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent, 'prepay' => $prepay, 'cod_fee_label' => CodFeeConfig::fromSettings($settings)->labels()];
     }
 
     /** COD with a shipping fee to prepay needs a chosen online/wallet method (strict checkout only; live quotes stay lenient). */
