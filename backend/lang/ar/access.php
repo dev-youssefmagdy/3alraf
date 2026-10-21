@@ -1,0 +1,18 @@
+<?php
+
+// Phase 6 roles / staff accounts UI
+return [
+    'roles' => 'الأدوار',
+    'admins' => 'حسابات الموظفين',
+    'permissions' => 'الصلاحيات',
+    'users' => 'المستخدمون',
+    'system' => 'نظام',
+    'all' => 'الكل',
+    'select_all' => 'تحديد الكل',
+    'role_in_use' => 'هذا الدور مسند لحسابات موظفين.',
+    'cannot_delete_self' => 'لا يمكنك حذف حسابك.',
+    'password_hint' => 'اتركه فارغا للإبقاء على كلمة المرور الحالية.',
+    'fields' => ['name' => 'الاسم', 'email' => 'البريد الإلكتروني', 'password' => 'كلمة المرور', 'permissions' => 'الصلاحيات', 'roles' => 'الأدوار'],
+    'modules' => ['languages' => 'اللغات', 'tenants' => 'المتاجر', 'brands' => 'العلامات التجارية', 'attributes' => 'الخصائص', 'categories' => 'الأقسام', 'products' => 'المنتجات', 'admins' => 'حسابات الموظفين', 'roles' => 'الأدوار', 'reports' => 'التقارير', 'catalog' => 'الكتالوج', 'settings' => 'الإعدادات', 'cities' => 'المدن', 'branches' => 'الفروع', 'suppliers' => 'الموردون', 'shipping' => 'الشحن', 'payment_methods' => 'طرق الدفع', 'banners' => 'البنرات', 'expense_categories' => 'تصنيفات المصروفات', 'expenses' => 'المصروفات', 'stock' => 'المخزون', 'purchases' => 'المشتريات', 'stock_transfers' => 'تحويلات المخزون', 'stock_adjustments' => 'تسويات المخزون', 'orders' => 'الطلبات', 'returns' => 'المرتجعات', 'customers' => 'العملاء', 'discount_codes' => 'أكواد الخصم', 'flash_sales' => 'العروض الخاطفة', 'affiliates' => 'المسوقون', 'affiliate_tiers' => 'شرائح العمولة', 'affiliate_payouts' => 'مدفوعات المسوقين', 'product_lists' => 'قوائم المنتجات', 'reviews' => 'التقييمات', 'custom_pages' => 'الصفحات المخصصة', 'static_pages' => 'الصفحات الثابتة'],
+    'actions' => ['view' => 'عرض', 'create' => 'إنشاء', 'edit' => 'تعديل', 'delete' => 'حذف', 'receive' => 'استلام', 'send' => 'إرسال', 'approve' => 'اعتماد', 'refund' => 'استرداد', 'payments' => 'المدفوعات'],
+];

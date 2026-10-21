@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+@import 'toastr/build/toastr.min.css';
+@import 'datatables.net-dt/css/dataTables.dataTables.min.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Cairo', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-brand-50: #fef2f2;
+    --color-brand-100: #fee2e2;
+    --color-brand-500: #ef4444;
+    --color-brand-600: #dc2626;
+    --color-brand-700: #b91c1c;
+}
+
+@layer components {
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer; }
+    .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; }
+    .btn-secondary { @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50; }
+    .btn-danger { @apply bg-red-50 text-red-700 border border-red-200 hover:bg-red-100; }
+    .btn-sm { @apply inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium cursor-pointer; }
+    .form-label { @apply mb-1 block text-sm font-medium text-slate-700; }
+    .form-control { @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20; }
+    .form-control.is-invalid { @apply border-red-500 ring-2 ring-red-500/10; }
+    .field-error { @apply mt-1 text-xs text-red-600; }
+    .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+    .badge-success { @apply bg-emerald-50 text-emerald-700; }
+    .badge-muted { @apply bg-slate-100 text-slate-600; }
+    .badge-danger { @apply bg-red-50 text-red-700; }
+    .badge-warn { @apply bg-amber-50 text-amber-700; }
+    .side-link { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white; }
+    .side-link.active { @apply bg-brand-600 text-white; }
+}
+
+/* DataTables light touch-ups (RTL-safe) */
+.dt-container { @apply text-sm; }
+table.dataTable thead th { @apply text-start; }
+table.dataTable td { @apply align-middle; }

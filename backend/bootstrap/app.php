@@ -1,0 +1,63 @@
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CentralContext;
+use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SetAdminLocale;
+use App\Http\Middleware\SetLocale;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+        then: function () {
+            $central = config('app.central_domain');
+            Route::middleware(['web', CentralContext::class])->domain($central)->group(base_path('routes/central.php'));
+            Route::middleware(['web', 'tenant.resolve'])->domain('{tenant}.'.$central)->group(function () {
+                // order matters: /admin first, then the /{locale} storefront
+                require base_path('routes/tenant_admin.php');
+                require base_path('routes/storefront.php');
+            });
+        },
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: ['webhooks/*']);
+        $middleware->alias([
+            'tenant.resolve' => ResolveTenant::class,
+            'set.locale' => SetLocale::class,
+            'admin.locale' => SetAdminLocale::class,
+            'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
+        ]);
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return $request->getHost() === central_domain() ? route('central.login') : route('tenant.login', ['tenant' => tenant_slug_from_host($request)]);
+            }
+
+            if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {
+                return route('storefront.affiliate.login', ['locale' => $request->segment(1)]);
+            }
+
+            return route('storefront.login', ['locale' => app()->getLocale()]);
+        });
+        $middleware->redirectUsersTo(function (Request $request) {
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return $request->getHost() === central_domain() ? route('central.dashboard') : route('tenant.dashboard', ['tenant' => tenant_slug_from_host($request)]);
+            }
+
+            if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {
+                return route('storefront.affiliate.dashboard', ['locale' => $request->segment(1)]);
+            }
+
+            return route('storefront.home', ['locale' => app()->getLocale()]);
+        });
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+    })->create();

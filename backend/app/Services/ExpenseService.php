@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\Contracts\ExpenseRepositoryInterface;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
+
+class ExpenseService extends CrudService
+{
+    public function __construct(ExpenseRepositoryInterface $repo)
+    {
+        parent::__construct($repo);
+    }
+
+    protected function payload(object $dto, ?Model $model = null): array
+    {
+        $data = $dto->toArray();
+        if ($dto->attachment) {
+            $model?->attachment && Storage::disk('public')->delete($model->attachment);
+            $data['attachment'] = $dto->attachment->store('expenses', 'public');
+        } elseif ($dto->removeAttachment && $model?->attachment) {
+            Storage::disk('public')->delete($model->attachment);
+            $data['attachment'] = null;
+        }
+        if (! $model) {
+            $data['created_by'] = auth('tenant')->id();
+        }
+
+        return $data;
+    }
+
+    protected function guardDelete(Model $model): void
+    {
+        $model->attachment && Storage::disk('public')->delete($model->attachment);
+    }
+}

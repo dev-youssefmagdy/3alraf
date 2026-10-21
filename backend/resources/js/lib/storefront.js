@@ -1,0 +1,319 @@
+import $ from 'jquery';
+import toastr from 'toastr';
+
+const sf = window.__sf;
+if (sf) init();
+
+function init() {
+    const T = sf.i;
+    const nf = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const money = (v) => nf.format(Number(v || 0)) + ' ' + sf.symbol;
+    const esc = (s) => $('<div>').text(s ?? '').html();
+    const firstError = (xhr) => {
+        const e = xhr.responseJSON?.errors;
+        return e ? Object.values(e)[0][0] : xhr.responseJSON?.message || window.__t?.error;
+    };
+    const itemUrl = (id) => sf.routes.cartItems + '/' + id;
+
+    /* ---------- cart state ---------- */
+    let cart = { items: [], totals: null };
+    function loadCart() {
+        return $.get(sf.routes.cart).done((res) => { cart = res.data || { items: [], totals: null }; $(document).trigger('cart:updated', [cart]); });
+    }
+    function cartCall(method, url, data) {
+        return $.ajax({ url, method: 'POST', data: Object.assign({ _method: method }, data || {}) })
+            .done((res) => { cart = res.data || cart; $(document).trigger('cart:updated', [cart]); })
+            .fail((xhr) => toastr.error(firstError(xhr)));
+    }
+    function addToCart(productId, variantId, qty) {
+        return $.post(sf.routes.cartItems, { product_id: productId, variant_id: variantId || 0, quantity: qty || 1 })
+            .done((res) => { toastr.success(res.message); cart = res.data || cart; $(document).trigger('cart:updated', [cart]); })
+            .fail((xhr) => toastr.error(firstError(xhr)));
+    }
+    const count = (c) => (c.items || []).reduce((n, i) => n + i.qty, 0);
+
+    $(document).on('cart:updated', (_e, c) => {
+        $('[data-cart-count]').text(count(c));
+        renderMini(c);
+    });
+
+    function renderMini(c) {
+        const $b = $('[data-mini-cart]');
+        if (!$b.length) return;
+        if (!c.items.length) { $b.html('<p class="py-4 text-center text-slate-500">' + esc(T.cart_empty) + '</p>'); $('[data-mini-cart-foot]').addClass('hidden'); return; }
+        $b.html(c.items.map((i) => '<div class="flex gap-2 py-2">' + (i.image ? '<img src="' + esc(i.image) + '" class="size-12 rounded object-cover" alt="">' : '<div class="size-12 rounded bg-slate-100"></div>')
+            + '<div class="min-w-0 flex-1"><p class="line-clamp-1 font-semibold">' + esc(i.name) + '</p><p class="text-xs text-slate-500">' + i.qty + ' &times; ' + money(i.unit_price) + '</p></div>'
+            + '<button type="button" data-mini-remove="' + i.id + '" class="self-start text-lg leading-none text-slate-400 hover:text-red-600" aria-label="' + esc(T.remove) + '">&times;</button></div>').join(''));
+        $('[data-mini-cart-foot]').removeClass('hidden');
+        $('[data-mini-subtotal]').text(c.totals ? money(c.totals.subtotal) : '');
+    }
+    $('#mini-cart').on('click', '[data-mini-remove]', function () { cartCall('DELETE', itemUrl($(this).data('mini-remove'))); });
+
+    $(document).on('click', '[data-add-to-cart]', function () {
+        const $b = $(this); $b.prop('disabled', true);
+        addToCart($b.data('product'), $b.data('variant'), 1).always(() => $b.prop('disabled', false));
+    });
+
+    /* ---------- generic UI ---------- */
+    $(document).on('click', '[data-drawer-open]', () => $('[data-drawer]').removeClass('hidden'));
+    $(document).on('click', '[data-drawer-close]', () => $('[data-drawer]').addClass('hidden'));
+    $(document).on('click', '[data-filters-toggle]', () => $('[data-filter-form]').toggleClass('hidden'));
+
+    function tickCountdowns() {
+        $('[data-countdown]').each(function () {
+            const left = Math.max(0, Math.floor((new Date($(this).data('countdown')) - Date.now()) / 1000));
+            const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+            const p = (n) => String(n).padStart(2, '0');
+            $(this).text((d ? d + T.d + ' ' : '') + p(h) + ':' + p(m) + ':' + p(s));
+        });
+    }
+    tickCountdowns(); setInterval(tickCountdowns, 1000);
+
+    /* ---------- search suggestions ---------- */
+    (function () {
+        const $form = $('[data-search-form]'), $in = $form.find('[data-search-input]'), $box = $form.find('[data-suggest]');
+        let timer, last = '';
+        const hide = () => $box.addClass('hidden');
+        $in.on('input', function () {
+            clearTimeout(timer);
+            const q = $in.val().trim();
+            if (q.length < 2) { hide(); return; }
+            timer = setTimeout(() => {
+                last = q;
+                $.get(sf.routes.suggest, { q }).done((r) => {
+                    if (q !== last) return;
+                    let h = '';
+                    if (r.categories.length) h += '<p class="bg-slate-50 px-4 py-1 text-xs font-bold text-slate-500">' + esc(T.categories) + '</p>' + r.categories.map((c) => '<a class="block px-4 py-2 text-sm hover:bg-slate-50" href="' + esc(c.url) + '">' + esc(c.name) + '</a>').join('');
+                    if (r.products.length) h += '<p class="bg-slate-50 px-4 py-1 text-xs font-bold text-slate-500">' + esc(T.products) + '</p>' + r.products.map((p) => '<a class="flex items-center gap-3 px-4 py-2 text-sm hover:bg-slate-50" href="' + esc(p.url) + '">'
+                        + (p.image ? '<img src="' + esc(p.image) + '" class="size-10 rounded object-cover" alt="">' : '<span class="size-10 rounded bg-slate-100"></span>') + '<span class="flex-1">' + esc(p.name) + '</span><b class="text-brand-600">' + money(p.price) + '</b></a>').join('');
+                    $box.html(h || '<p class="px-4 py-3 text-sm text-slate-500">' + esc(T.no_results) + '</p>').removeClass('hidden');
+                });
+            }, 250);
+        });
+        $(document).on('click', (e) => { if (!$(e.target).closest('[data-search-form]').length) hide(); });
+        $in.on('keydown', (e) => { if (e.key === 'Escape') hide(); });
+    })();
+
+    /* ---------- hero slider + popup ---------- */
+    $('[data-slider]').each(function () {
+        const $s = $(this), $track = $s.find('[data-slides]'), n = $s.find('[data-slide]').length, $dots = $s.find('[data-dots] span'), rtl = sf.dir === 'rtl';
+        let i = 0, timer;
+        const go = (k) => {
+            i = (k + n) % n;
+            $track.css('transform', 'translateX(' + (rtl ? '' : '-') + i * 100 + '%)');
+            $dots.removeClass('bg-white').addClass('bg-white/60').eq(i).removeClass('bg-white/60').addClass('bg-white');
+        };
+        const auto = () => { clearInterval(timer); if (n > 1) timer = setInterval(() => go(i + 1), 5000); };
+        $s.on('click', '[data-slide-next]', (e) => { e.preventDefault(); go(i + 1); auto(); });
+        $s.on('click', '[data-slide-prev]', (e) => { e.preventDefault(); go(i - 1); auto(); });
+        go(0); auto();
+    });
+    $('[data-popup]').each(function () {
+        const key = 'popup-' + $(this).data('popup'); let seen = false;
+        try { seen = sessionStorage.getItem(key); } catch (e) { /* ignore */ }
+        if (seen) return;
+        const $p = $(this);
+        setTimeout(() => $p.removeClass('hidden').addClass('grid'), 1500);
+        $p.on('click', (e) => { if (e.target === this || $(e.target).closest('[data-popup-close]').length) { $p.addClass('hidden').removeClass('grid'); try { sessionStorage.setItem(key, '1'); } catch (er) { /* ignore */ } } });
+    });
+
+    /* ---------- catalog: AJAX filters ---------- */
+    $('[data-catalog]').each(function () {
+        const $c = $(this), $form = $c.find('[data-filter-form]'), action = $c.data('action');
+        let busy = null;
+        const load = (page, push = true) => {
+            const params = $form.serialize() + (page > 1 ? '&page=' + page : '');
+            $c.find('[data-grid]').css('opacity', 0.5);
+            if (busy) busy.abort();
+            busy = $.get(action, params).done((r) => {
+                $c.find('[data-grid]').html(r.html).css('opacity', 1);
+                $c.find('[data-pagination]').html(r.pagination);
+                $c.find('[data-count]').text(r.label);
+                if (push) history.pushState(null, '', action + '?' + params);
+                $c.find('[data-grid]')[0].scrollIntoView({ block: 'start', behavior: 'smooth' });
+            }).fail((x) => { if (x.statusText !== 'abort') { $c.find('[data-grid]').css('opacity', 1); toastr.error(window.__t?.error); } });
+        };
+        let t;
+        $form.on('change', 'input[type=checkbox]', () => load(1));
+        $form.on('input', 'input[type=number]', () => { clearTimeout(t); t = setTimeout(() => load(1), 600); });
+        $form.on('submit', (e) => { e.preventDefault(); load(1); });
+        $form.on('click', '[data-filter-reset]', function (e) { e.preventDefault(); $form.find('input[type=checkbox]').prop('checked', false); $form.find('input[type=number]').val(''); load(1); $(this).remove(); });
+        $c.on('change', '[data-sort]', function () { $form.find('[data-sort-input]').val(this.value); load(1); });
+        $c.on('click', '[data-page-link]', function (e) { e.preventDefault(); const p = new URL(this.href).searchParams.get('page'); load(parseInt(p, 10) || 1); });
+        window.addEventListener('popstate', () => location.reload());
+    });
+
+    /* ---------- product page ---------- */
+    $('[data-product-page]').each(function () {
+        const $p = $(this), picker = JSON.parse($p.attr('data-picker')), pid = $p.data('product-id');
+        const sel = {}; // attribute id -> value id
+        let current = null, flashTimer;
+        const $btn = $p.find('[data-add-to-cart-page]');
+        const matches = (v, s) => Object.values(s).every((id) => v.values.includes(id));
+        const nGroups = picker.options.length;
+
+        function refresh() {
+            // disable option values that no variant can satisfy together with the other selections
+            $p.find('[data-option-group]').each(function () {
+                const gid = $(this).data('option-group');
+                const others = Object.assign({}, sel); delete others[gid];
+                $(this).find('[data-option]').each(function () {
+                    const id = $(this).data('option');
+                    const ok = picker.variants.some((v) => matches(v, others) && v.values.includes(id));
+                    $(this).prop('disabled', !ok).toggleClass('is-active', sel[gid] === id);
+                });
+            });
+            current = Object.keys(sel).length === nGroups ? picker.variants.find((v) => matches(v, sel)) || null : (nGroups ? null : picker.variants[0] || null);
+            $p.find('[data-combo-error]').toggleClass('hidden', !(nGroups && Object.keys(sel).length === nGroups && !current));
+            const v = current;
+            $p.find('[data-price]').text(v ? nf.format(v.price) : '—');
+            $p.find('[data-old]').toggleClass('hidden', !(v && v.old)).text(v && v.old ? nf.format(v.old) : '');
+            $p.find('[data-sku]').text(v ? v.sku || '' : '');
+            $p.find('[data-barcode]').text(v ? v.barcode || '' : '');
+            let st = '';
+            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= 5 ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+            $p.find('[data-stock]').html(st);
+            if (v && v.image) $p.find('[data-main-image]').attr('src', v.image);
+            $btn.prop('disabled', !(v && v.in_stock));
+            const $q = $p.find('[data-qty]');
+            if (v && v.stock !== null) $q.attr('max', v.stock); else $q.removeAttr('max');
+            clearInterval(flashTimer);
+            const $f = $p.find('[data-flash]');
+            if (v && v.flash_ends) {
+                $f.removeClass('hidden');
+                const tick = () => {
+                    const left = Math.max(0, Math.floor((new Date(v.flash_ends) - Date.now()) / 1000)), p2 = (n) => String(n).padStart(2, '0');
+                    $f.find('[data-flash-time]').text(Math.floor(left / 3600) + ':' + p2(Math.floor((left % 3600) / 60)) + ':' + p2(left % 60));
+                };
+                tick(); flashTimer = setInterval(tick, 1000);
+            } else $f.addClass('hidden');
+        }
+        // preselect the first in-stock variant
+        const start = picker.variants.find((v) => v.in_stock) || picker.variants[0];
+        if (nGroups && start) picker.options.forEach((o) => { const val = o.values.find((x) => start.values.includes(x.id)); if (val) sel[o.id] = val.id; });
+        $p.on('click', '[data-option]', function () {
+            const gid = $(this).closest('[data-option-group]').data('option-group'), id = $(this).data('option');
+            if (sel[gid] === id) delete sel[gid]; else sel[gid] = id;
+            refresh();
+        });
+        $p.on('click', '[data-thumb]', function () {
+            $p.find('[data-main-image]').attr('src', $(this).data('thumb'));
+            $p.find('[data-thumb]').removeClass('border-brand-600').addClass('border-transparent'); $(this).addClass('border-brand-600').removeClass('border-transparent');
+        });
+        $btn.on('click', function () {
+            if (!current) { toastr.error(T.unavailable); return; }
+            $btn.prop('disabled', true);
+            addToCart(pid, current.id, parseInt($p.find('[data-qty]').val(), 10) || 1).always(() => $btn.prop('disabled', !(current && current.in_stock)));
+        });
+        $p.on('click', '[data-wish]', function () {
+            $.post($(this).data('wish')).done((r) => { toastr.success(r.message); setTimeout(() => location.reload(), 600); });
+        });
+        refresh();
+    });
+
+    /* ---------- totals renderer ---------- */
+    function renderTotals($dl, t, opts = {}) {
+        if (!t) { $dl.empty(); return; }
+        const row = (label, val, cls = '') => '<div class="flex justify-between ' + cls + '"><dt>' + esc(label) + '</dt><dd>' + val + '</dd></div>';
+        let h = row(T.subtotal, money(t.subtotal));
+        if (Number(t.discount) > 0) h += row(T.discount, '-' + money(t.discount), 'text-emerald-600');
+        if (opts.shipping) h += row(T.shipping, Number(t.shippingNet) > 0 ? money(t.shippingNet) : esc(T.free));
+        if (Number(t.tax) > 0) h += row(T.tax, money(t.tax));
+        if (Number(t.paymentFeeCharged) > 0) h += row(T.payment_fee, money(t.paymentFeeCharged));
+        h += row(T.total, '<span class="text-brand-600">' + money(t.total) + '</span>', 'border-t border-slate-100 pt-2 text-base font-extrabold');
+        $dl.html(h);
+    }
+
+    /* ---------- cart page ---------- */
+    $('[data-cart-page]').each(function () {
+        const $pg = $(this);
+        function render(c) {
+            const has = c.items.length > 0;
+            $pg.find('[data-cart-empty]').toggleClass('hidden', has);
+            $pg.find('[data-cart-lines]').toggleClass('hidden', !has);
+            $pg.find('[data-cart-summary]').toggleClass('hidden', !has);
+            $pg.find('[data-cart-flash]').toggleClass('hidden', !c.flash);
+            $pg.find('[data-cart-lines]').html(c.items.map((i) => '<div class="flex flex-wrap items-center gap-3 p-3" data-line="' + i.id + '">'
+                + (i.image ? '<img src="' + esc(i.image) + '" class="size-20 rounded-lg object-cover" alt="">' : '<div class="size-20 rounded-lg bg-slate-100"></div>')
+                + '<div class="min-w-0 flex-1"><a class="font-semibold hover:text-brand-600" href="' + (i.slug ? esc(location.pathname.replace(/\/cart.*$/, '') + '/product/' + i.slug) : '#') + '">' + esc(i.name) + '</a>'
+                + (i.available ? '' : '<p class="text-xs text-red-600">' + esc(T.item_unavailable) + '</p>') + '<p class="text-sm text-slate-500">' + esc(T.unit) + ': ' + money(i.unit_price) + '</p></div>'
+                + '<div class="flex items-center rounded-lg border border-slate-300"><button type="button" class="px-3 py-1.5" data-qty-minus aria-label="-">&minus;</button><span class="min-w-8 text-center text-sm font-bold">' + i.qty + '</span><button type="button" class="px-3 py-1.5" data-qty-plus aria-label="+">+</button></div>'
+                + '<b class="w-28 text-end">' + money(i.qty * i.unit_price) + '</b>'
+                + '<button type="button" class="text-2xl leading-none text-slate-400 hover:text-red-600" data-remove aria-label="' + esc(T.remove) + '">&times;</button></div>').join(''));
+            renderTotals($pg.find('[data-totals]'), c.totals);
+        }
+        $(document).on('cart:updated', (_e, c) => render(c));
+        const find = (el) => cart.items.find((x) => x.id === $(el).closest('[data-line]').data('line'));
+        $pg.on('click', '[data-qty-plus]', function () { const i = find(this); cartCall('PUT', itemUrl(i.id), { quantity: i.qty + 1 }); });
+        $pg.on('click', '[data-qty-minus]', function () { const i = find(this); cartCall('PUT', itemUrl(i.id), { quantity: i.qty - 1 }); });
+        $pg.on('click', '[data-remove]', function () { cartCall('DELETE', itemUrl(find(this).id)); });
+        if (cart.items.length) render(cart);
+    });
+
+    /* ---------- checkout ---------- */
+    $('[data-checkout]').each(function () {
+        const $f = $(this);
+        let shippingOpts = [], shippingRate = null;
+
+        const cityId = () => {
+            const $a = $f.find('input[name=address_id]:checked');
+            return $a.length && $a.val() ? String($a.data('city')) : String($f.find('[name=city_id]').val() || '');
+        };
+        const quote = (fromApply) => {
+            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, [name=discount_code]').serialize();
+            return $.post(sf.routes.quote, data).done((r) => {
+                renderTotals($f.find('[data-totals]'), r.data.totals, { shipping: true });
+                if (fromApply && $f.find('[name=discount_code]').val()) toastr.success(T.code_applied);
+            }).fail((xhr) => {
+                const errs = xhr.responseJSON?.errors || {};
+                if (errs.discount_code) { $f.find('[name=discount_code]').val(''); toastr.error(errs.discount_code[0]); quote(false); return; }
+                toastr.error(firstError(xhr));
+            });
+        };
+        function renderLines(c) {
+            $f.find('[data-checkout-lines]').html(c.items.map((i) => '<div class="flex justify-between gap-2 py-2"><span>' + esc(i.name) + ' <span class="text-slate-400">&times; ' + i.qty + '</span></span><b>' + money(i.qty * i.unit_price) + '</b></div>').join(''));
+        }
+        function applyCodRule() {
+            $f.find('[data-method-row]').each(function () {
+                const $r = $(this), $i = $r.find('input'), blocked = $i.data('type') === 'cod' && shippingRate && !shippingRate.supports_cod;
+                $i.prop('disabled', !!blocked); $r.find('[data-cod-note]').toggleClass('hidden', !blocked);
+                if (blocked && $i.prop('checked')) $i.prop('checked', false);
+            });
+        }
+        function loadShipping() {
+            const city = cityId();
+            shippingRate = null; $f.find('[data-shipping-input]').val('');
+            if (!city) { $f.find('[data-shipping-options]').html('<p class="text-slate-500">' + esc(T.select_city_hint) + '</p>'); applyCodRule(); quote(); return; }
+            $.get(sf.routes.shipping, { city_id: city }).done((r) => {
+                shippingOpts = r.data.options;
+                if (!shippingOpts.length) { $f.find('[data-shipping-options]').html('<p class="text-red-600">' + esc(T.no_shipping) + '</p>'); applyCodRule(); quote(); return; }
+                $f.find('[data-shipping-options]').html(shippingOpts.map((o, k) => '<label class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">'
+                    + '<span class="flex items-center gap-2"><input type="radio" name="ship_opt" value="' + o.id + '" class="accent-brand-600"' + (k === 0 ? ' checked' : '') + '><b>' + esc(o.name) + '</b>'
+                    + (o.eta && o.eta !== '—' ? '<small class="text-slate-500">' + esc(T.eta.replace(':d', o.eta)) + '</small>' : '') + '</span>'
+                    + '<span class="text-end"><b>' + (o.free ? esc(T.free) : money(o.fee)) + '</b></span></label>').join(''));
+                selectShipping(shippingOpts[0].id);
+            });
+        }
+        function selectShipping(id) {
+            shippingRate = shippingOpts.find((o) => String(o.id) === String(id)) || null;
+            $f.find('[data-shipping-input]').val(shippingRate ? shippingRate.id : '');
+            applyCodRule(); quote();
+        }
+        $f.on('change', 'input[name=ship_opt]', function () { selectShipping(this.value); });
+        $f.on('change', 'input[name=payment_method_id]', () => quote());
+        $f.on('change', 'input[name=address_id]', function () {
+            $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
+            loadShipping();
+        });
+        $f.on('change', '[name=city_id]', loadShipping);
+        $f.on('click', '[data-apply-code]', () => quote(true));
+        $f.on('keydown', '[name=discount_code]', (e) => { if (e.key === 'Enter') { e.preventDefault(); quote(true); } });
+        $(document).on('cart:updated', (_e, c) => { if (!c.items.length) { location.href = sf.routes.cart; return; } renderLines(c); });
+        if (cart.items.length) renderLines(cart);
+        // initial state (a saved address may be preselected)
+        $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
+        loadShipping();
+    });
+
+    loadCart();
+}

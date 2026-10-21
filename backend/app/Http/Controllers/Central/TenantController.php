@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Http\Controllers\Central;
+
+use App\DataTables\TenantDataTable;
+use App\DTOs\TenantData;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Central\TenantRequest;
+use App\Models\Language;
+use App\Models\Tenant;
+use App\Services\TenantService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+
+class TenantController extends Controller implements HasMiddleware
+{
+    public function __construct(private TenantService $service) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:tenants.view', only: ['index', 'datatable']),
+            new Middleware('can:tenants.create', only: ['create', 'store']),
+            new Middleware('can:tenants.edit', only: ['edit', 'update']),
+            new Middleware('can:tenants.delete', only: ['destroy']),
+        ];
+    }
+
+    public function index()
+    {
+        return view('central.tenants.index', ['table' => new TenantDataTable]);
+    }
+
+    public function datatable(TenantDataTable $table): JsonResponse
+    {
+        return $table->ajax();
+    }
+
+    public function create()
+    {
+        $tenant = new Tenant(['is_active' => true, 'currency_rate' => 1, 'timezone' => 'Africa/Cairo', 'locales' => ['ar', 'en'], 'default_locale' => 'ar']);
+
+        return view('central.tenants.form', ['tenant' => $tenant, 'languages' => Language::active()->get()]);
+    }
+
+    public function store(TenantRequest $request): JsonResponse
+    {
+        $this->service->create(TenantData::fromRequest($request));
+
+        return $this->ok(__('admin.saved'), route('central.tenants.index'));
+    }
+
+    public function edit(Tenant $tenant)
+    {
+        return view('central.tenants.form', ['tenant' => $tenant, 'languages' => Language::active()->get()]);
+    }
+
+    public function update(TenantRequest $request, Tenant $tenant): JsonResponse
+    {
+        $this->service->update($tenant, TenantData::fromRequest($request));
+
+        return $this->ok(__('admin.saved'), route('central.tenants.index'));
+    }
+
+    public function destroy(Tenant $tenant): JsonResponse
+    {
+        $this->service->delete($tenant);
+
+        return $this->ok(__('admin.deleted'));
+    }
+
+    public function validateForm(TenantRequest $request, ?Tenant $tenant = null): JsonResponse
+    {
+        return $this->ok();
+    }
+}

@@ -1,0 +1,18 @@
+<?php
+
+// Phase 6 roles / staff accounts UI
+return [
+    'roles' => 'Roles',
+    'admins' => 'Staff accounts',
+    'permissions' => 'Permissions',
+    'users' => 'Users',
+    'system' => 'System',
+    'all' => 'All',
+    'select_all' => 'Select all',
+    'role_in_use' => 'This role is assigned to staff accounts.',
+    'cannot_delete_self' => 'You cannot delete your own account.',
+    'password_hint' => 'Leave blank to keep the current password.',
+    'fields' => ['name' => 'Name', 'email' => 'Email', 'password' => 'Password', 'permissions' => 'Permissions', 'roles' => 'Roles'],
+    'modules' => ['languages' => 'Languages', 'tenants' => 'Tenants', 'brands' => 'Brands', 'attributes' => 'Attributes', 'categories' => 'Categories', 'products' => 'Products', 'admins' => 'Staff accounts', 'roles' => 'Roles', 'reports' => 'Reports', 'catalog' => 'Catalog', 'settings' => 'Settings', 'cities' => 'Cities', 'branches' => 'Branches', 'suppliers' => 'Suppliers', 'shipping' => 'Shipping', 'payment_methods' => 'Payment methods', 'banners' => 'Banners', 'expense_categories' => 'Expense categories', 'expenses' => 'Expenses', 'stock' => 'Stock', 'purchases' => 'Purchases', 'stock_transfers' => 'Stock transfers', 'stock_adjustments' => 'Stock adjustments', 'orders' => 'Orders', 'returns' => 'Returns', 'customers' => 'Customers', 'discount_codes' => 'Discount codes', 'flash_sales' => 'Flash sales', 'affiliates' => 'Affiliates', 'affiliate_tiers' => 'Affiliate tiers', 'affiliate_payouts' => 'Affiliate payouts', 'product_lists' => 'Product lists', 'reviews' => 'Reviews', 'custom_pages' => 'Custom pages', 'static_pages' => 'Static pages'],
+    'actions' => ['view' => 'View', 'create' => 'Create', 'edit' => 'Edit', 'delete' => 'Delete', 'receive' => 'Receive', 'send' => 'Send', 'approve' => 'Approve', 'refund' => 'Refund', 'payments' => 'Payments'],
+];
