@@ -44,7 +44,7 @@
             <button type="button" class="rounded-lg border border-slate-200 p-2 lg:hidden" data-drawer-open aria-label="{{ __('store.menu') }}">
                 <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
-            <a href="{{ route('storefront.home') }}" class="shrink-0 text-xl font-extrabold text-brand-600">{{ $tenant->name }}</a>
+            <a href="{{ route('storefront.home') }}" class="flex shrink-0 items-center gap-2 text-xl font-extrabold text-brand-600"><img src="{{ asset('logo.png') }}" alt="{{ $tenant->name }}" class="h-14 w-auto max-w-[240px] object-contain"></a>
 
             <form action="{{ route('storefront.search') }}" method="GET" class="relative order-last w-full lg:order-none lg:max-w-2xl lg:flex-1" data-search-form role="search">
                 <input type="search" name="q" value="{{ request('q') }}" autocomplete="off" placeholder="{{ __('store.search_placeholder') }}" class="form-control !rounded-full !py-2.5 !pe-12 ps-5" data-search-input>

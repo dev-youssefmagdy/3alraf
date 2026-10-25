@@ -51,7 +51,7 @@
     <div class="flex min-h-screen">
         <aside id="sidebar" class="fixed inset-y-0 start-0 z-40 hidden w-64 shrink-0 flex-col bg-slate-900 p-4 md:static md:flex">
             <a href="{{ route($isCentral ? 'central.dashboard' : 'tenant.dashboard') }}" class="mb-6 flex items-center gap-2 px-2 text-lg font-bold text-white">
-                <span class="grid size-8 place-items-center rounded-lg bg-brand-600">3</span>
+                <img src="{{ asset('logo.png') }}" alt="" class="size-8 rounded-lg object-contain">
                 <span>{{ $isCentral ? config('app.name') : ($tenant?->name ?? config('app.name')) }}</span>
             </a>
             <nav class="space-y-1">

@@ -5,7 +5,7 @@
     <div class="grid min-h-screen place-items-center px-4">
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
-                <div class="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-brand-600 text-xl font-bold text-white">3</div>
+                <img src="{{ asset('logo.png') }}" alt="" class="mx-auto mb-2 h-14 w-auto object-contain">
                 <h1 class="text-lg font-bold">{{ current_tenant()?->name ?? config('app.name') }}</h1>
                 <p class="text-sm text-slate-500">{{ __('admin.'.$titleKey) }}</p>
             </div>
