@@ -35,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.self::tenantKey($r).'|'.$r->ip().'|'.self::routeKey($r)));
         }
 
+        // Proof RE-upload (stricter than `upload`): per tenant + order token + IP; config/checkout.php.
+        RateLimiter::for('proof-reupload', fn (Request $r) => Limit::perMinutes((int) config('checkout.reupload.window'), (int) config('checkout.reupload.attempts'))
+            ->by('proof-reupload|'.self::tenantKey($r).'|'.$r->route('token').'|'.$r->ip()));
+
         // Mobile API default limiter: per tenant + authenticated user, else per IP. Never keyed by the raw bearer string
         // (garbage tokens would each get a fresh bucket); the user is only known once a guard has authenticated the request.
         RateLimiter::for('api', function (Request $r) {

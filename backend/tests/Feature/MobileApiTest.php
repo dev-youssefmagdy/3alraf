@@ -278,11 +278,12 @@ it('requires a prepay method for COD with upfront shipping and follows the walle
     $h = ['X-Cart-Token' => $this->postJson("{$this->api}/cart/items", ['product_id' => $this->p1->id, 'variant_id' => 0, 'quantity' => 2])->headers->get('X-Cart-Token')];
     $this->postJson("{$this->api}/checkout/validate", $this->body + ['payment_method_id' => $this->cod->id], $h)->assertStatus(422)->assertJsonStructure(['errors' => ['prepay_method_id']]);
     $this->postJson("{$this->api}/checkout", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->cod->id], $h)->assertStatus(422);
-    $this->postJson("{$this->api}/checkout/validate", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id], $h)->assertOk()
+    $this->post("{$this->api}/checkout/validate", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id, 'proof' => testProof()], $h + ['Accept' => 'application/json'])->assertOk()
         ->assertJsonPath('data.totals.prepaid_shipping', '40.00')->assertJsonPath('data.totals.cod_amount', '200.00');
 
-    $r = $this->postJson("{$this->api}/checkout", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id], $h)->assertCreated()
-        ->assertJsonPath('meta.next_action', 'upload_proof')->assertJsonPath('data.cod_amount', '200.00')->assertJsonPath('data.can_upload_proof', true)->assertJsonPath('data.pay_now', '40.00');
+    $this->postJson("{$this->api}/checkout", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id], $h)->assertStatus(422)->assertJsonStructure(['errors' => ['proof']]);
+    $r = $this->post("{$this->api}/checkout", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id, 'proof' => testProof()], $h + ['Accept' => 'application/json'])->assertCreated()
+        ->assertJsonPath('meta.next_action', 'none')->assertJsonPath('data.payment_status', 'pending_review')->assertJsonPath('data.cod_amount', '200.00')->assertJsonPath('data.can_upload_proof', true)->assertJsonPath('data.pay_now', '40.00');
     $token = $r->json('data.token');
 
     $this->postJson("{$this->api}/orders/$token/proof", [])->assertStatus(422);

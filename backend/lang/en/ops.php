@@ -171,7 +171,7 @@ return [
         ],
         "payment_method_type" => [
             "cod" => 'Cash on delivery',
-            "wallet" => 'Wallet transfer',
+            "wallet" => 'Offline / manual transfer',
             "online" => 'Online gateway',
         ],
         "fee_bearer" => [

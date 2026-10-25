@@ -27,6 +27,8 @@ use Illuminate\Support\Str;
  *  customer        has orders or reviews -> anonymised (name/e-mail/phone/password, addresses/carts/wishlist/tokens removed), else purged
  *  variant         referenced by order items / stock / purchase / adjustment / transfer rows -> kept, else purged (+images, QR codes, listing rows)
  *  product         same references (any of its variants too) -> kept, else purged (+images, variants, QR codes, tenant listings)
+ *  packaging_option referenced by an order (packaging_option_id) -> kept, else purged (+image, cart refs cleared)
+ *  bundle          referenced by an order item (bundle_id) -> kept, else purged (+image, components, cart lines)
  *  brand           still has products (even soft-deleted) -> kept, else purged (+logo)
  *  category        still has products or sub-categories -> kept, else purged (+image)
  *  tag             always purged (pivot cascades; not used by any report)
@@ -192,6 +194,34 @@ class SoftDeletePurger
         $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachImages($p));
         $this->dropListings('product_id', $p->id);
         $p->forceDelete(); // categories/tags/reviews/flash items/lists/stock levels cascade
+
+        return self::PURGED;
+    }
+
+    private function purgePackagingOption(Model $o): string
+    {
+        if ($this->repo->referenced('orders', 'packaging_option_id', $o->id)) {
+            return self::RETAINED;
+        }
+        if ($o->image) {
+            $this->mediaFiles[] = $o->image;
+        }
+        $this->repo->nullWhere('carts', 'packaging_option_id', $o->id);
+        $o->forceDelete();
+
+        return self::PURGED;
+    }
+
+    private function purgeBundle(Model $b): string
+    {
+        if ($this->repo->referenced('order_items', 'bundle_id', $b->id)) {
+            return self::RETAINED;
+        }
+        if ($b->image) {
+            $this->mediaFiles[] = $b->image;
+        }
+        $this->repo->deleteWhere('cart_items', ['bundle_id' => $b->id]);
+        $b->forceDelete(); // bundle_items cascade
 
         return self::PURGED;
     }

@@ -17,6 +17,7 @@ return [
     'sorts' => ['newest' => 'الأحدث', 'price_asc' => 'السعر: من الأقل', 'price_desc' => 'السعر: من الأعلى', 'best_selling' => 'الأكثر مبيعاً', 'top_rated' => 'الأعلى تقييماً'],
     'results_count' => ':n منتج', 'no_results' => 'لا توجد منتجات مطابقة.', 'sub_categories' => 'أقسام فرعية',
     'in_stock' => 'متوفر', 'out_of_stock' => 'غير متوفر', 'low_stock' => 'متبقي :n فقط', 'sku' => 'رمز المنتج', 'barcode' => 'الباركود', 'qty' => 'الكمية',
+    'packaging' => 'تغليف خاص', 'packaging_choose' => 'اختر التغليف', 'bundles' => 'الباقات', 'bundle' => 'باقة', 'bundle_contains' => 'تحتوي هذه الباقة على', 'bundle_unavailable' => 'هذه الباقة غير متاحة حالياً', 'bundle_left' => 'متبقي :n باقة فقط', 'bundles_empty' => 'لا توجد باقات متاحة حالياً.', 'bundle_save' => 'وفّر :amount', 'bundle_regular' => 'السعر العادي',
     'add_to_cart' => 'أضف للسلة', 'choose_options' => 'اختر الخيارات', 'unavailable_combo' => 'هذا الاختيار غير متاح', 'off' => 'خصم :p%', 'description' => 'الوصف', 'sold_out' => 'نفدت الكمية',
     'wishlist_login' => 'سجّل الدخول لإضافة المنتج للمفضلة.', 'reviews_count' => ':n تقييم', 'avg_rating' => 'متوسط التقييم',
     'cart_title' => 'سلة التسوق', 'cart_empty' => 'سلتك فارغة', 'continue_shopping' => 'متابعة التسوق', 'remove' => 'حذف', 'unit_price' => 'سعر الوحدة', 'line_total' => 'الإجمالي',
@@ -41,4 +42,9 @@ return [
     'from_price' => 'ابتداءً من',
     'coming_soon' => 'قريباً',
     'tags' => 'الوسوم',
+    'offline_proof_title' => 'إثبات الدفع (إجباري)',
+    'offline_proof_hint' => 'حوّل المبلغ بالطريقة المختارة ثم أرفق الإيصال أو لقطة الشاشة (JPG أو PNG أو WEBP أو PDF بحد أقصى :mb ميجا).',
+    'offline_proof_for' => 'بيانات التحويل',
+    'proof_client_type' => 'الملفات المسموحة: JPG أو PNG أو WEBP أو PDF فقط.',
+    'proof_client_size' => 'حجم الملف أكبر من :mb ميجا.',
 ];

@@ -6,6 +6,7 @@ use App\DTOs\Orders\CheckoutData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Storefront\CheckoutRequest;
 use App\Services\Orders\CartService;
+use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderQuoteService;
 use App\Services\Orders\ShippingOptions;
@@ -16,7 +17,7 @@ use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private ShippingOptions $shipping) {}
+    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private ShippingOptions $shipping, private OrderPaymentService $payments) {}
 
     public function create(string $locale)
     {
@@ -43,7 +44,10 @@ class CheckoutController extends Controller
     /** Pre-validate: request rules + a full quote (stock/discount/shipping errors surface here too). */
     public function validateForm(CheckoutRequest $r): JsonResponse
     {
-        $this->quotes->assertPrepay($this->quotes->quote($this->cart->lines(), CheckoutData::fromRequest($r)));
+        $d = CheckoutData::fromRequest($r);
+        $q = $this->quotes->quote($this->cart->lines(), $d);
+        $this->quotes->assertPrepay($q);
+        $this->payments->precheckCheckoutProof($q, $d->proof);
 
         return $this->ok();
     }

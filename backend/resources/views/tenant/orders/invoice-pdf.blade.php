@@ -24,13 +24,17 @@
     </tr></table>
     <table>
         <thead><tr><th>{{ $t(__('ops.fields.item')) }}</th><th class="num">{{ $t(__('orders.fields.unit_price')) }}</th><th class="num">{{ $t(__('ops.fields.quantity')) }}</th><th class="num">{{ $t(__('ops.fields.total')) }}</th></tr></thead>
-        <tbody>@foreach ($order->items as $i)<tr><td>{{ $t($i->name) }}</td><td class="num">{{ number_format($i->unit_price, 2) }}</td><td class="num">{{ $i->quantity }}</td><td class="num">{{ number_format($i->line_subtotal, 2) }}</td></tr>@endforeach</tbody>
+        <tbody>@php($grp = null)
+@foreach ($order->items as $i)@if ($i->bundle_group && $i->bundle_group !== $grp)<tr><td colspan="4"><b>{{ $t($i->bundle_name) }}</b></td></tr>@endif
+@php($grp = $i->bundle_group)
+<tr><td style="{{ $i->bundle_group ? 'padding-right:14px;padding-left:14px' : '' }}">{{ $t($i->name) }}</td><td class="num">{{ number_format($i->unit_price, 2) }}</td><td class="num">{{ $i->quantity }}</td><td class="num">{{ number_format($i->line_subtotal, 2) }}</td></tr>@endforeach</tbody>
     </table>
     <table class="tot" style="width:55%;margin-top:14px;margin-{{ $rtl ? 'right' : 'left' }}:45%">
         <tr><td>{{ $t(__('orders.fields.subtotal')) }}</td><td class="num">{{ $m($order->subtotal) }}</td></tr>
         @if ($order->discount > 0)<tr><td>{{ $t(__('orders.fields.discount')) }}</td><td class="num">- {{ $m($order->discount) }}</td></tr>@endif
         <tr><td>{{ $t(__('orders.fields.shipping')) }}</td><td class="num">{{ $m($order->shipping_net) }}</td></tr>
-        @if ($order->tax > 0)<tr><td>{{ $t(__('orders.fields.tax')) }}</td><td class="num">{{ $m($order->tax) }}</td></tr>@endif
+        @if ($order->packaging_fee > 0)<tr><td>{{ $t(__('orders.packaging.title').': '.$order->packagingLabel()) }}</td><td class="num">{{ $m($order->packaging_fee) }}</td></tr>@endif
+        @if ($order->taxTotal() > 0)<tr><td>{{ $t(__('orders.fields.tax')) }}</td><td class="num">{{ $m($order->taxTotal()) }}</td></tr>@endif
         @if ($order->cod_fee > 0)<tr><td>{{ $t($order->codFeeLabel()) }}</td><td class="num">{{ $m($order->cod_fee) }}</td></tr>@endif
         @if ($order->payment_fee_charged > 0)<tr><td>{{ $t(__('orders.fields.payment_fee')) }}</td><td class="num">{{ $m($order->payment_fee_charged) }}</td></tr>@endif
         <tr class="grand"><td>{{ $t(__('ops.fields.total')) }}</td><td class="num">{{ $m($order->total) }}</td></tr>

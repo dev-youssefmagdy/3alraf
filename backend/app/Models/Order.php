@@ -14,18 +14,32 @@ class Order extends Model
 {
     use Audited, BelongsToTenant, SoftDeletes;
 
-    protected $fillable = ['number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
+    protected $fillable = ['number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'payment_proof_hash', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'packaging_option_id', 'packaging_name', 'packaging_fee', 'packaging_cost', 'packaging_tax', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
 
     /** Kept out of the audit log: guest-access secret, uploaded proof path and customer PII (customer_id stays for traceability). */
-    protected array $auditExcept = ['public_token', 'payment_proof', 'customer_name', 'customer_phone', 'customer_email', 'address'];
+    protected array $auditExcept = ['public_token', 'payment_proof', 'payment_proof_hash', 'proof_guard', 'customer_name', 'customer_phone', 'customer_email', 'address'];
 
     protected function casts(): array
     {
-        $dec = array_fill_keys(['subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee',
+        $dec = array_fill_keys(['subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'packaging_fee', 'packaging_cost', 'packaging_tax',
             'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit'], 'decimal:2');
 
-        return $dec + ['cod_fee_label' => 'array', 'status' => OrderStatus::class, 'payment_status' => PaymentStatus::class, 'proof_status' => ProofStatus::class,
+        return $dec + ['cod_fee_label' => 'array', 'packaging_name' => 'array', 'status' => OrderStatus::class, 'payment_status' => PaymentStatus::class, 'proof_status' => ProofStatus::class,
             'stock_deducted' => 'bool', 'placed_at' => 'datetime', 'delivered_at' => 'datetime', 'carrier_settled_at' => 'datetime', 'cancelled_at' => 'datetime'];
+    }
+
+    /** Snapshot name of the packaging option in the current locale. */
+    public function packagingLabel(): string
+    {
+        $l = (array) $this->packaging_name;
+
+        return $l[app()->getLocale()] ?? $l[config('app.fallback_locale')] ?? (reset($l) ?: __('store.packaging'));
+    }
+
+    /** Total VAT shown to customers: goods tax + packaging tax. */
+    public function taxTotal(): string
+    {
+        return \App\Support\Money::add((string) $this->tax, (string) $this->packaging_tax);
     }
 
     /** Snapshot label of the COD fee line in the current locale. */
@@ -39,13 +53,22 @@ class Order extends Model
     /** Prices included VAT: tax > 0 and it was NOT added on top of the goods (CALCULATIONS.md step 3). */
     public function taxIncluded(): bool
     {
-        if (\App\Support\Money::cmp((string) $this->tax, '0') <= 0) {
+        $allTax = \App\Support\Money::add((string) $this->tax, (string) $this->packaging_tax);
+        if (\App\Support\Money::cmp($allTax, '0') <= 0) { // goods tax may be 0 (fully discounted) while the packaging still carries VAT
             return false;
         }
         $goods = \App\Support\Money::sub((string) $this->subtotal, (string) $this->discount);
-        $added = \App\Support\Money::sub((string) $this->total, \App\Support\Money::add($goods, (string) $this->shipping_net, (string) $this->payment_fee_charged, (string) $this->cod_fee));
+        $added = \App\Support\Money::sub((string) $this->total, \App\Support\Money::add($goods, (string) $this->shipping_net, (string) $this->payment_fee_charged, (string) $this->cod_fee, (string) $this->packaging_fee));
 
-        return \App\Support\Money::cmp($added, (string) $this->tax) < 0;
+        return \App\Support\Money::cmp($added, $allTax) < 0;
+    }
+
+    /** Packaging income excl. VAT (inclusive orders extract the VAT inside the fee). */
+    public function packagingRevenue(): string
+    {
+        $fee = (string) $this->packaging_fee;
+
+        return $this->taxIncluded() ? \App\Support\Money::sub($fee, (string) $this->packaging_tax) : \App\Support\Money::round($fee);
     }
 
     /** revenue_goods = subtotal − discount − tax_in_goods (VAT is never revenue). */

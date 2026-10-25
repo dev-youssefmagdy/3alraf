@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
+    \Illuminate\Support\Facades\Storage::fake('private');
     Cache::flush();
     $this->seed(FoundationSeeder::class);
     $this->tenant = Tenant::where('slug', 'egy')->first();
@@ -36,7 +37,7 @@ beforeEach(function () {
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->setFee = fn (array $s) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '15'], $s)]);
     $this->place = fn (int $method, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $method,
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $method,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
     $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
 });

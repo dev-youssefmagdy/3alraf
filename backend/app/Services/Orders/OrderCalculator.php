@@ -53,14 +53,26 @@ class OrderCalculator
             $taxAdded = $in->pricesIncludeTax ? '0.00' : $tax;
         }
 
-        // 4. Payment fee on F = subtotal - discount + shipping_net + tax(exclusive)
-        $base = Money::add($afterDiscount, $shippingNet, $taxAdded);
+        // 3b. Special packaging: own step, not discountable, not in free-shipping threshold; taxable (exclusive: added; inclusive: extracted)
+        $packagingFee = Money::round($in->packagingFee);
+        $packagingCost = Money::round($in->packagingCost);
+        $packagingTax = '0.00';
+        $packagingTaxAdded = '0.00';
+        if (bccomp($packagingFee, '0', 2) > 0 && bccomp($rate, '0', 6) > 0) {
+            $packagingTax = $in->pricesIncludeTax
+                ? Money::round(bcdiv(bcmul($packagingFee, $rate, 8), bcadd('100', $rate, 8), 8))
+                : Money::percent($packagingFee, $rate);
+            $packagingTaxAdded = $in->pricesIncludeTax ? '0.00' : $packagingTax;
+        }
+
+        // 4. Payment fee on F = subtotal - discount + shipping_net + tax(exclusive) + packaging (+ its exclusive tax)
+        $base = Money::add($afterDiscount, $shippingNet, $taxAdded, $packagingFee, $packagingTaxAdded);
         $fee = Money::round(bcadd(bcdiv(bcmul($base, $in->feePercent, 8), '100', 8), $in->feeFixed, 8));
         $feeCharged = $in->feeBearer === 'customer' ? $fee : '0.00';
         $codFee = $this->codExtraFee($in, $base, $afterDiscount);
 
         // 5/6. Total, due
-        $total = Money::add($afterDiscount, $shippingNet, $taxAdded, $feeCharged, $codFee);
+        $total = Money::add($afterDiscount, $shippingNet, $taxAdded, $packagingFee, $packagingTaxAdded, $feeCharged, $codFee);
         $due = Money::sub($total, $in->paidAmount);
 
         // COD split: customer prepays shipping_net (online/wallet), the carrier collects the rest
@@ -74,10 +86,12 @@ class OrderCalculator
         $commission = bccomp($in->affiliatePercent, '0', 6) > 0 ? Money::percent($revenueGoods, $in->affiliatePercent) : '0.00';
 
         // Profit: (revenue_goods - cogs) + shipping_net - shipping_cost - fee - commission + fee_charged + cod_fee
-        $net = Money::sub(Money::add(Money::sub($revenueGoods, $cogs), $shippingNet, $feeCharged, $codFee), Money::add($shippingCost, $fee, $commission));
+        // + packaging revenue (ex-VAT when inclusive) - packaging cost
+        $packagingRevenue = $in->pricesIncludeTax ? Money::sub($packagingFee, $packagingTax) : $packagingFee;
+        $net = Money::sub(Money::add(Money::sub($revenueGoods, $cogs), $shippingNet, $feeCharged, $codFee, $packagingRevenue), Money::add($shippingCost, $fee, $commission, $packagingCost));
 
         return new OrderTotals($subtotal, $cogs, $discount, $shipping, $shippingDiscount, $shippingNet, $shippingCost, $tax, $fee, $feeCharged,
-            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid, $codFee);
+            $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid, $codFee, $packagingFee, $packagingTax, $packagingCost);
     }
 
     /**

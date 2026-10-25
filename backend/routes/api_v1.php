@@ -37,6 +37,8 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('catalog/suggest', [StoreController::class, 'suggest'])->middleware('throttle:search')->name('catalog.suggest');
         Route::get('products/{slug}', [StoreController::class, 'product'])->name('products.show');
         Route::get('products/{slug}/reviews', [AccountController::class, 'reviews'])->name('products.reviews');
+        Route::get('bundles', [StoreController::class, 'bundles'])->name('bundles.index');
+        Route::get('bundles/{slug}', [StoreController::class, 'bundle'])->where('slug', '[A-Za-z0-9._-]+')->name('bundles.show');
         Route::get('brands', [StoreController::class, 'brands'])->name('brands');
 
         Route::get('cart', [CartController::class, 'show'])->name('cart.show');
@@ -47,6 +49,7 @@ Route::middleware('throttle:api')->group(function () {
 
         Route::get('checkout/cities', [CheckoutController::class, 'cities'])->name('checkout.cities');
         Route::get('checkout/shipping', [CheckoutController::class, 'shipping'])->name('checkout.shipping');
+        Route::get('checkout/packaging', [CheckoutController::class, 'packaging'])->name('checkout.packaging');
         Route::get('checkout/payment-methods', [CheckoutController::class, 'paymentMethods'])->name('checkout.payment-methods');
         Route::post('checkout/validate', [CheckoutController::class, 'validateCheckout'])->middleware('throttle:checkout-validate')->name('checkout.validate');
         Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:checkout')->name('checkout.place');
@@ -54,7 +57,7 @@ Route::middleware('throttle:api')->group(function () {
         // order pages by public token (guest-safe)
         Route::get('orders/{token}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('orders/{token}/track', [OrderController::class, 'track'])->name('orders.track');
-        Route::post('orders/{token}/proof', [OrderController::class, 'proof'])->middleware('throttle:upload')->name('orders.proof');
+        Route::post('orders/{token}/proof', [OrderController::class, 'proof'])->middleware(['throttle:upload', 'throttle:proof-reupload'])->name('orders.proof');
         Route::post('orders/{token}/pay', [OrderController::class, 'pay'])->middleware('throttle:upload')->name('orders.pay');
         Route::get('payments/return/{token}', [OrderController::class, 'paymentReturn'])->name('payments.return');
     });

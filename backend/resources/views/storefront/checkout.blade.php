@@ -38,7 +38,7 @@
                 <div class="space-y-2 text-sm" data-payment-options>
                     @foreach ($methods as $m)
                         <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:disabled]:opacity-50" data-method-row>
-                            <input type="radio" name="payment_method_id" value="{{ $m->id }}" data-type="{{ $m->type->value }}" class="mt-1 accent-brand-600">
+                            <input type="radio" name="payment_method_id" value="{{ $m->id }}" data-type="{{ $m->type->value }}" data-name="{{ $m->name }}" data-instructions="{{ $m->instructions }}" data-account="{{ $m->account_number }}" class="mt-1 accent-brand-600">
                             <span><b>{{ $m->name }}</b>
                                 @php($feeText = (float) $m->fee_percent > 0 ? rtrim(rtrim(number_format((float) $m->fee_percent, 3), '0'), '.').'%' : ((float) $m->fee_fixed > 0 ? number_format((float) $m->fee_fixed, 2) : null))
                                 @if ($feeText)<small class="text-slate-500"> ({{ __('store.fee_note', ['fee' => $feeText]) }})</small>@endif
@@ -54,13 +54,23 @@
                         <p class="text-xs text-slate-500">{{ __('store.prepay_hint') }}</p>
                         @foreach ($methods->whereIn('type', [\App\Enums\PaymentMethodType::ONLINE, \App\Enums\PaymentMethodType::WALLET]) as $m)
                             <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">
-                                <input type="radio" name="prepay_method_id" value="{{ $m->id }}" class="mt-1 accent-brand-600">
+                                <input type="radio" name="prepay_method_id" value="{{ $m->id }}" data-type="{{ $m->type->value }}" data-name="{{ $m->name }}" data-instructions="{{ $m->instructions }}" data-account="{{ $m->account_number }}" class="mt-1 accent-brand-600">
                                 <span><b>{{ $m->name }}</b>
                                     @if ($m->account_number)<span class="mt-1 block text-xs text-slate-600">{{ __('store.transfer_to') }}: <b>{{ $m->account_number }}</b></span>@endif</span>
                             </label>
                         @endforeach
                     </div>
                 @endif
+                @php($proofKb = (int) config('checkout.proof.max_kb'))
+                <div class="mt-4 hidden space-y-2 border-t border-slate-100 pt-3 text-sm" data-offline-proof>
+                    <h3 class="font-bold">{{ __('store.offline_proof_title') }}</h3>
+                    <div class="rounded-lg bg-slate-50 p-3 text-xs text-slate-600" data-offline-details></div>
+                    <p class="text-xs text-slate-500">{{ __('store.offline_proof_hint', ['mb' => round($proofKb / 1024, 1)]) }}</p>
+                    <div data-field>
+                        <input type="file" name="proof" class="form-control" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" disabled
+                            data-max-kb="{{ $proofKb }}" data-msg-transfer="{{ __('store.transfer_to') }}" data-msg-type="{{ __('store.proof_client_type') }}" data-msg-size="{{ __('store.proof_client_size', ['mb' => round($proofKb / 1024, 1)]) }}">
+                    </div>
+                </div>
             </x-card>
         </div>
 
@@ -71,6 +81,7 @@
                 <input type="text" name="discount_code" class="form-control" placeholder="{{ __('store.discount_code') }}" data-code-input>
                 <button type="button" class="btn btn-secondary shrink-0" data-apply-code>{{ __('store.apply_code') }}</button>
             </div>
+            @include('storefront._packaging')
             <dl class="space-y-2 border-t border-slate-100 pt-3 text-sm" data-totals></dl>
             <button type="submit" class="btn btn-primary w-full !py-3">{{ __('store.place_order') }}</button>
         </aside>

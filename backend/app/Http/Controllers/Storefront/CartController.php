@@ -27,19 +27,23 @@ class CartController extends Controller
 
     public function add(CartItemRequest $r): JsonResponse
     {
-        $this->cart->add((int) $r->input('product_id'), (int) $r->input('variant_id', 0), max(1, (int) $r->input('quantity')));
+        if ((int) $r->input('bundle_id', 0) > 0) {
+            $this->cart->addBundle((int) $r->input('bundle_id'), max(1, (int) $r->input('quantity')));
+        } else {
+            $this->cart->add((int) $r->input('product_id'), (int) $r->input('variant_id', 0), max(1, (int) $r->input('quantity')));
+        }
 
         return $this->ok(__('orders.added_to_cart'), null, $this->payload());
     }
 
-    public function update(CartItemRequest $r, int $item): JsonResponse
+    public function update(CartItemRequest $r, string $locale, int $item): JsonResponse
     {
         $this->cart->setQuantity($item, (int) $r->input('quantity'));
 
         return $this->ok(null, null, $this->payload());
     }
 
-    public function remove(int $item): JsonResponse
+    public function remove(string $locale, int $item): JsonResponse
     {
         $this->cart->setQuantity($item, 0);
 
@@ -49,6 +53,10 @@ class CartController extends Controller
     /** Totals for the current selections (shipping / payment / code optional). */
     public function quote(CheckoutRequest $r): JsonResponse
     {
+        if ($r->exists('packaging_option_id')) { // remember the choice on the cart (also across guest -> customer merge)
+            $this->cart->setPackaging($r->filled('packaging_option_id') ? (int) $r->input('packaging_option_id') : null);
+        }
+
         return $this->ok(null, null, $this->payload(CheckoutData::fromRequest($r)));
     }
 

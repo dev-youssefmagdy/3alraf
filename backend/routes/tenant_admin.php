@@ -66,7 +66,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             'cities' => CityController::class, 'branches' => BranchController::class, 'suppliers' => SupplierController::class,
             'shipping-companies' => ShippingCompanyController::class, 'payment-methods' => PaymentMethodController::class,
             'banners' => BannerController::class, 'expense-categories' => ExpenseCategoryController::class, 'expenses' => ExpenseController::class,
-            'discount-codes' => DiscountCodeController::class, 'flash-sales' => FlashSaleController::class,
+            'discount-codes' => DiscountCodeController::class, 'flash-sales' => FlashSaleController::class, 'bundles' => \App\Http\Controllers\Tenant\BundleController::class, 'packaging' => \App\Http\Controllers\Tenant\PackagingOptionController::class,
             'affiliate-tiers' => AffiliateTierController::class, 'custom-pages' => CustomPageController::class, 'static-pages' => StaticPageController::class,
         ] as $uri => $ctl) {
             Route::get("$uri/datatable", [$ctl, 'datatable'])->name("$uri.datatable");

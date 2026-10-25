@@ -15,8 +15,8 @@ class OrderProfitService
         $net = '0.00';
         if (in_array($order->status, OrderStatus::salesStatuses(), true)) {
             $goods = $order->revenueGoods(); // subtotal − discount − VAT inside inclusive prices
-            $income = Money::add(Money::sub($goods, (string) $order->cogs), (string) $order->shipping_net, (string) $order->payment_fee_charged, (string) $order->cod_fee);
-            $net = Money::sub($income, Money::add((string) $order->shipping_cost, (string) $order->payment_fee, (string) $order->affiliate_commission));
+            $income = Money::add(Money::sub($goods, (string) $order->cogs), (string) $order->shipping_net, (string) $order->payment_fee_charged, (string) $order->cod_fee, $order->packagingRevenue());
+            $net = Money::sub($income, Money::add((string) $order->shipping_cost, (string) $order->payment_fee, (string) $order->affiliate_commission, (string) $order->packaging_cost));
 
             $loss = '0';
             $returned = '0';

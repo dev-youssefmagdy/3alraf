@@ -48,6 +48,13 @@
         <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :accent="true" />
     @endif
 
+    @if (! empty($bundles))
+        <section class="mt-8">
+            <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-extrabold">{{ __('store.bundles') }}</h2><a href="{{ route('storefront.bundles.index') }}" class="text-sm font-semibold text-brand-600">{{ __('store.view_all') }}</a></div>
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-4">@foreach ($bundles as $b)@include('storefront._bundle-card', ['b' => $b])@endforeach</div>
+        </section>
+    @endif
+
     <x-rail :title="__('store.recommended')" :items="$rails['recommended']" />
     <x-rail :title="__('store.most_sold')" :items="$rails['most_sold']" />
     <x-rail :title="__('store.most_reviewed')" :items="$rails['most_reviewed']" />

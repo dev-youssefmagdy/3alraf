@@ -46,6 +46,11 @@ class RetentionRepository implements RetentionRepositoryInterface
         return array_values(array_filter($paths));
     }
 
+    public function nullWhere(string $table, string $column, int $id): int
+    {
+        return DB::table($table)->where($column, $id)->update([$column => null]);
+    }
+
     public function deleteWhere(string $table, array $where): int
     {
         return DB::table($table)->where($where)->delete();

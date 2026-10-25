@@ -11,6 +11,7 @@
         </div>
         <aside class="h-fit space-y-3 rounded-2xl bg-white p-4 ring-1 ring-slate-100" data-cart-summary>
             <h2 class="font-extrabold">{{ __('store.order_summary') }}</h2>
+            @include('storefront._packaging')
             <dl class="space-y-2 text-sm" data-totals></dl>
             <a href="{{ route('storefront.checkout.create') }}" class="btn btn-primary w-full !py-3">{{ __('store.proceed_checkout') }}</a>
             <a href="{{ route('storefront.home') }}" class="block text-center text-sm text-slate-500 hover:text-brand-600">{{ __('store.continue_shopping') }}</a>

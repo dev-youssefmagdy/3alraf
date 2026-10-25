@@ -104,3 +104,11 @@ if (! function_exists('api_route')) {
         return route('api.v1.'.($header ? 'h.' : '').$name, $params);
     }
 }
+
+if (! function_exists('array_sum_bc')) {
+    /** Exact integer sum of numeric strings (bcmath). */
+    function array_sum_bc(array $values): string
+    {
+        return array_reduce($values, fn ($c, $v) => bcadd($c, (string) $v, 0), '0');
+    }
+}

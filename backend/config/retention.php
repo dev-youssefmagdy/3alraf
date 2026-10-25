@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Branch;
+use App\Models\Bundle;
+use App\Models\PackagingOption;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\City;
@@ -26,6 +28,8 @@ return [
         'customer' => Customer::class,
         'variant' => ProductVariant::class,
         'product' => Product::class,
+        'bundle' => Bundle::class,
+        'packaging_option' => PackagingOption::class,
         'brand' => Brand::class,
         'category' => Category::class,
         'tag' => Tag::class,

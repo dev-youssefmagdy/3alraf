@@ -7,6 +7,7 @@ use App\Http\Requests\Storefront\CheckoutRequest;
 use App\Http\Resources\Api\CartResource;
 use App\Http\Resources\Api\CityResource;
 use App\Http\Resources\Api\OrderDetailResource;
+use App\Http\Resources\Api\PackagingOptionResource;
 use App\Http\Resources\Api\PaymentMethodResource;
 use App\Http\Resources\Api\ShippingOptionResource;
 use App\Models\City;
@@ -14,6 +15,7 @@ use App\Models\PaymentMethod;
 use App\Services\Api\ApiOrderService;
 use App\Services\Orders\CartService;
 use App\Services\Orders\CartSummary;
+use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderQuoteService;
 use App\Services\Orders\ShippingOptions;
@@ -24,7 +26,7 @@ use Illuminate\Http\Request;
 class CheckoutController extends ApiController
 {
     public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private CartSummary $summary,
-        private ShippingOptions $shipping, private ApiOrderService $orders) {}
+        private ShippingOptions $shipping, private ApiOrderService $orders, private OrderPaymentService $payments) {}
 
     public function cities(): JsonResponse
     {
@@ -34,6 +36,12 @@ class CheckoutController extends ApiController
     public function shipping(Request $r): JsonResponse
     {
         return $this->list(ShippingOptionResource::collection($this->shipping->forCity((int) $r->query('city_id'))));
+    }
+
+    /** Active special-packaging options (price only; cost is never exposed). Send the chosen id as `packaging_option_id` on cart/quote and checkout. */
+    public function packaging(): JsonResponse
+    {
+        return $this->list(PackagingOptionResource::collection(\App\Models\PackagingOption::active()->orderBy('sort_order')->orderBy('id')->get()));
     }
 
     public function paymentMethods(): JsonResponse
@@ -46,7 +54,9 @@ class CheckoutController extends ApiController
     public function validateCheckout(CheckoutRequest $r): JsonResponse
     {
         $d = CheckoutData::fromRequest($r);
-        $this->quotes->assertPrepay($this->quotes->quote($this->cart->lines(), $d));
+        $q = $this->quotes->quote($this->cart->lines(), $d);
+        $this->quotes->assertPrepay($q);
+        $this->payments->precheckCheckoutProof($q, $d->proof);
 
         return $this->respond(new CartResource($this->summary->build($d)));
     }

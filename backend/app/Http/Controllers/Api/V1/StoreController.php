@@ -78,6 +78,17 @@ class StoreController extends ApiController
         ]));
     }
 
+    /** Live fixed-price bundles whose components are all purchasable (add one with POST cart/items {bundle_id, quantity}). */
+    public function bundles(\App\Services\Storefront\BundleCatalog $catalog): JsonResponse
+    {
+        return $this->list(\App\Http\Resources\Api\BundleResource::collection(collect($catalog->listing())));
+    }
+
+    public function bundle(string $slug, \App\Services\Storefront\BundleCatalog $catalog): JsonResponse
+    {
+        return $this->respond(new \App\Http\Resources\Api\BundleResource($catalog->find($slug) ?? abort(404)));
+    }
+
     public function brands(): JsonResponse
     {
         return $this->list(BrandResource::collection(Brand::query()->where('is_active', true)

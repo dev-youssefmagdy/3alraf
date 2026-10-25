@@ -3,7 +3,7 @@
     "info": {
         "title": "3alraf Mobile API",
         "version": "1.0.0",
-        "description": "JSON API for the Flutter apps.\n\nTenant: use the store host ({tenant}.domain) or the central host plus the `X-Tenant` slug header. GET /api/v1/tenants (central) lists the stores.\nEnvelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\nAuth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable and only work in the tenant that issued them.\nGuests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\nCheckout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (wallet transfer screenshot, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\nMoney values are decimal strings in the store currency. Cost, profit and commission fields are never exposed."
+        "description": "JSON API for the Flutter apps.\n\nTenant: use the store host ({tenant}.domain) or the central host plus the `X-Tenant` slug header. GET /api/v1/tenants (central) lists the stores.\nEnvelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\nAuth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable and only work in the tenant that issued them.\nGuests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\nCheckout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (re-upload of a rejected wallet transfer proof, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\nOffline payment: a wallet / bank-transfer payment method (or the wallet prepay leg of COD) REQUIRES the transfer proof file as the multipart field `proof` (jpg, png, webp or pdf) on POST /checkout and POST /checkout/validate; 422 `proof` when missing, invalid or already used for another order; 429 + Retry-After when the anti-abuse limiter trips. Bundles: add with POST /cart/items {bundle_id, quantity}; special packaging: GET /checkout/packaging then send packaging_option_id.\nMoney values are decimal strings in the store currency. Cost, profit and commission fields are never exposed."
     },
     "servers": [
         {
@@ -1594,6 +1594,116 @@
                 }
             }
         },
+        "/api/v1/bundles": {
+            "get": {
+                "summary": "Live fixed-price bundles whose components are all purchasable (add one with POST cart/items {bundle_id, quantity})",
+                "operationId": "bundles_index_get",
+                "tags": [
+                    "bundles"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bundles/{slug}": {
+            "get": {
+                "summary": "Bundles Show",
+                "operationId": "bundles_show_get",
+                "tags": [
+                    "bundles"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/cart": {
             "get": {
                 "summary": "Cart Show",
@@ -1681,6 +1791,9 @@
                                     "product_id": {
                                         "type": "integer"
                                     },
+                                    "bundle_id": {
+                                        "type": "integer"
+                                    },
                                     "variant_id": {
                                         "type": "integer"
                                     },
@@ -1761,6 +1874,9 @@
                                 "type": "object",
                                 "properties": {
                                     "product_id": {
+                                        "type": "integer"
+                                    },
+                                    "bundle_id": {
                                         "type": "integer"
                                     },
                                     "variant_id": {
@@ -1947,7 +2063,7 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
@@ -1984,6 +2100,13 @@
                                     },
                                     "discount_code": {
                                         "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
                                     }
                                 },
                                 "required": [
@@ -2204,7 +2327,7 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
@@ -2241,6 +2364,13 @@
                                     },
                                     "discount_code": {
                                         "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
                                     }
                                 },
                                 "required": [
@@ -2283,6 +2413,57 @@
             "get": {
                 "summary": "Checkout Cities",
                 "operationId": "checkout_cities_get",
+                "tags": [
+                    "checkout"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/checkout/packaging": {
+            "get": {
+                "summary": "Active special-packaging options (price only; cost is never exposed). Send the chosen id as `packaging_option_id` on cart/quote and checkout",
+                "operationId": "checkout_packaging_get",
                 "tags": [
                     "checkout"
                 ],
@@ -2461,7 +2642,7 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {
@@ -2498,6 +2679,13 @@
                                     },
                                     "discount_code": {
                                         "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
                                     }
                                 },
                                 "required": [
@@ -2990,7 +3178,7 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "type": "object",
                                 "properties": {

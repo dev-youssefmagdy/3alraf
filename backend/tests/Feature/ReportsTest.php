@@ -112,7 +112,7 @@ it('aggregates across tenants with currency rate normalization and isolates tena
     $o = ($this->deliver)(($this->place)(2));
     $sa = Tenant::create(['slug' => 'sa', 'name' => 'Saudi', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 2, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
     $row = (array) DB::table('orders')->find($o->id);
-    unset($row['id']);
+    unset($row["id"], $row["proof_guard"]); // generated column
     DB::table('orders')->insert(array_merge($row, ['tenant_id' => $sa->id, 'number' => 'SA-1', 'public_token' => 'sa-token-1']));
 
     // tenant egy sees only its own order (own currency, no conversion)

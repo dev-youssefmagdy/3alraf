@@ -25,14 +25,18 @@
         </div>
         <table>
             <thead><tr><th>{{ __('ops.fields.item') }}</th><th>{{ __('orders.fields.unit_price') }}</th><th>{{ __('ops.fields.quantity') }}</th><th>{{ __('ops.fields.total') }}</th></tr></thead>
-            <tbody>@foreach ($order->items as $i)<tr><td>{{ $i->name }}</td><td>{{ number_format($i->unit_price, 2) }}</td><td>{{ $i->quantity }}</td><td>{{ number_format($i->line_subtotal, 2) }}</td></tr>@endforeach</tbody>
+            <tbody>@php($grp = null)
+@foreach ($order->items as $i)@if ($i->bundle_group && $i->bundle_group !== $grp)<tr><td colspan="4"><b>{{ $i->bundle_name }}</b></td></tr>@endif
+@php($grp = $i->bundle_group)
+<tr><td style="{{ $i->bundle_group ? 'padding-inline-start:16px' : '' }}">{{ $i->name }}</td><td>{{ number_format($i->unit_price, 2) }}</td><td>{{ $i->quantity }}</td><td>{{ number_format($i->line_subtotal, 2) }}</td></tr>@endforeach</tbody>
         </table>
         <div class="tot">
             @php($m = fn ($v) => \App\Support\Money::format((string) $v, $order->currency))
             <div><span>{{ __('orders.fields.subtotal') }}</span><span>{{ $m($order->subtotal) }}</span></div>
             @if ($order->discount > 0)<div><span>{{ __('orders.fields.discount') }}</span><span>- {{ $m($order->discount) }}</span></div>@endif
             <div><span>{{ __('orders.fields.shipping') }}</span><span>{{ $m($order->shipping_net) }}</span></div>
-            @if ($order->tax > 0)<div><span>{{ __('orders.fields.tax') }}</span><span>{{ $m($order->tax) }}</span></div>@endif
+            @if ($order->packaging_fee > 0)<div><span>{{ __('orders.packaging.title') }}: {{ $order->packagingLabel() }}</span><span>{{ $m($order->packaging_fee) }}</span></div>@endif
+            @if ($order->taxTotal() > 0)<div><span>{{ __('orders.fields.tax') }}</span><span>{{ $m($order->taxTotal()) }}</span></div>@endif
             @if ($order->cod_fee > 0)<div><span>{{ $order->codFeeLabel() }}</span><span>{{ $m($order->cod_fee) }}</span></div>@endif
             @if ($order->payment_fee_charged > 0)<div><span>{{ __('orders.fields.payment_fee') }}</span><span>{{ $m($order->payment_fee_charged) }}</span></div>@endif
             <div style="font-weight:700;border-top:1px solid #cbd5e1"><span>{{ __('ops.fields.total') }}</span><span>{{ $m($order->total) }}</span></div>

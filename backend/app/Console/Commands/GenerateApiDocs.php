@@ -111,7 +111,9 @@ class GenerateApiDocs extends Command
             $op['security'] = $security;
         }
         if ($request && in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            $op['requestBody'] = ['content' => ['application/json' => ['schema' => $this->schema($request)]]];
+            $schema = $this->schema($request);
+            $multipart = str_contains(json_encode($schema), '"format":"binary"'); // file upload => multipart/form-data
+            $op['requestBody'] = ['content' => [$multipart ? 'multipart/form-data' : 'application/json' => ['schema' => $schema]]];
         }
         $op['responses'] = ['200' => ['description' => 'Success (envelope)', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Envelope']]]],
             '422' => ['description' => 'Validation error', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]]]];
@@ -160,7 +162,8 @@ class GenerateApiDocs extends Command
             ."Envelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\n"
             ."Auth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable and only work in the tenant that issued them.\n"
             ."Guests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\n"
-            ."Checkout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (wallet transfer screenshot, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\n"
+            ."Checkout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (re-upload of a rejected wallet transfer proof, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\n"
+            ."Offline payment: a wallet / bank-transfer payment method (or the wallet prepay leg of COD) REQUIRES the transfer proof file as the multipart field `proof` (jpg, png, webp or pdf) on POST /checkout and POST /checkout/validate; 422 `proof` when missing, invalid or already used for another order; 429 + Retry-After when the anti-abuse limiter trips. Bundles: add with POST /cart/items {bundle_id, quantity}; special packaging: GET /checkout/packaging then send packaging_option_id.\n"
             ."Money values are decimal strings in the store currency. Cost, profit and commission fields are never exposed.";
     }
 }

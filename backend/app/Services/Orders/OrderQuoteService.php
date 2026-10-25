@@ -9,6 +9,7 @@ use App\DTOs\Orders\OrderTotals;
 use App\Enums\PaymentMethodType;
 use App\Enums\AffiliateStatus;
 use App\Models\Affiliate;
+use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
 use App\Services\Affiliates\AffiliateCommissionService;
 use App\Models\ShippingRate;
@@ -20,10 +21,10 @@ use Illuminate\Validation\ValidationException;
  */
 class OrderQuoteService
 {
-    public function __construct(private PriceResolver $prices, private DiscountValidator $discounts, private OrderCalculator $calculator, private AffiliateCommissionService $affiliates) {}
+    public function __construct(private PriceResolver $prices, private DiscountValidator $discounts, private OrderCalculator $calculator, private AffiliateCommissionService $affiliates, private BundleResolver $bundles) {}
 
     /**
-     * @param  array<int,array{product_id:int,variant_id:int,qty:int}>  $cartLines
+     * @param  array<int,array{product_id:int,variant_id:int,qty:int,bundle_id?:int}>  $cartLines
      * @return array{affiliate:?Affiliate,affiliate_percent:string,lines:array,totals:OrderTotals,discount:?\App\Models\DiscountCode,rate:?ShippingRate,method:?PaymentMethod,prepay:?PaymentMethod,cod_fee_label:array}
      */
     public function quote(array $cartLines, CheckoutData $d, bool $lock = false): array
@@ -35,6 +36,18 @@ class OrderQuoteService
         $lines = [];
         $flashUsed = []; // flash units granted per flash item across ALL lines of this quote
         foreach ($cartLines as $c) {
+            if (($c['bundle_id'] ?? 0) > 0) { // bundle line -> component lines at allocated prices (no flash; CALCULATIONS.md "Bundles")
+                $bundle = $this->bundles->live((int) $c['bundle_id']);
+                $components = $bundle ? $this->bundles->components($bundle) : null;
+                if (! $bundle || ! $components) {
+                    throw ValidationException::withMessages(['cart' => __('orders.item_unavailable')]);
+                }
+                foreach ($this->bundles->expand($bundle, $components, (int) $c['qty'], (string) \Illuminate\Support\Str::uuid()) as $l) {
+                    $lines[] = ['key' => count($lines)] + $l;
+                }
+
+                continue;
+            }
             $item = $this->prices->item($c['product_id'], $c['variant_id']);
             if (! $item) {
                 throw ValidationException::withMessages(['cart' => __('orders.item_unavailable')]);
@@ -86,6 +99,14 @@ class OrderQuoteService
             }
         }
 
+        $packaging = null;
+        if ($d->packagingOptionId) {
+            $packaging = PackagingOption::active()->find($d->packagingOptionId); // tenant scoped + active, else 422
+            if (! $packaging) {
+                throw ValidationException::withMessages(['packaging_option_id' => __('orders.packaging.unavailable')]);
+            }
+        }
+
         $affiliate = $d->affiliateId ? Affiliate::where('status', AffiliateStatus::APPROVED->value)->find($d->affiliateId) : null;
         $affiliatePercent = $affiliate ? $this->affiliates->percentFor($affiliate) : '0';
 
@@ -104,9 +125,11 @@ class OrderQuoteService
             codCollectShippingUpfront: (bool) (current_tenant()?->codCollectsShippingUpfront() ?? true),
             codFee: CodFeeConfig::fromSettings($settings),
             cityId: $d->cityId,
+            packagingFee: $packaging ? (string) $packaging->price : '0',
+            packagingCost: $packaging ? (string) $packaging->cost : '0',
         ));
 
-        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent, 'prepay' => $prepay, 'cod_fee_label' => CodFeeConfig::fromSettings($settings)->labels()];
+        return ['lines' => $lines, 'totals' => $totals, 'discount' => $discountModel, 'rate' => $rate, 'method' => $method, 'affiliate' => $affiliate, 'affiliate_percent' => $affiliatePercent, 'prepay' => $prepay, 'packaging' => $packaging, 'cod_fee_label' => CodFeeConfig::fromSettings($settings)->labels()];
     }
 
     /** COD with a shipping fee to prepay needs a chosen online/wallet method (strict checkout only; live quotes stay lenient). */

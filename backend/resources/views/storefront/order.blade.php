@@ -75,7 +75,8 @@
                     <div class="flex justify-between"><dt>{{ __('store.subtotal') }}</dt><dd>{{ $money($order->subtotal) }}</dd></div>
                     @if ((float) $order->discount > 0)<div class="flex justify-between text-emerald-600"><dt>{{ __('store.discount') }}</dt><dd>-{{ $money($order->discount) }}</dd></div>@endif
                     <div class="flex justify-between"><dt>{{ __('store.shipping') }}</dt><dd>{{ (float) $order->shipping_net > 0 ? $money($order->shipping_net) : __('store.free') }}</dd></div>
-                    @if ((float) $order->tax > 0)<div class="flex justify-between"><dt>{{ __('store.tax') }}</dt><dd>{{ $money($order->tax) }}</dd></div>@endif
+                    @if ((float) $order->packaging_fee > 0)<div class="flex justify-between"><dt>{{ __('store.packaging') }}: {{ $order->packagingLabel() }}</dt><dd>{{ $money($order->packaging_fee) }}</dd></div>@endif
+                    @if ((float) $order->taxTotal() > 0)<div class="flex justify-between"><dt>{{ __('store.tax') }}</dt><dd>{{ $money($order->taxTotal()) }}</dd></div>@endif
                     @if ((float) $order->cod_fee > 0)<div class="flex justify-between"><dt>{{ $order->codFeeLabel() }}</dt><dd>{{ $money($order->cod_fee) }}</dd></div>@endif
                     @if ((float) $order->payment_fee_charged > 0)<div class="flex justify-between"><dt>{{ __('store.payment_fee') }}</dt><dd>{{ $money($order->payment_fee_charged) }}</dd></div>@endif
                     <div class="flex justify-between border-t border-slate-100 pt-2 text-base font-extrabold"><dt>{{ __('store.total') }}</dt><dd class="text-brand-600">{{ $money($order->total) }}</dd></div>
@@ -85,8 +86,11 @@
 
         <section class="rounded-2xl bg-white p-5 ring-1 ring-slate-100">
             <h2 class="mb-2 font-extrabold">{{ __('store.items') }}</h2>
+            @php $grp = null; @endphp
             @foreach ($order->items as $it)
-                <div class="flex justify-between gap-2 border-t border-slate-100 py-2 text-sm"><span>{{ $it->name }} <span class="text-slate-400">&times; {{ $it->quantity }}</span>@if ($it->returned_qty)<span class="badge badge-warn">{{ __('store.returned') }} {{ $it->returned_qty }}</span>@endif</span><b>{{ $money($it->line_subtotal) }}</b></div>
+                @if ($it->bundle_group && $it->bundle_group !== $grp)<div class="border-t border-slate-100 bg-slate-50 px-2 py-1.5 text-xs font-bold text-brand-600">{{ __('store.bundle') }}: {{ $it->bundle_name }}</div>@endif
+                @php $grp = $it->bundle_group; @endphp
+                <div class="flex justify-between gap-2 border-t border-slate-100 py-2 text-sm {{ $it->bundle_group ? 'ps-4' : '' }}"><span>{{ $it->name }} <span class="text-slate-400">&times; {{ $it->quantity }}</span>@if ($it->returned_qty)<span class="badge badge-warn">{{ __('store.returned') }} {{ $it->returned_qty }}</span>@endif</span><b>{{ $money($it->line_subtotal) }}</b></div>
             @endforeach
         </section>
 
@@ -96,7 +100,7 @@
                 <form data-ajax-form action="{{ route('storefront.orders.return', $order->public_token) }}" method="POST" class="space-y-3 text-sm" novalidate>
                     @csrf
                     @foreach ($order->items as $i => $it)
-                        <div class="flex items-center justify-between gap-3"><span>{{ $it->name }}</span>
+                        <div class="flex items-center justify-between gap-3"><span>@if ($it->bundle_name)<span class="text-xs font-bold text-brand-600">[{{ $it->bundle_name }}]</span> @endif{{ $it->name }}</span>
                             <input type="hidden" name="items[{{ $i }}][order_item_id]" value="{{ $it->id }}">
                             <input type="number" min="0" max="{{ $it->quantity - $it->returned_qty }}" value="0" name="items[{{ $i }}][quantity]" class="form-control w-24" aria-label="{{ __('store.return_qty') }}"></div>
                     @endforeach

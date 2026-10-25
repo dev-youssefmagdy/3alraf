@@ -33,7 +33,7 @@ class OrderPaymentService
     /** Payment links per order (each one burns a merchant reference "-R{n}" at the provider); beyond this the customer gets a 422. */
     public const MAX_PAYMENT_ATTEMPTS = 20;
 
-    public function __construct(private OrderStatusService $status, private PaymentGatewayFactory $gateways) {}
+    public function __construct(private OrderStatusService $status, private PaymentGatewayFactory $gateways, private PaymentProofFiles $files) {}
 
     // ---------------------------------------------------------------- wallet proof
 
@@ -46,17 +46,50 @@ class OrderPaymentService
             && ! in_array($order->payment_status, [PaymentStatus::PAID, PaymentStatus::PARTIALLY_PAID, PaymentStatus::REFUNDED], true);
     }
 
+    /** Offline = WALLET type. COD alone never needs proof; COD needs it only when its (actually charged) prepaid-shipping leg goes through a WALLET method. */
+    public function offlineAtCheckout(?PaymentMethod $method, ?PaymentMethod $prepay, string|float|int $prepaidShipping = 0): bool
+    {
+        if ($method?->type === PaymentMethodType::WALLET) {
+            return true;
+        }
+
+        return $method?->type === PaymentMethodType::COD && $prepay?->type === PaymentMethodType::WALLET && bccomp((string) $prepaidShipping, '0', 2) > 0;
+    }
+
+    /** Pre-validate endpoint: the same checks placement runs on the file (required, real type, not reused) but nothing is stored. */
+    public function precheckCheckoutProof(array $quote, ?UploadedFile $file): void
+    {
+        if (! $this->offlineAtCheckout($quote['method'], $quote['prepay'], $quote['totals']->prepaidShipping)) {
+            return;
+        }
+        if (! $file) {
+            throw ValidationException::withMessages(['proof' => __('orders.proof_required')]);
+        }
+        app(OfflineCheckoutThrottle::class)->attemptValidate(request()); // decoding files + the reuse oracle are bounded per IP/tenant
+        $this->files->assertNotReused($this->files->inspect($file)['hash']);
+    }
+
     public function uploadProof(Order $order, UploadedFile $file): Order
     {
         if (! $this->canUploadProof($order)) {
             throw ValidationException::withMessages(['proof' => __('orders.proof_not_allowed')]);
         }
+        $info = $this->files->inspect($file);
+        $this->files->assertNotReused($info['hash'], $order->id);
         $old = $order->payment_proof;
-        $path = $file->store('tenants/'.$order->tenant_id.'/payment-proofs', self::PROOF_DISK);
-        if ($old && $old !== $path) {
-            Storage::disk(self::PROOF_DISK)->delete($old);
+        $path = $this->files->store($file, $order->tenant_id, $info);
+        try {
+            $order->update(['payment_proof' => $path, 'payment_proof_hash' => $info['hash'], 'proof_status' => ProofStatus::PENDING, 'payment_status' => PaymentStatus::REVIEW]);
+        } catch (\Throwable $e) {
+            $this->files->delete($path);
+            if (PaymentProofFiles::isReuseViolation($e)) {
+                $this->files->reused();
+            }
+            throw $e;
         }
-        $order->update(['payment_proof' => $path, 'proof_status' => ProofStatus::PENDING, 'payment_status' => PaymentStatus::REVIEW]);
+        if ($old && $old !== $path) {
+            $this->files->delete($old);
+        }
         event(new OrderPaymentProofUploaded($order));
 
         return $order;

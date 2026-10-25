@@ -30,6 +30,15 @@ function init() {
             .done((res) => { toastr.success(res.message); cart = res.data || cart; $(document).trigger('cart:updated', [cart]); })
             .fail((xhr) => toastr.error(firstError(xhr)));
     }
+    function addBundle(bundleId, qty) {
+        return $.post(sf.routes.cartItems, { bundle_id: bundleId, quantity: qty || 1 })
+            .done((res) => { toastr.success(res.message); cart = res.data || cart; $(document).trigger('cart:updated', [cart]); })
+            .fail((xhr) => toastr.error(firstError(xhr)));
+    }
+    $(document).on('click', '[data-add-bundle]', function () {
+        const $b = $(this); $b.prop('disabled', true);
+        addBundle($b.data('add-bundle'), 1).always(() => $b.prop('disabled', false));
+    });
     const count = (c) => (c.items || []).reduce((n, i) => n + i.qty, 0);
 
     $(document).on('cart:updated', (_e, c) => {
@@ -220,6 +229,7 @@ function init() {
         let h = row(T.subtotal, money(t.subtotal));
         if (Number(t.discount) > 0) h += row(T.discount, '-' + money(t.discount), 'text-emerald-600');
         if (opts.shipping) h += row(T.shipping, Number(t.shippingNet) > 0 ? money(t.shippingNet) : esc(T.free));
+        if (Number(t.packagingFee) > 0) h += row(T.packaging, money(t.packagingFee));
         if (Number(t.tax) > 0) h += row(T.tax, money(t.tax));
         if (Number(t.paymentFeeCharged) > 0) h += row(T.payment_fee, money(t.paymentFeeCharged));
         if (Number(t.codFee) > 0) h += row(t.codFeeLabel || T.cod_fee, money(t.codFee));
@@ -229,6 +239,17 @@ function init() {
         }
         $dl.html(h);
     }
+
+    /* ---------- special packaging checkbox (cart + checkout): toggles the picker; unchecking clears the option ---------- */
+    $(document).on('change', '[data-packaging-toggle]', function () {
+        const $w = $(this).closest('[data-packaging]'), on = this.checked, $s = $w.find('[data-packaging-select]');
+        $w.find('[data-packaging-picker]').toggleClass('hidden', !on);
+        if (!on) { $s.val('').trigger('change'); } else if (!$s.val()) { $s.val($s.find('option[value!=""]').first().val()).trigger('change'); }
+    });
+    $(document).on('change', '[data-packaging-select]', function () {
+        const id = $(this).val(), $w = $(this).closest('[data-packaging]');
+        $w.find('[data-packaging-desc]').addClass('hidden'); if (id) $w.find('[data-packaging-desc="' + id + '"]').removeClass('hidden');
+    });
 
     /* ---------- cart page ---------- */
     $('[data-cart-page]').each(function () {
@@ -241,7 +262,8 @@ function init() {
             $pg.find('[data-cart-flash]').toggleClass('hidden', !c.flash);
             $pg.find('[data-cart-lines]').html(c.items.map((i) => '<div class="flex flex-wrap items-center gap-3 p-3" data-line="' + i.id + '">'
                 + (i.image ? '<img src="' + esc(i.image) + '" class="size-20 rounded-lg object-cover" alt="">' : '<div class="size-20 rounded-lg bg-slate-100"></div>')
-                + '<div class="min-w-0 flex-1"><a class="font-semibold hover:text-brand-600" href="' + (i.slug ? esc(location.pathname.replace(/\/cart.*$/, '') + '/product/' + i.slug) : '#') + '">' + esc(i.name) + '</a>'
+                + '<div class="min-w-0 flex-1"><a class="font-semibold hover:text-brand-600" href="' + (i.slug ? esc(location.pathname.replace(/\/cart.*$/, '') + (i.is_bundle ? '/bundle/' : '/product/') + i.slug) : '#') + '">' + esc(i.name) + '</a>'
+                + (i.is_bundle ? '<ul class="mt-1 list-disc ps-5 text-xs text-slate-500">' + (i.components || []).map((c) => '<li>' + esc(c.name) + ' &times; ' + (c.quantity * i.qty) + '</li>').join('') + '</ul>' : '')
                 + (i.available ? '' : '<p class="text-xs text-red-600">' + esc(T.item_unavailable) + '</p>') + '<p class="text-sm text-slate-500">' + esc(T.unit) + ': ' + money(i.unit_price) + '</p></div>'
                 + '<div class="flex items-center rounded-lg border border-slate-300"><button type="button" class="px-3 py-1.5" data-qty-minus aria-label="-">&minus;</button><span class="min-w-8 text-center text-sm font-bold">' + i.qty + '</span><button type="button" class="px-3 py-1.5" data-qty-plus aria-label="+">+</button></div>'
                 + '<b class="w-28 text-end">' + money(i.qty * i.unit_price) + '</b>'
@@ -249,6 +271,7 @@ function init() {
             renderTotals($pg.find('[data-totals]'), c.totals);
         }
         $(document).on('cart:updated', (_e, c) => render(c));
+        $pg.on('change', '[data-packaging-select]', function () { cartCall('POST', sf.routes.quote, { packaging_option_id: $(this).val() }); });
         const find = (el) => cart.items.find((x) => x.id === $(el).closest('[data-line]').data('line'));
         $pg.on('click', '[data-qty-plus]', function () { const i = find(this); cartCall('PUT', itemUrl(i.id), { quantity: i.qty + 1 }); });
         $pg.on('click', '[data-qty-minus]', function () { const i = find(this); cartCall('PUT', itemUrl(i.id), { quantity: i.qty - 1 }); });
@@ -266,7 +289,7 @@ function init() {
             return $a.length && $a.val() ? String($a.data('city')) : String($f.find('[name=city_id]').val() || '');
         };
         const quote = (fromApply) => {
-            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, input[name=prepay_method_id]:checked, [name=discount_code]').serialize();
+            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, input[name=prepay_method_id]:checked, [name=discount_code], [name=packaging_option_id]').serialize();
             return $.post(sf.routes.quote, data).done((r) => {
                 renderTotals($f.find('[data-totals]'), r.data.totals, { shipping: true });
                 togglePrepay(r.data.totals);
@@ -285,7 +308,30 @@ function init() {
             const need = cod && t && Number(t.prepaidShipping) > 0;
             $f.find('[data-prepay]').toggleClass('hidden', !need);
             if (!need) $f.find('input[name=prepay_method_id]').prop('checked', false);
+            toggleOfflineProof();
         }
+        function toggleOfflineProof() { // file input only when the chosen method (or COD's wallet prepay method) is offline = wallet
+            const $pm = $f.find('input[name=payment_method_id]:checked');
+            const $pp = $f.find('[data-prepay]:not(.hidden) input[name=prepay_method_id]:checked');
+            const $src = $pm.data('type') === 'wallet' ? $pm : ($pm.data('type') === 'cod' && $pp.data('type') === 'wallet' ? $pp : null);
+            const $box = $f.find('[data-offline-proof]'), $file = $box.find('input[type=file]');
+            $box.toggleClass('hidden', !$src);
+            $file.prop('disabled', !$src); // disabled inputs are not sent -> COD/online never carry a file
+            if (!$src) { $file.val(''); return; }
+            const $d = $box.find('[data-offline-details]').empty();
+            $('<b>').text($src.data('name') || '').appendTo($d);
+            if ($src.data('instructions')) $('<div>').text($src.data('instructions')).appendTo($d);
+            if ($src.data('account')) $('<div>').text($file.data('msg-transfer') + ': ' + $src.data('account')).appendTo($d);
+        }
+        $f.on('change', 'input[type=file][name=proof]', function () { // client-side guard (the server re-checks everything)
+            const f = this.files[0];
+            if (!f) return;
+            const okType = /\.(jpe?g|png|webp|pdf)$/i.test(f.name) && (!f.type || /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.type));
+            if (!okType || f.size > Number($(this).data('max-kb')) * 1024) {
+                toastr.error(!okType ? $(this).data('msg-type') : $(this).data('msg-size'));
+                $(this).val('');
+            }
+        });
         function applyCodRule() {
             $f.find('[data-method-row]').each(function () {
                 const $r = $(this), $i = $r.find('input'), blocked = $i.data('type') === 'cod' && shippingRate && !shippingRate.supports_cod;
@@ -313,12 +359,13 @@ function init() {
             applyCodRule(); quote();
         }
         $f.on('change', 'input[name=ship_opt]', function () { selectShipping(this.value); });
-        $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => quote());
+        $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => { toggleOfflineProof(); quote(); });
         $f.on('change', 'input[name=address_id]', function () {
             $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
             loadShipping();
         });
         $f.on('change', '[name=city_id]', loadShipping);
+        $f.on('change', '[data-packaging-select]', () => quote());
         $f.on('click', '[data-apply-code]', () => quote(true));
         $f.on('keydown', '[name=discount_code]', (e) => { if (e.key === 'Enter') { e.preventDefault(); quote(true); } });
         $(document).on('cart:updated', (_e, c) => { if (!c.items.length) { location.href = sf.routes.cart; return; } renderLines(c); });

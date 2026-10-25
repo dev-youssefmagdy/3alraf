@@ -78,7 +78,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function sales(ReportFilter $f): array
     {
-        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.net_profit')} as net_profit")
+        return $this->rows($this->orders($f)->selectRaw("DATE(o.created_at) as day, COUNT(*) as orders, {$this->m($f, 'o.subtotal')} as subtotal, {$this->m($f, 'o.total')} as total, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.discount')} as discount, {$this->m($f, 'o.shipping_net')} as shipping, {$this->m($f, 'o.payment_fee')} as fees, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.packaging_fee')} as packaging_fee, {$this->m($f, 'o.net_profit')} as net_profit")
             ->groupBy(DB::raw('DATE(o.created_at)'))->orderBy('day'));
     }
 
@@ -123,7 +123,7 @@ class ReportRepository implements ReportRepositoryInterface
     /** SQL: the order's prices included VAT (tax > 0 and not added on top), mirrors Order::taxIncluded(). */
     private function taxIncluded(): string
     {
-        return '(o.tax > 0 AND o.total - (o.subtotal - o.discount + o.shipping_net + o.payment_fee_charged + o.cod_fee) < o.tax)';
+        return '((o.tax + o.packaging_tax) > 0 AND o.total - (o.subtotal - o.discount + o.shipping_net + o.payment_fee_charged + o.cod_fee + o.packaging_fee) < o.tax + o.packaging_tax)';
     }
 
     /** SQL: revenue_goods = subtotal − discount − VAT inside inclusive prices (CALCULATIONS.md §Profit). */
@@ -134,7 +134,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function netProfit(ReportFilter $f): array
     {
-        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, $this->revenueGoods())} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
+        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, $this->revenueGoods())} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, "o.packaging_fee - CASE WHEN {$this->taxIncluded()} THEN o.packaging_tax ELSE 0 END - o.packaging_cost")} as packaging, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
 
         // goods reversal only for returns whose order is still in the sales set (a fully-returned order is already out of the
         // order profit — subtracting its returns again would remove it twice); return shipping is a real cost for every return.

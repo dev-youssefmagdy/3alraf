@@ -46,6 +46,8 @@ return [
         'customers' => ['view'],
         'discount_codes' => $crud,
         'flash_sales' => $crud,
+        'bundles' => $crud,
+        'packaging' => $crud,
         // Phase 5 growth
         'affiliates' => ['view', 'edit', 'delete'],
         'affiliate_tiers' => $crud,

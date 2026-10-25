@@ -16,9 +16,10 @@ class OrderResource extends JsonResource
             'number' => $o->number, 'token' => $o->public_token, 'status' => ['value' => $o->status->value, 'label' => $o->status->label()],
             'payment_status' => $o->payment_status->value, 'proof_status' => $o->proof_status?->value,
             'payment_method' => $o->relationLoaded('paymentMethod') && $o->paymentMethod ? ['id' => $o->paymentMethod->id, 'type' => $o->paymentMethod->type->value, 'name' => $o->paymentMethod->name] : null,
-            'subtotal' => (string) $o->subtotal, 'discount' => (string) $o->discount, 'shipping' => (string) $o->shipping_net, 'tax' => (string) $o->tax,
+            'subtotal' => (string) $o->subtotal, 'discount' => (string) $o->discount, 'shipping' => (string) $o->shipping_net, 'tax' => $o->taxTotal(),
             'payment_fee' => (string) $o->payment_fee_charged, 'total' => (string) $o->total, 'paid_amount' => (string) $o->paid_amount, 'due' => $o->due(),
             'cod_fee' => (string) $o->cod_fee, 'cod_fee_label' => (float) $o->cod_fee > 0 ? $o->codFeeLabel() : null, 'cod_amount' => (string) $o->cod_amount, 'prepaid_shipping' => (string) $o->prepaid_shipping, 'currency' => $o->currency,
+            'packaging_fee' => (string) $o->packaging_fee, 'packaging_name' => (float) $o->packaging_fee > 0 || $o->packaging_option_id ? $o->packagingLabel() : null,
             'placed_at' => $o->placed_at?->toIso8601String(), 'items_count' => $o->relationLoaded('items') ? (int) $o->items->sum('quantity') : null,
         ];
     }

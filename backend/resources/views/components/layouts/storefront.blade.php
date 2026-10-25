@@ -20,7 +20,7 @@
             'out_of_stock' => __('store.out_of_stock'), 'low_stock' => __('store.low_stock', ['n' => ':n']), 'select_city_hint' => __('store.select_city_hint'), 'no_shipping' => __('store.no_shipping'),
             'eta' => __('store.eta_days', ['d' => ':d']), 'cod_na' => __('store.cod_not_for_shipping'), 'unavailable' => __('store.unavailable_combo'), 'item_unavailable' => __('store.item_unavailable'),
             'wishlist_login' => __('store.wishlist_login'), 'code_applied' => __('store.code_applied'), 'fee_note' => __('store.fee_note', ['fee' => ':fee']),
-            'subtotal' => __('store.subtotal'), 'discount' => __('store.discount'), 'shipping' => __('store.shipping'), 'tax' => __('store.tax'), 'payment_fee' => __('store.payment_fee'), 'cod_fee' => __('store.cod_fee'), 'total' => __('store.total'), 'prepaid_now' => __('store.prepaid_now'), 'cod_balance' => __('store.cod_balance'),
+            'subtotal' => __('store.subtotal'), 'discount' => __('store.discount'), 'shipping' => __('store.shipping'), 'tax' => __('store.tax'), 'packaging' => __('store.packaging'), 'payment_fee' => __('store.payment_fee'), 'cod_fee' => __('store.cod_fee'), 'total' => __('store.total'), 'prepaid_now' => __('store.prepaid_now'), 'cod_balance' => __('store.cod_balance'),
             'unit' => __('store.unit_price'), 'qty' => __('store.qty')]];
 @endphp
 <x-layouts.base :title="$title ?: $tenant->name" body-class="bg-slate-50" :site-name="$tenant->name">

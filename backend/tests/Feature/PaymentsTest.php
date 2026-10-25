@@ -49,7 +49,7 @@ beforeEach(function () {
     $this->fawry = PaymentMethod::create(['type' => 'online', 'provider' => 'fawrypay', 'name' => ['ar' => 'فوري'], 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer',
         'credentials' => ['merchant_code' => 'MC1', 'secure_key' => 'fsecret'], 'is_sandbox' => true, 'is_active' => true]);
     $this->place = fn (int $qty, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty]]);
     $this->setUpfront = fn (bool $on) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_collect_shipping_upfront' => $on])]);
@@ -354,13 +354,13 @@ it('keeps proofs on the private disk, served only to tenant admins and the order
     $bad = fn ($f) => $this->postJson("{$this->s}/order/{$order->public_token}/proof", ['proof' => $f]);
     $bad(UploadedFile::fake()->create('x.txt', 10, 'text/plain'))->assertStatus(422);
     $bad(UploadedFile::fake()->create('big.pdf', 6000, 'application/pdf'))->assertStatus(422);                        // > 5MB
-    $bad(UploadedFile::fake()->create('ok.pdf', 100, 'application/pdf'))->assertOk();
+    $bad(UploadedFile::fake()->createWithContent('ok.pdf', "%PDF-1.4\n% first\n%%EOF"))->assertOk();
     $order->refresh();
     Storage::disk('private')->assertExists($order->payment_proof);
     Storage::disk('media')->assertMissing($order->payment_proof);
     // re-uploading replaces: the previous proof file is deleted (no orphan on the private disk)
     $first = $order->payment_proof;
-    $bad(UploadedFile::fake()->create('second.pdf', 100, 'application/pdf'))->assertOk();
+    $bad(UploadedFile::fake()->createWithContent('second.pdf', "%PDF-1.4\n% second\n%%EOF"))->assertOk();
     $order->refresh();
     expect($order->payment_proof)->not->toBe($first);
     Storage::disk('private')->assertMissing($first);

@@ -12,6 +12,7 @@ final readonly class OrderTotals
         public string $total, public string $paidAmount, public string $due, public string $affiliateCommission, public string $netProfit,
         public array $lineDiscounts = [],
         public string $codAmount = '0.00', public string $prepaidShipping = '0.00', public string $codFee = '0.00',
+        public string $packagingFee = '0.00', public string $packagingTax = '0.00', public string $packagingCost = '0.00',
     ) {}
 
     /** What a shopper may see. NEVER send toArray() to a client: it carries cogs, net profit, carrier cost and affiliate commission. */
@@ -19,7 +20,7 @@ final readonly class OrderTotals
     {
         return [
             'subtotal' => $this->subtotal, 'discount' => $this->discount, 'shipping' => $this->shipping, 'shippingDiscount' => $this->shippingDiscount,
-            'shippingNet' => $this->shippingNet, 'tax' => $this->tax, 'paymentFeeCharged' => $this->paymentFeeCharged, 'total' => $this->total,
+            'shippingNet' => $this->shippingNet, 'tax' => \App\Support\Money::add($this->tax, $this->packagingTax), 'packagingFee' => $this->packagingFee, 'paymentFeeCharged' => $this->paymentFeeCharged, 'total' => $this->total,
             'codAmount' => $this->codAmount, 'prepaidShipping' => $this->prepaidShipping, 'codFee' => $this->codFee,
         ];
     }

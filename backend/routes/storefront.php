@@ -53,7 +53,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('order/{token}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('order/{token}/invoice.pdf', [OrderController::class, 'invoicePdf'])->middleware('throttle:upload')->name('orders.invoice.pdf');
-    Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware('throttle:upload')->name('orders.proof');
+    Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware(['throttle:upload', 'throttle:proof-reupload'])->name('orders.proof');
     Route::get('order/{token}/proof', [OrderController::class, 'proofFile'])->middleware('throttle:upload')->name('orders.proof.file');
     Route::post('order/{token}/pay', [OrderController::class, 'pay'])->middleware('throttle:upload')->name('orders.pay');
     Route::post('order/{token}/return', [OrderController::class, 'requestReturn'])->middleware(['auth:web', 'throttle:returns'])->name('orders.return');
@@ -68,6 +68,8 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
 
     // Phase 5: product page, reviews, static pages, wishlist
     Route::get('product/{slug}', [ProductController::class, 'show'])->name('product.show');
+    Route::get('bundles', [\App\Http\Controllers\Storefront\BundleController::class, 'index'])->name('bundles.index');
+    Route::get('bundle/{slug}', [\App\Http\Controllers\Storefront\BundleController::class, 'show'])->name('bundle.show');
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::middleware('auth:web')->group(function () {
         Route::post('product/{slug}/reviews/validate', [ReviewController::class, 'validateForm'])->name('reviews.validate');

@@ -24,6 +24,8 @@ interface RetentionRepositoryInterface
     /** Delete rows of $table matching $where, returns affected count. */
     public function deleteWhere(string $table, array $where): int;
 
+    public function nullWhere(string $table, string $column, int $id): int;
+
     /** @return array<int,string> stored QR file paths of the given owners (rows deleted). */
     public function detachQrCodes(string $ownerType, array $ownerIds): array;
 

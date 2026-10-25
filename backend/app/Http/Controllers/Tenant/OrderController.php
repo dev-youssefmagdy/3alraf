@@ -51,7 +51,12 @@ class OrderController extends Controller implements HasMiddleware
     {
         $order = $this->find($id);
 
-        return view('tenant.orders.show', ['order' => $order, 'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all()]);
+        // other orders (any status) of this tenant that carry the very same proof file: a classic double-spend of one transfer receipt
+        $sharedProof = $order->payment_proof_hash
+            ? \App\Models\Order::query()->where('payment_proof_hash', $order->payment_proof_hash)->where('id', '!=', $order->id)->orderBy('id')->limit(10)->get(['id', 'number', 'status', 'proof_status'])
+            : collect();
+
+        return view('tenant.orders.show', ['sharedProof' => $sharedProof, 'order' => $order, 'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all()]);
     }
 
     public function invoice(int $id)

@@ -17,6 +17,7 @@ return [
     'sorts' => ['newest' => 'Newest', 'price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'best_selling' => 'Best selling', 'top_rated' => 'Top rated'],
     'results_count' => ':n products', 'no_results' => 'No matching products.', 'sub_categories' => 'Sub-categories',
     'in_stock' => 'In stock', 'out_of_stock' => 'Out of stock', 'low_stock' => 'Only :n left', 'sku' => 'SKU', 'barcode' => 'Barcode', 'qty' => 'Quantity',
+    'packaging' => 'Special packaging', 'packaging_choose' => 'Choose packaging', 'bundles' => 'Bundles', 'bundle' => 'Bundle', 'bundle_contains' => 'This bundle includes', 'bundle_unavailable' => 'This bundle is currently unavailable', 'bundle_left' => 'Only :n bundle(s) left', 'bundles_empty' => 'No bundles available right now.', 'bundle_save' => 'Save :amount', 'bundle_regular' => 'Regular price',
     'add_to_cart' => 'Add to cart', 'choose_options' => 'Choose options', 'unavailable_combo' => 'This combination is unavailable', 'off' => ':p% off', 'description' => 'Description', 'sold_out' => 'Sold out',
     'wishlist_login' => 'Log in to add this product to your wishlist.', 'reviews_count' => ':n reviews', 'avg_rating' => 'Average rating',
     'cart_title' => 'Shopping cart', 'cart_empty' => 'Your cart is empty', 'continue_shopping' => 'Continue shopping', 'remove' => 'Remove', 'unit_price' => 'Unit price', 'line_total' => 'Total',
@@ -41,4 +42,9 @@ return [
     'from_price' => 'From',
     'coming_soon' => 'Coming soon',
     'tags' => 'Tags',
+    'offline_proof_title' => 'Payment proof (required)',
+    'offline_proof_hint' => 'Transfer the amount using the selected method, then attach the receipt or a screenshot (JPG, PNG, WEBP or PDF, max :mb MB).',
+    'offline_proof_for' => 'Transfer details',
+    'proof_client_type' => 'Only JPG, PNG, WEBP or PDF files are allowed.',
+    'proof_client_size' => 'The file is larger than :mb MB.',
 ];

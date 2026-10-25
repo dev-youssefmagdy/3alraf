@@ -13,9 +13,11 @@ class CartSummary
     public function build(?CheckoutData $d = null): array
     {
         $out = ['items' => $this->cart->view()];
+        $d ??= new CheckoutData(packagingOptionId: $this->cart->packagingOptionId());
         if ($lines = $this->cart->lines()) {
-            $q = $this->quotes->quote($lines, $d ?? new CheckoutData);
+            $q = $this->quotes->quote($lines, $d);
             $out['totals'] = $q['totals']->forCustomer() + ['codFeeLabel' => $q['cod_fee_label'][app()->getLocale()] ?? reset($q['cod_fee_label'])];
+            $out['packaging'] = $q['packaging'] ? ['id' => $q['packaging']->id, 'name' => $q['packaging']->name] : null;
             $out['flash'] = collect($q['lines'])->contains(fn ($l) => $l['flash']);
         }
 

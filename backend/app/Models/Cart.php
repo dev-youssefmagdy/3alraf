@@ -9,7 +9,7 @@ class Cart extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['customer_id', 'token'];
+    protected $fillable = ['customer_id', 'token', 'packaging_option_id'];
 
     public function items()
     {

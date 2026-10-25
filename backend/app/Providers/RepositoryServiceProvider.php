@@ -46,6 +46,10 @@ use App\Repositories\Contracts\StockMovementRepositoryInterface;
 use App\Repositories\Eloquent\StockMovementRepository;
 use App\Repositories\Contracts\DiscountCodeRepositoryInterface;
 use App\Repositories\Eloquent\DiscountCodeRepository;
+use App\Repositories\Contracts\BundleRepositoryInterface;
+use App\Repositories\Contracts\PackagingOptionRepositoryInterface;
+use App\Repositories\Eloquent\PackagingOptionRepository;
+use App\Repositories\Eloquent\BundleRepository;
 use App\Repositories\Contracts\FlashSaleRepositoryInterface;
 use App\Repositories\Eloquent\FlashSaleRepository;
 use App\Repositories\Contracts\OrderRepositoryInterface;
@@ -115,6 +119,8 @@ class RepositoryServiceProvider extends ServiceProvider
         StockMovementRepositoryInterface::class => StockMovementRepository::class,
         DiscountCodeRepositoryInterface::class => DiscountCodeRepository::class,
         FlashSaleRepositoryInterface::class => FlashSaleRepository::class,
+        BundleRepositoryInterface::class => BundleRepository::class,
+        PackagingOptionRepositoryInterface::class => PackagingOptionRepository::class,
         OrderRepositoryInterface::class => OrderRepository::class,
         OrderReturnRepositoryInterface::class => OrderReturnRepository::class,
         CustomerRepositoryInterface::class => CustomerRepository::class,

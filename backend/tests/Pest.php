@@ -16,3 +16,12 @@ function codUpfront(\App\Models\Tenant $tenant, bool $on): \App\Models\Tenant
 
     return $tenant->refresh();
 }
+
+/** Unique fake proof image per call (identical bytes would be rejected as a reused proof). Offline checkouts require one. */
+function testProof(): \Illuminate\Http\UploadedFile
+{
+    static $n = 0;
+    $n++;
+
+    return \Illuminate\Http\UploadedFile::fake()->image("proof{$n}.png", 50 + $n, 20);
+}

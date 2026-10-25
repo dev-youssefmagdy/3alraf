@@ -51,7 +51,7 @@ beforeEach(function () {
     $this->wallet = PaymentMethod::where('type', 'wallet')->first();
     $this->lines = fn (int $qty) => [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty]];
     $this->checkout = fn (array $o = []) => new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'Street 1',
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'Street 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o));
     $this->place = fn (int $qty = 2, array $o = []) => app(OrderPlacementService::class)->place(($this->checkout)($o), ($this->lines)($qty))['order'];
@@ -161,7 +161,7 @@ it('increments flash counters on placement, decrements on cancel and counts disc
 it('handles wallet proof upload, approval and rejection', function () {
     $order = ($this->place)(1, ['paymentMethodId' => $this->wallet->id]);
     $svc = app(OrderPaymentService::class);
-    expect(fn () => $svc->approveProof($order))->toThrow(ValidationException::class);
+    expect($order->payment_status)->toBe(PaymentStatus::REVIEW);   // the checkout proof already put it in review
     $svc->uploadProof($order, UploadedFile::fake()->image('proof.jpg'));
     $order->refresh();
     expect($order->payment_status)->toBe(PaymentStatus::REVIEW)->and($order->payment_proof)->not->toBeNull();

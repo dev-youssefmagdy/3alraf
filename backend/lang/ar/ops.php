@@ -171,7 +171,7 @@ return [
         ],
         "payment_method_type" => [
             "cod" => 'الدفع عند الاستلام',
-            "wallet" => 'تحويل محفظة',
+            "wallet" => 'دفع يدوي / تحويل (أوفلاين)',
             "online" => 'بوابة دفع',
         ],
         "fee_bearer" => [

@@ -121,9 +121,9 @@ class ReportService
             'cards' => [
                 $this->card('orders', number_format($orders), 'slate'), $this->card('sales', $this->money($this->sum($rows, 'total'))), $this->card('costs', $this->money($this->sum($rows, 'cogs')), 'slate'),
                 $this->card('discounts', $this->money($this->sum($rows, 'discount')), 'slate'), $this->card('shipping', $this->money($this->sum($rows, 'shipping')), 'slate'),
-                $this->card('fees', $this->money($this->sum($rows, 'fees')), 'slate'), $this->card('cod_fee', $this->money($this->sum($rows, 'cod_fee')), 'slate'), $this->card('net_profit', $this->money($this->sum($rows, 'net_profit')), 'emerald'),
+                $this->card('fees', $this->money($this->sum($rows, 'fees')), 'slate'), $this->card('cod_fee', $this->money($this->sum($rows, 'cod_fee')), 'slate'), $this->card('packaging_fee', $this->money($this->sum($rows, 'packaging_fee')), 'slate'), $this->card('net_profit', $this->money($this->sum($rows, 'net_profit')), 'emerald'),
             ],
-            'columns' => [$this->col('day', 'date'), $this->col('orders', 'int'), $this->col('subtotal', 'money'), $this->col('total', 'money'), $this->col('cogs', 'money'), $this->col('discount', 'money'), $this->col('shipping', 'money'), $this->col('fees', 'money'), $this->col('cod_fee', 'money'), $this->col('net_profit', 'money')],
+            'columns' => [$this->col('day', 'date'), $this->col('orders', 'int'), $this->col('subtotal', 'money'), $this->col('total', 'money'), $this->col('cogs', 'money'), $this->col('discount', 'money'), $this->col('shipping', 'money'), $this->col('fees', 'money'), $this->col('cod_fee', 'money'), $this->col('packaging_fee', 'money'), $this->col('net_profit', 'money')],
             'rows' => $rows,
             'chart' => ['type' => 'line', 'labels' => array_column($rows, 'day'), 'datasets' => [['label' => __('reports.col.total'), 'data' => $this->nums($rows, 'total')], ['label' => __('reports.col.net_profit'), 'data' => $this->nums($rows, 'net_profit')]]],
         ];
@@ -135,7 +135,7 @@ class ReportService
         $d = $this->repo->netProfit($f);
         $gross = Money::sub($d['revenue'], $d['cogs']);
         $fees = Money::sub($d['fee'], $d['fee_charged']);                  // merchant-borne fee cost (customer-borne fees net to 0)
-        $order = Money::sub(Money::sub(Money::add($gross, $d['shipping_net'], $d['cod_fee']), Money::add($d['shipping_cost'], $fees)), $d['commission']);
+        $order = Money::sub(Money::sub(Money::add($gross, $d['shipping_net'], $d['cod_fee'], $d['packaging']), Money::add($d['shipping_cost'], $fees)), $d['commission']);
         $reversal = Money::sub(Money::sub($d['return_value'], $d['return_tax']), $d['returned_cogs']); // returned goods excl. VAT − their cogs
         $net = Money::sub(Money::sub(Money::sub($order, $reversal), $d['return_shipping']), $d['expenses']);
 
@@ -147,7 +147,7 @@ class ReportService
         $l = $this->netProfitLines($f);
         $rows = collect([
             ['revenue', $l['revenue'], 'income'], ['cogs', $l['cogs'], 'cost'], ['gross_profit', $l['gross'], 'total'],
-            ['shipping_collected', $l['shipping_net'], 'income'], ['cod_fee', $l['cod_fee'], 'income'], ['shipping_paid', $l['shipping_cost'], 'cost'], ['payment_fees', $l['fees'], 'cost'], ['affiliate_commission', $l['commission'], 'cost'],
+            ['shipping_collected', $l['shipping_net'], 'income'], ['cod_fee', $l['cod_fee'], 'income'], ['packaging', $l['packaging'], 'income'], ['shipping_paid', $l['shipping_cost'], 'cost'], ['payment_fees', $l['fees'], 'cost'], ['affiliate_commission', $l['commission'], 'cost'],
             ['order_profit', $l['order'], 'total'], ['returns_reversal', $l['reversal'], 'cost'], ['return_shipping', $l['return_shipping'], 'cost'], ['expenses', $l['expenses'], 'cost'], ['net_profit', $l['net'], 'total'],
         ])->map(fn ($r) => ['line' => __('reports.line.'.$r[0]), 'amount' => $r[1], 'kind' => $r[2]])->all();
 
