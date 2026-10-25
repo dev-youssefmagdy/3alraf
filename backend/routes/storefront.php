@@ -32,12 +32,12 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::middleware('guest:web')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
         Route::post('login/validate', [LoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
-        Route::post('login', [LoginController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+        Route::post('login', [LoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
     });
     Route::middleware('guest:web')->group(function () {
         Route::get('register', [CustomerAuthController::class, 'show'])->name('register');
         Route::post('register/validate', [CustomerAuthController::class, 'validateForm'])->name('register.validate');
-        Route::post('register', [CustomerAuthController::class, 'store'])->middleware('throttle:10,1')->name('register.submit');
+        Route::post('register', [CustomerAuthController::class, 'store'])->middleware('throttle:auth')->name('register.submit');
     });
     Route::post('logout', [LoginController::class, 'logout'])->middleware('auth:web')->name('logout');
 
@@ -50,7 +50,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::get('checkout', [CheckoutController::class, 'create'])->name('checkout.create');
     Route::get('checkout/shipping', [CheckoutController::class, 'shipping'])->name('checkout.shipping');
     Route::post('checkout/validate', [CheckoutController::class, 'validateForm'])->middleware('throttle:checkout-validate')->name('checkout.validate');
-    Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:20,1')->name('checkout.store');
+    Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('order/{token}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('order/{token}/invoice.pdf', [OrderController::class, 'invoicePdf'])->middleware('throttle:upload')->name('orders.invoice.pdf');
     Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware('throttle:upload')->name('orders.proof');
@@ -71,7 +71,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::middleware('auth:web')->group(function () {
         Route::post('product/{slug}/reviews/validate', [ReviewController::class, 'validateForm'])->name('reviews.validate');
-        Route::post('product/{slug}/reviews', [ReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+        Route::post('product/{slug}/reviews', [ReviewController::class, 'store'])->middleware('throttle:reviews')->name('reviews.store');
         Route::get('wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
         Route::post('wishlist/{product}/toggle', [WishlistController::class, 'toggle'])->whereNumber('product')->name('wishlist.toggle');
     });
@@ -81,10 +81,10 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
         Route::middleware('guest:affiliate')->group(function () {
             Route::get('login', [AffiliateAuthController::class, 'showLogin'])->name('login');
             Route::post('login/validate', [AffiliateAuthController::class, 'validateLogin'])->middleware('throttle:login-validate')->name('login.validate');
-            Route::post('login', [AffiliateAuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+            Route::post('login', [AffiliateAuthController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
             Route::get('register', [AffiliateAuthController::class, 'showRegister'])->name('register');
             Route::post('register/validate', [AffiliateAuthController::class, 'validateRegister'])->name('register.validate');
-            Route::post('register', [AffiliateAuthController::class, 'register'])->middleware('throttle:10,1')->name('register.submit');
+            Route::post('register', [AffiliateAuthController::class, 'register'])->middleware('throttle:auth')->name('register.submit');
         });
         Route::middleware('auth:affiliate')->group(function () {
             Route::post('logout', [AffiliateAuthController::class, 'logout'])->name('logout');

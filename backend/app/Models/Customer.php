@@ -12,7 +12,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
-    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes;
+    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes, \App\Models\Concerns\RevokesSessionsOnLockout;
 
     protected array $freedOnDelete = ['email'];
 
@@ -41,5 +41,11 @@ class Customer extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** Must not stay logged in anywhere (RevokesSessionsOnLockout + EnsureAccountActive). */
+    public function isLockedOut(): bool
+    {
+        return $this->is_active === false; // null = unsaved default (column defaults to active)
     }
 }

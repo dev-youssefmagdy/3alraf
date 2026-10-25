@@ -45,6 +45,7 @@
                 <x-input name="phone" :label="__('store.phone')" :value="$customer->phone" />
                 <x-input name="password" type="password" :label="__('store.password')" :hint="__('store.password_keep')" />
                 <x-input name="password_confirmation" type="password" :label="__('store.password_confirmation')" />
+                <x-input name="current_password" type="password" :label="__('store.current_password')" :hint="__('store.current_password_hint')" />
                 <button class="btn btn-primary w-full">{{ __('store.save') }}</button>
             </form>
             <a href="{{ route('storefront.wishlist.index') }}" class="btn btn-secondary w-full">{{ __('store.wishlist') }}</a>

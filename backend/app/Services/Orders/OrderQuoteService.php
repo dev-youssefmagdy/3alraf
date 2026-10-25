@@ -33,12 +33,13 @@ class OrderQuoteService
         }
 
         $lines = [];
+        $flashUsed = []; // flash units granted per flash item across ALL lines of this quote
         foreach ($cartLines as $c) {
             $item = $this->prices->item($c['product_id'], $c['variant_id']);
             if (! $item) {
                 throw ValidationException::withMessages(['cart' => __('orders.item_unavailable')]);
             }
-            foreach ($this->prices->segments($item, $c['qty'], $lock) as $seg) {
+            foreach ($this->prices->segments($item, $c['qty'], $lock, $flashUsed) as $seg) {
                 $lines[] = ['key' => count($lines), 'product_id' => $item['product']->id, 'variant_id' => $item['variant']?->id ?? 0, 'name' => $item['name'],
                     'sku' => $item['sku'], 'barcode' => $item['barcode'], 'unit_price' => $seg['unit_price'], 'unit_cost' => $item['cost'], 'qty' => $seg['qty'],
                     'flash' => $seg['flash'], 'eligible' => true];

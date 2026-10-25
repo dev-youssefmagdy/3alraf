@@ -23,7 +23,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
     Route::middleware('guest:central')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
         Route::post('login/validate', [LoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
-        Route::post('login', [LoginController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+        Route::post('login', [LoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
     });
 
     Route::middleware('auth:central')->group(function () {

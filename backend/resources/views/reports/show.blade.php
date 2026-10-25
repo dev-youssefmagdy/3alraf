@@ -16,7 +16,7 @@
             @if ($guard === 'tenant' && $key === 'cod-settlement' && auth('tenant')->user()?->can('orders.payments'))
                 <form method="POST" action="{{ route('tenant.reports.cod-settle') }}" class="mt-4 flex flex-wrap items-center gap-2 border-t pt-4" onsubmit="return confirm(@js(__('reports.settle_confirm')))">
                     @csrf
-                    <input type="hidden" name="from" value="{{ $f->from }}"><input type="hidden" name="to" value="{{ $f->to }}">
+                    <input type="hidden" name="from" value="{{ $f->from }}"><input type="hidden" name="to" value="{{ $f->to }}">@if ($f->branchId)<input type="hidden" name="branch_id" value="{{ $f->branchId }}">@endif
                     <select name="shipping_company_id" class="form-control w-auto" required>
                         @foreach (collect($data['rows'])->filter(fn ($r) => ! empty($r['company_id']) && (float) $r['owed'] > 0) as $r)<option value="{{ $r['company_id'] }}">{{ $r['company'] }} - {{ $r['owed'] }}</option>@endforeach
                     </select>

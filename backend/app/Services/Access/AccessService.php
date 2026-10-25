@@ -122,9 +122,42 @@ class AccessService
         return $guard === 'tenant' ? TenantAdmin::query() : CentralAdmin::query();
     }
 
+    /** Load a staff account for edit/update/delete; accounts holding the system role are off-limits to non-holders. */
     public function findAdmin(string $guard, int|string $id): CentralAdmin|TenantAdmin
     {
-        return $this->adminQuery($guard)->findOrFail($id);
+        $admin = $this->adminQuery($guard)->findOrFail($id);
+        abort_if($admin->hasRole(self::SYSTEM[$guard]) && ! $this->actorIsSystem($guard), 403);
+
+        return $admin;
+    }
+
+    public function actorIsSystem(string $guard): bool
+    {
+        return (bool) auth($guard)->user()?->hasRole(self::SYSTEM[$guard]);
+    }
+
+    /** The system role only by its holders; any other role only when all its permissions are held by the actor. */
+    public function canAssign(string $guard, Role $role): bool
+    {
+        if ($this->isSystem($guard, $role)) {
+            return $this->actorIsSystem($guard);
+        }
+        if ($this->actorIsSystem($guard)) {
+            return true;
+        }
+        $own = auth($guard)->user()?->getAllPermissions()->pluck('name')->all() ?? [];
+
+        return $role->permissions->pluck('name')->diff($own)->isEmpty();
+    }
+
+    /** Roles the actor may pick in the staff form (+ those the account already holds, kept as-is). @return array<int,string> */
+    public function assignableRoles(string $guard, CentralAdmin|TenantAdmin|null $admin = null): array
+    {
+        $held = $admin?->exists ? $admin->roles->pluck('id')->all() : [];
+
+        return $this->roleQuery($guard)->with('permissions')->orderBy('id')->get()
+            ->filter(fn (Role $r) => in_array($r->id, $held, true) || $this->canAssign($guard, $r))
+            ->mapWithKeys(fn (Role $r) => [$r->id => $this->displayName($guard, $r)])->all();
     }
 
     public function saveAdmin(string $guard, AdminUserData $d, CentralAdmin|TenantAdmin|null $admin = null): CentralAdmin|TenantAdmin
@@ -133,7 +166,15 @@ class AccessService
         if ($d->password) {
             $attrs['password'] = $d->password;
         }
-        $roles = $this->roleQuery($guard)->whereIn('id', $d->roleIds)->get();
+        $roles = $this->roleQuery($guard)->with('permissions')->whereIn('id', $d->roleIds)->get();
+        abort_if($admin && $admin->hasRole(self::SYSTEM[$guard]) && ! $this->actorIsSystem($guard), 403);
+        // privilege escalation guard: every newly granted role must be assignable by the actor (roles already held may be kept)
+        $held = $admin ? $admin->roles->pluck('id')->all() : [];
+        foreach ($roles as $role) {
+            if (! in_array($role->id, $held, true) && ! $this->canAssign($guard, $role)) {
+                throw ValidationException::withMessages(['roles' => __('access.role_not_assignable')]);
+            }
+        }
 
         return DB::transaction(function () use ($guard, $attrs, $admin, $roles) {
             if ($admin) {
@@ -160,6 +201,7 @@ class AccessService
         if ($admin->getKey() === auth($guard)->id()) {
             throw ValidationException::withMessages(['email' => __('access.cannot_delete_self')]);
         }
+        abort_if($admin->hasRole(self::SYSTEM[$guard]) && ! $this->actorIsSystem($guard), 403);
         $this->audit($guard, $admin, 'admin.deleted');
         $admin->delete();
     }

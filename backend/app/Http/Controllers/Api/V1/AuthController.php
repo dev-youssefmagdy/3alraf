@@ -49,7 +49,7 @@ class AuthController extends ApiController
 
     public function update(ProfileRequest $r, CustomerAccountService $accounts): JsonResponse
     {
-        return $this->respond(new CustomerResource($accounts->updateProfile($r->user(), $r->safe()->except('password_confirmation'))), __('admin.saved'));
+        return $this->respond(new CustomerResource($accounts->updateProfile($r->user(), $r->safe()->except(['password_confirmation', 'current_password']))), __('admin.saved'));
     }
 
     public function forgotPassword(ForgotPasswordRequest $r): JsonResponse

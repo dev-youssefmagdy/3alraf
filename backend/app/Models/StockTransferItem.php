@@ -8,7 +8,7 @@ class StockTransferItem extends Model
 {
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = ['stock_transfer_id', 'product_id', 'product_variant_id', 'quantity', 'unit_cost'];
 
     protected function casts(): array
     {

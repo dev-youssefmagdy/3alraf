@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrderReturnItem extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['order_return_id', 'order_item_id', 'quantity', 'return_value'];
 
     protected function casts(): array
     {

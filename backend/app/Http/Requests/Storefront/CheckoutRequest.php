@@ -23,7 +23,7 @@ class CheckoutRequest extends FormRequest
             'name' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:120'],
             'phone' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:190'],
-            'city_id' => [$loggedIn || $quote ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
+            'city_id' => [$loggedIn || $quote ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
             'address' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
             'shipping_company_id' => [$quote ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],

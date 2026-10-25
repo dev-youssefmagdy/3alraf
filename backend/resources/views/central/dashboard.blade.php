@@ -7,5 +7,7 @@
         <x-stat-card :label="__('admin.active_tenants')" :value="$activeTenants" tone="emerald" />
         <x-stat-card :label="__('admin.total_languages')" :value="$languagesCount" tone="slate" />
     </div>
-    @include('reports._dashboard', ['d' => $d, 'f' => $f, 'guard' => 'central'])
+    @if ($d)
+        @include('reports._dashboard', ['d' => $d, 'f' => $f, 'guard' => 'central'])
+    @endif
 </x-layouts.admin>

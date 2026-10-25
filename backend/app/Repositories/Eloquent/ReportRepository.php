@@ -120,15 +120,38 @@ class ReportRepository implements ReportRepositoryInterface
             ->groupBy('o.payment_method_id', 'o.tenant_id', 't.name', 'pm.fee_bearer', DB::raw($this->nm('pm.name')))->orderByDesc('fee'));
     }
 
+    /** SQL: the order's prices included VAT (tax > 0 and not added on top), mirrors Order::taxIncluded(). */
+    private function taxIncluded(): string
+    {
+        return '(o.tax > 0 AND o.total - (o.subtotal - o.discount + o.shipping_net + o.payment_fee_charged + o.cod_fee) < o.tax)';
+    }
+
+    /** SQL: revenue_goods = subtotal − discount − VAT inside inclusive prices (CALCULATIONS.md §Profit). */
+    private function revenueGoods(): string
+    {
+        return "o.subtotal - o.discount - CASE WHEN {$this->taxIncluded()} THEN o.tax ELSE 0 END";
+    }
+
     public function netProfit(ReportFilter $f): array
     {
-        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, 'o.subtotal - o.discount')} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
+        $o = (array) $this->orders($f)->selectRaw("COUNT(*) as orders, {$this->m($f, $this->revenueGoods())} as revenue, {$this->m($f, 'o.cogs')} as cogs, {$this->m($f, 'o.shipping_net')} as shipping_net, {$this->m($f, 'o.shipping_cost')} as shipping_cost, {$this->m($f, 'o.payment_fee')} as fee, {$this->m($f, 'o.payment_fee_charged')} as fee_charged, {$this->m($f, 'o.cod_fee')} as cod_fee, {$this->m($f, 'o.affiliate_commission')} as commission")->first();
 
-        $r = $this->base($f, 'order_returns', 'r')->join('orders as o', 'o.id', '=', 'r.order_id')->whereIn('r.status', ['approved', 'refunded'])->whereBetween('r.created_at', [$f->start(), $f->end()]);
+        // goods reversal only for returns whose order is still in the sales set (a fully-returned order is already out of the
+        // order profit — subtracting its returns again would remove it twice); return shipping is a real cost for every return.
+        // VAT inside returned goods of inclusive orders is cumulative per order: round(tax×(P+v)/B) − round(tax×P/B), P = earlier returns.
+        $prior = DB::table('order_returns as r2')->join('order_returns as r3', fn ($j) => $j->on('r3.order_id', '=', 'r2.order_id')->on('r3.id', '<', 'r2.id'))
+            ->whereIn('r3.status', ['approved', 'refunded'])->selectRaw('r2.id as id, SUM(r3.return_value) as prior')->groupBy('r2.id');
+        $r = $this->base($f, 'order_returns', 'r')->join('orders as o', 'o.id', '=', 'r.order_id')->leftJoinSub($prior, 'pr', 'pr.id', '=', 'r.id')
+            ->whereIn('r.status', ['approved', 'refunded'])->whereBetween('r.created_at', [$f->start(), $f->end()]);
         if ($f->branchId) {
             $r->where('o.branch_id', $f->branchId);
         }
-        $r = (array) $r->selectRaw("{$this->m($f, 'r.return_value')} as return_value, {$this->m($f, 'r.returned_cogs')} as returned_cogs, {$this->m($f, 'r.return_shipping_cost')} as return_shipping")->first();
+        $in = "o.status IN ('".implode("','", $this->salesStatuses())."')";
+        $p = 'COALESCE(pr.prior, 0)';
+        $b = '(o.subtotal - o.discount)';
+        $vat = "CASE WHEN {$this->taxIncluded()} AND $b > 0 THEN ROUND(o.tax * ($p + r.return_value) / $b, 2) - ROUND(o.tax * $p / $b, 2) ELSE 0 END";
+        $r = (array) $r->selectRaw("{$this->m($f, "CASE WHEN $in THEN r.return_value ELSE 0 END")} as return_value, {$this->m($f, "CASE WHEN $in THEN $vat ELSE 0 END")} as return_tax,
+            {$this->m($f, "CASE WHEN $in THEN r.returned_cogs ELSE 0 END")} as returned_cogs, {$this->m($f, 'r.return_shipping_cost')} as return_shipping")->first();
 
         $e = $this->base($f, 'expenses', 'e')->whereBetween('e.expense_date', [$f->from, $f->to]);
         if ($f->branchId) {
@@ -253,7 +276,7 @@ class ReportRepository implements ReportRepositoryInterface
     public function branches(ReportFilter $f): array
     {
         $q = $this->orders($f)->leftJoin('branches as b', 'b.id', '=', 'o.branch_id');
-        $rows = $this->rows($q->selectRaw("o.branch_id as branch_id, t.name as tenant, COALESCE(NULLIF({$this->nm('b.name')}, ''), '-') as branch, COUNT(*) as orders, {$this->m($f, 'o.total')} as sales, {$this->m($f, "CASE WHEN o.status = 'delivered' THEN o.net_profit ELSE 0 END")} as profit")
+        $rows = $this->rows($q->selectRaw("o.branch_id as branch_id, t.name as tenant, COALESCE(NULLIF({$this->nm('b.name')}, ''), '-') as branch, COUNT(*) as orders, {$this->m($f, 'o.total')} as sales, {$this->m($f, 'o.net_profit')} as profit")
             ->groupBy('o.branch_id', 'o.tenant_id', 't.name', DB::raw($this->nm('b.name'))));
         $exp = $this->base($f, 'expenses', 'e')->whereBetween('e.expense_date', [$f->from, $f->to])->selectRaw("e.branch_id as branch_id, {$this->m($f, 'e.amount')} as expenses")->groupBy('e.branch_id')->pluck('expenses', 'branch_id');
         $stock = $this->base($f, 'stock_levels', 'sl')->selectRaw("sl.branch_id as branch_id, {$this->m($f, 'sl.on_hand * sl.avg_cost')} as value")->groupBy('sl.branch_id')->pluck('value', 'branch_id');
@@ -276,7 +299,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function tenantBreakdown(ReportFilter $f): array
     {
-        return $this->rows($this->orders($f)->selectRaw("t.id as tenant_id, t.name as tenant, t.currency_code as currency, COUNT(*) as orders, {$this->m($f, 'o.total')} as sales, {$this->m($f, "CASE WHEN o.status = 'delivered' THEN o.net_profit ELSE 0 END")} as profit")
+        return $this->rows($this->orders($f)->selectRaw("t.id as tenant_id, t.name as tenant, t.currency_code as currency, COUNT(*) as orders, {$this->m($f, 'o.total')} as sales, {$this->m($f, 'o.net_profit')} as profit")
             ->groupBy('t.id', 't.name', 't.currency_code')->orderByDesc('sales'));
     }
 }

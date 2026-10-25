@@ -24,6 +24,11 @@ class PaymentMethodController extends ResourceController
         parent::__construct($service);
     }
 
+    public static function middleware(): array
+    {
+        return [...parent::middleware(), new \Illuminate\Routing\Controllers\Middleware('can:payment_methods.edit', only: ['toggle'])];
+    }
+
     public function toggle(int $id): \Illuminate\Http\JsonResponse
     {
         $this->service->toggle($this->service->find($id));

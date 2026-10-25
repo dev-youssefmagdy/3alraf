@@ -43,6 +43,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Reverse the proof move (private → public) before the schema goes back.
+        foreach (DB::table('orders')->whereNotNull('payment_proof')->get(['id', 'payment_proof']) as $o) {
+            if (Storage::disk('private')->exists($o->payment_proof) && ! Storage::disk('public')->exists($o->payment_proof)) {
+                Storage::disk('public')->put($o->payment_proof, Storage::disk('private')->get($o->payment_proof));
+                Storage::disk('private')->delete($o->payment_proof);
+            }
+        }
+
         Schema::table('orders', function (Blueprint $t) {
             $t->dropIndex('orders_tenant_carrier_status_idx');
             $t->dropConstrainedForeignId('prepay_method_id');

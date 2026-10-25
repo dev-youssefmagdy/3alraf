@@ -5,7 +5,7 @@
         <section class="relative overflow-hidden rounded-2xl bg-slate-200" data-slider>
             <div class="flex transition-transform duration-500" data-slides>
                 @foreach ($hero as $b)
-                    <a href="{{ $b->link_url ?: '#' }}" class="block w-full shrink-0" data-slide>
+                    <a href="{{ $b->safeLink() ?: '#' }}" class="block w-full shrink-0" data-slide>
                         @if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/6] w-full object-cover" @if (! $loop->first) loading="lazy" @endif>@endif
                     </a>
                 @endforeach
@@ -38,7 +38,7 @@
     @if ($strips->isNotEmpty() || $tiles->isNotEmpty())
         <section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-{{ min(4, max(2, $strips->count() + $tiles->count())) }}">
             @foreach ($strips->concat($tiles) as $b)
-                <a href="{{ $b->link_url ?: '#' }}" class="block overflow-hidden rounded-xl bg-slate-100">@if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/7] w-full object-cover transition hover:scale-105" loading="lazy">@endif</a>
+                <a href="{{ $b->safeLink() ?: '#' }}" class="block overflow-hidden rounded-xl bg-slate-100">@if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/7] w-full object-cover transition hover:scale-105" loading="lazy">@endif</a>
             @endforeach
         </section>
     @endif
@@ -75,7 +75,7 @@
         <div class="fixed inset-0 z-50 hidden place-items-center bg-black/50 p-4" data-popup="{{ $popup->id }}">
             <div class="relative max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
                 <button type="button" data-popup-close class="absolute end-2 top-2 grid size-8 place-items-center rounded-full bg-white/90 text-xl leading-none shadow" aria-label="{{ __('store.close') }}">&times;</button>
-                <a href="{{ $popup->link_url ?: '#' }}"><img src="{{ $popup->imageUrl() }}" alt="{{ $popup->title }}" class="w-full"></a>
+                <a href="{{ $popup->safeLink() ?: '#' }}"><img src="{{ $popup->imageUrl() }}" alt="{{ $popup->title }}" class="w-full"></a>
             </div>
         </div>
     @endif

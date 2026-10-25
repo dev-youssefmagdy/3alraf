@@ -18,15 +18,18 @@ class AffiliateCommissionService
 
     public function __construct(private AffiliateCommissionRepositoryInterface $commissions) {}
 
-    /** Lifetime sales = Σ(subtotal − discount) of the affiliate's delivered orders − Σ return_value of their approved/refunded returns (floored at 0). */
+    /** Lifetime sales = Σ revenue_goods (excl. VAT) of the affiliate's delivered orders − Σ returned value excl. VAT of their approved/refunded returns (floored at 0). */
     public function lifetimeSales(Affiliate $a): string
     {
-        $orders = Order::query()->where('affiliate_id', $a->id)->where('status', OrderStatus::DELIVERED->value);
-        $sales = (string) (clone $orders)->selectRaw('COALESCE(SUM(subtotal - discount), 0) as s')->value('s');
-        $returned = (string) \App\Models\OrderReturn::query()->whereIn('status', ['approved', 'refunded'])
-            ->whereIn('order_id', (clone $orders)->select('id'))->sum('return_value');
+        $orders = Order::query()->where('affiliate_id', $a->id)->where('status', OrderStatus::DELIVERED->value)->get();
+        $returned = \App\Models\OrderReturn::query()->whereIn('status', ['approved', 'refunded'])->whereIn('order_id', $orders->modelKeys())
+            ->selectRaw('order_id, SUM(return_value) as v')->groupBy('order_id')->pluck('v', 'order_id');
+        $sales = '0';
+        foreach ($orders as $o) { // Σ revenue_goods − Σ returned value, both excl. VAT
+            $sales = Money::add($sales, Money::sub($o->revenueGoods(), $o->returnNetOfTax((string) ($returned[$o->id] ?? '0'))));
+        }
 
-        return Money::max('0', Money::sub(Money::round($sales), Money::round($returned)));
+        return Money::max('0', $sales);
     }
 
     /** Highest tier with min_sales <= sales (per tenant). */
@@ -48,7 +51,7 @@ class AffiliateCommissionService
         }
 
         return $this->commissions->create([
-            'affiliate_id' => $a->id, 'order_id' => $order->id, 'base' => Money::sub((string) $order->subtotal, (string) $order->discount),
+            'affiliate_id' => $a->id, 'order_id' => $order->id, 'base' => $order->revenueGoods(),
             'percent' => $percent, 'amount' => (string) $order->affiliate_commission, 'status' => CommissionStatus::PENDING,
         ]);
     }
@@ -64,7 +67,7 @@ class AffiliateCommissionService
             return;
         }
         $returned = Money::round((string) \App\Models\OrderReturn::query()->where('order_id', $order->id)->whereIn('status', ['approved', 'refunded'])->sum('return_value'));
-        $left = Money::max('0', Money::sub((string) $c->base, $returned));
+        $left = Money::max('0', Money::sub((string) $c->base, $order->returnNetOfTax($returned))); // returned goods excl. VAT
         $order->update(['affiliate_commission' => Money::percent($left, (string) $c->percent)]);
     }
 

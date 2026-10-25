@@ -8,7 +8,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class CentralAdmin extends Authenticatable
 {
-    use HasRoles, Notifiable;
+    use HasRoles, Notifiable, \App\Models\Concerns\RevokesSessionsOnLockout;
 
     protected string $guard_name = 'central';
 
@@ -19,5 +19,11 @@ class CentralAdmin extends Authenticatable
     protected function casts(): array
     {
         return ['password' => 'hashed', 'is_active' => 'bool'];
+    }
+
+    /** Must not stay logged in anywhere (RevokesSessionsOnLockout + EnsureAccountActive). */
+    public function isLockedOut(): bool
+    {
+        return $this->is_active === false; // null = unsaved default (column defaults to active)
     }
 }

@@ -136,7 +136,7 @@ class ReportService
         $gross = Money::sub($d['revenue'], $d['cogs']);
         $fees = Money::sub($d['fee'], $d['fee_charged']);                  // merchant-borne fee cost (customer-borne fees net to 0)
         $order = Money::sub(Money::sub(Money::add($gross, $d['shipping_net'], $d['cod_fee']), Money::add($d['shipping_cost'], $fees)), $d['commission']);
-        $reversal = Money::sub($d['return_value'], $d['returned_cogs']);
+        $reversal = Money::sub(Money::sub($d['return_value'], $d['return_tax']), $d['returned_cogs']); // returned goods excl. VAT − their cogs
         $net = Money::sub(Money::sub(Money::sub($order, $reversal), $d['return_shipping']), $d['expenses']);
 
         return $d + compact('gross', 'fees', 'order', 'reversal', 'net');

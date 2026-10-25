@@ -20,11 +20,13 @@ Route::middleware('throttle:api')->group(function () {
     Route::get('store', [StoreController::class, 'store'])->name('store');
     Route::get('pages', [StoreController::class, 'pages'])->name('pages');
     Route::get('pages/{slug}', [StoreController::class, 'staticPage'])->name('pages.show');
+    Route::get('custom-pages', [StoreController::class, 'customPages'])->name('custom-pages.index');
+    Route::get('custom-pages/{slug}', [StoreController::class, 'customPage'])->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')->name('custom-pages.show');
 
-    Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1')->name('auth.register');
-    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('auth.login');
-    Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1')->name('auth.forgot');
-    Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1')->name('auth.reset');
+    Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:auth')->name('auth.register');
+    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
+    Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-strict')->name('auth.forgot');
+    Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth')->name('auth.reset');
 
     // ---- storefront data + cart + checkout: guests or customers (optional bearer)
     Route::middleware('api.auth:customer,optional')->group(function () {
@@ -47,7 +49,7 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('checkout/shipping', [CheckoutController::class, 'shipping'])->name('checkout.shipping');
         Route::get('checkout/payment-methods', [CheckoutController::class, 'paymentMethods'])->name('checkout.payment-methods');
         Route::post('checkout/validate', [CheckoutController::class, 'validateCheckout'])->middleware('throttle:checkout-validate')->name('checkout.validate');
-        Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1')->name('checkout.place');
+        Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:checkout')->name('checkout.place');
 
         // order pages by public token (guest-safe)
         Route::get('orders/{token}', [OrderController::class, 'show'])->name('orders.show');
@@ -62,8 +64,8 @@ Route::middleware('throttle:api')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::put('auth/me', [AuthController::class, 'update'])->name('auth.update');
-        Route::post('auth/email/verification-notification', [AuthController::class, 'sendVerification'])->middleware('throttle:5,1')->name('auth.verification.send');
-        Route::post('auth/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1')->name('auth.verification.verify');
+        Route::post('auth/email/verification-notification', [AuthController::class, 'sendVerification'])->middleware('throttle:auth-strict')->name('auth.verification.send');
+        Route::post('auth/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:auth')->name('auth.verification.verify');
 
         Route::post('cart/merge', [CartController::class, 'merge'])->middleware('throttle:cart')->name('cart.merge');
 
@@ -77,12 +79,12 @@ Route::middleware('throttle:api')->group(function () {
 
         Route::get('wishlist', [AccountController::class, 'wishlist'])->name('wishlist.index');
         Route::post('wishlist/{product}/toggle', [AccountController::class, 'toggleWishlist'])->whereNumber('product')->name('wishlist.toggle');
-        Route::post('products/{slug}/reviews', [AccountController::class, 'storeReview'])->middleware('throttle:10,1')->name('products.reviews.store');
+        Route::post('products/{slug}/reviews', [AccountController::class, 'storeReview'])->middleware('throttle:reviews')->name('products.reviews.store');
     });
 
     // ---- affiliates (separate token type)
-    Route::post('affiliate/register', [AffiliateController::class, 'register'])->middleware('throttle:10,1')->name('affiliate.register');
-    Route::post('affiliate/login', [AffiliateController::class, 'login'])->middleware('throttle:10,1')->name('affiliate.login');
+    Route::post('affiliate/register', [AffiliateController::class, 'register'])->middleware('throttle:auth')->name('affiliate.register');
+    Route::post('affiliate/login', [AffiliateController::class, 'login'])->middleware('throttle:auth')->name('affiliate.login');
     Route::middleware('api.auth:affiliate')->prefix('affiliate')->name('affiliate.')->group(function () {
         Route::post('logout', [AffiliateController::class, 'logout'])->name('logout');
         Route::get('me', [AffiliateController::class, 'me'])->name('me');

@@ -31,7 +31,7 @@ class AccountController extends Controller
 
     public function update(ProfileRequest $r): JsonResponse
     {
-        $this->accounts->updateProfile(auth('web')->user(), $r->safe()->except('password_confirmation'));
+        $this->accounts->updateProfile(auth('web')->user(), $r->safe()->except(['password_confirmation', 'current_password']));
 
         return $this->ok(__('admin.saved'), route('storefront.account.index'));
     }

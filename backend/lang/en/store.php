@@ -27,7 +27,7 @@ return [
     'name' => 'Name', 'phone' => 'Phone', 'email' => 'Email', 'city' => 'City', 'address' => 'Full address', 'notes' => 'Notes', 'label' => 'Address label',
     'select_city' => 'Select city', 'select_city_hint' => 'Select a city to see shipping options.', 'shipping_method' => 'Shipping method', 'no_shipping' => 'No shipping available for this city.',
     'eta_days' => 'Delivery in :d days', 'payment_method' => 'Payment method', 'place_order' => 'Place order', 'cod_not_for_shipping' => 'Not available with this shipping',
-    'fee_note' => ':fee fee', 'password' => 'Password', 'password_confirmation' => 'Confirm password', 'has_account' => 'Already have an account?', 'no_account' => "Don't have an account?",
+    'fee_note' => ':fee fee', 'password' => 'Password', 'password_confirmation' => 'Confirm password', 'current_password' => 'Current password', 'current_password_hint' => 'Required to change your e-mail or password.', 'has_account' => 'Already have an account?', 'no_account' => "Don't have an account?",
     'order_received' => 'Order received', 'thank_you' => "Thank you! We'll keep you posted on your order.", 'order_number' => 'Order number', 'placed_at' => 'Placed on', 'order_status' => 'Order status',
     'payment_status' => 'Payment status', 'timeline' => 'Order tracking', 'items' => 'Items', 'print_invoice' => 'Print invoice', 'bookmark' => 'Keep this page link to track your order.',
     'pay_now' => 'Pay now', 'upload_proof' => 'Upload transfer proof', 'proof_file' => 'Proof image', 'send' => 'Send', 'transfer_to' => 'Transfer to', 'request_return' => 'Request a return',

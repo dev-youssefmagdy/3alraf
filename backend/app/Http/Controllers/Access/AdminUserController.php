@@ -54,7 +54,7 @@ class AdminUserController extends Controller implements HasMiddleware
         $g = $this->guard($request);
 
         return view('access.admins.form', [
-            'guard' => $g, 'admin' => $admin, 'roles' => collect($this->access->roles($g))->pluck('name', 'id')->all(),
+            'guard' => $g, 'admin' => $admin, 'roles' => $this->access->assignableRoles($g, $admin),
             'assigned' => $admin->exists ? $admin->roles->pluck('id')->all() : [],
         ]);
     }

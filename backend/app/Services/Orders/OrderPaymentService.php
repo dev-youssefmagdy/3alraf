@@ -30,6 +30,9 @@ class OrderPaymentService
 {
     public const PROOF_DISK = 'private';
 
+    /** Payment links per order (each one burns a merchant reference "-R{n}" at the provider); beyond this the customer gets a 422. */
+    public const MAX_PAYMENT_ATTEMPTS = 20;
+
     public function __construct(private OrderStatusService $status, private PaymentGatewayFactory $gateways) {}
 
     // ---------------------------------------------------------------- wallet proof
@@ -101,6 +104,9 @@ class OrderPaymentService
             return null;
         }
         $attempt = (int) $order->payment_attempts;
+        if ($attempt >= self::MAX_PAYMENT_ATTEMPTS) {
+            throw ValidationException::withMessages(['payment' => __('orders.payment_attempts_exceeded')]);
+        }
         $reference = $attempt === 0 ? $order->number : $order->number.'-R'.($attempt + 1); // providers reject duplicate merchant refs
         $order->update(['payment_attempts' => $attempt + 1]); // count the attempt up front: a half-done attempt may already own the merchant ref at the provider
         try {

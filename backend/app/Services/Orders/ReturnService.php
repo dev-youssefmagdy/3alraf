@@ -28,24 +28,31 @@ class ReturnService
         return $this->returns->query()->with(['order.items', 'items.orderItem', 'branch'])->findOrFail($id);
     }
 
-    /** return_value = unit_price × qty − line_discount × qty/ordered_qty */
-    public function lineValue(\App\Models\OrderItem $item, int $qty): string
+    /**
+     * return_value = unit_price × qty − discount_share, CUMULATIVE per line (CALCULATIONS.md §Returns):
+     * discount_share = round(line_discount × (A+qty)/ordered) − round(line_discount × A/ordered), A = units already returned/pending
+     * (default returned_qty), so partial returns sum exactly to line_subtotal − line_discount.
+     */
+    public function lineValue(\App\Models\OrderItem $item, int $qty, ?int $already = null): string
     {
-        $discountShare = Money::round(bcdiv(bcmul((string) $item->line_discount, (string) $qty, 8), (string) $item->quantity, 8));
+        $already ??= (int) $item->returned_qty;
+        $at = fn (int $n) => Money::round(bcdiv(bcmul((string) $item->line_discount, (string) $n, 8), (string) $item->quantity, 8));
+        $discountShare = Money::sub($at($already + $qty), $at($already));
 
         return Money::sub(Money::mul((string) $item->unit_price, $qty), $discountShare);
     }
 
     public function request(Order $order, ReturnRequestData $d): OrderReturn
     {
-        if ($order->status !== OrderStatus::DELIVERED) {
-            throw ValidationException::withMessages(['items' => __('orders.return_not_allowed')]);
-        }
         if (! $d->quantities) {
             throw ValidationException::withMessages(['items' => __('orders.return_nothing')]);
         }
 
         return DB::transaction(function () use ($order, $d) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail(); // serialises concurrent requests on the same order
+            if ($order->status !== OrderStatus::DELIVERED) {
+                throw ValidationException::withMessages(['items' => __('orders.return_not_allowed')]);
+            }
             $items = $order->items()->get()->keyBy('id');
             $pending = OrderReturnItem::query()->whereIn('order_return_id', OrderReturn::where('order_id', $order->id)->where('status', ReturnStatus::REQUESTED->value)->pluck('id'))
                 ->selectRaw('order_item_id, SUM(quantity) q')->groupBy('order_item_id')->pluck('q', 'order_item_id');
@@ -58,7 +65,7 @@ class ReturnService
                 if ($qty > $item->quantity - $item->returned_qty - (int) ($pending[$itemId] ?? 0)) {
                     throw ValidationException::withMessages(['items' => __('orders.return_qty_exceeded', ['name' => $item->name])]);
                 }
-                $v = $this->lineValue($item, $qty);
+                $v = $this->lineValue($item, $qty, (int) $item->returned_qty + (int) ($pending[$itemId] ?? 0));
                 $value = Money::add($value, $v);
                 $cogs = Money::add($cogs, Money::mul((string) $item->unit_cost, $qty));
                 $rows[] = ['order_item_id' => $itemId, 'quantity' => $qty, 'return_value' => $v];
@@ -80,11 +87,19 @@ class ReturnService
         $this->ensure($ret, ReturnStatus::REQUESTED);
 
         return DB::transaction(function () use ($ret, $restock, $branchId) {
+            // lock order then return row (same order as refund/request), re-check the state on the FRESH row: no double restock
             $order = Order::whereKey($ret->order_id)->lockForUpdate()->first();
+            $ret = $this->lockFresh($ret, ReturnStatus::REQUESTED);
             $restock ??= $ret->restock;
             $branchId ??= $ret->branch_id ?? $order->branch_id;
 
-            foreach ($ret->items()->with('orderItem')->get()->sortBy(fn ($ri) => sprintf('%012d-%012d', $ri->orderItem->product_id, $ri->orderItem->product_variant_id)) as $ri) {
+            $items = $ret->items()->with('orderItem')->get();
+            foreach ($items as $ri) {
+                if ($ri->orderItem->returned_qty + $ri->quantity > $ri->orderItem->quantity) {
+                    throw ValidationException::withMessages(['items' => __('orders.return_qty_exceeded', ['name' => $ri->orderItem->name])]);
+                }
+            }
+            foreach ($items->sortBy(fn ($ri) => sprintf('%012d-%012d', $ri->orderItem->product_id, $ri->orderItem->product_variant_id)) as $ri) {
                 $oi = $ri->orderItem;
                 if ($restock) {
                     $this->ledger->record($branchId, $oi->product_id, $oi->product_variant_id, StockMovementType::RETURN_IN, $ri->quantity, (string) $oi->unit_cost, $ret);
@@ -114,34 +129,35 @@ class ReturnService
     public function reject(OrderReturn $ret): OrderReturn
     {
         $this->ensure($ret, ReturnStatus::REQUESTED);
-        $ret->update(['status' => ReturnStatus::REJECTED]);
 
-        return $ret;
+        return DB::transaction(function () use ($ret) {
+            $ret = $this->lockFresh($ret, ReturnStatus::REQUESTED);
+            $ret->update(['status' => ReturnStatus::REJECTED]);
+
+            return $ret;
+        });
     }
 
     /**
-     * Tax refunded with a return (CALCULATIONS.md step 3): exclusive-tax orders refund tax pro-rata
-     * (`tax × return_value / (subtotal − discount)`); tax-inclusive orders refund nothing extra (it is inside return_value).
+     * Tax refunded with a return (CALCULATIONS.md step 3): exclusive-tax orders refund tax CUMULATIVELY pro-rata
+     * (`round(tax × (P+v)/B) − round(tax × P/B)`, P = return value already refunded), so all returns sum exactly to `tax`;
+     * tax-inclusive orders refund nothing extra (it is inside return_value).
      */
-    public function taxShare(Order $order, string $returnValue): string
+    public function taxShare(Order $order, string $returnValue, string $prior = '0'): string
     {
-        $base = Money::sub((string) $order->subtotal, (string) $order->discount);
-        if (Money::cmp((string) $order->tax, '0') <= 0 || Money::cmp($base, '0') <= 0) {
-            return '0.00';
-        }
-        $added = Money::sub((string) $order->total, Money::add($base, (string) $order->shipping_net, (string) $order->payment_fee_charged, (string) $order->cod_fee));
-        if (Money::cmp($added, (string) $order->tax) < 0) {
+        if ($order->taxIncluded()) {
             return '0.00'; // inclusive: tax was never added on top of the goods
         }
 
-        return Money::round(bcdiv(bcmul((string) $order->tax, $returnValue, 8), $base, 8));
+        return $order->returnTax($returnValue, $prior);
     }
 
     /** Max refundable = return_value + its tax share (+ shipping_net when flagged), never above what was paid and not yet refunded. */
     public function refundable(OrderReturn $ret): string
     {
         $order = $ret->order;
-        $cap = Money::add((string) $ret->return_value, $this->taxShare($order, (string) $ret->return_value), $this->shippingRefundable($ret) ? (string) $order->shipping_net : '0');
+        $prior = Money::round((string) OrderReturn::where('order_id', $ret->order_id)->whereKeyNot($ret->id)->where('status', ReturnStatus::REFUNDED)->sum('return_value'));
+        $cap = Money::add((string) $ret->return_value, $this->taxShare($order, (string) $ret->return_value, $prior), $this->shippingRefundable($ret) ? (string) $order->shipping_net : '0');
         $left = Money::sub((string) $order->paid_amount, (string) $order->refunded_amount);
 
         return Money::max('0', Money::min($cap, $left));
@@ -164,6 +180,7 @@ class ReturnService
 
         return DB::transaction(function () use ($ret, $amount) {
             $order = Order::whereKey($ret->order_id)->lockForUpdate()->first();
+            $ret = $this->lockFresh($ret, ReturnStatus::APPROVED); // fresh state under lock: the provider is never asked twice
             $ret->setRelation('order', $order);
             $max = $this->refundable($ret);
             $amount = $amount === null || $amount === '' ? $max : Money::round($amount);
@@ -186,6 +203,15 @@ class ReturnService
 
             return $ret->refresh();
         });
+    }
+
+    /** Re-read the return row FOR UPDATE inside the current transaction and re-check its state on the fresh row. */
+    private function lockFresh(OrderReturn $ret, ReturnStatus $expected): OrderReturn
+    {
+        $fresh = OrderReturn::whereKey($ret->id)->lockForUpdate()->firstOrFail();
+        $this->ensure($fresh, $expected);
+
+        return $fresh;
     }
 
     private function ensure(OrderReturn $ret, ReturnStatus $expected): void

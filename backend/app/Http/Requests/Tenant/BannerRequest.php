@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Enums\BannerPlacement;
 use App\Models\Banner;
+use App\Support\SafeUrl;
 use Illuminate\Validation\Rule;
 
 class BannerRequest extends BaseRequest
@@ -15,7 +16,7 @@ class BannerRequest extends BaseRequest
             'images' => ['nullable', 'array'],
             'images.*' => ['nullable', 'image', 'max:4096'],
             'remove_images' => ['nullable', 'array'],
-            'link_url' => ['nullable', 'string', 'max:500'],
+            'link_url' => ['nullable', 'string', 'max:500', fn ($attr, $value, $fail) => SafeUrl::isSafe($value) ? null : $fail(__('ops.link_url_invalid'))],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

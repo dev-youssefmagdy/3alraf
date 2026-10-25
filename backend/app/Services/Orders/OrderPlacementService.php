@@ -60,8 +60,11 @@ class OrderPlacementService
                     'sku' => $l['sku'], 'barcode' => $l['barcode'], 'unit_price' => $l['unit_price'], 'unit_cost' => $l['unit_cost'], 'quantity' => $l['qty'],
                     'line_subtotal' => \App\Support\Money::mul($l['unit_price'], $l['qty']), 'line_discount' => $t->lineDiscounts[$l['key']] ?? 0,
                 ]);
-                if ($l['flash']) {
-                    FlashSaleItem::whereKey($l['flash']->id)->increment('sold', $l['qty']);
+                if ($l['flash']) { // never past qty_limit (the locked quote already split; this guards a stale/limitless race)
+                    $ok = FlashSaleItem::whereKey($l['flash']->id)->where(fn ($q) => $q->whereNull('qty_limit')->orWhereRaw('sold + ? <= qty_limit', [$l['qty']]))->increment('sold', $l['qty']);
+                    if (! $ok) {
+                        throw ValidationException::withMessages(['cart' => __('orders.item_unavailable')]);
+                    }
                 }
                 $k = $l['product_id'].'-'.$l['variant_id'];
                 $reserve[$k] = ($reserve[$k] ?? 0) + $l['qty'];

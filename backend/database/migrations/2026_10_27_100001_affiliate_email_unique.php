@@ -35,5 +35,9 @@ return new class extends Migration
         }
     }
 
-    public function down(): void {}
+    /** The e-mail normalisation / "+dup{id}" tombstoning overwrote the original values; there is nothing to restore them from. */
+    public function down(): void
+    {
+        throw \App\Exceptions\IrreversibleMigrationException::for('affiliate_email_unique', 'affiliate e-mails were normalised and duplicates renamed in place');
+    }
 };

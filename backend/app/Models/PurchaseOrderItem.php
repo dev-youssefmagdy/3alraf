@@ -8,7 +8,7 @@ class PurchaseOrderItem extends Model
 {
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = ['purchase_order_id', 'product_id', 'product_variant_id', 'quantity', 'unit_cost', 'line_total'];
 
     protected function casts(): array
     {

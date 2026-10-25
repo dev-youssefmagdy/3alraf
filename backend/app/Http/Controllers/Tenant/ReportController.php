@@ -21,7 +21,7 @@ class ReportController extends Controller implements HasMiddleware
         abort_unless(auth('tenant')->user()?->can('orders.payments'), 403);
         $data = $request->validate(['shipping_company_id' => ['required', 'integer', 'exists:shipping_companies,id'], 'from' => ['required', 'date'], 'to' => ['required', 'date']]);
         $f = ReportFilter::fromRequest($request, false);
-        $n = $settlement->settle((int) $data['shipping_company_id'], $f->from, $f->to);
+        $n = $settlement->settle((int) $data['shipping_company_id'], $f->from, $f->to, $f->branchId);
 
         return redirect()->route('tenant.reports.show', ['report' => 'cod-settlement'] + $f->query())->with('status', __('reports.settled_done', ['n' => $n]));
     }

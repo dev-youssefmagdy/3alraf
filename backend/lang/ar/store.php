@@ -27,7 +27,7 @@ return [
     'name' => 'الاسم', 'phone' => 'رقم الهاتف', 'email' => 'البريد الإلكتروني', 'city' => 'المدينة', 'address' => 'العنوان بالتفصيل', 'notes' => 'ملاحظات', 'label' => 'اسم العنوان',
     'select_city' => 'اختر المدينة', 'select_city_hint' => 'اختر المدينة لعرض خيارات الشحن.', 'shipping_method' => 'طريقة الشحن', 'no_shipping' => 'لا يوجد شحن متاح لهذه المدينة.',
     'eta_days' => 'التوصيل خلال :d يوم', 'payment_method' => 'طريقة الدفع', 'place_order' => 'تأكيد الطلب', 'cod_not_for_shipping' => 'غير متاح مع هذا الشحن',
-    'fee_note' => 'رسوم :fee', 'password' => 'كلمة المرور', 'password_confirmation' => 'تأكيد كلمة المرور', 'has_account' => 'لديك حساب؟', 'no_account' => 'ليس لديك حساب؟',
+    'fee_note' => 'رسوم :fee', 'password' => 'كلمة المرور', 'password_confirmation' => 'تأكيد كلمة المرور', 'current_password' => 'كلمة المرور الحالية', 'current_password_hint' => 'مطلوبة لتغيير البريد الإلكتروني أو كلمة المرور.', 'has_account' => 'لديك حساب؟', 'no_account' => 'ليس لديك حساب؟',
     'order_received' => 'تم استلام طلبك', 'thank_you' => 'شكراً لك! سنوافيك بتحديثات الطلب.', 'order_number' => 'رقم الطلب', 'placed_at' => 'تاريخ الطلب', 'order_status' => 'حالة الطلب',
     'payment_status' => 'حالة الدفع', 'timeline' => 'تتبع الطلب', 'items' => 'المنتجات', 'print_invoice' => 'طباعة الفاتورة', 'bookmark' => 'احتفظ برابط هذه الصفحة لتتبع طلبك.',
     'pay_now' => 'ادفع الآن', 'upload_proof' => 'رفع إثبات التحويل', 'proof_file' => 'صورة الإثبات', 'send' => 'إرسال', 'transfer_to' => 'حوّل إلى', 'request_return' => 'طلب إرجاع',

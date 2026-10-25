@@ -40,6 +40,7 @@ return [
     "branch_has_stock" => 'This branch still holds stock.',
     "expense_category_in_use" => 'This category has expenses.',
     "banner_image_required" => 'Upload at least one image.',
+    "link_url_invalid" => 'Use a full http(s):// link or a site path starting with /.',
     "add_item" => 'Add item',
     "add_rate" => 'Add city price',
     "rates" => 'Price list per city',

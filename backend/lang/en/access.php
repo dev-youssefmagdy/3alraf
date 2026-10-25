@@ -11,6 +11,7 @@ return [
     'all' => 'All',
     'select_all' => 'Select all',
     'role_in_use' => 'This role is assigned to staff accounts.',
+    'role_not_assignable' => 'You cannot assign a role with permissions you do not have.',
     'cannot_delete_self' => 'You cannot delete your own account.',
     'password_hint' => 'Leave blank to keep the current password.',
     'fields' => ['name' => 'Name', 'email' => 'Email', 'password' => 'Password', 'permissions' => 'Permissions', 'roles' => 'Roles'],

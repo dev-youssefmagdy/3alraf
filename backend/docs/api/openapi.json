@@ -1351,6 +1351,9 @@
                                     },
                                     "password": {
                                         "type": "string"
+                                    },
+                                    "current_password": {
+                                        "type": "string"
                                     }
                                 },
                                 "required": [
@@ -2509,6 +2512,104 @@
                         }
                     }
                 },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/custom-pages": {
+            "get": {
+                "summary": "Active custom landing pages (slug + title + web URL)",
+                "operationId": "custom-pages_index_get",
+                "tags": [
+                    "custom-pages"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/custom-pages/{slug}": {
+            "get": {
+                "summary": "One custom page by slug + its product grid (pinned products first, then the page filters). Query: price_min, price_max, sort, page",
+                "operationId": "custom-pages_show_get",
+                "tags": [
+                    "custom-pages"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Success (envelope)",

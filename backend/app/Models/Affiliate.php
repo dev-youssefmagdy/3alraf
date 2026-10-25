@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 
 class Affiliate extends Authenticatable
 {
-    use BelongsToTenant, HasApiTokens;
+    use BelongsToTenant, HasApiTokens, \App\Models\Concerns\RevokesSessionsOnLockout;
 
     protected $fillable = ['name', 'email', 'phone', 'password', 'status', 'approved_at'];
 
@@ -66,5 +66,11 @@ class Affiliate extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** Must not stay logged in anywhere (RevokesSessionsOnLockout + EnsureAccountActive). */
+    public function isLockedOut(): bool
+    {
+        return ! $this->isApproved();
     }
 }

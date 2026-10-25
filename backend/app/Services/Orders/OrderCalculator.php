@@ -67,11 +67,14 @@ class OrderCalculator
         $prepaid = ($in->isCod && $in->codCollectShippingUpfront) ? $shippingNet : '0.00';
         $codAmount = $in->isCod ? Money::sub($total, $prepaid) : '0.00';
 
-        // Affiliate commission on goods after discount
-        $commission = bccomp($in->affiliatePercent, '0', 6) > 0 ? Money::percent($afterDiscount, $in->affiliatePercent) : '0.00';
+        // revenue_goods = subtotal - discount - tax_in_goods (VAT inside inclusive prices is never revenue)
+        $revenueGoods = $in->pricesIncludeTax ? Money::sub($afterDiscount, $tax) : $afterDiscount;
 
-        // Profit: (revenue_goods - cogs) + shipping_net - shipping_cost - fee - commission + fee_charged
-        $net = Money::sub(Money::add(Money::sub($afterDiscount, $cogs), $shippingNet, $feeCharged, $codFee), Money::add($shippingCost, $fee, $commission));
+        // Affiliate commission on goods after discount, excl. VAT
+        $commission = bccomp($in->affiliatePercent, '0', 6) > 0 ? Money::percent($revenueGoods, $in->affiliatePercent) : '0.00';
+
+        // Profit: (revenue_goods - cogs) + shipping_net - shipping_cost - fee - commission + fee_charged + cod_fee
+        $net = Money::sub(Money::add(Money::sub($revenueGoods, $cogs), $shippingNet, $feeCharged, $codFee), Money::add($shippingCost, $fee, $commission));
 
         return new OrderTotals($subtotal, $cogs, $discount, $shipping, $shippingDiscount, $shippingNet, $shippingCost, $tax, $fee, $feeCharged,
             $total, Money::round($in->paidAmount), $due, $commission, $net, $lineDiscounts, $codAmount, $prepaid, $codFee);
@@ -141,25 +144,28 @@ class OrderCalculator
         $discount = ($cap !== null && $cap !== '') ? Money::min($raw, $cap) : $raw;
         $discount = Money::min($discount, $base);
 
-        // proportional distribution; last eligible line takes the rounding remainder, but no line_discount may exceed its
-        // line_subtotal (any excess is pushed to eligible lines that still have room, so Σ shares == discount)
+        // proportional distribution, each share rounded and clamped to [0, line_subtotal]; the remainder (positive or negative)
+        // is then moved onto eligible lines with room / off lines with a positive share, so Σ shares == discount exactly
         $shares = [];
         $given = '0.00';
-        foreach ($eligible as $n => $i) {
+        foreach ($eligible as $i) {
             $key = $in->lines[$i]['key'];
-            $raw = $n === array_key_last($eligible) ? Money::sub($discount, $given) : Money::round(bcdiv(bcmul($discount, $lineSub[$i], 8), $base, 8));
-            $shares[$key] = Money::min($raw, $lineSub[$i]);
+            $raw = Money::round(bcdiv(bcmul($discount, $lineSub[$i], 8), $base, 8));
+            $shares[$key] = Money::max('0', Money::min($raw, $lineSub[$i]));
             $given = Money::add($given, $shares[$key]);
         }
         $left = Money::sub($discount, $given);
-        foreach ($eligible as $i) {
-            if (Money::cmp($left, '0') <= 0) {
+        foreach (array_reverse($eligible) as $i) {
+            $cmp = Money::cmp($left, '0');
+            if ($cmp === 0) {
                 break;
             }
             $key = $in->lines[$i]['key'];
-            $take = Money::min($left, Money::sub($lineSub[$i], $shares[$key]));
-            $shares[$key] = Money::add($shares[$key], $take);
-            $left = Money::sub($left, $take);
+            $move = $cmp > 0
+                ? Money::min($left, Money::sub($lineSub[$i], $shares[$key]))     // add: up to the line's room
+                : Money::max($left, Money::sub('0', $shares[$key]));             // take back: never below 0
+            $shares[$key] = Money::add($shares[$key], $move);
+            $left = Money::sub($left, $move);
         }
 
         return [$discount, $shares, false];

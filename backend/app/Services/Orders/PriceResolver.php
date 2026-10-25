@@ -55,8 +55,11 @@ class PriceResolver
         ];
     }
 
-    /** Running flash-sale item for product/variant (exact variant first, then product-wide), with units remaining. */
-    public function flashItem(int $productId, int $variantId, bool $lock = false): ?FlashSaleItem
+    /**
+     * Running flash-sale item for product/variant (exact variant first, then product-wide), with units remaining
+     * after $consumed (flash units already granted per flash item id earlier in the same quote).
+     */
+    public function flashItem(int $productId, int $variantId, bool $lock = false, array $consumed = []): ?FlashSaleItem
     {
         $q = FlashSaleItem::query()->where('product_id', $productId)->whereIn('product_variant_id', array_unique([$variantId, 0]))
             ->whereHas('flashSale', fn ($f) => $f->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now()))
@@ -65,7 +68,15 @@ class PriceResolver
             $q->lockForUpdate();
         }
 
-        return $q->get()->first(fn (FlashSaleItem $i) => $i->remaining() === null || $i->remaining() > 0);
+        return $q->get()->first(fn (FlashSaleItem $i) => $this->left($i, $consumed) === null || $this->left($i, $consumed) > 0);
+    }
+
+    /** Flash units still available for this quote: remaining − consumed by earlier lines (null = unlimited). */
+    private function left(FlashSaleItem $i, array $consumed): ?int
+    {
+        $rem = $i->remaining();
+
+        return $rem === null ? null : max(0, $rem - ($consumed[$i->id] ?? 0));
     }
 
     public function flashPrice(FlashSaleItem $item, string $regular): string
@@ -79,19 +90,22 @@ class PriceResolver
 
     /**
      * Split $qty into priced segments: units within the flash-sale remaining quantity use the flash price, the rest the regular price.
+     * $consumed (flash item id => units) is shared by all lines of ONE quote and updated here, so a product-wide item used by
+     * several variant lines never grants more than its remaining units in total (CALCULATIONS.md §Flash sale).
      *
      * @return array<int,array{unit_price:string,qty:int,flash:?FlashSaleItem}>
      */
-    public function segments(array $item, int $qty, bool $lock = false): array
+    public function segments(array $item, int $qty, bool $lock = false, array &$consumed = []): array
     {
         $variantId = $item['variant']?->id ?? 0;
-        $flash = $this->flashItem($item['product']->id, $variantId, $lock);
+        $flash = $this->flashItem($item['product']->id, $variantId, $lock, $consumed);
         if (! $flash) {
             return [['unit_price' => $item['price'], 'qty' => $qty, 'flash' => null]];
         }
         $fp = $this->flashPrice($flash, $item['price']);
-        $rem = $flash->remaining();
+        $rem = $this->left($flash, $consumed);
         $flashQty = $rem === null ? $qty : min($qty, $rem);
+        $consumed[$flash->id] = ($consumed[$flash->id] ?? 0) + $flashQty;
         $out = [['unit_price' => $fp, 'qty' => $flashQty, 'flash' => $flash]];
         if ($qty > $flashQty) {
             $out[] = ['unit_price' => $item['price'], 'qty' => $qty - $flashQty, 'flash' => null];

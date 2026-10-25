@@ -5,6 +5,7 @@ return [
     'confirm_payment_required' => 'Payment must be received and verified before this order can be confirmed.',
     'prepay_unavailable' => 'The selected shipping-prepayment method is not available.',
     'prepay_required' => 'Choose an online or wallet method to prepay the delivery fee.',
+    'payment_attempts_exceeded' => 'Too many payment attempts for this order. Please contact the store.',
     'payment_start_failed' => 'Could not start the payment, please try again shortly.',
     'refund_failed' => 'The payment provider did not confirm the refund. Nothing was marked as refunded.',
     'cancel_refund_failed_note' => 'Cancelled, but the provider refund FAILED: refund manually or retry.',

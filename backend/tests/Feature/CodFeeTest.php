@@ -55,7 +55,8 @@ it('validates and saves COD fee settings, keeping other settings keys', function
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_percent' => '101']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_percent');
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_fixed' => '-1']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_fixed');
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_fixed' => '']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_fixed');
-    $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_min' => '60', 'cod_extra_fee_max' => '50']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_max');
+    $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_min' => '60', 'cod_extra_fee_max' => '50']))->assertOk(); // min > max allowed: max wins
+    $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_min' => '', 'cod_extra_fee_max' => '50']))->assertOk();   // cap without a floor
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_bearer' => 'carrier']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_bearer');
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_city_fixed' => [$this->city->id => '-3']]))->assertStatus(422);
     $this->postJson("{$this->t}/cod-fees/validate", $form())->assertOk();

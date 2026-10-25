@@ -28,6 +28,12 @@ class Banner extends Model
         return $path ? media_url($path) : null;
     }
 
+    /** link_url only when it is http(s) or a site-relative path (javascript:/data: etc. never reach a href). */
+    public function safeLink(): ?string
+    {
+        return \App\Support\SafeUrl::orNull($this->link_url);
+    }
+
     /** Active flag + schedule window. */
     public function scopeLive($q)
     {

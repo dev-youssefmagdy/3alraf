@@ -22,8 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api', 'api.context'])->domain('{tenant}.'.$central)->prefix('api/v1')->name('api.v1.')->group(base_path('routes/api_v1.php'));
             Route::middleware(['api', 'api.context'])->domain($central)->prefix('api/v1')->name('api.v1.h.')->group(base_path('routes/api_v1.php'));
             Route::middleware('api')->domain($central)->prefix('api/v1')->group(base_path('routes/api.php'));
-            Route::middleware(['web', CentralContext::class])->domain($central)->group(base_path('routes/central.php'));
-            Route::middleware(['web', 'tenant.resolve'])->domain('{tenant}.'.$central)->group(function () {
+            Route::middleware(['web', CentralContext::class, 'auth.active'])->domain($central)->group(base_path('routes/central.php'));
+            Route::middleware(['web', 'tenant.resolve', 'auth.active'])->domain('{tenant}.'.$central)->group(function () {
                 // order matters: /admin first, then the /{locale} storefront
                 require base_path('routes/tenant_admin.php');
                 require base_path('routes/storefront.php');
@@ -42,7 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.context' => \App\Http\Middleware\Api\ApiContext::class,
             'api.auth' => \App\Http\Middleware\Api\ApiAuth::class,
             'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
+            'auth.active' => \App\Http\Middleware\EnsureAccountActive::class,
         ]);
+        // Inactive-account logout must run before route auth (Authenticate is priority-sorted ahead of plain group middleware).
+        $middleware->prependToPriorityList(before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, prepend: \App\Http\Middleware\EnsureAccountActive::class);
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('api/*')) {
                 return null; // JSON 401 (ApiExceptionRenderer), never a redirect

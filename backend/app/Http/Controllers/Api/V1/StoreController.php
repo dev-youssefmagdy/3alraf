@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Resources\Api\BrandResource;
+use App\Http\Resources\Api\CustomPageResource;
 use App\Http\Resources\Api\FacetsResource;
 use App\Http\Resources\Api\HomeResource;
 use App\Http\Resources\Api\MenuNodeResource;
@@ -15,9 +16,12 @@ use App\Http\Resources\Api\SuggestResource;
 use App\DTOs\Storefront\CatalogFilter;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\CustomPage;
 use App\Models\StaticPage;
 use App\Models\TenantProduct;
+use App\Services\Storefront\CardPresenter;
 use App\Services\Storefront\CatalogSearch;
+use App\Services\Storefront\CustomPageProducts;
 use App\Services\Storefront\ProductDetail;
 use App\Services\Storefront\StorefrontData;
 use Illuminate\Http\JsonResponse;
@@ -89,6 +93,30 @@ class StoreController extends ApiController
     public function staticPage(string $slug): JsonResponse
     {
         return $this->respond(new StaticPageDetailResource(StaticPage::where('slug', $slug)->where('is_active', true)->firstOrFail()));
+    }
+
+    /** Active custom landing pages (slug + title + web URL). */
+    public function customPages(): JsonResponse
+    {
+        return $this->list(CustomPageResource::collection(CustomPage::where('is_active', true)->orderBy('id')->get()));
+    }
+
+    /** One custom page by slug + its product grid (pinned products first, then the page filters). Query: price_min, price_max, sort, page. */
+    public function customPage(Request $request, string $slug, CustomPageProducts $products, CardPresenter $cards): JsonResponse
+    {
+        $page = CustomPage::where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $refine = array_filter([
+            'price_min' => is_numeric($request->query('price_min')) ? (string) $request->query('price_min') : null,
+            'price_max' => is_numeric($request->query('price_max')) ? (string) $request->query('price_max') : null,
+            'sort' => in_array($request->query('sort'), ['newest', 'price_asc', 'price_desc', 'best_selling'], true) ? $request->query('sort') : null,
+        ], fn ($v) => $v !== null);
+        $items = $products->paginate($page, $refine);
+        $cards->decorate($items->getCollection());
+
+        return $this->respond([
+            'page' => (new CustomPageResource($page))->resolve($request),
+            'products' => ProductCardResource::collection($items->getCollection())->resolve($request),
+        ], null, ['pagination' => ['current_page' => $items->currentPage(), 'last_page' => $items->lastPage(), 'per_page' => $items->perPage(), 'total' => $items->total()]]);
     }
 
     /** @return array{0:\Illuminate\Database\Eloquent\Builder,1:CatalogFilter} */

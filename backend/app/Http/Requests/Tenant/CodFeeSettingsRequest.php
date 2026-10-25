@@ -21,7 +21,7 @@ class CodFeeSettingsRequest extends BaseRequest
             'cod_extra_fee_fixed' => [$needsFixed ? 'required' : 'nullable', 'numeric', 'min:0', 'max:999999'],
             'cod_extra_fee_percent' => [$needsPct ? 'required' : 'nullable', 'numeric', 'min:0', 'max:100'],
             'cod_extra_fee_min' => ['nullable', 'numeric', 'min:0', 'max:999999'],
-            'cod_extra_fee_max' => ['nullable', 'numeric', 'min:0', 'max:999999', 'gte:cod_extra_fee_min'],
+            'cod_extra_fee_max' => ['nullable', 'numeric', 'min:0', 'max:999999'], // no gte:min — min > max is allowed, max wins (CALCULATIONS.md)
             'cod_extra_fee_free_over' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'cod_extra_fee_bearer' => ['required', Rule::in(['customer', 'merchant'])],
             'cod_extra_fee_city_fixed' => ['nullable', 'array', function ($attr, $value, $fail) {
