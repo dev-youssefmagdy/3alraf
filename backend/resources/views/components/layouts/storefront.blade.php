@@ -148,25 +148,25 @@
 
     <main class="mx-auto min-h-[50vh] max-w-7xl px-4 py-6">{{ $slot }}</main>
 
-    <footer class="mt-10 bg-slate-900 text-slate-300">
+    <footer class="mt-10 border-t border-slate-200 bg-brand-50 text-slate-600">
         <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div><h3 class="mb-3 text-lg font-bold text-white">{{ $tenant->name }}</h3><p class="text-sm leading-6 text-slate-400">{{ __('store.seo_default_desc') }}</p></div>
-            <div><h4 class="mb-3 font-semibold text-white">{{ __('store.about') }}</h4>
-                <ul class="space-y-2 text-sm">@foreach ($footer['pages'] as $fp)<li><a class="hover:text-white" href="{{ route('storefront.pages.show', $fp['slug']) }}">{{ $fp['title'] }}</a></li>@endforeach</ul></div>
-            <div><h4 class="mb-3 font-semibold text-white">{{ __('store.customer_service') }}</h4>
-                <ul class="space-y-2 text-sm"><li><a class="hover:text-white" href="{{ route('storefront.account.index') }}">{{ __('store.my_orders') }}</a></li><li><a class="hover:text-white" href="{{ route('storefront.cart.show') }}">{{ __('store.cart') }}</a></li><li><a class="hover:text-white" href="{{ route('storefront.affiliate.login') }}">{{ __('store.affiliate_program') }}</a></li></ul></div>
-            <div><h4 class="mb-3 font-semibold text-white">{{ __('store.download_app') }}</h4>
+            <div><h3 class="mb-3 text-lg font-bold text-slate-900">{{ $tenant->name }}</h3><p class="text-sm leading-6 text-slate-500">{{ __('store.seo_default_desc') }}</p></div>
+            <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.about') }}</h4>
+                <ul class="space-y-2 text-sm">@foreach ($footer['pages'] as $fp)<li><a class="hover:text-slate-900" href="{{ route('storefront.pages.show', $fp['slug']) }}">{{ $fp['title'] }}</a></li>@endforeach</ul></div>
+            <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.customer_service') }}</h4>
+                <ul class="space-y-2 text-sm"><li><a class="hover:text-slate-900" href="{{ route('storefront.account.index') }}">{{ __('store.my_orders') }}</a></li><li><a class="hover:text-slate-900" href="{{ route('storefront.cart.show') }}">{{ __('store.cart') }}</a></li><li><a class="hover:text-slate-900" href="{{ route('storefront.affiliate.login') }}">{{ __('store.affiliate_program') }}</a></li></ul></div>
+            <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.download_app') }}</h4>
                 <div class="flex flex-wrap gap-2">
                     @foreach (['ios' => ['App Store', 'M8 2h8a1 1 0 011 1v18a1 1 0 01-1 1H8a1 1 0 01-1-1V3a1 1 0 011-1zm4 17h.01'], 'android' => ['Google Play', 'M5 3l14 9-14 9z']] as $k => [$label, $path])
-                        @if ($footer['apps'][$k] ?? null)<a href="{{ $footer['apps'][$k] }}" rel="noopener" target="_blank" class="flex items-center gap-2 rounded-lg border border-slate-600 px-3 py-2 text-xs hover:border-white hover:text-white" aria-label="{{ $label }}">
-                        @else<span class="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-500" title="{{ __('store.coming_soon') }}">@endif
+                        @if ($footer['apps'][$k] ?? null)<a href="{{ $footer['apps'][$k] }}" rel="noopener" target="_blank" class="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs hover:border-brand-500 hover:text-slate-900" aria-label="{{ $label }}">
+                        @else<span class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500" title="{{ __('store.coming_soon') }}">@endif
                             <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{ $path }}"/></svg>{{ $label }}
                         @if ($footer['apps'][$k] ?? null)</a>@else</span>@endif
                     @endforeach
                 </div>
-                <h4 class="mb-2 mt-5 font-semibold text-white">{{ __('store.we_accept') }}</h4>
+                <h4 class="mb-2 mt-5 font-semibold text-slate-900">{{ __('store.we_accept') }}</h4>
                 <div class="flex flex-wrap gap-2">@foreach ($footer['payments'] as $pm)<x-payment-icon :method="$pm" />@endforeach</div></div>
         </div>
-        <div class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ $tenant->name }}. {{ __('store.rights') }}</div>
+        <div class="border-t border-slate-200 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ $tenant->name }}. {{ __('store.rights') }}</div>
     </footer>
 </x-layouts.base>

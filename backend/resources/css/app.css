@@ -7,11 +7,40 @@
 
 @theme {
     --font-sans: 'Cairo', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-    --color-brand-50: #fef2f2;
-    --color-brand-100: #fee2e2;
-    --color-brand-500: #ef4444;
-    --color-brand-600: #dc2626;
-    --color-brand-700: #b91c1c;
+
+    /* 3alraf palette: primary rose, plum text, warm white background, soft gold accent */
+    --color-brand-50: #fbeaf0;
+    --color-brand-100: #f6d6e1;
+    --color-brand-200: #f0bfd0;
+    --color-brand-300: #ecaec4;
+    --color-brand-400: #e9a0b5;
+    --color-brand-500: #c96f91;
+    --color-brand-600: #c96f91;
+    --color-brand-700: #b85a7d;
+    --color-brand-800: #9c4968;
+    --color-brand-900: #7d3a53;
+
+    --color-accent: #d7b987;
+    --color-accent-light: #f4e8d5;
+
+    /* neutrals re-tinted to plum (replaces cool slate) */
+    --color-slate-50: #fff9f7;
+    --color-slate-100: #f7ecef;
+    --color-slate-200: #f0dde4;
+    --color-slate-300: #dfc3cf;
+    --color-slate-400: #a3949c;
+    --color-slate-500: #806b76;
+    --color-slate-600: #6a5560;
+    --color-slate-700: #5a4551;
+    --color-slate-800: #4d3944;
+    --color-slate-900: #45313b;
+    --color-slate-950: #2f2129;
+
+    --color-red-500: #d9485f;
+    --color-red-600: #d9485f;
+    --color-emerald-600: #2f806a;
+    --color-emerald-700: #2f806a;
+    --color-amber-500: #d99a36;
 }
 
 @layer components {
