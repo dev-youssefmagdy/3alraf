@@ -29,13 +29,25 @@ abstract class BaseDriver implements AiDriver
     {
         return Http::withHeaders($this->headers())->acceptJson()->asJson()
             ->timeout((int) config('ai.timeout', 60))->connectTimeout((int) config('ai.connect_timeout', 10))
-            ->retry((int) config('ai.retries', 2), 400, fn ($e) => $e instanceof ConnectionException || ($e->response?->status() >= 500 || $e->response?->status() === 429), throw: false);
+            ->retry((int) config('ai.retries', 2), fn (int $attempt, $e) => $this->backoffMs($e), fn ($e) => $e instanceof ConnectionException || ($e->response?->status() >= 500 || $e->response?->status() === 429), throw: false);
+    }
+
+    /** Delay before a retry: the provider's Retry-After (capped) on 429, else exponential from 400 ms. */
+    private function backoffMs(mixed $e): int
+    {
+        $cap = (int) config('ai.retry_max_wait', 8) * 1000;
+        $after = $e instanceof \Illuminate\Http\Client\RequestException ? (int) $e->response->header('Retry-After') : 0;
+
+        return $after > 0 ? min($after * 1000, $cap) : 800;
     }
 
     /** Maps vendor failures to a user-safe exception; the vendor body is never exposed. */
     protected function check(Response $r): array
     {
         if ($r->failed()) {
+            if ($r->status() === 429) {
+                \Illuminate\Support\Facades\Log::warning('AI provider rate limited', ['provider' => $this->provider->getKey(), 'retry_after' => $r->header('Retry-After'), 'body' => mb_substr($r->body(), 0, 500)]);
+            }
             throw new AiException(__($r->status() === 429 ? 'ai.errors.throttled' : 'ai.errors.provider'), 'http_'.$r->status());
         }
 
