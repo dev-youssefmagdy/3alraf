@@ -7,7 +7,7 @@
         </div>
         <form data-ajax-form data-method="PUT" data-validate-url="{{ route('tenant.ai.settings.validate') }}" action="{{ route('tenant.ai.settings.update') }}" method="POST" class="space-y-4" novalidate>
             @csrf
-            <x-select name="default_ai_model_id" search :label="__('ai.fields.default_model')" :placeholder="__('ai.platform_default')" :options="$models->pluck('label', 'id')->all()" :value="$setting->default_ai_model_id" />
+            <x-select name="default_ai_model_id" search :label="__('ai.fields.default_model')" :placeholder="__('ai.platform_default')" :options="$models->mapWithKeys(fn ($m) => [$m->id => $m->displayName()])->all()" :value="$setting->default_ai_model_id" />
             <x-textarea name="brand_voice" rows="4" :label="__('ai.fields.brand_voice')" :value="$setting->brand_voice" />
             <x-textarea name="forbidden_words" rows="2" :label="__('ai.fields.forbidden_words')" :value="implode(', ', $setting->forbidden_words ?? [])" />
             <div>

@@ -24,7 +24,7 @@
                     <select name="preset" class="{{ $inp }}">@foreach ($presets as $p)<option value="{{ $p }}">{{ $t('presets.'.$p) }}</option>@endforeach</select></label>
                 <label class="block text-sm text-slate-600">{{ $t('instruction') }}<textarea name="instruction" rows="3" maxlength="800" class="{{ $inp }}"></textarea></label>
                 @if ($text->count() > 1)
-                    <label class="block text-sm text-slate-600">{{ __('ai.studio.fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}">@foreach ($text as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>
+                    <label class="block text-sm text-slate-600">{{ __('ai.studio.fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}">@foreach ($text as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>
                 @endif
                 <button id="ed-go" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">{{ $t('generate') }}</button>
                 <p class="text-xs text-slate-500">{{ $t('protected') }}</p>

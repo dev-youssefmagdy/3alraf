@@ -33,6 +33,8 @@ class RebuildQrCodes extends Command
                     $n++;
                 });
 
+                \App\Models\Bundle::query()->orderBy('id')->each(fn ($b) => $manager->syncBundle($b, (bool) $this->option('force')));
+
                 return $n;
             });
             $codes = TenantContext::run($tenant, fn () => QrCode::query()->count());

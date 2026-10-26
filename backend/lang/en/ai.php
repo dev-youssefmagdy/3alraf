@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'menu' => ['group' => 'AI', 'providers' => 'Providers', 'models' => 'Models', 'tenants' => 'Tenants AI', 'usage' => 'Usage & cost', 'trends' => 'Trends', 'studio' => 'Studio', 'generators' => 'Generators', 'editor' => 'Product editor', 'assistant' => 'Assistant', 'settings' => 'AI Settings'],
+    'menu' => ['group' => 'AI', 'providers' => 'Providers', 'models' => 'Models', 'tenants' => 'Tenants AI', 'usage' => 'Usage & cost', 'market_trends' => 'Market trends', 'trends' => 'Trends', 'studio' => 'Studio', 'generators' => 'Generators', 'editor' => 'Product editor', 'assistant' => 'Assistant', 'settings' => 'AI Settings'],
     'fields' => [
         'name' => 'Name', 'driver' => 'Vendor', 'api_key' => 'API key', 'base_url' => 'Base URL', 'provider' => 'Provider', 'model_id' => 'Model ID', 'label' => 'Label', 'kind' => 'Kind',
         'capabilities' => 'Capabilities', 'input_cost' => 'Input cost / 1M tokens', 'output_cost' => 'Output cost / 1M tokens', 'max_output' => 'Max output tokens',
@@ -45,6 +45,16 @@ return [
         'po_created' => 'Purchase draft :n created.', 'po_note' => 'Created from AI trends - review before ordering.', 'no_lines' => 'No products to order.', 'need_supplier' => 'Add a supplier and a branch first.',
         'throttled' => 'You refreshed recently. Try again in :m min.', 'no_web_model' => 'No web-search capable AI model is available. Ask the platform administrator to enable one for your store.',
         'bad_json' => 'The AI answer could not be understood. Please try again.', 'no_items' => 'No new opportunities found.', 'job_failed' => 'Could not refresh trends.', 'select_row' => 'Select rows',
+    ],
+    'market' => [
+        'title' => 'Market trends', 'subtitle' => 'What is trending in the countries you pick, compared with your store.', 'countries' => 'Countries (max 5)', 'period' => 'Period', 'days' => ':n days', 'keyword' => 'Category / niche',
+        'keyword_ph' => 'e.g. smart watches', 'count' => 'Results', 'model' => 'AI model', 'status' => 'Store status', 'search' => 'Search', 'refresh' => 'Refresh from web', 'refreshing' => 'Researching the market, this can take a minute...',
+        'generated' => 'Updated :t', 'never' => 'Not generated yet.', 'estimate' => 'AI estimates from web sources, prices are local to each country.', 'max_countries' => 'You can pick up to 5 countries.', 'pick_country' => 'Pick at least one country.',
+        'statuses' => ['all' => 'All', 'in_stock' => 'In stock', 'out_of_stock' => 'Out of stock', 'not_in_catalog' => 'Not in my catalog'], 'no_match' => 'No match in your catalog.', 'matched' => 'Your product', 'our_stock' => 'Your stock', 'our_price' => 'Your price',
+        'trending_in' => 'Trending in', 'strength' => 'Trend strength', 'confidence' => 'Confidence', 'price' => 'Est. price', 'keywords' => 'Search keywords', 'sources' => 'Sources', 'open_product' => 'Open product', 'create_po' => 'Purchase draft',
+        'write_post' => 'Write a post', 'copy_keywords' => 'Copy keywords', 'copied' => 'Copied.', 'dismiss' => 'Dismiss', 'export' => 'Export CSV', 'no_items' => 'No results for this filter.', 'failed' => 'Could not load market trends.',
+        'need_supplier' => 'Add a supplier and a branch first.', 'po_settings' => 'Purchase draft settings', 'supplier' => 'Supplier', 'branch' => 'Branch',
+        'fields' => ['countries' => 'Countries', 'countries.*' => 'Country', 'period' => 'Period', 'keyword' => 'Category / niche', 'count' => 'Results', 'ai_model_id' => 'AI model'],
     ],
     'errors' => [
         'disabled' => 'AI is not enabled for your store or for this feature. Contact the platform administrator.',

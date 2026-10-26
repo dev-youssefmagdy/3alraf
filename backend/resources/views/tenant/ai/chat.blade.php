@@ -14,7 +14,7 @@
             <header class="flex flex-wrap items-center gap-3 border-b border-slate-200 p-3 text-sm">
                 <label class="flex items-center gap-2 text-slate-600">{{ __('ai.chat.model') }}
                     <select id="ai-model" data-search class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm">
-                        @foreach ($models as $m)<option value="{{ $m->id }}" @selected($current?->id === $m->id)>{{ $m->label }}</option>@endforeach
+                        @foreach ($models as $m)<option value="{{ $m->id }}" @selected($current?->id === $m->id)>{{ $m->displayName() }}</option>@endforeach
                     </select>
                 </label>
                 <button type="button" id="ai-new-m" class="rounded-lg border border-slate-300 px-2 py-1 text-xs md:hidden">+ {{ __('ai.chat.new_chat') }}</button>

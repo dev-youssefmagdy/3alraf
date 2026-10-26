@@ -248,3 +248,10 @@ Adversarial review of the uncommitted diff; regression tests in `tests/Feature/R
 - Verified OK: all ai_* reads tenant-scoped (404 cross-tenant/cross-user/cross-feature), no keys on tenant/central screens, ar/en parity, core tenant pages render with AI on/off in en+ar.
 - Full suite: 360 tests, 21 failures, ALL pre-existing non-AI (guest checkout/cart 401/302, openapi multipart); same files fail on a clean HEAD worktree (22 there incl. AiFoundationTest central CRUD).
 - Gaps: a single chat turn can overshoot the token quota by one run (checked before, logged after); Browser smoke (tests/Browser/smoke.mjs) not run; N+1 only reviewed by reading; image `n`/video quota only pre-checked once per call.
+
+## AI Market trends (global)
+- Page `/admin/ai/market-trends` (sidebar AI > Market trends), flag `trends`, perm `ai_trends.view`; existing `/admin/ai/trends` untouched.
+- Filters: countries (max 5, ISO list in `App\Support\MarketCountries`), period, keyword, count, web model; status filter client-side.
+- `GlobalMarketTrendService` + `RunGlobalMarketTrendsJob` (needs `queue:work`); snapshot kind `mkt_global` (kind col is varchar(10), no migration), key hash in `period`; 24h cache, refresh throttle 1/10min.
+- Store match (`ProductMatcher`, extracted from TrendService) re-evaluated on every read: in_stock / out_of_stock (0 stock or inactive) / not_in_catalog.
+- Actions: open product, purchase draft (reuses trends draft route), Write a post (Studio preselects `product_ids[]`), copy keywords, dismiss (cache), CSV. Tests: `tests/Feature/AiMarketTrendsTest.php`.

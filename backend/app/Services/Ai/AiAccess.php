@@ -44,7 +44,7 @@ class AiAccess
     public function modelsFor(?Tenant $t = null, string $kind = 'text')
     {
         $s = $this->settings($t);
-        $q = AiModel::active()->where('kind', $kind)->orderBy('label');
+        $q = AiModel::active()->with('provider')->where('kind', $kind)->orderBy('ai_provider_id')->orderBy('label');
         if ($s?->allowed_model_ids !== null && $s) {
             $q->whereIn('id', $s->allowed_model_ids);
         }

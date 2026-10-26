@@ -51,6 +51,7 @@
                 <img src="{{ $pq?->file_url ?? route('tenant.catalog.qr', $tp) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
                 <div class="mt-1 text-xs text-slate-500">{{ __('admin.qr_product') }}</div>
                 <a href="{{ route('tenant.catalog.qr', $tp) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+                @can('catalog.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('tenant.catalog.qr.regenerate', $tp) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
             </div>
             @foreach ($tp->variants->filter(fn ($tv) => $tv->is_active && $tv->variant && ! $tv->variant->trashed() && $tv->variant->is_active) as $tv)
                 @php($vq = $qrCodes->get(\App\Models\TenantProductVariant::class.':'.$tv->id))
@@ -58,6 +59,7 @@
                     <img src="{{ $vq?->file_url ?? route('tenant.catalog.qr', [$tp, 'variant' => $tv->id]) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
                     <div class="mt-1 text-xs text-slate-500">{{ $tv->variant->label() }}</div>
                     <a href="{{ route('tenant.catalog.qr', [$tp, 'variant' => $tv->id]) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+                    @can('catalog.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('tenant.catalog.qr.regenerate', [$tp, 'variant' => $tv->id]) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
                 </div>
             @endforeach
         </div>

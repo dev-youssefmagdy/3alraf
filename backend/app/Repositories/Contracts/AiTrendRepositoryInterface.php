@@ -25,6 +25,9 @@ interface AiTrendRepositoryInterface
 
     public function latestSnapshot(string $kind, ?string $country): ?AiTrendSnapshot;
 
+    /** Latest snapshot of a kind whose `period` column holds the given cache key (tenant scoped). */
+    public function snapshotByKey(string $kind, string $key): ?AiTrendSnapshot;
+
     public function saveSnapshot(string $kind, ?string $country, ?string $period, array $items): AiTrendSnapshot;
 
     public function updateItems(AiTrendSnapshot $s, array $items): void;

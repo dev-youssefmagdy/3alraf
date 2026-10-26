@@ -24,8 +24,8 @@
             </div>
             <label class="{{ $lbl }}">{{ $s('fields.brief') }} ({{ $s('optional') }})<textarea name="brief" rows="2" maxlength="1500" class="{{ $inp }}"></textarea></label>
             <div class="grid gap-3 sm:grid-cols-2">
-                <label class="{{ $lbl }}">{{ $s('fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($textModels as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>
-                <label class="{{ $lbl }}" data-only="banner">{{ $s('fields.image_model_id') }}<select data-search name="image_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($imageModels as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>
+                <label class="{{ $lbl }}">{{ $s('fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($textModels as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>
+                <label class="{{ $lbl }}" data-only="banner">{{ $s('fields.image_model_id') }}<select data-search name="image_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($imageModels as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>
             </div>
             <p id="gen-err" class="hidden rounded-lg bg-red-50 p-2 text-sm text-red-700"></p>
             <button type="submit" id="gen-go" class="btn btn-primary">{{ $s('generate') }}</button>

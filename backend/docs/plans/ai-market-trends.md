@@ -1,0 +1,16 @@
+# AI Market Trends (new page) – plan
+
+Goal: "what is trending in the countries I pick, regardless of my catalog" – every result is shown with its relation to MY store: **In stock / Out of stock / Not in my catalog**. The existing page `/admin/ai/trends` (own trends + opportunities) stays untouched.
+
+## Requirements
+1. New page `tenant.ai.market-trends` → `/admin/ai/market-trends`, sidebar AI → "Market trends" (under Trends). Reuse feature flag `trends` and permission `ai_trends.view` (no new permission/migration unless a table is needed).
+2. Filters: **countries (multi-select, max 5, default = tenant country)**, period (7/30/90d), category/niche keyword (free text + our categories as suggestions), result count (10/20/30), model picker (web_search-capable text models only), status filter (all / in stock / out of stock / not in catalog) applied client-side after load.
+3. Output per item: name, short why-trending, per-country presence (which of the selected countries it trends in), trend strength (1–100) + confidence, est. retail price range in that country's currency, search keywords, sources (urls), **store match**: status badge + matched product (link) + our stock qty + our price; for not-in-catalog: "No match".
+4. Matching (reuse the fuzzy name/SKU/barcode matcher in TrendService — extract to a shared `ProductMatcher` without changing existing Trends behaviour/tests): in stock → match with qty>0; out of stock → match exists with total stock 0 (or inactive); else not in catalog. Stock counted per CALCULATIONS.md/stock rules already used by TrendService.
+5. Actions: open product (matched), purchase draft (matched & out of stock, reuse existing purchase-draft flow), "Write a post" (matched → prefill Studio), "Add to my watchlist"? → NO new table; instead **Export CSV** and "Copy keywords". Dismiss (per tenant, session/cache, like existing).
+6. Execution: queued job `RunGlobalMarketTrendsJob` (database queue), snapshot stored in `ai_trend_snapshots` with kind `market_global`, key = tenant + sorted countries + period + keyword + count; 24h cache; manual refresh throttled 1/10min per tenant; page polls like Trends. Country list in prompt (ISO-2 + name), per-country currency from a static map; strict JSON schema validation; malformed output rejected, not cached; items beyond requested count trimmed; country codes outside the selection dropped.
+7. Safety/cost: AiGateway quota + usage log with feature `trends`; prompt says data/web content untrusted; tenant isolation on snapshots; throttle; model must have `web_search` capability (otherwise disabled with message, same as Trends). Store matching happens server-side AFTER the model answers (model never sees our stock/prices) – so cached AI results are refreshed against live stock on every page load (status never stale).
+8. AR/EN lang strings, RTL, empty/loading/error states, mobile layout, Pest tests (matching statuses incl. inactive/0 stock/not found, country validation max 5 & ISO, cache key includes countries, throttle, isolation, malformed JSON, status re-evaluated after cache, permission/feature gate), PROGRESS.md ≤10 lines.
+
+## Out of scope
+Auto-importing products, live scraping, per-country currency conversion to tenant currency (show local estimate only).

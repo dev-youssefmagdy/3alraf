@@ -54,7 +54,7 @@ class AiTrendRepository implements AiTrendRepositoryInterface
     {
         return TenantProduct::query()->with('product')->get()->filter(fn ($tp) => $tp->product)->map(fn ($tp) => (object) [
             'product_id' => $tp->product_id, 'tp_id' => $tp->id, 'sku' => (string) $tp->product->sku, 'barcode' => (string) $tp->product->barcode,
-            'names' => array_values(array_filter((array) $tp->product->getTranslations('name'))), 'cost' => (string) ($tp->cost ?? '0'), 'active' => (bool) $tp->is_active,
+            'names' => array_values(array_filter((array) $tp->product->getTranslations('name'))), 'cost' => (string) ($tp->cost ?? '0'), 'price' => (string) ($tp->price ?? '0'), 'active' => (bool) $tp->is_active,
         ])->values();
     }
 
@@ -74,6 +74,11 @@ class AiTrendRepository implements AiTrendRepositoryInterface
     public function latestSnapshot(string $kind, ?string $country): ?AiTrendSnapshot
     {
         return AiTrendSnapshot::query()->where('kind', $kind)->where('country', $country)->orderByDesc('generated_at')->orderByDesc('id')->first();
+    }
+
+    public function snapshotByKey(string $kind, string $key): ?AiTrendSnapshot
+    {
+        return AiTrendSnapshot::query()->where('kind', $kind)->where('period', $key)->orderByDesc('generated_at')->orderByDesc('id')->first();
     }
 
     public function saveSnapshot(string $kind, ?string $country, ?string $period, array $items): AiTrendSnapshot

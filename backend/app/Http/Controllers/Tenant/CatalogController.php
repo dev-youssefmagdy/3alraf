@@ -27,7 +27,7 @@ class CatalogController extends Controller implements HasMiddleware
         return [
             new Middleware('can:catalog.view', only: ['index', 'datatable', 'qr']),
             new Middleware('can:catalog.create', only: ['available', 'bulkStore', 'validateBulk']),
-            new Middleware('can:catalog.edit', only: ['edit', 'update', 'validateForm']),
+            new Middleware('can:catalog.edit', only: ['edit', 'update', 'validateForm', 'regenerateQr']),
             new Middleware('can:catalog.delete', only: ['destroy']),
         ];
     }
@@ -76,6 +76,17 @@ class CatalogController extends Controller implements HasMiddleware
         abort_if($file === null, 404);
 
         return response($file[0], 200, ['Content-Type' => 'image/png', 'Content-Disposition' => 'attachment; filename="'.$file[1].'"', 'Cache-Control' => 'private, no-store']);
+    }
+
+    /** Rebuild the product QR (or `?variant={tenant variant row id}`) from scratch. */
+    public function regenerateQr(QrDownloadRequest $request, TenantProduct $tenantProduct): JsonResponse
+    {
+        $vid = $request->variantId();
+        $tv = $vid ? $tenantProduct->variants()->find($vid) : null;
+        abort_if($vid && ! $tv, 404);
+        abort_unless($this->qr->regenerate($tenantProduct, $tv), 404);
+
+        return $this->ok(__('admin.qr_regenerated'));
     }
 
     public function update(TenantProductRequest $request, TenantProduct $tenantProduct): JsonResponse

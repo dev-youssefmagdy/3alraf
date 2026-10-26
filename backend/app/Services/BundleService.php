@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bundle;
 use App\Models\BundleItem;
 use App\Repositories\Contracts\BundleRepositoryInterface;
+use App\Services\Qr\QrCodeManager;
 use App\Support\Slug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /** Bundle CRUD: components are synced by (product, variant); the image is stored/replaced through ImageUploadService. */
 class BundleService extends CrudService
 {
-    public function __construct(BundleRepositoryInterface $repo, private ImageUploadService $images)
+    public function __construct(BundleRepositoryInterface $repo, private ImageUploadService $images, private QrCodeManager $qr)
     {
         parent::__construct($repo);
     }
@@ -22,6 +23,7 @@ class BundleService extends CrudService
         return DB::transaction(function () use ($dto) {
             $bundle = parent::create($dto);
             $this->syncItems($bundle, $dto->items);
+            DB::afterCommit(fn () => $this->qr->syncBundle($bundle));
 
             return $bundle;
         });
@@ -32,9 +34,16 @@ class BundleService extends CrudService
         return DB::transaction(function () use ($model, $dto) {
             parent::update($model, $dto);
             $this->syncItems($model, $dto->items);
+            DB::afterCommit(fn () => $this->qr->syncBundle($model));
 
             return $model;
         });
+    }
+
+    public function delete(Model $model): void
+    {
+        parent::delete($model);
+        $this->qr->deleteForBundle($model);
     }
 
     public function find(int|string $id): Model

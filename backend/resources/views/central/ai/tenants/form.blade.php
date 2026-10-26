@@ -24,7 +24,7 @@
                 <p class="mb-2 text-xs text-slate-500">{{ __('ai.allowed_hint') }}</p>
                 <div class="grid gap-2 sm:grid-cols-2">
                     @foreach ($models as $m)
-                        <x-checkbox name="allowed_model_ids[]" :bool="false" :value="$m->id" :label="$m->label.' ('.$m->provider?->name.' / '.$m->kind->label().')'" :checked="$allowed !== null && in_array($m->id, $allowed)" />
+                        <x-checkbox name="allowed_model_ids[]" :bool="false" :value="$m->id" :label="$m->displayName().' ('.$m->kind->label().')'" :checked="$allowed !== null && in_array($m->id, $allowed)" />
                     @endforeach
                 </div>
             </div>

@@ -18,7 +18,7 @@
                 <h3 class="font-semibold text-slate-800">{{ $s('step_subject') }}</h3>
                 <p class="text-xs text-slate-500">{{ $s('subject_hint') }}</p>
                 <label class="{{ $lbl }}">{{ $s('fields.product_ids') }}
-                    <select name="product_ids[]" multiple size="5" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
+                    <select name="product_ids[]" multiple size="5" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}" @selected(in_array((string) $id, array_map('strval', (array) request('product_ids')), true))>{{ $n }}</option>@endforeach</select></label>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="{{ $lbl }}">{{ $s('fields.bundle_id') }}<select name="bundle_id" class="{{ $inp }}"><option value="">-</option>@foreach ($bundles as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
                     <label class="{{ $lbl }}">{{ $s('fields.flash_sale_id') }}<select name="flash_sale_id" class="{{ $inp }}"><option value="">-</option>@foreach ($sales as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
@@ -53,9 +53,9 @@
                             @if ($videoModels->count())<option value="video">{{ $s('formats.video') }}</option>@endif
                             @if ($imageModels->count() && $videoModels->count())<option value="all">{{ $s('formats.all') }}</option>@endif
                         </select></label>
-                    <label class="{{ $lbl }}">{{ $s('fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($textModels as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>
-                    @if ($imageModels->count())<label class="{{ $lbl }}">{{ $s('fields.image_model_id') }}<select data-search name="image_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($imageModels as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>@endif
-                    @if ($videoModels->count())<label class="{{ $lbl }}">{{ $s('fields.video_model_id') }}<select data-search name="video_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($videoModels as $m)<option value="{{ $m->id }}">{{ $m->label }}</option>@endforeach</select></label>@endif
+                    <label class="{{ $lbl }}">{{ $s('fields.ai_model_id') }}<select data-search name="ai_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($textModels as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>
+                    @if ($imageModels->count())<label class="{{ $lbl }}">{{ $s('fields.image_model_id') }}<select data-search name="image_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($imageModels as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>@endif
+                    @if ($videoModels->count())<label class="{{ $lbl }}">{{ $s('fields.video_model_id') }}<select data-search name="video_model_id" class="{{ $inp }}"><option value=""></option>@foreach ($videoModels as $m)<option value="{{ $m->id }}">{{ $m->displayName() }}</option>@endforeach</select></label>@endif
                 </div>
                 <p id="st-err" class="hidden rounded-lg bg-red-50 p-2 text-sm text-red-700"></p>
                 <button type="submit" id="st-go" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">{{ $s('generate') }}</button>

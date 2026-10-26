@@ -41,6 +41,7 @@ use App\Http\Controllers\Tenant\SupplierController;
 use App\Http\Controllers\Tenant\AiChatController;
 use App\Http\Controllers\Tenant\AiGeneratorController;
 use App\Http\Controllers\Tenant\AiStudioController;
+use App\Http\Controllers\Tenant\AiMarketTrendsController;
 use App\Http\Controllers\Tenant\AiTrendsController;
 use App\Http\Controllers\Tenant\AiProductEditorController;
 use App\Http\Controllers\Tenant\AiSettingsController;
@@ -70,6 +71,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('catalog/bulk/validate', [CatalogController::class, 'validateBulk'])->name('catalog.bulk.validate');
         Route::post('catalog/bulk', [CatalogController::class, 'bulkStore'])->name('catalog.bulk.store');
         Route::get('catalog/{tenantProduct}/qr', [CatalogController::class, 'qr'])->name('catalog.qr');
+        Route::post('catalog/{tenantProduct}/qr/regenerate', [CatalogController::class, 'regenerateQr'])->name('catalog.qr.regenerate');
+        Route::get('bundles/{id}/qr', [BundleController::class, 'qr'])->whereNumber('id')->name('bundles.qr');
+        Route::post('bundles/{id}/qr/regenerate', [BundleController::class, 'regenerateQr'])->whereNumber('id')->name('bundles.qr.regenerate');
         Route::post('catalog/validate/{tenantProduct}', [CatalogController::class, 'validateForm'])->name('catalog.validate');
         Route::resource('catalog', CatalogController::class)->only(['index', 'edit', 'update', 'destroy'])->parameters(['catalog' => 'tenantProduct']);
 
@@ -105,6 +109,14 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
                 Route::post('market/dismiss', [AiTrendsController::class, 'dismiss'])->name('dismiss');
                 Route::post('purchase-draft', [AiTrendsController::class, 'purchaseDraft'])->name('draft');
                 Route::get('export', [AiTrendsController::class, 'export'])->name('export');
+            });
+
+            Route::middleware('ai.enabled:trends')->prefix('market-trends')->name('market-trends.')->group(function () {
+                Route::get('/', [AiMarketTrendsController::class, 'index'])->name('index');
+                Route::get('data', [AiMarketTrendsController::class, 'data'])->name('data');
+                Route::post('refresh', [AiMarketTrendsController::class, 'refresh'])->name('refresh');
+                Route::post('dismiss', [AiMarketTrendsController::class, 'dismiss'])->name('dismiss');
+                Route::get('export', [AiMarketTrendsController::class, 'export'])->name('export');
             });
 
             Route::middleware('ai.enabled:studio')->prefix('studio')->name('studio.')->group(function () {

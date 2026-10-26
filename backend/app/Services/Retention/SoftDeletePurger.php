@@ -220,6 +220,7 @@ class SoftDeletePurger
         if ($b->image) {
             $this->mediaFiles[] = $b->image;
         }
+        $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachQrCodes(\App\Models\Bundle::class, [$b->id]));
         $this->repo->deleteWhere('cart_items', ['bundle_id' => $b->id]);
         $b->forceDelete(); // bundle_items cascade
 

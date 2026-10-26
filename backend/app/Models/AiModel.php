@@ -24,6 +24,14 @@ class AiModel extends Model
         return $this->belongsTo(AiProvider::class, 'ai_provider_id');
     }
 
+    /** Dropdown label: "Provider: Model". */
+    public function displayName(): string
+    {
+        $name = $this->provider?->name;
+
+        return $name ? $name.': '.$this->label : $this->label;
+    }
+
     public function can(string $cap): bool
     {
         return (bool) (($this->capabilities ?? [])[$cap] ?? false);

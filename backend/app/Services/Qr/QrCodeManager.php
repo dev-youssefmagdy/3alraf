@@ -5,6 +5,7 @@ namespace App\Services\Qr;
 use App\Enums\AffiliateStatus;
 use App\Jobs\SyncQrCodesJob;
 use App\Models\Affiliate;
+use App\Models\Bundle;
 use App\Models\QrCode;
 use App\Models\Tenant;
 use App\Models\TenantProduct;
@@ -90,6 +91,73 @@ class QrCodeManager
     {
         TenantProduct::withoutGlobalScopes()->where('product_id', $productId)->get(['id', 'tenant_id'])
             ->each(fn ($tp) => SyncQrCodesJob::dispatch(SyncQrCodesJob::LISTING, $tp->tenant_id, $tp->id)->afterCommit());
+    }
+
+    // ------------------------------------------------------------------ bundles
+
+    /** Bundle code right after save (idempotent); a trashed bundle keeps what exists. */
+    public function syncBundle(Bundle $bundle, bool $force = false): ?QrCode
+    {
+        if ($bundle->trashed()) {
+            return null;
+        }
+
+        return $this->writeBundle($bundle, $this->codes->findFor($bundle, null), $force);
+    }
+
+    public function deleteForBundle(Bundle $bundle): void
+    {
+        $this->codes->query()->where('owner_type', Bundle::class)->where('owner_id', $bundle->id)->get()->each(fn ($q) => $this->remove($q));
+    }
+
+    /** Stored code of a bundle; generated on demand when missing (self-healing). */
+    public function ensureBundle(Bundle $bundle): ?QrCode
+    {
+        if ($bundle->trashed() || (current_tenant() && $bundle->tenant_id !== current_tenant()->id)) {
+            return null;
+        }
+        $qr = $this->codes->findFor($bundle, null);
+
+        return $qr && ImageUploadService::disk()->exists($qr->path) ? $qr : $this->writeBundle($bundle, $qr);
+    }
+
+    public function bundleDownload(Bundle $bundle): ?array
+    {
+        $qr = $this->ensureBundle($bundle);
+        $bytes = $qr ? $this->png($qr) : null;
+
+        return $bytes === null ? null : [$bytes, 'qr-bundle-'.$bundle->slug.'.png'];
+    }
+
+    public function bundleCode(Bundle $bundle): ?QrCode
+    {
+        return $this->codes->findFor($bundle, null);
+    }
+
+    // ------------------------------------------------------------------ manual regenerate
+
+    /** Force a fresh plain code for a listing (or one of its variant rows); false when it is not sellable. */
+    public function regenerate(TenantProduct $tp, ?TenantProductVariant $tv = null): bool
+    {
+        $tp->loadMissing('product');
+        if ($tp->product === null || $tp->product->trashed() || ! $this->sellable($tp)) {
+            return false;
+        }
+        if ($tv) {
+            $tv->loadMissing('variant');
+            if ($tv->tenant_product_id !== $tp->id || ! $this->variantSellable($tv)) {
+                return false;
+            }
+        }
+        $owner = $tv ?? $tp;
+        $this->write($owner, $tp->product->slug, $tv?->product_variant_id, null, $tp, $this->codes->findFor($owner, null), true);
+
+        return true;
+    }
+
+    public function regenerateBundle(Bundle $bundle): bool
+    {
+        return $this->syncBundle($bundle, true) !== null;
     }
 
     // ------------------------------------------------------------------ delete
@@ -264,7 +332,7 @@ class QrCodeManager
             return $current;
         }
 
-        $path = $this->path($tp->tenant_id, $owner, $hash);
+        $path = $this->path($tp->tenant_id, $owner, $hash, $force);
         $disk->put($path, $this->png->png($url));
         $old = $current?->path;
         $attrs = ['url' => $url, 'url_hash' => $hash, 'path' => $path];
@@ -273,6 +341,29 @@ class QrCodeManager
             : $this->codes->create($attrs + ['owner_type' => $owner::class, 'owner_id' => $owner->getKey(), 'affiliate_id' => $aff?->id, 'tenant_id' => $tp->tenant_id]);
         if ($old && $old !== $path) {
             $disk->delete($old); // replaced: the old (content-hashed) file is dead
+        }
+
+        return $qr;
+    }
+
+    private function writeBundle(Bundle $bundle, ?QrCode $current, bool $force = false): QrCode
+    {
+        $tenant = Tenant::findOrFail($bundle->tenant_id);
+        $url = tenant_url($tenant, '/'.$tenant->default_locale.'/bundle/'.$bundle->slug);
+        $hash = sha1($url);
+        $disk = ImageUploadService::disk();
+        if ($current && ! $force && $current->url_hash === $hash && $disk->exists($current->path)) {
+            return $current;
+        }
+        $path = $this->path($bundle->tenant_id, $bundle, $hash, $force);
+        $disk->put($path, $this->png->png($url));
+        $old = $current?->path;
+        $attrs = ['url' => $url, 'url_hash' => $hash, 'path' => $path];
+        $qr = $current
+            ? $this->codes->update($current, $attrs)
+            : $this->codes->create($attrs + ['owner_type' => Bundle::class, 'owner_id' => $bundle->id, 'affiliate_id' => null, 'tenant_id' => $bundle->tenant_id]);
+        if ($old && $old !== $path) {
+            $disk->delete($old);
         }
 
         return $qr;
@@ -295,11 +386,16 @@ class QrCodeManager
         return tenant_url($tenant, '/'.$tenant->default_locale.'/product/'.$slug).($q ? '?'.http_build_query($q) : '');
     }
 
-    private function path(int $tenantId, Model $owner, string $hash): string
+    /** A forced rebuild gets a new file name so browsers / CDN never serve the replaced image. */
+    private function path(int $tenantId, Model $owner, string $hash, bool $fresh = false): string
     {
-        $prefix = $owner instanceof TenantProductVariant ? 'v' : 'p';
+        $prefix = match (true) {
+            $owner instanceof TenantProductVariant => 'v',
+            $owner instanceof Bundle => 'b',
+            default => 'p',
+        };
 
-        return "tenants/{$tenantId}/".trim((string) config('qr.dir'), '/').'/'.$prefix.$owner->getKey().'-'.substr($hash, 0, 20).'.png';
+        return "tenants/{$tenantId}/".trim((string) config('qr.dir'), '/').'/'.$prefix.$owner->getKey().'-'.substr($hash, 0, 20).($fresh ? '-'.dechex(time()) : '').'.png';
     }
 
     private function key(string $type, int $id, ?int $affiliateId): string
