@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private ShippingOptions $shipping, private OrderPaymentService $payments) {}
+    public function __construct(private CartService $cart, private OrderPlacementService $placement, private OrderQuoteService $quotes, private ShippingOptions $shipping, private OrderPaymentService $payments, private CustomerAddressService $addresses) {}
 
     public function create(string $locale)
     {
