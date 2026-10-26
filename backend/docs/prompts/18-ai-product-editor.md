@@ -1,0 +1,7 @@
+Working dir: /var/www/3alraf/backend (Laravel 13, MySQL). Read CLAUDE.md, docs/plans/ai-features.md (the contract: follow it exactly), docs/PROGRESS.md, and docs/CALCULATIONS.md if touching money/stock/reports. Follow layering/stack conventions strictly (Controller → FormRequest → DTO → Service → Repository → Model, enums, Blade components, tenant_id isolation, AR/EN lang files + RTL). Do only this sprint; reuse existing code, do not re-explore finished phases. Write Pest tests (Http::fake for providers; cross-tenant isolation); run vendor/bin/pest and php artisan route:list. Be token-efficient. At the end append <=15 lines to docs/PROGRESS.md and reply with a <=8 line summary. Do NOT commit.
+
+SPRINT AI-5 Product AI editor (plan §2).
+1. Page: pick product (searchable), choose fields (name, description, meta title/description, tags, per-locale translations, tone rewrite, SEO, spec bullets) and instruction/preset prompts (translate to X, shorten, SEO, marketing tone).
+2. Service returns per-field proposals as ai_generations(product_edit); side-by-side diff with accept/reject per field; accept applies through ProductService/TenantCatalogService respecting translatable columns and permissions (tenant may only edit what it can edit today; central-owned product fields stay protected – check how catalog ownership works first).
+3. Bulk mode for multiple products queued; undo via audit log values.
+4. Tests: apply only accepted fields, locale validation, ownership rules, XSS stripping of AI HTML, isolation.

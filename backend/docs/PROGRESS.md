@@ -193,3 +193,12 @@ Adversarial review of the uncommitted diff; regression tests in `tests/Feature/R
 - Mobile: `POST api/v1/auth/google {id_token, device_name?}` verifies the ID token server-side (Google tokeninfo: aud = web client or `GOOGLE_MOBILE_CLIENT_IDS`, iss, exp), same account rules, returns the usual Sanctum session + merges `X-Cart-Token` cart.
 - Tests: `tests/Feature/GoogleAuthTest.php` (21).
 - Gaps: `docs/api/openapi.json` not regenerated for `auth/google` (api:docs currently fatals on a duplicate `messages()` in `CheckoutRequest`, not part of this work); no "unlink Google" UI; no concurrency guard on first-login creation (a double click could hit the unique index).
+
+## AI-1 Foundation (docs/plans/ai-features.md) - done; no commit
+- Data: migration `2026_11_04_100001_ai_foundation` (ai_providers/models/tenant_settings/usage_logs + tenant tables ai_conversations/messages/generations/trend_snapshots; models + enums AiDriverType/AiModelKind/AiGenerationType/AiGenerationStatus/AiFeature). `2026_11_04_100002` re-runs PermissionSeeder (central `ai_providers|ai_models|ai_tenants|ai_usage`, tenant `ai_settings|ai_chat|ai_trends|ai_studio|ai_editor|ai_generators`).
+- Key safety: `AiProvider.api_key` encrypted cast, `$hidden`, `$auditExcept`; forms only show a masked tail, blank on edit keeps the key. Rotating APP_KEY = re-enter keys.
+- `App\Services\Ai`: drivers (Anthropic Messages, OpenAI, Moonshot extends OpenAI; custom_openai = OpenAI + base_url; video() = unsupported), `AiRunner` (<=6 tool rounds, token/time budget, capped tool output), `AiManager`, `AiGateway` (access -> monthly quota -> per-tenant throttle `ai.rate_per_minute` -> usage log; errors become user-safe `AiException`), `AiContext(Factory)`, `AiAccess` (scoped; settings/feature/allowed models). `config/ai.php` = timeouts only.
+- Central UI (sidebar group "AI", `/admin/ai/*`): Providers (+test connection), Models (one default per kind), Tenants AI (enable, quotas, features, allowed models), Usage & cost.
+- Tenant: `/admin/ai/settings` (default model among allowed, brand voice, forbidden words, platforms) behind `ai.enabled[:feature]` middleware (403 + disabled page/JSON); sidebar group only when enabled.
+- Tests: `tests/Feature/AiFoundationTest.php` (10, Http::fake). Later sprints: add tools/chat/etc.; stream() is single-shot for now.
+- Pre-existing, unrelated failures in the full suite (20, identical on a clean stash): guest checkout 401s (Offline/Orders/Payments/Review/Security/Storefront) + openapi multipart doc check.

@@ -19,6 +19,10 @@ return [
         'admins' => $crud,
         'roles' => $crud,
         'reports' => ['view', 'export'],
+        'ai_providers' => $crud,
+        'ai_models' => $crud,
+        'ai_tenants' => ['view', 'edit'],
+        'ai_usage' => ['view'],
     ],
     'tenant' => [
         'admins' => $crud,
@@ -56,5 +60,12 @@ return [
         'reviews' => ['view', 'edit', 'delete'],
         'custom_pages' => $crud,
         'static_pages' => $crud,
+        // AI
+        'ai_settings' => ['view', 'edit'],
+        'ai_chat' => ['use'],
+        'ai_trends' => ['view'],
+        'ai_studio' => ['use'],
+        'ai_editor' => ['use'],
+        'ai_generators' => ['use', 'approve'],
     ],
 ];

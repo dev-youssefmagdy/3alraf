@@ -86,6 +86,9 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     /** interface => implementation. Add new repositories here. */
     public array $bindings = [
+        \App\Repositories\Contracts\AiProviderRepositoryInterface::class => \App\Repositories\Eloquent\AiProviderRepository::class,
+        \App\Repositories\Contracts\AiModelRepositoryInterface::class => \App\Repositories\Eloquent\AiModelRepository::class,
+        \App\Repositories\Contracts\AiTenantSettingRepositoryInterface::class => \App\Repositories\Eloquent\AiTenantSettingRepository::class,
         AffiliateRepositoryInterface::class => AffiliateRepository::class,
         AffiliateTierRepositoryInterface::class => AffiliateTierRepository::class,
         AffiliatePayoutRepositoryInterface::class => AffiliatePayoutRepository::class,

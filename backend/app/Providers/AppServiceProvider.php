@@ -18,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(\App\Services\Ai\AiAccess::class);
     }
 
     /**

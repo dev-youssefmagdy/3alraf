@@ -49,6 +49,11 @@
             ['tenant.purchases.index', 'ops.purchases', 'M3 4h2l2 12h10l2-9H6', 'purchases.view'],
             ['tenant.stock-transfers.index', 'ops.stock_transfers', 'M7 7h12l-3-3m3 13H7l3 3', 'stock_transfers.view'],
             ['tenant.stock-adjustments.index', 'ops.stock_adjustments', 'M4 20h4L19 9l-4-4L4 16z', 'stock_adjustments.view']];
+    $aiMenu = $isCentral
+        ? [['central.ai.providers.index', 'ai.menu.providers', 'M5 12h14M12 5v14M4 4h16v16H4z', 'ai_providers.view', 'central.ai.providers.*'], ['central.ai.models.index', 'ai.menu.models', 'M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'ai_models.view', 'central.ai.models.*'],
+            ['central.ai.tenants.index', 'ai.menu.tenants', 'M3 21h18M5 21V7l7-4 7 4v14', 'ai_tenants.view', 'central.ai.tenants.*'], ['central.ai.usage.index', 'ai.menu.usage', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'ai_usage.view', 'central.ai.usage.*']]
+        : (app(\App\Services\Ai\AiAccess::class)->enabled($tenant)
+            ? [['tenant.ai.settings.edit', 'ai.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'ai_settings.view', 'tenant.ai.*']] : []);
 @endphp
 <x-layouts.base :title="$title">
     <div class="flex min-h-screen">
@@ -66,6 +71,18 @@
                     </a>
                 @endforeach
             </nav>
+            @php($aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3])))
+            @if ($aiVisible->isNotEmpty())
+                <p class="mb-1 mt-5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('ai.menu.group') }}</p>
+                <nav class="space-y-1">
+                    @foreach ($aiVisible as $item)
+                        <a href="{{ route($item[0]) }}" class="side-link {{ request()->routeIs($item[4]) ? 'active' : '' }}">
+                            <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $item[2] }}"/></svg>
+                            {{ __($item[1]) }}
+                        </a>
+                    @endforeach
+                </nav>
+            @endif
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">

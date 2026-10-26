@@ -17,6 +17,10 @@ use App\Http\Controllers\Central\ReportController;
 use App\Http\Controllers\Central\TagController;
 use App\Http\Controllers\Central\TenantController;
 use App\Http\Controllers\Tenant\NotificationController;
+use App\Http\Controllers\Central\Ai\ModelController as AiModelController;
+use App\Http\Controllers\Central\Ai\ProviderController as AiProviderController;
+use App\Http\Controllers\Central\Ai\TenantAiController;
+use App\Http\Controllers\Central\Ai\UsageController as AiUsageController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +77,22 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
         }
         Route::post('categories/validate/{category?}', [CategoryController::class, 'validateForm'])->name('categories.validate');
         Route::resource('categories', CategoryController::class)->except('show');
+
+        Route::prefix('ai')->name('ai.')->group(function () {
+            foreach (['providers' => [AiProviderController::class, 'ai_provider'], 'models' => [AiModelController::class, 'ai_model']] as $name => [$ctl, $param]) {
+                Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
+                Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
+                Route::resource($name, $ctl)->except('show')->parameters([$name => $param]);
+            }
+            Route::post('providers/{ai_provider}/test', [AiProviderController::class, 'test'])->middleware('throttle:10,1')->name('providers.test');
+            Route::get('tenants', [TenantAiController::class, 'index'])->name('tenants.index');
+            Route::get('tenants/datatable', [TenantAiController::class, 'datatable'])->name('tenants.datatable');
+            Route::post('tenants/{tenant}/validate', [TenantAiController::class, 'validateForm'])->name('tenants.validate');
+            Route::get('tenants/{tenant}/edit', [TenantAiController::class, 'edit'])->name('tenants.edit');
+            Route::put('tenants/{tenant}', [TenantAiController::class, 'update'])->name('tenants.update');
+            Route::get('usage', [AiUsageController::class, 'index'])->name('usage.index');
+            Route::get('usage/datatable', [AiUsageController::class, 'datatable'])->name('usage.datatable');
+        });
 
         Route::get('tenants/datatable', [TenantController::class, 'datatable'])->name('tenants.datatable');
         Route::post('tenants/validate/{tenant?}', [TenantController::class, 'validateForm'])->name('tenants.validate');

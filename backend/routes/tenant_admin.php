@@ -38,6 +38,7 @@ use App\Http\Controllers\Tenant\StockAdjustmentController;
 use App\Http\Controllers\Tenant\StockController;
 use App\Http\Controllers\Tenant\StockTransferController;
 use App\Http\Controllers\Tenant\SupplierController;
+use App\Http\Controllers\Tenant\AiSettingsController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
@@ -85,6 +86,12 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('cod-fees', [CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
+
+        Route::middleware('ai.enabled')->prefix('ai')->name('ai.')->group(function () {
+            Route::get('settings', [AiSettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [AiSettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/validate', [AiSettingsController::class, 'validateForm'])->name('settings.validate');
+        });
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 

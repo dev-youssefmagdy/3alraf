@@ -1,0 +1,7 @@
+Working dir: /var/www/3alraf/backend (Laravel 13, MySQL). Read CLAUDE.md, docs/plans/ai-features.md (the contract: follow it exactly), docs/PROGRESS.md, and docs/CALCULATIONS.md if touching money/stock/reports. Follow layering/stack conventions strictly (Controller → FormRequest → DTO → Service → Repository → Model, enums, Blade components, tenant_id isolation, AR/EN lang files + RTL). Do only this sprint; reuse existing code, do not re-explore finished phases. Write Pest tests (Http::fake for providers; cross-tenant isolation); run vendor/bin/pest and php artisan route:list. Be token-efficient. At the end append <=15 lines to docs/PROGRESS.md and reply with a <=8 line summary. Do NOT commit.
+
+SPRINT AI-3 Trends (plan §2 Trends).
+1. TrendService own: SQL velocity/growth/margin/days-of-stock over 7/30/90d (confirmed-set orders per CALCULATIONS.md), filters, optional AI narrative+restock advice.
+2. TrendService market: web-capable model, tenant country in prompt, structured JSON output validated, excludes existing in-stock products (fuzzy name/sku/barcode), includes existing-with-0-stock items flagged Restock, confidence+sources, cached in ai_trend_snapshots (24h, manual refresh throttled), queued job.
+3. UI page with 2 tabs (Our trending | Opportunities to stock), period/category filters, cards+table, actions: Create purchase-order draft / open existing product / dismiss; export CSV.
+4. Tests: velocity math, exclusion logic, 0-stock inclusion, country in prompt, cache/throttle, isolation, malformed model JSON handled.

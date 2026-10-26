@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.context' => \App\Http\Middleware\Api\ApiContext::class,
             'api.auth' => \App\Http\Middleware\Api\ApiAuth::class,
             'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
+            'ai.enabled' => \App\Http\Middleware\EnsureAiEnabled::class,
             'auth.active' => \App\Http\Middleware\EnsureAccountActive::class,
         ]);
         // Inactive-account logout must run before route auth (Authenticate is priority-sorted ahead of plain group middleware).
