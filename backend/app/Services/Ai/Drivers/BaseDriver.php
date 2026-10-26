@@ -45,13 +45,22 @@ abstract class BaseDriver implements AiDriver
     protected function check(Response $r): array
     {
         if ($r->failed()) {
-            if ($r->status() === 429) {
-                \Illuminate\Support\Facades\Log::warning('AI provider rate limited', ['provider' => $this->provider->getKey(), 'retry_after' => $r->header('Retry-After'), 'body' => mb_substr($r->body(), 0, 500)]);
-            }
+            \Illuminate\Support\Facades\Log::warning($r->status() === 429 ? 'AI provider rate limited' : 'AI provider error', ['provider' => $this->provider->getKey(), 'status' => $r->status(), 'retry_after' => $r->header('Retry-After'), 'body' => $this->redact(mb_substr($r->body(), 0, 500))]);
             throw new AiException(__($r->status() === 429 ? 'ai.errors.throttled' : 'ai.errors.provider'), 'http_'.$r->status());
         }
 
         return (array) $r->json();
+    }
+
+    /** Vendors sometimes echo the offending key ("Incorrect API key provided: sk-..."); never let it reach the log. */
+    protected function redact(string $text): string
+    {
+        $key = (string) $this->provider->api_key;
+        if ($key !== '') {
+            $text = str_replace($key, '[redacted]', $text);
+        }
+
+        return (string) preg_replace('/\b(sk|key|pk|api)[-_][A-Za-z0-9_\-]{8,}/i', '[redacted]', $text);
     }
 
     protected function call(callable $fn): Response

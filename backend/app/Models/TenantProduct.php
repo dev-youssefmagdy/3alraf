@@ -12,16 +12,32 @@ class TenantProduct extends Model
 {
     use Audited, BelongsToTenant;
 
-    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'is_active'];
+    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'is_active', 'content'];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'is_active' => 'bool'];
+        return ['price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'is_active' => 'bool', 'content' => 'array'];
     }
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** Tenant text overlay fields (central product stays untouched; the tenant only owns its own storefront wording). */
+    public const CONTENT_FIELDS = ['name', 'description', 'meta_title', 'meta_description'];
+
+    /** Overlay the tenant's own wording onto the (in-memory, never saved) product for display. */
+    public function applyContent(): static
+    {
+        $p = $this->relationLoaded('product') ? $this->product : null;
+        foreach ((array) $this->content as $field => $byLocale) {
+            if ($p && in_array($field, self::CONTENT_FIELDS, true) && is_array($byLocale)) {
+                $p->setTranslations($field, array_replace($p->getTranslations($field), array_filter($byLocale, fn ($v) => is_string($v) && $v !== '')));
+            }
+        }
+
+        return $this;
     }
 
     public function variants(): HasMany

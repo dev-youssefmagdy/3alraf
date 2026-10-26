@@ -11,6 +11,7 @@ import './lib/growth-form';
 import './lib/reports';
 import './lib/access-form';
 import './lib/storefront';
+import './lib/search-select';
 
 window.$ = window.jQuery = $;
 window.toastr = toastr;

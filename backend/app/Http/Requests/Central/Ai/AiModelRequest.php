@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 
 class AiModelRequest extends FormRequest
 {
-    public const CAPABILITIES = ['tools', 'vision', 'web_search', 'json_mode'];
+    public const CAPABILITIES = ['tools', 'vision', 'web_search', 'json_mode', 'reasoning', 'audio_input', 'video_input', 'file_input', 'image_output', 'audio_output', 'speech', 'transcription', 'edit', 'image_to_video', 'free'];
 
     public function authorize(): bool
     {

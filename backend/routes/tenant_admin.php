@@ -38,6 +38,11 @@ use App\Http\Controllers\Tenant\StockAdjustmentController;
 use App\Http\Controllers\Tenant\StockController;
 use App\Http\Controllers\Tenant\StockTransferController;
 use App\Http\Controllers\Tenant\SupplierController;
+use App\Http\Controllers\Tenant\AiChatController;
+use App\Http\Controllers\Tenant\AiGeneratorController;
+use App\Http\Controllers\Tenant\AiStudioController;
+use App\Http\Controllers\Tenant\AiTrendsController;
+use App\Http\Controllers\Tenant\AiProductEditorController;
 use App\Http\Controllers\Tenant\AiSettingsController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +96,56 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::get('settings', [AiSettingsController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [AiSettingsController::class, 'update'])->name('settings.update');
             Route::post('settings/validate', [AiSettingsController::class, 'validateForm'])->name('settings.validate');
+
+            Route::middleware('ai.enabled:trends')->prefix('trends')->name('trends.')->group(function () {
+                Route::get('/', [AiTrendsController::class, 'index'])->name('index');
+                Route::get('own', [AiTrendsController::class, 'own'])->name('own');
+                Route::get('market', [AiTrendsController::class, 'market'])->name('market');
+                Route::post('market/refresh', [AiTrendsController::class, 'refresh'])->name('refresh');
+                Route::post('market/dismiss', [AiTrendsController::class, 'dismiss'])->name('dismiss');
+                Route::post('purchase-draft', [AiTrendsController::class, 'purchaseDraft'])->name('draft');
+                Route::get('export', [AiTrendsController::class, 'export'])->name('export');
+            });
+
+            Route::middleware('ai.enabled:studio')->prefix('studio')->name('studio.')->group(function () {
+                Route::get('/', [AiStudioController::class, 'index'])->name('index');
+                Route::get('history', [AiStudioController::class, 'history'])->name('history');
+                Route::post('generate', [AiStudioController::class, 'store'])->middleware('throttle:20,1')->name('store');
+                Route::get('generations/{id}', [AiStudioController::class, 'show'])->whereNumber('id')->name('show');
+                Route::post('generations/{id}/regenerate', [AiStudioController::class, 'regenerate'])->middleware('throttle:20,1')->whereNumber('id')->name('regenerate');
+                Route::delete('generations/{id}', [AiStudioController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            });
+
+            Route::middleware('ai.enabled:editor')->prefix('editor')->name('editor.')->group(function () {
+                Route::get('/', [AiProductEditorController::class, 'index'])->name('index');
+                Route::get('products', [AiProductEditorController::class, 'products'])->name('products');
+                Route::get('history', [AiProductEditorController::class, 'history'])->name('history');
+                Route::post('generate', [AiProductEditorController::class, 'store'])->middleware('throttle:20,1')->name('store');
+                Route::get('generations/{id}', [AiProductEditorController::class, 'show'])->whereNumber('id')->name('show');
+                Route::post('generations/{id}/apply', [AiProductEditorController::class, 'apply'])->whereNumber('id')->name('apply');
+                Route::post('generations/{id}/reject', [AiProductEditorController::class, 'reject'])->whereNumber('id')->name('reject');
+                Route::post('generations/{id}/undo', [AiProductEditorController::class, 'undo'])->whereNumber('id')->name('undo');
+            });
+
+            Route::middleware('ai.enabled:generators')->prefix('generators')->name('generators.')->group(function () {
+                Route::get('/', [AiGeneratorController::class, 'index'])->name('index');
+                Route::get('datatable', [AiGeneratorController::class, 'datatable'])->name('datatable');
+                Route::post('generate', [AiGeneratorController::class, 'store'])->middleware('throttle:20,1')->name('store');
+                Route::get('{id}', [AiGeneratorController::class, 'show'])->whereNumber('id')->name('show');
+                Route::get('{id}/json', [AiGeneratorController::class, 'json'])->whereNumber('id')->name('json');
+                Route::put('{id}', [AiGeneratorController::class, 'update'])->whereNumber('id')->name('update');
+                Route::post('{id}/approve', [AiGeneratorController::class, 'approve'])->whereNumber('id')->name('approve');
+                Route::post('{id}/reject', [AiGeneratorController::class, 'reject'])->whereNumber('id')->name('reject');
+                Route::post('{id}/regenerate', [AiGeneratorController::class, 'regenerate'])->middleware('throttle:20,1')->whereNumber('id')->name('regenerate');
+            });
+
+            Route::middleware('ai.enabled:chat')->prefix('chat')->name('chat.')->group(function () {
+                Route::get('/', [AiChatController::class, 'index'])->name('index');
+                Route::post('stream', [AiChatController::class, 'stream'])->name('stream');
+                Route::get('conversations/{id}', [AiChatController::class, 'show'])->whereNumber('id')->name('show');
+                Route::put('conversations/{id}', [AiChatController::class, 'rename'])->whereNumber('id')->name('rename');
+                Route::delete('conversations/{id}', [AiChatController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            });
         });
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');

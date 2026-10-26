@@ -54,6 +54,12 @@ class TenantCatalogService
         });
     }
 
+    /** Replace the tenant's text overlay (audited by TenantProduct, so the previous value is recoverable from the activity log). */
+    public function updateContent(TenantProduct $tp, ?array $content): TenantProduct
+    {
+        return $this->listings->update($tp, ['content' => $content ?: null]);
+    }
+
     /** Disable the product for this tenant (removes the listing). */
     public function delete(TenantProduct $tp): void
     {

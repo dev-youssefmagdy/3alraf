@@ -20,6 +20,11 @@ class AiGeneration extends Model
         return ['type' => AiGenerationType::class, 'status' => AiGenerationStatus::class, 'inputs' => 'array', 'output' => 'array', 'media' => 'array', 'reviewed_at' => 'datetime'];
     }
 
+    public function aiModel(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(AiModel::class, 'ai_model_id');
+    }
+
     public function target(): MorphTo
     {
         return $this->morphTo();

@@ -10,7 +10,7 @@ class AiConversation extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['user_id', 'title', 'ai_model_id', 'summary'];
+    protected $fillable = ['user_id', 'title', 'ai_model_id', 'summary', 'summarized_until_id'];
 
     public function messages(): HasMany
     {

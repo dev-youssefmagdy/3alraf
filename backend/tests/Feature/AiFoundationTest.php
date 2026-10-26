@@ -139,7 +139,7 @@ it('builds a country aware context from the tenant', function () {
 it('never exposes or audits the api key', function () {
     $m = ($this->mk)(AiDriverType::OPENAI, 'gpt-x', 'sk-TOPSECRETKEY9999');
     $p = $m->provider;
-    expect(json_encode($p->toArray()))->not->toContain('TOPSECRET')->and(\DB::table('ai_providers')->value('api_key'))->not->toContain('TOPSECRET');
+    expect(json_encode($p->toArray()))->not->toContain('TOPSECRET')->and(\DB::table('ai_providers')->where('id', $p->id)->value('api_key'))->not->toContain('TOPSECRET');
     $p->update(['api_key' => 'sk-ROTATED-KEY-0000', 'name' => 'renamed']);
     $logs = \Spatie\Activitylog\Models\Activity::where('subject_type', AiProvider::class)->get();
     expect($logs)->not->toBeEmpty()->and(json_encode($logs->toArray()))->not->toContain('TOPSECRET')->not->toContain('ROTATED');
@@ -153,7 +153,7 @@ it('central CRUD: provider, model defaults, test connection, tenant AI, usage', 
     ($this->central)();
     $this->postJson("{$this->c}/ai/providers/validate", [])->assertStatus(422)->assertJsonValidationErrors(['driver', 'name', 'api_key']);
     $this->postJson("{$this->c}/ai/providers", ['driver' => 'anthropic', 'name' => 'Claude', 'api_key' => 'sk-ant-1', 'is_active' => 1])->assertSuccessful();
-    $p = AiProvider::first();
+    $p = AiProvider::where('name', 'Claude')->firstOrFail();
     expect($p->api_key)->toBe('sk-ant-1');
     $this->putJson("{$this->c}/ai/providers/{$p->id}", ['driver' => 'anthropic', 'name' => 'Claude 2', 'api_key' => '', 'is_active' => 1])->assertSuccessful();
     expect($p->fresh()->api_key)->toBe('sk-ant-1')->and($p->fresh()->name)->toBe('Claude 2');
@@ -167,9 +167,9 @@ it('central CRUD: provider, model defaults, test connection, tenant AI, usage', 
     foreach (['a', 'b'] as $x) {
         $this->postJson("{$this->c}/ai/models", ['ai_provider_id' => $p->id, 'model_id' => $x, 'label' => $x, 'kind' => 'text', 'capabilities' => ['tools'], 'is_active' => 1, 'is_default' => 1])->assertSuccessful();
     }
-    expect(AiModel::where('is_default', true)->pluck('model_id')->all())->toBe(['b'])->and(AiModel::first()->can('tools'))->toBeTrue();
+    expect(AiModel::where('ai_provider_id', $p->id)->where('is_default', true)->pluck('model_id')->all())->toBe(['b'])->and(AiModel::where('model_id', 'a')->first()->can('tools'))->toBeTrue();
 
-    $this->putJson("{$this->c}/ai/tenants/{$this->tenant->id}", ['ai_enabled' => 1, 'monthly_token_quota' => 5000, 'features' => ['chat', 'trends'], 'allowed_model_ids' => [AiModel::first()->id]])->assertSuccessful();
+    $this->putJson("{$this->c}/ai/tenants/{$this->tenant->id}", ['ai_enabled' => 1, 'monthly_token_quota' => 5000, 'features' => ['chat', 'trends'], 'allowed_model_ids' => [AiModel::where('model_id', 'a')->first()->id]])->assertSuccessful();
     $s = AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->first();
     expect($s->ai_enabled)->toBeTrue()->and($s->monthly_token_quota)->toBe(5000)->and($s->features)->toMatchArray(['chat' => true, 'trends' => true, 'studio' => false]);
     $this->getJson("{$this->c}/ai/tenants/datatable")->assertOk();

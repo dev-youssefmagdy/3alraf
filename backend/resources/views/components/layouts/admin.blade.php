@@ -53,36 +53,76 @@
         ? [['central.ai.providers.index', 'ai.menu.providers', 'M5 12h14M12 5v14M4 4h16v16H4z', 'ai_providers.view', 'central.ai.providers.*'], ['central.ai.models.index', 'ai.menu.models', 'M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'ai_models.view', 'central.ai.models.*'],
             ['central.ai.tenants.index', 'ai.menu.tenants', 'M3 21h18M5 21V7l7-4 7 4v14', 'ai_tenants.view', 'central.ai.tenants.*'], ['central.ai.usage.index', 'ai.menu.usage', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'ai_usage.view', 'central.ai.usage.*']]
         : (app(\App\Services\Ai\AiAccess::class)->enabled($tenant)
-            ? [['tenant.ai.settings.edit', 'ai.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'ai_settings.view', 'tenant.ai.*']] : []);
+            ? array_merge(app(\App\Services\Ai\AiAccess::class)->feature('chat', $tenant) ? [['tenant.ai.chat.index', 'ai.menu.assistant', 'M8 10h8M8 14h5M4 5h16v11H9l-5 4z', 'ai_chat.use', 'tenant.ai.chat.*']] : [],
+                app(\App\Services\Ai\AiAccess::class)->feature('trends', $tenant) ? [['tenant.ai.trends.index', 'ai.menu.trends', 'M3 17l6-6 4 4 8-8M15 7h6v6', 'ai_trends.view', 'tenant.ai.trends.*']] : [],
+                app(\App\Services\Ai\AiAccess::class)->feature('studio', $tenant) ? [['tenant.ai.studio.index', 'ai.menu.studio', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M9 9h.01', 'ai_studio.use', 'tenant.ai.studio.*']] : [],
+                app(\App\Services\Ai\AiAccess::class)->feature('editor', $tenant) ? [['tenant.ai.editor.index', 'ai.menu.editor', 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4', 'ai_editor.use', 'tenant.ai.editor.*']] : [],
+                app(\App\Services\Ai\AiAccess::class)->feature('generators', $tenant) ? [['tenant.ai.generators.index', 'ai.menu.generators', 'M5 4h14v6H5zM5 14h6v6H5zM15 14h4v6h-4z', 'ai_generators.use', 'tenant.ai.generators.*']] : [],
+                [['tenant.ai.settings.edit', 'ai.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'ai_settings.view', 'tenant.ai.settings.*']]) : []);
 @endphp
 <x-layouts.base :title="$title">
     <div class="flex min-h-screen">
-        <aside id="sidebar" class="fixed inset-y-0 start-0 z-40 hidden w-64 shrink-0 flex-col bg-slate-900 p-4 md:static md:flex">
+        <aside id="sidebar" class="fixed inset-y-0 start-0 z-40 hidden w-64 shrink-0 flex-col bg-slate-900 p-4 md:sticky md:top-0 md:h-screen md:flex">
             <a href="{{ route($isCentral ? 'central.dashboard' : 'tenant.dashboard') }}" class="mb-6 flex items-center gap-2 px-2 text-lg font-bold text-white">
                 <img src="{{ asset('logo.png') }}" alt="" class="size-8 rounded-lg object-contain">
                 <span>{{ $isCentral ? config('app.name') : ($tenant?->name ?? config('app.name')) }}</span>
             </a>
-            <nav class="space-y-1">
-                @foreach ($menu as $item)
-                    @continue(isset($item[3]) && ! $user?->can($item[3]))
-                    <a href="{{ route($item[0]) }}" class="side-link {{ request()->routeIs($item[4] ?? (Str::endsWith($item[0], '.dashboard') ? $item[0] : Str::beforeLast($item[0], '.').'.*')) ? 'active' : '' }}">
+            @php
+                $label = fn ($i) => str_contains($i[1], '.') ? __($i[1]) : __('admin.'.$i[1]);
+                $isActive = fn ($i) => request()->routeIs($i[4] ?? (Str::endsWith($i[0], '.dashboard') ? $i[0] : Str::beforeLast($i[0], '.').'.*'));
+                $visible = collect($menu)->filter(fn ($i) => ! isset($i[3]) || $user?->can($i[3]))->keyBy(fn ($i) => $i[0]);
+                // tenant sidebar groups: [title key, icon path, [route names]]
+                $groups = $isCentral ? [] : [
+                    ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['tenant.orders.index', 'tenant.returns.index', 'tenant.customers.index', 'tenant.discount-codes.index', 'tenant.flash-sales.index', 'tenant.bundles.index', 'tenant.packaging.index']],
+                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock.index', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
+                    ['admin.nav.marketing', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', ['tenant.affiliates.index', 'tenant.affiliate-tiers.index', 'tenant.affiliate-payouts.index', 'tenant.product-lists.index', 'tenant.reviews.index', 'tenant.banners.index']],
+                    ['admin.nav.content', 'M7 3h8l4 4v14H7zM14 3v5h5', ['tenant.custom-pages.index', 'tenant.static-pages.index']],
+                    ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['tenant.expenses.index', 'tenant.expense-categories.index', 'tenant.cod-fees.edit', 'tenant.payment-methods.index']],
+                    ['admin.nav.logistics', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', ['tenant.shipping-companies.index', 'tenant.cities.index', 'tenant.branches.index']],
+                    ['admin.nav.team_access', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', ['tenant.admins.index', 'tenant.roles.index', 'tenant.audit.index']],
+                    ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['tenant.reports.index', 'tenant.notification-settings.edit']],
+                ];
+                $grouped = collect($groups)->flatMap(fn ($g) => $g[2])->all();
+                $aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3]));
+                if ($aiVisible->isNotEmpty()) {
+                    $groups[] = ['ai.menu.group', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', null];
+                }
+                $chev = '<svg class="size-4 shrink-0 transition-transform group-open:rotate-90 rtl:group-open:-rotate-90 rtl:-scale-x-100" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>';
+            @endphp
+            <nav class="-me-2 flex-1 space-y-1 overflow-y-auto pe-2">
+                {{-- top-level items (everything for central; dashboard etc. for tenant) --}}
+                @foreach ($visible as $name => $item)
+                    @continue(in_array($name, $grouped, true))
+                    <a href="{{ route($item[0]) }}" class="side-link {{ $isActive($item) ? 'active' : '' }}">
                         <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $item[2] }}"/></svg>
-                        {{ str_contains($item[1], '.') ? __($item[1]) : __('admin.'.$item[1]) }}
+                        {{ $label($item) }}
                     </a>
                 @endforeach
+
+                @foreach ($groups as $g)
+                    @php
+                        $items = $g[2] === null
+                            ? $aiVisible->map(fn ($i) => [$i[0], $i[1], $i[2], $i[3], $i[4]])
+                            : collect($g[2])->map(fn ($n) => $visible[$n] ?? null)->filter();
+                        $open = $items->contains(fn ($i) => $isActive($i));
+                    @endphp
+                    @continue($items->isEmpty())
+                    <details class="group" @if ($open) open @endif>
+                        <summary class="side-link cursor-pointer select-none list-none justify-between [&::-webkit-details-marker]:hidden {{ $open ? '!text-white' : '' }}">
+                            <span class="flex items-center gap-3">
+                                <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $g[1] }}"/></svg>
+                                {{ __($g[0]) }}
+                            </span>
+                            {!! $chev !!}
+                        </summary>
+                        <div class="ms-5 mt-1 space-y-0.5 border-s border-white/10 ps-2">
+                            @foreach ($items as $item)
+                                <a href="{{ route($item[0]) }}" class="side-link !py-1.5 !text-[13px] {{ $isActive($item) ? 'active' : '' }}">{{ $label($item) }}</a>
+                            @endforeach
+                        </div>
+                    </details>
+                @endforeach
             </nav>
-            @php($aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3])))
-            @if ($aiVisible->isNotEmpty())
-                <p class="mb-1 mt-5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('ai.menu.group') }}</p>
-                <nav class="space-y-1">
-                    @foreach ($aiVisible as $item)
-                        <a href="{{ route($item[0]) }}" class="side-link {{ request()->routeIs($item[4]) ? 'active' : '' }}">
-                            <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $item[2] }}"/></svg>
-                            {{ __($item[1]) }}
-                        </a>
-                    @endforeach
-                </nav>
-            @endif
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">

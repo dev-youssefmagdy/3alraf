@@ -23,6 +23,7 @@ return [
     'attributes' => 'الخصائص',
     'categories' => 'التصنيفات',
     'products' => 'المنتجات',
+    'nav' => ['sales' => 'المبيعات', 'catalog_inventory' => 'الكتالوج والمخزون', 'marketing' => 'التسويق والنمو', 'content' => 'المحتوى', 'finance' => 'المالية', 'logistics' => 'الشحن والمواقع', 'team_access' => 'الفريق والصلاحيات', 'insights_settings' => 'التقارير والإعدادات'],
     'catalog' => 'الكتالوج',
     'values' => 'القيم',
     'variants' => 'المتغيرات',

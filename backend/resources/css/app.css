@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'toastr/build/toastr.min.css';
+@import 'tom-select/dist/css/tom-select.default.css';
 @import 'datatables.net-dt/css/dataTables.dataTables.min.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -66,3 +67,12 @@
 .dt-container { @apply text-sm; }
 table.dataTable thead th { @apply text-start; }
 table.dataTable td { @apply align-middle; }
+
+/* searchable selects (Tom Select) styled like .form-control */
+.ts-wrapper { min-width: 12rem; }
+.ts-wrapper.single .ts-control, .ts-wrapper.multi .ts-control { border-radius: 0.5rem; border-color: var(--color-slate-300); padding: 0.4rem 0.6rem; box-shadow: none; background-image: none; }
+.ts-wrapper.focus .ts-control { border-color: var(--color-brand-500); box-shadow: 0 0 0 2px var(--color-brand-100); }
+.ts-dropdown { border-radius: 0.5rem; border-color: var(--color-slate-300); z-index: 60; }
+.ts-dropdown .active { background: var(--color-brand-50); color: var(--color-brand-900); }
+[dir='rtl'] .ts-wrapper.single .ts-control { padding-inline-end: 2rem; }
+[dir='rtl'] .ts-wrapper.single .ts-control::after { right: auto; left: 15px; }

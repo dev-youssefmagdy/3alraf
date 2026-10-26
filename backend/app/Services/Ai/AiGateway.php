@@ -17,7 +17,7 @@ class AiGateway
     /**
      * @param  array<int,Contracts\AiTool>  $tools
      */
-    public function chat(AiModel $model, AiRequest $req, string $feature, array $tools = [], ?AiContext $ctx = null, ?array &$trace = null): AiResponse
+    public function chat(AiModel $model, AiRequest $req, string $feature, array $tools = [], ?AiContext $ctx = null, ?array &$trace = null, ?callable $onTool = null): AiResponse
     {
         $ctx ??= $this->contexts->forTenant();
         $this->authorize($model, $feature, $ctx, 'tokens');
@@ -25,8 +25,8 @@ class AiGateway
         $req->model = $model->model_id;
         $req->system = trim($ctx->systemPreamble()."\n".($req->system ?? ''));
 
-        return $this->measure($model, $feature, $ctx, function () use ($driver, $model, $req, $tools, $ctx, &$trace) {
-            return $tools ? $this->runner->run($driver, $model, $req, $tools, $ctx, $trace) : $driver->chat($req);
+        return $this->measure($model, $feature, $ctx, function () use ($driver, $model, $req, $tools, $ctx, &$trace, $onTool) {
+            return $tools ? $this->runner->run($driver, $model, $req, $tools, $ctx, $trace, onTool: $onTool) : $driver->chat($req);
         });
     }
 
@@ -56,6 +56,9 @@ class AiGateway
 
     private function authorize(AiModel $model, string $feature, AiContext $ctx, string $unit): void
     {
+        if (! $model->is_active || ! $model->provider?->is_active) {
+            throw AiException::disabled();   // deactivated model/provider: stale conversations, queued drafts and old ids must not reach the vendor
+        }
         if ($ctx->tenantId === null) {
             return;   // central (platform) calls: no tenant quota
         }

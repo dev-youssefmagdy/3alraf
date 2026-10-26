@@ -11,6 +11,7 @@ enum AiDriverType: string
     case ANTHROPIC = 'anthropic';
     case OPENAI = 'openai';
     case MOONSHOT = 'moonshot';
+    case OPENROUTER = 'openrouter';
     case CUSTOM_OPENAI = 'custom_openai';
 
     public function label(): string

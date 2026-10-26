@@ -23,6 +23,7 @@ return [
     'attributes' => 'Attributes',
     'categories' => 'Categories',
     'products' => 'Products',
+    'nav' => ['sales' => 'Sales', 'catalog_inventory' => 'Catalog & Inventory', 'marketing' => 'Marketing & Growth', 'content' => 'Content', 'finance' => 'Finance', 'logistics' => 'Shipping & Locations', 'team_access' => 'Team & Access', 'insights_settings' => 'Reports & Settings'],
     'catalog' => 'Catalog',
     'values' => 'Values',
     'variants' => 'Variants',

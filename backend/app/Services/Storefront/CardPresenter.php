@@ -27,6 +27,7 @@ class CardPresenter
             return $items;
         }
         \Illuminate\Database\Eloquent\Collection::make($items->all())->loadMissing('product');
+        $items->each->applyContent();
         $ids = $items->pluck('product_id')->all();
         $flash = FlashSaleItem::query()->with('flashSale')->whereIn('product_id', $ids)
             ->whereHas('flashSale', fn ($f) => $f->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now()))

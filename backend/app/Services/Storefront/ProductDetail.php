@@ -22,6 +22,7 @@ class ProductDetail
     {
         $product = Product::with(['images', 'variants.values', 'variants.images', 'brand', 'categories'])->where('slug', $slug)->where('is_active', true)->firstOrFail();
         $tp = TenantProduct::where('product_id', $product->id)->where('is_active', true)->firstOrFail();
+        $tp->setRelation('product', $product)->applyContent();   // tenant wording overlay (AI product editor)
 
         return [
             'product' => $product, 'tp' => $tp, 'summary' => $this->reviews->summary($product),

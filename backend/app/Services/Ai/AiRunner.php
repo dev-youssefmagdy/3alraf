@@ -17,7 +17,7 @@ class AiRunner
      * @param  array<int,AiTool>  $tools
      * @param  array<int,array>  $trace  filled with executed tool names (UI chips)
      */
-    public function run(AiDriver $driver, AiModel $model, AiRequest $req, array $tools, AiContext $ctx, ?array &$trace = null, int $tokenBudget = 60000, int $timeBudget = 90): AiResponse
+    public function run(AiDriver $driver, AiModel $model, AiRequest $req, array $tools, AiContext $ctx, ?array &$trace = null, int $tokenBudget = 60000, int $timeBudget = 90, ?callable $onTool = null): AiResponse
     {
         $trace = [];
         $byName = [];
@@ -45,6 +45,9 @@ class AiRunner
             $req->messages[] = ['role' => 'assistant', 'content' => $res->text, 'tool_calls' => $res->toolCalls];
             foreach ($res->toolCalls as $c) {
                 $trace[] = $c['name'];
+                if ($onTool) {
+                    $onTool($c['name']);
+                }
                 $req->messages[] = ['role' => 'tool', 'tool_call_id' => $c['id'], 'content' => $this->exec($byName[$c['name']] ?? null, $c['arguments'], $ctx)];
             }
         }
@@ -58,7 +61,7 @@ class AiRunner
             return json_encode(['error' => 'unknown_tool']);
         }
         try {
-            $out = json_encode(['data' => $tool->execute($args, $ctx)], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            $out = json_encode(['data' => $tool->execute($args, $ctx)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
         } catch (\Throwable $e) {
             return json_encode(['error' => 'tool_failed']);
         }

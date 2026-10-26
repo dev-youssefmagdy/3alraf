@@ -6,7 +6,7 @@
             action="{{ $editing ? route('central.ai.models.update', $model) : route('central.ai.models.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
-                <x-select name="ai_provider_id" required :label="__('ai.fields.provider')" :options="$providers" :value="$model->ai_provider_id" />
+                <x-select name="ai_provider_id" search required :label="__('ai.fields.provider')" :options="$providers" :value="$model->ai_provider_id" />
                 <x-select name="kind" required :label="__('ai.fields.kind')" :options="\App\Enums\AiModelKind::options()" :value="$model->kind?->value" />
                 <x-input name="model_id" required :label="__('ai.fields.model_id')" :value="$model->model_id" />
                 <x-input name="label" required :label="__('ai.fields.label')" :value="$model->label" />

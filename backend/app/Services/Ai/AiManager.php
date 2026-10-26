@@ -10,6 +10,7 @@ use App\Services\Ai\Contracts\AiDriver;
 use App\Services\Ai\Drivers\AnthropicDriver;
 use App\Services\Ai\Drivers\MoonshotDriver;
 use App\Services\Ai\Drivers\OpenAiDriver;
+use App\Services\Ai\Drivers\OpenRouterDriver;
 
 class AiManager
 {
@@ -18,6 +19,7 @@ class AiManager
         return match ($p->driver) {
             AiDriverType::ANTHROPIC => new AnthropicDriver($p),
             AiDriverType::OPENAI, AiDriverType::CUSTOM_OPENAI => new OpenAiDriver($p),
+            AiDriverType::OPENROUTER => new OpenRouterDriver($p),
             AiDriverType::MOONSHOT => new MoonshotDriver($p),
         };
     }
