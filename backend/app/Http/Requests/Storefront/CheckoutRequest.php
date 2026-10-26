@@ -48,6 +48,11 @@ class CheckoutRequest extends FormRequest
             'proof.max' => __('orders.proof_too_large', ['kb' => config('checkout.proof.max_kb')]), 'proof.uploaded' => __('orders.proof_invalid')];
     }
 
+    public function messages(): array
+    {
+        return ['address_id.required' => __('store.address_required'), 'address_id.exists' => __('store.address_required')];
+    }
+
     public function rules(): array
     {
         $tid = current_tenant()->id;
@@ -55,7 +60,7 @@ class CheckoutRequest extends FormRequest
         $quote = $this->isQuote(); // live totals: selections may be incomplete
 
         return [
-            'address_id' => ['nullable', 'integer', Rule::exists('customer_addresses', 'id')->where('customer_id', auth('web')->id() ?? 0)],
+            'address_id' => [$web ? 'required' : 'nullable', 'integer', Rule::exists('customer_addresses', 'id')->where('customer_id', auth('web')->id() ?? 0)],
             'name' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:120'],
             'phone' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:190'],

@@ -24,7 +24,7 @@ return [
     'subtotal' => 'Subtotal', 'discount' => 'Discount', 'shipping' => 'Shipping', 'tax' => 'Tax', 'cod_fee' => 'COD fee', 'payment_fee' => 'Payment fee', 'total' => 'Total', 'free' => 'Free',
     'checkout' => 'Checkout', 'proceed_checkout' => 'Proceed to checkout', 'flash_note' => 'Your cart includes flash-sale prices that may end soon.', 'item_unavailable' => 'Currently unavailable',
     'discount_code' => 'Discount code', 'apply_code' => 'Apply', 'code_applied' => 'Code applied.', 'order_summary' => 'Order summary',
-    'contact_info' => 'Contact details', 'shipping_address' => 'Shipping address', 'saved_addresses' => 'Your saved addresses', 'new_address' => 'New address',
+    'address_required' => 'Choose a delivery address, or add one.', 'edit_address' => 'Edit address', 'no_addresses_hint' => 'You have no saved addresses yet. Add one to continue.', 'set_default' => 'Set as my default address', 'edit' => 'Edit', 'contact_info' => 'Contact details', 'shipping_address' => 'Shipping address', 'saved_addresses' => 'Your saved addresses', 'new_address' => 'New address',
     'name' => 'Name', 'phone' => 'Phone', 'email' => 'Email', 'city' => 'City', 'address' => 'Full address', 'notes' => 'Notes', 'label' => 'Address label',
     'select_city' => 'Select city', 'select_city_hint' => 'Select a city to see shipping options.', 'shipping_method' => 'Shipping method', 'no_shipping' => 'No shipping available for this city.',
     'eta_days' => 'Delivery in :d days', 'payment_method' => 'Payment method', 'place_order' => 'Place order', 'cod_not_for_shipping' => 'Not available with this shipping',

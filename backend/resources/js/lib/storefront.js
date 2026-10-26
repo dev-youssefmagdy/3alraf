@@ -358,9 +358,27 @@ function init() {
         }
         $f.on('change', 'input[name=ship_opt]', function () { selectShipping(this.value); });
         $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => { toggleOfflineProof(); quote(); });
-        $f.on('change', 'input[name=address_id]', function () {
-            $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
-            loadShipping();
+        $f.on('change', 'input[name=address_id]', loadShipping);
+
+        // add / edit address modal (the form lives outside the checkout form)
+        const $modal = $('#address-modal'), $af = $modal.find('[data-address-form]');
+        const openAddress = (a) => {
+            $af[0].reset(); $af.find('.is-invalid').removeClass('is-invalid'); $af.find('.field-error').remove();
+            $af.find('[name=_method]').remove();
+            if (a) {
+                $af.attr('action', a.url).data('method', 'PUT');
+                $af.find('[name=label]').val(a.label || ''); $af.find('[name=name]').val(a.name); $af.find('[name=phone]').val(a.phone);
+                $af.find('[name=city_id]').val(String(a.city_id)); $af.find('[name=address]').val(a.address); $af.find('[name=is_default]').prop('checked', !!a.is_default);
+            } else { $af.attr('action', $af.data('store-url')).removeData('method'); }
+            $modal.find('h3').text($modal.find('[data-title-add]').data('title-' + (a ? 'edit' : 'add')));
+            $modal.removeClass('hidden').addClass('flex');
+        };
+        $f.on('click', '[data-address-add]', () => openAddress(null));
+        $f.on('click', '[data-address-edit]', function (e) { e.preventDefault(); openAddress($(this).data('address')); });
+        $af.on('ajax-form:success', (_e, res) => {
+            $modal.addClass('hidden').removeClass('flex');
+            const $list = $f.find('[data-address-list]');
+            $.get($list.data('list-url'), { select: res.data?.address?.id }).done((html) => { $list.html(html); loadShipping(); });
         });
         $f.on('change', '[name=city_id]', loadShipping);
         $f.on('change', '[data-packaging-select]', () => quote());
@@ -368,8 +386,6 @@ function init() {
         $f.on('keydown', '[name=discount_code]', (e) => { if (e.key === 'Enter') { e.preventDefault(); quote(true); } });
         $(document).on('cart:updated', (_e, c) => { if (!c.items.length) { location.href = sf.routes.cart; return; } renderLines(c); });
         if (cart.items.length) renderLines(cart);
-        // initial state (a saved address may be preselected)
-        $f.find('[data-new-address]').toggleClass('hidden', !!$f.find('input[name=address_id]:checked').val());
         loadShipping();
     });
 

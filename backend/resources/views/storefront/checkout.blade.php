@@ -5,26 +5,8 @@
         <div class="space-y-5">
             <x-card :title="__('store.shipping_address')">
                 <div class="space-y-3">
-                    @if ($addresses->isNotEmpty())
-                        <div class="space-y-2" data-address-list>
-                            <p class="text-sm font-semibold">{{ __('store.saved_addresses') }}</p>
-                            @foreach ($addresses as $a)
-                                <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">
-                                    <input type="radio" name="address_id" value="{{ $a->id }}" data-city="{{ $a->city_id }}" class="mt-1 accent-brand-600" @checked($loop->first)>
-                                    <span><b>{{ $a->label ?: $a->name }}</b> <span class="text-slate-500">{{ $a->phone }}</span><br>{{ $a->city?->name }} - {{ $a->address }}</span>
-                                </label>
-                            @endforeach
-                            <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-brand-600">
-                                <input type="radio" name="address_id" value="" class="accent-brand-600"> {{ __('store.new_address') }}</label>
-                        </div>
-                    @endif
-                    <div class="grid gap-3 sm:grid-cols-2 {{ $addresses->isNotEmpty() ? 'hidden' : '' }}" data-new-address>
-                        <x-input name="name" :label="__('store.name')" :value="$customer?->name" required />
-                        <x-input name="phone" type="tel" :label="__('store.phone')" :value="$customer?->phone" required />
-                        <x-input name="email" type="email" :label="__('store.email')" :value="$customer?->email" class="sm:col-span-2" />
-                        <x-select name="city_id" :label="__('store.city')" :options="$cities->mapWithKeys(fn ($c) => [$c->id => $c->name])->all()" :placeholder="__('store.select_city')" required class="sm:col-span-2" />
-                        <x-input name="address" :label="__('store.address')" required class="sm:col-span-2" />
-                    </div>
+                    <div class="space-y-2" data-address-list data-list-url="{{ route('storefront.checkout.addresses') }}">@include('storefront._checkout-addresses')</div>
+                    <button type="button" class="btn btn-secondary w-full" data-address-add>+ {{ __('store.add_address') }}</button>
                     <x-input name="notes" :label="__('store.notes')" />
                 </div>
             </x-card>
@@ -86,4 +68,22 @@
             <button type="submit" class="btn btn-primary w-full !py-3">{{ __('store.place_order') }}</button>
         </aside>
     </form>
+
+    {{-- Add / edit address (outside the checkout form: forms cannot nest) --}}
+    <x-modal id="address-modal" :title="__('store.add_address')" data-title-add="{{ __('store.add_address') }}" data-title-edit="{{ __('store.edit_address') }}">
+        <form data-ajax-form data-address-form data-validate-url="{{ route('storefront.account.addresses.validate') }}" data-store-url="{{ route('storefront.account.addresses.store') }}" action="{{ route('storefront.account.addresses.store') }}" method="POST" class="grid gap-3 sm:grid-cols-2" novalidate>
+            @csrf
+            <input type="hidden" name="inline" value="1">
+            <x-input name="label" :label="__('store.label')" class="sm:col-span-2" />
+            <x-input name="name" :label="__('store.name')" :value="$customer->name" required />
+            <x-input name="phone" type="tel" :label="__('store.phone')" :value="$customer->phone" required />
+            <x-select name="city_id" :label="__('store.city')" :options="$cities->mapWithKeys(fn ($c) => [$c->id => $c->name])->all()" :placeholder="__('store.select_city')" required class="sm:col-span-2" />
+            <x-input name="address" :label="__('store.address')" required class="sm:col-span-2" />
+            <label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="is_default" value="1" data-bool class="accent-brand-600"> {{ __('store.set_default') }}</label>
+            <div class="flex justify-end gap-2 sm:col-span-2">
+                <button type="button" class="btn btn-secondary" data-modal-close>{{ __('admin.cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('store.save') }}</button>
+            </div>
+        </form>
+    </x-modal>
 </x-layouts.storefront>

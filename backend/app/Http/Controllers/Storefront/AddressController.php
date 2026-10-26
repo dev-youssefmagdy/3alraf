@@ -25,14 +25,14 @@ class AddressController extends Controller
     {
         $a = $this->service->save(auth('web')->user(), $r->validated());
 
-        return $this->ok(__('admin.saved'), route('storefront.account.index'), ['address' => $a->toArray()]);
+        return $this->ok(__('admin.saved'), $r->boolean('inline') ? null : route('storefront.account.index'), ['address' => $a->toArray()]);
     }
 
     public function update(AddressRequest $r, int $id): JsonResponse
     {
         $a = $this->service->save(auth('web')->user(), $r->validated(), $id);
 
-        return $this->ok(__('admin.saved'), route('storefront.account.index'), ['address' => $a->toArray()]);
+        return $this->ok(__('admin.saved'), $r->boolean('inline') ? null : route('storefront.account.index'), ['address' => $a->toArray()]);
     }
 
     public function destroy(int $id): JsonResponse

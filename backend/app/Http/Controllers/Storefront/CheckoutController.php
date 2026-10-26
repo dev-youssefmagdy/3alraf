@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\DTOs\Orders\CheckoutData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Storefront\CheckoutRequest;
+use App\Services\CustomerAddressService;
 use App\Services\Orders\CartService;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
@@ -30,8 +31,17 @@ class CheckoutController extends Controller
             'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
             'methods' => PaymentMethod::available()->orderBy('sort_order')->get(),
             'codUpfront' => current_tenant()->codCollectsShippingUpfront(),
-            'addresses' => $customer ? $customer->addresses()->with('city')->get() : collect(),
+            'addresses' => $this->addresses->forCustomer($customer->id),
+            'selectedAddress' => null,
             'customer' => $customer,
+        ]);
+    }
+
+    /** Re-rendered address list (after the add/edit modal saved); `select` picks the address to tick. */
+    public function addresses(Request $r)
+    {
+        return view('storefront._checkout-addresses', [
+            'addresses' => $this->addresses->forCustomer(auth('web')->id()), 'selectedAddress' => $r->integer('select') ?: null,
         ]);
     }
 

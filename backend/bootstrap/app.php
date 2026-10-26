@@ -56,10 +56,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {
-                return route('storefront.affiliate.login', ['locale' => $request->segment(1)]);
+                return route('storefront.affiliate.login', ['tenant' => tenant_slug_from_host($request), 'locale' => $request->segment(1)]);
             }
 
-            return route('storefront.login', ['locale' => app()->getLocale()]);
+            return route('storefront.login', ['tenant' => tenant_slug_from_host($request), 'locale' => $request->segment(1) ?: app()->getLocale()]);
         });
         $middleware->redirectUsersTo(function (Request $request) {
             if ($request->is('admin') || $request->is('admin/*')) {
@@ -67,10 +67,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {
-                return route('storefront.affiliate.dashboard', ['locale' => $request->segment(1)]);
+                return route('storefront.affiliate.dashboard', ['tenant' => tenant_slug_from_host($request), 'locale' => $request->segment(1)]);
             }
 
-            return route('storefront.home', ['locale' => app()->getLocale()]);
+            return route('storefront.home', ['tenant' => tenant_slug_from_host($request), 'locale' => $request->segment(1) ?: app()->getLocale()]);
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {

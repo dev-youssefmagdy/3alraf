@@ -24,7 +24,7 @@ return [
     'subtotal' => 'المجموع الفرعي', 'discount' => 'الخصم', 'shipping' => 'الشحن', 'tax' => 'الضريبة', 'cod_fee' => 'رسوم الدفع عند الاستلام', 'payment_fee' => 'رسوم الدفع', 'total' => 'الإجمالي', 'free' => 'مجاني',
     'checkout' => 'إتمام الشراء', 'proceed_checkout' => 'متابعة إلى الدفع', 'flash_note' => 'تشمل سلتك أسعار عروض خاطفة قد تنتهي قريباً.', 'item_unavailable' => 'غير متاح حالياً',
     'discount_code' => 'كود الخصم', 'apply_code' => 'تطبيق', 'code_applied' => 'تم تطبيق الكود.', 'order_summary' => 'ملخص الطلب',
-    'contact_info' => 'بيانات التواصل', 'shipping_address' => 'عنوان الشحن', 'saved_addresses' => 'عناوينك المحفوظة', 'new_address' => 'عنوان جديد',
+    'address_required' => 'اختر عنوان التوصيل أو أضف عنوانًا جديدًا.', 'edit_address' => 'تعديل العنوان', 'no_addresses_hint' => 'لا توجد عناوين محفوظة بعد. أضف عنوانًا للمتابعة.', 'set_default' => 'تعيين كعنوان افتراضي', 'edit' => 'تعديل', 'contact_info' => 'بيانات التواصل', 'shipping_address' => 'عنوان الشحن', 'saved_addresses' => 'عناوينك المحفوظة', 'new_address' => 'عنوان جديد',
     'name' => 'الاسم', 'phone' => 'رقم الهاتف', 'email' => 'البريد الإلكتروني', 'city' => 'المدينة', 'address' => 'العنوان بالتفصيل', 'notes' => 'ملاحظات', 'label' => 'اسم العنوان',
     'select_city' => 'اختر المدينة', 'select_city_hint' => 'اختر المدينة لعرض خيارات الشحن.', 'shipping_method' => 'طريقة الشحن', 'no_shipping' => 'لا يوجد شحن متاح لهذه المدينة.',
     'eta_days' => 'التوصيل خلال :d يوم', 'payment_method' => 'طريقة الدفع', 'place_order' => 'تأكيد الطلب', 'cod_not_for_shipping' => 'غير متاح مع هذا الشحن',

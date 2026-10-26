@@ -47,10 +47,14 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::put('cart/items/{item}', [CartController::class, 'update'])->middleware('throttle:cart')->whereNumber('item')->name('cart.update');
     Route::delete('cart/items/{item}', [CartController::class, 'remove'])->middleware('throttle:cart')->whereNumber('item')->name('cart.remove');
     Route::post('cart/quote', [CartController::class, 'quote'])->middleware('throttle:quote')->name('cart.quote');
-    Route::get('checkout', [CheckoutController::class, 'create'])->name('checkout.create');
-    Route::get('checkout/shipping', [CheckoutController::class, 'shipping'])->name('checkout.shipping');
-    Route::post('checkout/validate', [CheckoutController::class, 'validateForm'])->middleware('throttle:checkout-validate')->name('checkout.validate');
-    Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
+    // Checkout needs a signed-in customer (guests are sent to login, then back here); the cart itself stays open to guests.
+    Route::middleware('auth:web')->group(function () {
+        Route::get('checkout', [CheckoutController::class, 'create'])->name('checkout.create');
+        Route::get('checkout/addresses', [CheckoutController::class, 'addresses'])->name('checkout.addresses');
+        Route::get('checkout/shipping', [CheckoutController::class, 'shipping'])->name('checkout.shipping');
+        Route::post('checkout/validate', [CheckoutController::class, 'validateForm'])->middleware('throttle:checkout-validate')->name('checkout.validate');
+        Route::post('checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
+    });
     Route::get('order/{token}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('order/{token}/invoice.pdf', [OrderController::class, 'invoicePdf'])->middleware('throttle:upload')->name('orders.invoice.pdf');
     Route::post('order/{token}/proof', [OrderController::class, 'uploadProof'])->middleware(['throttle:upload', 'throttle:proof-reupload'])->name('orders.proof');
