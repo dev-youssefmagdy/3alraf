@@ -94,7 +94,8 @@
             @endforeach
         </section>
 
-        @if ($mine && $order->status === S::DELIVERED)
+        {{-- Customer return requests hidden for now; flip to true to re-enable. --}}
+        @if (false && $mine && $order->status === S::DELIVERED)
             <section class="rounded-2xl bg-white p-5 ring-1 ring-slate-100">
                 <h2 class="mb-3 font-extrabold">{{ __('store.request_return') }}</h2>
                 <form data-ajax-form action="{{ route('storefront.orders.return', $order->public_token) }}" method="POST" class="space-y-3 text-sm" novalidate>
