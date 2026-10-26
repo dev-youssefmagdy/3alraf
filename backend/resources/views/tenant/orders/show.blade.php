@@ -135,6 +135,7 @@
                     @endforeach
                 </ol>
             </x-card>
+            @isset($activities)@include('tenant._activity', ['activities' => $activities])@endisset
         </div>
     </div>
 </x-layouts.admin>

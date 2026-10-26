@@ -2,17 +2,23 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\FreesUniqueOnDelete;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Models\Concerns\RevokesSessionsOnLockout;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class Customer extends Authenticatable
 {
-    use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes, \App\Models\Concerns\RevokesSessionsOnLockout;
+    // Audited MUST boot before RevokesSessionsOnLockout (its `updated` hook re-saves the row, which would hide the change from the audit log) (alphabetical order keeps it so).
+    use Audited, BelongsToTenant, FreesUniqueOnDelete, HasApiTokens, HasRoles, Notifiable, RevokesSessionsOnLockout, SoftDeletes;
+
+    /** Audit: PII shown masked only. */
+    protected array $auditMasked = ['name', 'email', 'phone'];
 
     protected array $freedOnDelete = ['email', 'google_id'];
 

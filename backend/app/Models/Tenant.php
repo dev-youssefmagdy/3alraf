@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tenant extends Model
 {
-    use SoftDeletes;
+    use Audited, SoftDeletes;
+
+    /** Encrypted settings may hold gateway/mail secrets: never written to the audit log. */
+    protected array $auditExcept = ['settings'];
 
     protected $fillable = ['slug', 'name', 'country', 'currency_code', 'currency_symbol', 'currency_rate',
         'default_locale', 'locales', 'timezone', 'is_active', 'settings'];

@@ -18,5 +18,6 @@
                 </tbody>
             </table>
         </x-card>
+        @isset($activities)<div class="lg:col-span-3">@include('tenant._activity', ['activities' => $activities])</div>@endisset
     </div>
 </x-layouts.admin>

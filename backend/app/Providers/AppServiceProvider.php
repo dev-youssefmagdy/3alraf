@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Listeners\NotifyCustomerOfOrder;
+use App\Models\Tenant;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -47,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('api|'.self::tenantKey($r).'|'.($user ? $user::class.':'.$user->getAuthIdentifier() : 'ip:'.$r->ip()));
         });
 
+        Event::subscribe(NotifyCustomerOfOrder::class);
+        require base_path('routes/channels.php');
+
         // Super admins bypass permission checks within their guard.
         Gate::before(fn ($user) => method_exists($user, 'hasRole') && $user->hasRole('super-admin') ? true : null);
     }
@@ -67,7 +73,7 @@ class AppServiceProvider extends ServiceProvider
             $r->is('api/*') && $r->hasHeader('X-Tenant') => strtolower(trim((string) $r->header('X-Tenant'))),
             default => null,
         };
-        $id = $slug !== null && $slug !== '' ? \App\Models\Tenant::query()->where('slug', $slug)->value('id') : null;
+        $id = $slug !== null && $slug !== '' ? Tenant::query()->where('slug', $slug)->value('id') : null;
         $key = $id ? 't'.$id : 'central';
         $r->attributes->set('limiter_tenant', $key);
 

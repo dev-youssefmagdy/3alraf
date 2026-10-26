@@ -39,6 +39,7 @@
             ['tenant.suppliers.index', 'ops.suppliers', 'M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 10a4 4 0 100-8 4 4 0 000 8z', 'suppliers.view'],
             ['tenant.shipping-companies.index', 'ops.shipping_companies', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'shipping.view'],
             ['tenant.payment-methods.index', 'ops.payment_methods', 'M3 7h18v10H3zM3 11h18', 'payment_methods.view'],
+            ['tenant.notification-settings.edit', 'notifications.settings.title', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0', 'settings.view'],
             ['tenant.cod-fees.edit', 'ops.cod_fees', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'settings.view'],
             ['tenant.banners.index', 'ops.banners', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5', 'banners.view'],
             ['tenant.expense-categories.index', 'ops.expense_categories', 'M4 6h16M4 12h16M4 18h16', 'expense_categories.view'],
@@ -92,17 +93,22 @@
                         <a href="{{ route($guard.'.locale', $l->code) }}" class="text-xs font-semibold uppercase text-slate-500 hover:text-brand-600">{{ $l->native_name }}</a>
                     @endforeach
 
-                    {{-- notification bell: tenant admins poll every 15s (resources/js/lib/orders-form.js) --}}
+                    {{-- notification bell: polls (60s when realtime is on, else 15s) + Echo push (resources/js/lib/orders-form.js) --}}
                     <div class="relative">
                         <button type="button" data-dropdown-toggle="notif-menu" class="relative rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="{{ __('admin.notifications') }}">
                             <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
                             <span id="notif-count" class="absolute -end-0.5 -top-0.5 hidden min-w-4 rounded-full bg-brand-600 px-1 text-center text-[10px] font-bold leading-4 text-white"></span>
                         </button>
                         <div id="notif-menu" data-dropdown class="absolute end-0 mt-2 hidden w-80 rounded-xl border border-slate-200 bg-white shadow-lg"
-                            @unless ($isCentral) data-url="{{ route('tenant.notifications.index') }}" data-read-url="{{ route('tenant.notifications.read', '__ID__') }}" data-read-all-url="{{ route('tenant.notifications.read-all') }}" @endunless
+                            data-url="{{ route($guard.'.notifications.index') }}" data-read-url="{{ route($guard.'.notifications.read', '__ID__') }}" data-read-all-url="{{ route($guard.'.notifications.read-all') }}"
+                            @if (config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key'))
+                                data-channel="App.Models.{{ $isCentral ? 'CentralAdmin' : 'TenantAdmin' }}.{{ $user->id }}" data-auth-url="{{ route($guard.'.broadcasting.auth') }}"
+                                data-ws-key="{{ config('broadcasting.connections.reverb.key') }}" data-ws-host="{{ config('broadcasting.connections.reverb.options.host') }}"
+                                data-ws-port="{{ config('broadcasting.connections.reverb.options.port') }}" data-ws-scheme="{{ config('broadcasting.connections.reverb.options.scheme') }}"
+                            @endif
                             data-empty="{{ __('admin.no_notifications') }}">
                             <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-sm font-semibold">{{ __('admin.notifications') }}
-                                @unless ($isCentral)<a id="notif-read-all" href="#" class="text-xs font-normal text-brand-600">{{ __('orders.mark_all_read') }}</a>@endunless
+                                <a id="notif-read-all" href="#" class="text-xs font-normal text-brand-600">{{ __('orders.mark_all_read') }}</a>
                             </div>
                             <div id="notif-list" class="max-h-80 overflow-y-auto"><p class="p-3 text-sm text-slate-500">{{ __('admin.no_notifications') }}</p></div>
                         </div>

@@ -7,11 +7,14 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Enums\StockMovementType;
+use App\Events\OrderReturnUpdated;
 use App\Events\OrderStatusChanged;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Repositories\Contracts\OrderReturnRepositoryInterface;
+use App\Services\Affiliates\AffiliateCommissionService;
 use App\Services\Payments\RefundService;
 use App\Services\Stock\StockLedger;
 use App\Support\Money;
@@ -33,7 +36,7 @@ class ReturnService
      * discount_share = round(line_discount × (A+qty)/ordered) − round(line_discount × A/ordered), A = units already returned/pending
      * (default returned_qty), so partial returns sum exactly to line_subtotal − line_discount.
      */
-    public function lineValue(\App\Models\OrderItem $item, int $qty, ?int $already = null): string
+    public function lineValue(OrderItem $item, int $qty, ?int $already = null): string
     {
         $already ??= (int) $item->returned_qty;
         $at = fn (int $n) => Money::round(bcdiv(bcmul((string) $item->line_discount, (string) $n, 8), (string) $item->quantity, 8));
@@ -77,6 +80,7 @@ class ReturnService
             ]);
             $ret->update(['number' => sprintf('RET-%06d', $ret->id)]);
             $ret->items()->createMany($rows);
+            event(new OrderReturnUpdated($ret, 'requested'));
 
             return $ret;
         });
@@ -116,11 +120,13 @@ class ReturnService
                 DB::afterCommit(fn () => event(new OrderStatusChanged($order, $from, OrderStatus::RETURNED)));
             } else {
                 // partial return: recomputed from the CUMULATIVE returned value (CALCULATIONS.md §Affiliate commission)
-                app(\App\Services\Affiliates\AffiliateCommissionService::class)->recalculateAfterReturns($order);
+                app(AffiliateCommissionService::class)->recalculateAfterReturns($order);
             }
 
-            app(\App\Services\Affiliates\AffiliateCommissionService::class)->syncOrder($order->refresh());
+            app(AffiliateCommissionService::class)->syncOrder($order->refresh());
             $this->profit->recalculate($order->refresh()); // returns reduce orders.net_profit
+
+            event(new OrderReturnUpdated($ret, 'approved'));
 
             return $ret->refresh();
         });
@@ -133,6 +139,7 @@ class ReturnService
         return DB::transaction(function () use ($ret) {
             $ret = $this->lockFresh($ret, ReturnStatus::REQUESTED);
             $ret->update(['status' => ReturnStatus::REJECTED]);
+            event(new OrderReturnUpdated($ret, 'rejected'));
 
             return $ret;
         });
@@ -200,6 +207,7 @@ class ReturnService
                 'payment_status' => Money::cmp($refunded, (string) $order->paid_amount) >= 0 ? PaymentStatus::REFUNDED : PaymentStatus::PARTIALLY_REFUNDED,
             ]);
             $ret->update(['status' => ReturnStatus::REFUNDED, 'refund_amount' => $amount, 'refunded_at' => now()]);
+            event(new OrderReturnUpdated($ret, 'refunded'));
 
             return $ret->refresh();
         });

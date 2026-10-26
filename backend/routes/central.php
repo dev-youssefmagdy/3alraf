@@ -1,25 +1,29 @@
 <?php
 
+use App\Http\Controllers\Access\AdminUserController;
+use App\Http\Controllers\Access\AuditLogController;
+use App\Http\Controllers\Access\RoleController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\Central\AttributeController;
 use App\Http\Controllers\Central\BrandController;
-use App\Http\Controllers\Central\TagController;
 use App\Http\Controllers\Central\CategoryController;
 use App\Http\Controllers\Central\DashboardController;
 use App\Http\Controllers\Central\LandingController;
-use App\Http\Controllers\Central\ProductController;
 use App\Http\Controllers\Central\LanguageController;
-use App\Http\Controllers\Central\TenantController;
+use App\Http\Controllers\Central\ProductController;
 use App\Http\Controllers\Central\ReportController;
-use App\Http\Controllers\Access\AdminUserController;
-use App\Http\Controllers\Access\RoleController;
+use App\Http\Controllers\Central\TagController;
+use App\Http\Controllers\Central\TenantController;
+use App\Http\Controllers\Tenant\NotificationController;
+use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('central.landing');
 Route::get('choose/{slug}', [LandingController::class, 'choose'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('central.choose');
 
-Route::get('auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('central.google.callback');
+Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('central.google.callback');
 
 Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(function () {
     Route::middleware('guest:central')->group(function () {
@@ -44,8 +48,13 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
-        Route::get('audit', [\App\Http\Controllers\Access\AuditLogController::class, 'index'])->name('audit.index');
-        Route::get('audit/datatable', [\App\Http\Controllers\Access\AuditLogController::class, 'datatable'])->name('audit.datatable');
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
+
+        Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('audit/datatable', [AuditLogController::class, 'datatable'])->name('audit.datatable');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/{report}', [ReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');

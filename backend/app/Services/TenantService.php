@@ -3,8 +3,13 @@
 namespace App\Services;
 
 use App\DTOs\TenantData;
+use App\Models\AffiliateTier;
+use App\Models\Branch;
+use App\Models\CentralAdmin;
+use App\Models\PaymentMethod;
 use App\Models\Tenant;
 use App\Models\TenantAdmin;
+use App\Notifications\TenantNotification;
 use App\Repositories\Contracts\TenantRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -17,7 +22,7 @@ class TenantService
     {
         return DB::transaction(function () use ($dto) {
             $tenant = $this->tenants->create($dto->toArray());
-            \App\Models\PaymentMethod::ensureDefaultCod($tenant->id);
+            PaymentMethod::ensureDefaultCod($tenant->id);
             $this->provisionDefaults($tenant);
             if ($dto->adminEmail && $dto->adminPassword) {
                 $admin = TenantAdmin::withoutGlobalScopes()->create([
@@ -29,23 +34,40 @@ class TenantService
                 }
             }
 
+            DB::afterCommit(fn () => $this->notifyCentral($tenant, 'tenant_created'));
+
             return $tenant;
         });
+    }
+
+    /** Central admins allowed to view tenants get a bell + realtime notification (and the actor is skipped). */
+    private function notifyCentral(Tenant $tenant, string $kind): void
+    {
+        $actor = auth('central')->id();
+        CentralAdmin::where('is_active', true)->get()
+            ->filter(fn ($a) => $a->getKey() !== $actor && $a->can('tenants.view'))
+            ->each(fn ($a) => $a->notify(new TenantNotification($tenant, $kind)));
     }
 
     /** Defaults every new store needs to be operable: a default branch (stock/orders need one) and the affiliate commission tiers (0 / 1000 / 5000 -> 5% / 7% / 10%). */
     private function provisionDefaults(Tenant $tenant): void
     {
-        \App\Models\Branch::withoutGlobalScopes()->firstOrCreate(['tenant_id' => $tenant->id, 'is_default' => true],
+        Branch::withoutGlobalScopes()->firstOrCreate(['tenant_id' => $tenant->id, 'is_default' => true],
             ['name' => ['ar' => 'الفرع الرئيسي', 'en' => 'Main branch'], 'is_active' => true]);
         foreach ([['Starter', 0, 5], ['Silver', 1000, 7], ['Gold', 5000, 10]] as [$name, $min, $pct]) {
-            \App\Models\AffiliateTier::withoutGlobalScopes()->firstOrCreate(['tenant_id' => $tenant->id, 'min_sales' => $min], ['name' => $name, 'percent' => $pct]);
+            AffiliateTier::withoutGlobalScopes()->firstOrCreate(['tenant_id' => $tenant->id, 'min_sales' => $min], ['name' => $name, 'percent' => $pct]);
         }
     }
 
     public function update(Tenant $tenant, TenantData $dto): Tenant
     {
-        return $this->tenants->update($tenant, $dto->toArray());
+        $was = (bool) $tenant->is_active;
+        $tenant = $this->tenants->update($tenant, $dto->toArray());
+        if ($was !== (bool) $tenant->is_active) {
+            $this->notifyCentral($tenant, 'tenant_status');
+        }
+
+        return $tenant;
     }
 
     public function delete(Tenant $tenant): void

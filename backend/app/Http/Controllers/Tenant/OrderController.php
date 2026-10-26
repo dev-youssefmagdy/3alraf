@@ -10,8 +10,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\OrderReturnRequest;
 use App\Http\Requests\Tenant\OrderStatusRequest;
 use App\Models\Branch;
+use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Services\ActivityTimeline;
+use App\Services\Orders\InvoicePdf;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderStatusService;
 use App\Services\Orders\ReturnService;
@@ -53,10 +56,12 @@ class OrderController extends Controller implements HasMiddleware
 
         // other orders (any status) of this tenant that carry the very same proof file: a classic double-spend of one transfer receipt
         $sharedProof = $order->payment_proof_hash
-            ? \App\Models\Order::query()->where('payment_proof_hash', $order->payment_proof_hash)->where('id', '!=', $order->id)->orderBy('id')->limit(10)->get(['id', 'number', 'status', 'proof_status'])
+            ? Order::query()->where('payment_proof_hash', $order->payment_proof_hash)->where('id', '!=', $order->id)->orderBy('id')->limit(10)->get(['id', 'number', 'status', 'proof_status'])
             : collect();
 
-        return view('tenant.orders.show', ['sharedProof' => $sharedProof, 'order' => $order, 'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all()]);
+        $activities = auth('tenant')->user()->can('audit.view') ? app(ActivityTimeline::class)->forOrder($order) : null;
+
+        return view('tenant.orders.show', ['activities' => $activities, 'sharedProof' => $sharedProof, 'order' => $order, 'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all()]);
     }
 
     public function invoice(int $id)
@@ -64,7 +69,7 @@ class OrderController extends Controller implements HasMiddleware
         return view('tenant.orders.invoice', ['order' => $this->find($id), 'public' => false]);
     }
 
-    public function invoicePdf(int $id, \App\Services\Orders\InvoicePdf $pdf)
+    public function invoicePdf(int $id, InvoicePdf $pdf)
     {
         $order = $this->find($id);
 

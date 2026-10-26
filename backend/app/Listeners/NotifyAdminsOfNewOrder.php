@@ -17,6 +17,6 @@ class NotifyAdminsOfNewOrder implements ShouldQueue
 
     public function handle(OrderPlaced $event): void
     {
-        $this->notify($event->order, new OrderNotification($event->order, 'new_order'));
+        $this->notify($event->order, new OrderNotification($event->order, 'new_order', [], $event->actorId));
     }
 }

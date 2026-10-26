@@ -17,6 +17,6 @@ class NotifyAdminsOfStatusChange implements ShouldQueue
 
     public function handle(OrderStatusChanged $event): void
     {
-        $this->notify($event->order, new OrderNotification($event->order, 'status_changed', ['from' => $event->from?->value, 'to' => $event->to->value]));
+        $this->notify($event->order, new OrderNotification($event->order, 'status_changed', ['from' => $event->from?->value, 'to' => $event->to->value], $event->actorId));
     }
 }

@@ -41,7 +41,7 @@ return [
         'stock_transfers' => ['view', 'create', 'edit', 'delete', 'send', 'receive'],
         'stock_adjustments' => ['view', 'create'],
         // Phase 4 orders
-        'orders' => ['view', 'edit', 'payments'],
+        'orders' => ['view', 'edit', 'payments', 'email_notifications'],
         'returns' => ['view', 'create', 'approve', 'refund'],
         'customers' => ['view'],
         'discount_codes' => $crud,

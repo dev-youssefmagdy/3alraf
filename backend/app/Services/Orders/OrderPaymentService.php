@@ -9,11 +9,11 @@ use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Enums\ProofStatus;
 use App\Events\OrderPaymentProofUploaded;
+use App\Events\OrderPaymentUpdated;
 use App\Exceptions\GatewayException;
 use App\Exceptions\GatewayNotImplementedException;
 use App\Exceptions\PaymentMismatchException;
 use App\Models\Order;
-use App\Models\PaymentEvent;
 use App\Models\PaymentMethod;
 use App\Services\Payments\PaymentGatewayFactory;
 use App\Support\Money;
@@ -114,6 +114,7 @@ class OrderPaymentService
             'payment_status' => $order->prepay_method_id ? PaymentStatus::PARTIALLY_PAID : PaymentStatus::PAID,
         ]);
         $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.proof_approved_note'), 'user_id' => auth('tenant')->id()]);
+        event(new OrderPaymentUpdated($order, 'proof_approved'));
 
         return $order->refresh();
     }
@@ -123,6 +124,7 @@ class OrderPaymentService
         $this->ensureReview($order);
         $order->update(['proof_status' => ProofStatus::REJECTED, 'payment_status' => PaymentStatus::UNPAID]);
         $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => trim(__('orders.proof_rejected_note').' '.$reason), 'user_id' => auth('tenant')->id()]);
+        event(new OrderPaymentUpdated($order, 'proof_rejected'));
 
         return $order;
     }
@@ -233,6 +235,7 @@ class OrderPaymentService
             } else {
                 $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.gateway_paid_note')]);
             }
+            event(new OrderPaymentUpdated($order, 'paid'));
         } elseif (in_array($result->status, ['failed', 'cancelled'], true) && ! $alreadyPaid) {
             $order->update(['payment_status' => PaymentStatus::FAILED]);
         }

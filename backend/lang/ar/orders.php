@@ -40,6 +40,8 @@ return [
     'upload_proof' => 'رفع إثبات التحويل',
     'addresses' => 'العناوين',
     'mark_all_read' => 'تحديد الكل كمقروء',
+    'activity' => 'سجل النشاط',
+    'activity_system' => 'النظام / العميل',
     'cart_empty' => 'سلتك فارغة.',
     'item_unavailable' => 'أحد المنتجات في سلتك لم يعد متاحاً.',
     'shipping_unavailable' => 'الشحن غير متاح لهذه المدينة مع الشركة المختارة.',

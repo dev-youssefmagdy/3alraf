@@ -40,6 +40,8 @@ return [
     'upload_proof' => 'Upload transfer proof',
     'addresses' => 'Addresses',
     'mark_all_read' => 'Mark all read',
+    'activity' => 'Activity log',
+    'activity_system' => 'System / customer',
     'cart_empty' => 'Your cart is empty.',
     'item_unavailable' => 'An item in your cart is no longer available.',
     'shipping_unavailable' => 'Shipping is not available to this city with the chosen company.',

@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\ProofStatus;
 use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -14,7 +15,7 @@ class Order extends Model
 {
     use Audited, BelongsToTenant, SoftDeletes;
 
-    protected $fillable = ['number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'payment_proof_hash', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'packaging_option_id', 'packaging_name', 'packaging_fee', 'packaging_cost', 'packaging_tax', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
+    protected $fillable = ['locale', 'number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'payment_proof_hash', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'packaging_option_id', 'packaging_name', 'packaging_fee', 'packaging_cost', 'packaging_tax', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
 
     /** Kept out of the audit log: guest-access secret, uploaded proof path and customer PII (customer_id stays for traceability). */
     protected array $auditExcept = ['public_token', 'payment_proof', 'payment_proof_hash', 'proof_guard', 'customer_name', 'customer_phone', 'customer_email', 'address'];
@@ -39,7 +40,7 @@ class Order extends Model
     /** Total VAT shown to customers: goods tax + packaging tax. */
     public function taxTotal(): string
     {
-        return \App\Support\Money::add((string) $this->tax, (string) $this->packaging_tax);
+        return Money::add((string) $this->tax, (string) $this->packaging_tax);
     }
 
     /** Snapshot label of the COD fee line in the current locale. */
@@ -53,14 +54,14 @@ class Order extends Model
     /** Prices included VAT: tax > 0 and it was NOT added on top of the goods (CALCULATIONS.md step 3). */
     public function taxIncluded(): bool
     {
-        $allTax = \App\Support\Money::add((string) $this->tax, (string) $this->packaging_tax);
-        if (\App\Support\Money::cmp($allTax, '0') <= 0) { // goods tax may be 0 (fully discounted) while the packaging still carries VAT
+        $allTax = Money::add((string) $this->tax, (string) $this->packaging_tax);
+        if (Money::cmp($allTax, '0') <= 0) { // goods tax may be 0 (fully discounted) while the packaging still carries VAT
             return false;
         }
-        $goods = \App\Support\Money::sub((string) $this->subtotal, (string) $this->discount);
-        $added = \App\Support\Money::sub((string) $this->total, \App\Support\Money::add($goods, (string) $this->shipping_net, (string) $this->payment_fee_charged, (string) $this->cod_fee, (string) $this->packaging_fee));
+        $goods = Money::sub((string) $this->subtotal, (string) $this->discount);
+        $added = Money::sub((string) $this->total, Money::add($goods, (string) $this->shipping_net, (string) $this->payment_fee_charged, (string) $this->cod_fee, (string) $this->packaging_fee));
 
-        return \App\Support\Money::cmp($added, $allTax) < 0;
+        return Money::cmp($added, $allTax) < 0;
     }
 
     /** Packaging income excl. VAT (inclusive orders extract the VAT inside the fee). */
@@ -68,33 +69,33 @@ class Order extends Model
     {
         $fee = (string) $this->packaging_fee;
 
-        return $this->taxIncluded() ? \App\Support\Money::sub($fee, (string) $this->packaging_tax) : \App\Support\Money::round($fee);
+        return $this->taxIncluded() ? Money::sub($fee, (string) $this->packaging_tax) : Money::round($fee);
     }
 
     /** revenue_goods = subtotal − discount − tax_in_goods (VAT is never revenue). */
     public function revenueGoods(): string
     {
-        $goods = \App\Support\Money::sub((string) $this->subtotal, (string) $this->discount);
+        $goods = Money::sub((string) $this->subtotal, (string) $this->discount);
 
-        return $this->taxIncluded() ? \App\Support\Money::sub($goods, (string) $this->tax) : $goods;
+        return $this->taxIncluded() ? Money::sub($goods, (string) $this->tax) : $goods;
     }
 
     /** Cumulative tax portion of returned goods value $value given $prior already-counted returned value: round(tax×(P+v)/B) − round(tax×P/B). */
     public function returnTax(string $value, string $prior = '0'): string
     {
-        $base = \App\Support\Money::sub((string) $this->subtotal, (string) $this->discount);
-        if (\App\Support\Money::cmp((string) $this->tax, '0') <= 0 || \App\Support\Money::cmp($base, '0') <= 0) {
+        $base = Money::sub((string) $this->subtotal, (string) $this->discount);
+        if (Money::cmp((string) $this->tax, '0') <= 0 || Money::cmp($base, '0') <= 0) {
             return '0.00';
         }
-        $at = fn (string $v) => \App\Support\Money::round(bcdiv(bcmul((string) $this->tax, $v, 8), $base, 8));
+        $at = fn (string $v) => Money::round(bcdiv(bcmul((string) $this->tax, $v, 8), $base, 8));
 
-        return \App\Support\Money::sub($at(\App\Support\Money::add($prior, $value)), $at($prior));
+        return Money::sub($at(Money::add($prior, $value)), $at($prior));
     }
 
     /** Returned value net of VAT: inclusive orders remove the (cumulative) VAT inside it; exclusive orders return it unchanged. */
     public function returnNetOfTax(string $value, string $prior = '0'): string
     {
-        return $this->taxIncluded() ? \App\Support\Money::sub($value, $this->returnTax($value, $prior)) : \App\Support\Money::round($value);
+        return $this->taxIncluded() ? Money::sub($value, $this->returnTax($value, $prior)) : Money::round($value);
     }
 
     public function items()
@@ -166,6 +167,6 @@ class Order extends Model
 
     public function due(): string
     {
-        return \App\Support\Money::sub((string) $this->total, (string) $this->paid_amount);
+        return Money::sub((string) $this->total, (string) $this->paid_amount);
     }
 }

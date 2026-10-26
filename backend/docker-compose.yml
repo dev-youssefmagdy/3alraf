@@ -22,6 +22,14 @@ services:
     command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--backoff=10", "--max-time=3600", "--memory=192"]
     stop_grace_period: 60s
 
+  # Real-time admin notifications (Pusher-protocol WebSocket). Needs REVERB_APP_ID/KEY/SECRET in .env; BROADCAST_CONNECTION=reverb.
+  reverb:
+    build: { context: ./deploy/reverb }
+    image: 3alraf-reverb:latest
+    env_file: .env
+    restart: unless-stopped
+    expose: ["8080"]
+
   scheduler:
     <<: *app
     command: ["php", "artisan", "schedule:work"]

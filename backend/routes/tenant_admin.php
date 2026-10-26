@@ -1,38 +1,44 @@
 <?php
 
+use App\Http\Controllers\Access\AdminUserController;
+use App\Http\Controllers\Access\AuditLogController;
+use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\Tenant\AffiliateController;
+use App\Http\Controllers\Tenant\AffiliatePayoutController;
+use App\Http\Controllers\Tenant\AffiliateTierController;
 use App\Http\Controllers\Tenant\BannerController;
 use App\Http\Controllers\Tenant\BranchController;
+use App\Http\Controllers\Tenant\BundleController;
 use App\Http\Controllers\Tenant\CatalogController;
 use App\Http\Controllers\Tenant\CityController;
+use App\Http\Controllers\Tenant\CodFeeSettingsController;
+use App\Http\Controllers\Tenant\CustomerController;
+use App\Http\Controllers\Tenant\CustomPageController;
+use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\DiscountCodeController;
 use App\Http\Controllers\Tenant\ExpenseCategoryController;
 use App\Http\Controllers\Tenant\ExpenseController;
+use App\Http\Controllers\Tenant\FlashSaleController;
+use App\Http\Controllers\Tenant\NotificationController;
+use App\Http\Controllers\Tenant\NotificationSettingsController;
+use App\Http\Controllers\Tenant\OrderController;
+use App\Http\Controllers\Tenant\PackagingOptionController;
 use App\Http\Controllers\Tenant\PaymentMethodController;
-use App\Http\Controllers\Tenant\PurchaseController;
 use App\Http\Controllers\Tenant\PrivateFileController;
+use App\Http\Controllers\Tenant\ProductListController;
+use App\Http\Controllers\Tenant\PurchaseController;
+use App\Http\Controllers\Tenant\ReportController;
+use App\Http\Controllers\Tenant\ReturnController;
+use App\Http\Controllers\Tenant\ReviewController;
 use App\Http\Controllers\Tenant\ShippingCompanyController;
+use App\Http\Controllers\Tenant\StaticPageController;
 use App\Http\Controllers\Tenant\StockAdjustmentController;
 use App\Http\Controllers\Tenant\StockController;
 use App\Http\Controllers\Tenant\StockTransferController;
 use App\Http\Controllers\Tenant\SupplierController;
-use App\Http\Controllers\Tenant\CustomerController;
-use App\Http\Controllers\Tenant\DiscountCodeController;
-use App\Http\Controllers\Tenant\FlashSaleController;
-use App\Http\Controllers\Tenant\NotificationController;
-use App\Http\Controllers\Tenant\OrderController;
-use App\Http\Controllers\Tenant\ReturnController;
-use App\Http\Controllers\Tenant\DashboardController;
-use App\Http\Controllers\Tenant\AffiliateController;
-use App\Http\Controllers\Tenant\AffiliatePayoutController;
-use App\Http\Controllers\Tenant\AffiliateTierController;
-use App\Http\Controllers\Tenant\CustomPageController;
-use App\Http\Controllers\Tenant\ProductListController;
-use App\Http\Controllers\Tenant\ReviewController;
-use App\Http\Controllers\Tenant\StaticPageController;
-use App\Http\Controllers\Tenant\ReportController;
-use App\Http\Controllers\Access\AdminUserController;
-use App\Http\Controllers\Access\RoleController;
+use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(function () {
@@ -66,7 +72,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             'cities' => CityController::class, 'branches' => BranchController::class, 'suppliers' => SupplierController::class,
             'shipping-companies' => ShippingCompanyController::class, 'payment-methods' => PaymentMethodController::class,
             'banners' => BannerController::class, 'expense-categories' => ExpenseCategoryController::class, 'expenses' => ExpenseController::class,
-            'discount-codes' => DiscountCodeController::class, 'flash-sales' => FlashSaleController::class, 'bundles' => \App\Http\Controllers\Tenant\BundleController::class, 'packaging' => \App\Http\Controllers\Tenant\PackagingOptionController::class,
+            'discount-codes' => DiscountCodeController::class, 'flash-sales' => FlashSaleController::class, 'bundles' => BundleController::class, 'packaging' => PackagingOptionController::class,
             'affiliate-tiers' => AffiliateTierController::class, 'custom-pages' => CustomPageController::class, 'static-pages' => StaticPageController::class,
         ] as $uri => $ctl) {
             Route::get("$uri/datatable", [$ctl, 'datatable'])->name("$uri.datatable");
@@ -74,9 +80,11 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
-        Route::get('cod-fees', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
-        Route::put('cod-fees', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
-        Route::post('cod-fees/validate', [\App\Http\Controllers\Tenant\CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
+        Route::get('notification-settings', [NotificationSettingsController::class, 'edit'])->name('notification-settings.edit');
+        Route::put('notification-settings', [NotificationSettingsController::class, 'update'])->name('notification-settings.update');
+        Route::get('cod-fees', [CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
+        Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
+        Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 
@@ -86,8 +94,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
 
-        Route::get('audit', [\App\Http\Controllers\Access\AuditLogController::class, 'index'])->name('audit.index');
-        Route::get('audit/datatable', [\App\Http\Controllers\Access\AuditLogController::class, 'datatable'])->name('audit.datatable');
+        Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('audit/datatable', [AuditLogController::class, 'datatable'])->name('audit.datatable');
 
         // Reports (view-only, date range + CSV export)
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
@@ -164,6 +172,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
         Route::delete('reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
+        Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');

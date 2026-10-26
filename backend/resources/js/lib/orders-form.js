@@ -11,7 +11,7 @@ function syncScope() {
 $(document).on('change', '[data-discount-form] [name=scope]', syncScope);
 $(syncScope);
 
-// ---- admin notifications bell: poll every 15s, toastr pop for new ones ----
+// ---- admin notifications bell: poll (15s; 60s when the Reverb socket is up), toastr pop for new ones; Echo push refreshes instantly ----
 const bell = document.getElementById('notif-menu');
 if (bell && bell.dataset.url) {
     const url = bell.dataset.url;
@@ -34,7 +34,24 @@ if (bell && bell.dataset.url) {
         lastSeen = res.latest || lastSeen || '0';
     });
     poll();
-    setInterval(poll, 15000);
+    let timer = setInterval(poll, 15000);
+    if (bell.dataset.channel && bell.dataset.wsKey) {
+        Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
+            window.Pusher = Pusher;
+            const tls = bell.dataset.wsScheme === 'https';
+            const echo = new Echo({
+                broadcaster: 'reverb', key: bell.dataset.wsKey, wsHost: bell.dataset.wsHost, wsPort: bell.dataset.wsPort, wssPort: bell.dataset.wsPort,
+                forceTLS: tls, enabledTransports: ['ws', 'wss'], authEndpoint: bell.dataset.authUrl,
+                auth: { headers: { 'X-CSRF-TOKEN': $('meta[name=csrf-token]').attr('content') } },
+            });
+            echo.private(bell.dataset.channel).notification(() => poll());
+            // socket healthy -> relax polling (kept as a safety net); down -> back to 15s
+            const conn = echo.connector.pusher.connection;
+            conn.bind('connected', () => { clearInterval(timer); timer = setInterval(poll, 60000); });
+            conn.bind('unavailable', () => { clearInterval(timer); timer = setInterval(poll, 15000); });
+            conn.bind('disconnected', () => { clearInterval(timer); timer = setInterval(poll, 15000); });
+        }).catch(() => {});
+    }
     $(document).on('click', '[data-notif-id]', function () { $.post(bell.dataset.readUrl.replace('__ID__', $(this).data('notif-id'))); });
     $(document).on('click', '#notif-read-all', function (e) { e.preventDefault(); $.post(bell.dataset.readAllUrl).done(poll); });
 }

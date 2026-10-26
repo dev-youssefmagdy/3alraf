@@ -1,0 +1,43 @@
+<?php
+
+return [
+    'admin' => [
+        'new_order' => 'طلب جديد :number من :customer (:total)',
+        'status_changed' => 'الطلب :number أصبح :status',
+        'proof_uploaded' => 'تم رفع إثبات دفع للطلب :number',
+        'payment_received' => 'تم استلام دفع إلكتروني للطلب :number (:total)',
+        'return_requested' => 'طلب مرتجع :return للطلب :number',
+        'tenant_created' => 'تم إنشاء متجر جديد: :name',
+        'tenant_status' => 'المتجر :name تم :state',
+        'tenant_active' => 'تفعيله',
+        'tenant_inactive' => 'إيقافه',
+    ],
+    'admin_mail' => ['greeting' => 'مرحباً :name،', 'view' => 'افتح في لوحة التحكم', 'customer' => 'العميل', 'total' => 'الإجمالي', 'payment' => 'الدفع'],
+    'customer' => [
+        'greeting' => 'مرحباً :name،',
+        'guest' => 'بك',
+        'view' => 'عرض طلبك',
+        'order' => 'الطلب',
+        'total' => 'الإجمالي',
+        'status' => 'الحالة',
+        'thanks' => 'شكراً لتسوقك من :store.',
+        'placed' => ['subject' => 'استلمنا طلبك :number', 'line' => 'شكراً لك! استلمنا طلبك وسنبدأ تجهيزه قريباً.'],
+        'status_changed' => ['subject' => 'الطلب :number أصبح :status', 'line' => 'تغيرت حالة طلبك إلى :status.'],
+        'proof_approved' => ['subject' => 'تم تأكيد الدفع للطلب :number', 'line' => 'تم التحقق من الدفع. شكراً لك!'],
+        'proof_rejected' => ['subject' => 'تم رفض إثبات الدفع للطلب :number', 'line' => 'لم نتمكن من التحقق من إثبات الدفع. يرجى فتح الطلب ورفع إثبات واضح مرة أخرى.'],
+        'paid' => ['subject' => 'تم استلام الدفع للطلب :number', 'line' => 'تم استلام دفعتك الإلكترونية. شكراً لك!'],
+        'return_requested' => ['subject' => 'استلمنا طلب المرتجع :return', 'line' => 'استلمنا طلب إرجاع للطلب :number وسنراجعه قريباً.'],
+        'return_approved' => ['subject' => 'تمت الموافقة على المرتجع :return', 'line' => 'تمت الموافقة على طلب الإرجاع للطلب :number.'],
+        'return_rejected' => ['subject' => 'تم رفض المرتجع :return', 'line' => 'للأسف تم رفض طلب الإرجاع للطلب :number.'],
+        'return_refunded' => ['subject' => 'تم رد المبلغ للمرتجع :return', 'line' => 'تم رد مبلغ :amount عن المرتجع في الطلب :number.'],
+    ],
+    'settings' => [
+        'title' => 'إعدادات الإشعارات',
+        'hint' => 'اختر رسائل البريد التي يرسلها متجرك للعملاء. رسائل الموظفين تتحكم بها صلاحية "إشعارات البريد" في كل دور.',
+        'placed' => 'استلام الطلب',
+        'status' => 'تغيّر حالة الطلب',
+        'payment' => 'تأكيد الدفع / رفض الإثبات',
+        'return' => 'تحديثات المرتجعات',
+    ],
+    'audit' => ['sent' => 'تم الإرسال', 'failed' => 'فشل'],
+];

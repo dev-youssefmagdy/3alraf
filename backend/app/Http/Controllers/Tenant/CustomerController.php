@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\DataTables\CustomerDataTable;
 use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
+use App\Services\ActivityTimeline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -32,6 +33,8 @@ class CustomerController extends Controller implements HasMiddleware
     {
         $c = $this->customers->query()->with(['addresses.city', 'orders' => fn ($q) => $q->latest('id')->limit(20)])->findOrFail($id);
 
-        return view('tenant.customers.show', ['customer' => $c]);
+        $activities = auth('tenant')->user()->can('audit.view') ? app(ActivityTimeline::class)->forCustomer($c) : null;
+
+        return view('tenant.customers.show', ['customer' => $c, 'activities' => $activities]);
     }
 }
