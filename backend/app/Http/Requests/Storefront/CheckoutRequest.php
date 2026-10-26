@@ -45,12 +45,8 @@ class CheckoutRequest extends FormRequest
     public function messages(): array
     {
         return ['proof.required' => __('orders.proof_required'), 'proof.mimes' => __('orders.proof_invalid'), 'proof.file' => __('orders.proof_invalid'),
-            'proof.max' => __('orders.proof_too_large', ['kb' => config('checkout.proof.max_kb')]), 'proof.uploaded' => __('orders.proof_invalid')];
-    }
-
-    public function messages(): array
-    {
-        return ['address_id.required' => __('store.address_required'), 'address_id.exists' => __('store.address_required')];
+            'proof.max' => __('orders.proof_too_large', ['kb' => config('checkout.proof.max_kb')]), 'proof.uploaded' => __('orders.proof_invalid'),
+            'address_id.required' => __('store.address_required'), 'address_id.exists' => __('store.address_required')];
     }
 
     public function rules(): array

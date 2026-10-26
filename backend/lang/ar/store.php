@@ -47,4 +47,11 @@ return [
     'offline_proof_for' => 'بيانات التحويل',
     'proof_client_type' => 'الملفات المسموحة: JPG أو PNG أو WEBP أو PDF فقط.',
     'proof_client_size' => 'حجم الملف أكبر من :mb ميجا.',
+    'google' => [
+        'continue' => 'المتابعة باستخدام Google', 'or' => 'أو',
+        'denied' => 'تم إلغاء تسجيل الدخول عبر Google.', 'failed' => 'تعذّر تسجيل الدخول عبر Google. حاول مرة أخرى.',
+        'invalid_state' => 'رابط تسجيل الدخول عبر Google منتهي أو غير صالح. حاول مرة أخرى.',
+        'unverified' => 'بريد Google غير موثّق، لذا لا يمكن استخدامه لتسجيل الدخول.',
+        'inactive' => 'هذا الحساب غير مفعّل.', 'other_account' => 'هذا البريد مرتبط بالفعل بحساب Google مختلف.',
+    ],
 ];

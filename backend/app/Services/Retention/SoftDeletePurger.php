@@ -160,7 +160,7 @@ class SoftDeletePurger
         }
         DB::table('customers')->where('id', $c->id)->update([
             'name' => 'Anonymized customer', 'email' => 'c'.$c->id.'@anonymized.invalid', 'phone' => null,
-            'password' => Str::random(60), 'remember_token' => null, 'is_active' => false,
+            'password' => Str::random(60), 'remember_token' => null, 'google_id' => null, 'avatar' => null, 'is_active' => false,
         ]);
 
         return self::ANONYMIZED;

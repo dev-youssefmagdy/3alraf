@@ -25,6 +25,7 @@ Route::middleware('throttle:api')->group(function () {
 
     Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:auth')->name('auth.register');
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
+    Route::post('auth/google', [AuthController::class, 'google'])->middleware('throttle:auth')->name('auth.google');
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-strict')->name('auth.forgot');
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth')->name('auth.reset');
 

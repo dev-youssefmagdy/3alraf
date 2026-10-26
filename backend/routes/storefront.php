@@ -35,6 +35,8 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
         Route::post('login', [LoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
     });
     Route::middleware('guest:web')->group(function () {
+        Route::get('auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->middleware('throttle:auth')->name('google.redirect');
+        Route::get('auth/google/complete', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'complete'])->middleware('throttle:auth')->name('google.complete');
         Route::get('register', [CustomerAuthController::class, 'show'])->name('register');
         Route::post('register/validate', [CustomerAuthController::class, 'validateForm'])->name('register.validate');
         Route::post('register', [CustomerAuthController::class, 'store'])->middleware('throttle:auth')->name('register.submit');

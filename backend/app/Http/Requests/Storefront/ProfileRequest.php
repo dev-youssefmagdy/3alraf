@@ -20,8 +20,16 @@ class ProfileRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             // re-authenticate before changing the login credentials (stolen session / unlocked device)
-            'current_password' => [Rule::requiredIf(fn () => $this->changesCredentials()), 'nullable', 'string', 'current_password:web'],
+            // (Google-only accounts have no password yet: nothing to re-enter)
+            'current_password' => $this->hasPassword()
+                ? [Rule::requiredIf(fn () => $this->changesCredentials()), 'nullable', 'string', 'current_password:web']
+                : ['nullable', 'string'],
         ];
+    }
+
+    private function hasPassword(): bool
+    {
+        return (string) auth('web')->user()?->getAuthPassword() !== '';
     }
 
     public function changesCredentials(): bool

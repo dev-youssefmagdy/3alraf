@@ -47,4 +47,11 @@ return [
     'offline_proof_for' => 'Transfer details',
     'proof_client_type' => 'Only JPG, PNG, WEBP or PDF files are allowed.',
     'proof_client_size' => 'The file is larger than :mb MB.',
+    'google' => [
+        'continue' => 'Continue with Google', 'or' => 'or',
+        'denied' => 'Google sign-in was cancelled.', 'failed' => 'Could not sign in with Google. Please try again.',
+        'invalid_state' => 'The Google sign-in link expired or is invalid. Please try again.',
+        'unverified' => 'Your Google e-mail is not verified, so it cannot be used to sign in.',
+        'inactive' => 'This account is not active.', 'other_account' => 'This e-mail is already linked to a different Google account.',
+    ],
 ];

@@ -14,13 +14,13 @@ class Customer extends Authenticatable
 {
     use HasApiTokens, HasRoles, Notifiable, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes, \App\Models\Concerns\RevokesSessionsOnLockout;
 
-    protected array $freedOnDelete = ['email'];
+    protected array $freedOnDelete = ['email', 'google_id'];
 
     protected string $guard_name = 'web';
 
     protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'google_id'];
 
     /** Hide the soft-delete tombstone suffix (see FreesUniqueOnDelete) from every display. */
     public function getEmailAttribute($v): ?string

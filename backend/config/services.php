@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    // "Continue with Google": ONE platform-level OAuth client; empty client id = feature off (button hidden, routes 404).
+    // Redirect URI registered once in Google: https://{APP_CENTRAL_DOMAIN}/auth/google/callback (see docs/PROGRESS.md).
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        // extra OAuth client ids accepted as the ID-token audience on POST api/v1/auth/google (Android / iOS clients), comma separated
+        'mobile_client_ids' => array_filter(array_map('trim', explode(',', (string) env('GOOGLE_MOBILE_CLIENT_IDS', '')))),
+    ],
+
 ];

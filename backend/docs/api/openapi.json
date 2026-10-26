@@ -1119,6 +1119,51 @@
                 }
             }
         },
+        "/api/v1/auth/google": {
+            "post": {
+                "summary": "Auth Google",
+                "operationId": "auth_google_post",
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/login": {
             "post": {
                 "summary": "Auth Login",
@@ -2063,60 +2108,9 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "address_id": {
-                                        "type": "integer"
-                                    },
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "city_id": {
-                                        "type": "string"
-                                    },
-                                    "address": {
-                                        "type": "string"
-                                    },
-                                    "notes": {
-                                        "type": "string"
-                                    },
-                                    "shipping_company_id": {
-                                        "type": "string"
-                                    },
-                                    "payment_method_id": {
-                                        "type": "string"
-                                    },
-                                    "prepay_method_id": {
-                                        "type": "string"
-                                    },
-                                    "discount_code": {
-                                        "type": "string"
-                                    },
-                                    "packaging_option_id": {
-                                        "type": "integer"
-                                    },
-                                    "proof": {
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "required": [
-                                    "name",
-                                    "phone",
-                                    "city_id",
-                                    "address",
-                                    "shipping_company_id",
-                                    "payment_method_id"
-                                ]
+                                "type": "object"
                             }
                         }
                     }
@@ -2327,60 +2321,9 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "address_id": {
-                                        "type": "integer"
-                                    },
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "city_id": {
-                                        "type": "string"
-                                    },
-                                    "address": {
-                                        "type": "string"
-                                    },
-                                    "notes": {
-                                        "type": "string"
-                                    },
-                                    "shipping_company_id": {
-                                        "type": "string"
-                                    },
-                                    "payment_method_id": {
-                                        "type": "string"
-                                    },
-                                    "prepay_method_id": {
-                                        "type": "string"
-                                    },
-                                    "discount_code": {
-                                        "type": "string"
-                                    },
-                                    "packaging_option_id": {
-                                        "type": "integer"
-                                    },
-                                    "proof": {
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "required": [
-                                    "name",
-                                    "phone",
-                                    "city_id",
-                                    "address",
-                                    "shipping_company_id",
-                                    "payment_method_id"
-                                ]
+                                "type": "object"
                             }
                         }
                     }
@@ -2642,60 +2585,9 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "address_id": {
-                                        "type": "integer"
-                                    },
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "city_id": {
-                                        "type": "string"
-                                    },
-                                    "address": {
-                                        "type": "string"
-                                    },
-                                    "notes": {
-                                        "type": "string"
-                                    },
-                                    "shipping_company_id": {
-                                        "type": "string"
-                                    },
-                                    "payment_method_id": {
-                                        "type": "string"
-                                    },
-                                    "prepay_method_id": {
-                                        "type": "string"
-                                    },
-                                    "discount_code": {
-                                        "type": "string"
-                                    },
-                                    "packaging_option_id": {
-                                        "type": "integer"
-                                    },
-                                    "proof": {
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "required": [
-                                    "name",
-                                    "phone",
-                                    "city_id",
-                                    "address",
-                                    "shipping_company_id",
-                                    "payment_method_id"
-                                ]
+                                "type": "object"
                             }
                         }
                     }

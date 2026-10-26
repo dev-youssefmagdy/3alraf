@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [LandingController::class, 'index'])->name('central.landing');
 Route::get('choose/{slug}', [LandingController::class, 'choose'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('central.choose');
 
+Route::get('auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('central.google.callback');
+
 Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(function () {
     Route::middleware('guest:central')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');

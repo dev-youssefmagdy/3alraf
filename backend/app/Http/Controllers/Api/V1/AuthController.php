@@ -35,6 +35,14 @@ class AuthController extends ApiController
         return $this->respond($this->session($customer, $token), __('admin.welcome_back'));
     }
 
+    public function google(Request $r): JsonResponse
+    {
+        $r->validate(['id_token' => ['required', 'string', 'max:4096'], 'device_name' => ['nullable', 'string', 'max:60']]);
+        [$customer, $token] = $this->auth->loginGoogle($r->input('id_token'), $r->input('device_name'));
+
+        return $this->respond($this->session($customer, $token), __('admin.welcome_back'));
+    }
+
     public function logout(Request $r): JsonResponse
     {
         $this->auth->logout($r->user());
