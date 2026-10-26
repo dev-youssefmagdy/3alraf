@@ -74,6 +74,8 @@ use App\Repositories\Contracts\ReviewRepositoryInterface;
 use App\Repositories\Eloquent\ReviewRepository;
 use App\Repositories\Contracts\CustomPageRepositoryInterface;
 use App\Repositories\Eloquent\CustomPageRepository;
+use App\Repositories\Contracts\BlogPostRepositoryInterface;
+use App\Repositories\Eloquent\BlogPostRepository;
 use App\Repositories\Contracts\StaticPageRepositoryInterface;
 use App\Repositories\Eloquent\StaticPageRepository;
 use App\Repositories\Contracts\ProductListItemRepositoryInterface;
@@ -96,6 +98,7 @@ class RepositoryServiceProvider extends ServiceProvider
         ReviewRepositoryInterface::class => ReviewRepository::class,
         CustomPageRepositoryInterface::class => CustomPageRepository::class,
         StaticPageRepositoryInterface::class => StaticPageRepository::class,
+        BlogPostRepositoryInterface::class => BlogPostRepository::class,
         ProductListItemRepositoryInterface::class => ProductListItemRepository::class,
         WishlistItemRepositoryInterface::class => WishlistItemRepository::class,
         LanguageRepositoryInterface::class => LanguageRepository::class,

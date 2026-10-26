@@ -36,6 +36,9 @@ class SitemapController extends Controller
         foreach (StaticPage::where('is_active', true)->get(['slug']) as $p) {
             $add('storefront.pages.show', ['slug' => $p->slug]);
         }
+        foreach (\App\Models\BlogPost::where('is_active', true)->get(['slug']) as $p) {
+            $add('storefront.blog.show', ['slug' => $p->slug]);
+        }
         foreach (CustomPage::where('is_active', true)->get(['slug']) as $p) {
             $urls[] = ['loc' => url('/'.$p->slug), 'mod' => null];
         }

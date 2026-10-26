@@ -29,12 +29,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Banner / offer (flash sale | discount code) / bundle generators. AI proposes a structured draft; nothing goes live until a human with
+ * Banner / offer (flash sale | discount code) / bundle / static page / custom page / blog post generators. AI proposes a structured draft; nothing goes live until a human with
  * ai_generators.approve approves it, and then the REAL service creates an INACTIVE record (docs/plans/ai-features.md principle 4).
  */
 class GeneratorService
 {
-    public const TYPES = [AiGenerationType::BANNER, AiGenerationType::OFFER, AiGenerationType::BUNDLE];
+    public const TYPES = [AiGenerationType::BANNER, AiGenerationType::OFFER, AiGenerationType::BUNDLE, AiGenerationType::STATIC_PAGE, AiGenerationType::CUSTOM_PAGE, AiGenerationType::BLOG_POST];
 
     public const TTL_DAYS = 7;
 
@@ -45,7 +45,7 @@ class GeneratorService
 
     public function __construct(
         private AiGenerationRepositoryInterface $repo, private AiGateway $gateway, private AiAccess $access, private AiContextFactory $contexts,
-        private StudioService $studio, private DraftValidator $validator, private PriceResolver $prices, private StockItemCatalog $catalog,
+        private StudioService $studio, private DraftValidator $validator, private PriceResolver $prices, private StockItemCatalog $catalog, private ContentGeneratorService $content,
     ) {}
 
     public static function typeValues(): array
@@ -58,6 +58,9 @@ class GeneratorService
         return match ($kind) {
             'banner' => AiGenerationType::BANNER,
             'bundle' => AiGenerationType::BUNDLE,
+            'static_page' => AiGenerationType::STATIC_PAGE,
+            'custom_page' => AiGenerationType::CUSTOM_PAGE,
+            'blog_post' => AiGenerationType::BLOG_POST,
             default => AiGenerationType::OFFER,
         };
     }
@@ -105,9 +108,17 @@ class GeneratorService
         if (! $model) {
             throw new AiException(__('ai.studio.no_text_model'), 'model');
         }
-        $req = new AiRequest($model->model_id, [['role' => 'user', 'content' => $this->prompt($i)]], system: $this->system(), maxTokens: 3000, json: true);
+        $isContent = ContentGeneratorService::handles($i['kind']);
+        $req = new AiRequest($model->model_id, [['role' => 'user', 'content' => $isContent ? $this->content->prompt($i) : $this->prompt($i)]],
+            system: $isContent ? $this->content->system() : $this->system(), maxTokens: $isContent ? 8000 : 3000, json: true);
         $res = $this->gateway->chat($model, $req, 'generators', [], $ctx);
         $draft = $this->parse($res->text);
+        if ($isContent) {
+            $v = $this->content->validate($i['kind'], $this->content->uniqueSlug($i['kind'], $draft));
+            $g->forceFill(['ai_model_id' => $model->id, 'output' => $this->pack($i['kind'], $v, $draft), 'media' => [], 'status' => AiGenerationStatus::DRAFT, 'error' => null])->save();
+
+            return;
+        }
         $draft = $this->forceDefaults($i, $draft);
         $floor = (float) $i['margin_floor'];
         $v = $this->validator->validate($i['kind'], $draft, $floor);
@@ -153,7 +164,7 @@ class GeneratorService
     {
         $this->assertOpen($g);
         $kind = $g->output['kind'] ?? ($g->inputs['kind'] ?? 'banner');
-        $v = $this->validator->validate($kind, $draft, (float) ($g->inputs['margin_floor'] ?? 10));
+        $v = ContentGeneratorService::handles($kind) ? $this->content->validate($kind, $draft) : $this->validator->validate($kind, $draft, (float) ($g->inputs['margin_floor'] ?? 10));
         $g->forceFill(['output' => $this->pack($kind, $v, $v['draft'])])->save();
 
         return $g;
@@ -163,6 +174,9 @@ class GeneratorService
     public function evaluate(AiGeneration $g): array
     {
         $kind = $g->output['kind'] ?? ($g->inputs['kind'] ?? 'banner');
+        if (ContentGeneratorService::handles($kind)) {
+            return $this->content->validate($kind, (array) ($g->output['draft'] ?? []));
+        }
         $v = $this->validator->validate($kind, (array) ($g->output['draft'] ?? []), (float) ($g->inputs['margin_floor'] ?? 10));
         if ($kind === 'banner' && ! $this->readyImage($g)) {
             $v['errors'][] = ['code' => 'image_required', 'params' => []];
@@ -188,6 +202,7 @@ class GeneratorService
                 'flash_sale' => app(FlashSaleService::class)->create($this->flashDto($v['draft'])),
                 'discount_code' => app(DiscountCodeService::class)->create($this->codeDto($v['draft'])),
                 'bundle' => app(BundleService::class)->create($this->bundleDto($v['draft'])),
+                'static_page', 'custom_page', 'blog_post' => $this->content->create($kind, $v['draft']),
             };
             $g->forceFill(['status' => AiGenerationStatus::APPROVED, 'target_type' => $model::class, 'target_id' => $model->getKey(), 'reviewed_by' => $userId, 'reviewed_at' => now(), 'reject_reason' => null])->save();
             activity('ai_generator')->performedOn($g)->causedBy(auth('tenant')->user())->withProperties(['kind' => $kind, 'target_type' => $model::class, 'target_id' => $model->getKey()])->log('approved');

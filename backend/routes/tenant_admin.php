@@ -83,7 +83,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             'shipping-companies' => ShippingCompanyController::class, 'payment-methods' => PaymentMethodController::class,
             'banners' => BannerController::class, 'expense-categories' => ExpenseCategoryController::class, 'expenses' => ExpenseController::class,
             'discount-codes' => DiscountCodeController::class, 'flash-sales' => FlashSaleController::class, 'bundles' => BundleController::class, 'packaging' => PackagingOptionController::class,
-            'affiliate-tiers' => AffiliateTierController::class, 'custom-pages' => CustomPageController::class, 'static-pages' => StaticPageController::class,
+            'affiliate-tiers' => AffiliateTierController::class, 'custom-pages' => CustomPageController::class, 'static-pages' => StaticPageController::class, 'blog-posts' => \App\Http\Controllers\Tenant\BlogPostController::class,
         ] as $uri => $ctl) {
             Route::get("$uri/datatable", [$ctl, 'datatable'])->name("$uri.datatable");
             Route::post("$uri/validate/{id?}", [$ctl, 'validateForm'])->name("$uri.validate");

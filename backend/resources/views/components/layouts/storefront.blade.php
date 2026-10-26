@@ -152,7 +152,7 @@
         <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
             <div><h3 class="mb-3 text-lg font-bold text-slate-900">{{ $tenant->name }}</h3><p class="text-sm leading-6 text-slate-500">{{ __('store.seo_default_desc') }}</p></div>
             <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.about') }}</h4>
-                <ul class="space-y-2 text-sm">@foreach ($footer['pages'] as $fp)<li><a class="hover:text-slate-900" href="{{ route('storefront.pages.show', $fp['slug']) }}">{{ $fp['title'] }}</a></li>@endforeach</ul></div>
+                <ul class="space-y-2 text-sm">@foreach ($footer['pages'] as $fp)<li><a class="hover:text-slate-900" href="{{ route('storefront.pages.show', $fp['slug']) }}">{{ $fp['title'] }}</a></li>@endforeach @if ($footer['blog'] ?? false)<li><a class="hover:text-slate-900" href="{{ route('storefront.blog.index') }}">{{ __('growth.blog') }}</a></li>@endif</ul></div>
             <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.customer_service') }}</h4>
                 <ul class="space-y-2 text-sm"><li><a class="hover:text-slate-900" href="{{ route('storefront.account.index') }}">{{ __('store.my_orders') }}</a></li><li><a class="hover:text-slate-900" href="{{ route('storefront.cart.show') }}">{{ __('store.cart') }}</a></li><li><a class="hover:text-slate-900" href="{{ route('storefront.affiliate.login') }}">{{ __('store.affiliate_program') }}</a></li></ul></div>
             <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.download_app') }}</h4>

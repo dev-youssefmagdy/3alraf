@@ -10,7 +10,9 @@
         $img = collect($g['media'])->firstWhere('state', 'ready');
         $target = $g['target_type'] && $g['target_id'] ? match ($kind) {
             'banner' => route('tenant.banners.edit', $g['target_id']), 'flash_sale' => route('tenant.flash-sales.edit', $g['target_id']),
-            'discount_code' => route('tenant.discount-codes.edit', $g['target_id']), 'bundle' => route('tenant.bundles.edit', $g['target_id']), default => null } : null;
+            'discount_code' => route('tenant.discount-codes.edit', $g['target_id']), 'bundle' => route('tenant.bundles.edit', $g['target_id']),
+            'static_page' => route('tenant.static-pages.edit', $g['target_id']), 'custom_page' => route('tenant.custom-pages.edit', $g['target_id']), 'blog_post' => route('tenant.blog-posts.edit', $g['target_id']), default => null } : null;
+        $isContent = in_array($kind, ['static_page', 'custom_page', 'blog_post'], true);
     @endphp
     <div id="gv" class="space-y-4" data-id="{{ $g['id'] }}" data-base="{{ route('tenant.ai.generators.show', $g['id']) }}" data-pending="{{ $g['pending'] ? 1 : 0 }}" data-open="{{ $open ? 1 : 0 }}">
         <div class="flex flex-wrap items-center gap-3">
@@ -69,7 +71,31 @@
                 @if (($g['preview'][0]['headroom_pct'] ?? null) !== null)<p class="text-sm text-slate-600">{{ $s('headroom') }}: <b>{{ $g['preview'][0]['headroom_pct'] }}%</b></p>@endif
             @endif
 
-            @if ($kind !== 'discount_code' || true)
+            @if ($isContent)
+                <label class="{{ $lbl }}">{{ $s('slug') }}<input data-k="slug" value="{{ $d['slug'] ?? '' }}" maxlength="100" {{ $dis }} class="{{ $inp }}" dir="ltr"></label>
+                @if (! empty($g['preview'][0]['url']))<p class="text-xs text-slate-500">{{ $s('page_url') }}: <span dir="ltr">{{ $g['preview'][0]['url'] }}</span></p>@endif
+                @foreach ($locales as $l)<label class="{{ $lbl }}">{{ $s('title_field') }} ({{ strtoupper($l) }})<input data-k="title.{{ $l }}" value="{{ $d['title'][$l] ?? '' }}" maxlength="120" {{ $dis }} class="{{ $inp }}"></label>@endforeach
+                @if ($kind === 'blog_post')
+                    @foreach ($locales as $l)<label class="{{ $lbl }}">{{ $s('excerpt') }} ({{ strtoupper($l) }})<textarea data-k="excerpt.{{ $l }}" rows="2" maxlength="500" {{ $dis }} class="{{ $inp }}">{{ $d['excerpt'][$l] ?? '' }}</textarea></label>@endforeach
+                    @foreach ($locales as $l)<label class="{{ $lbl }}">{{ $s('meta_description') }} ({{ strtoupper($l) }})<textarea data-k="meta_description.{{ $l }}" rows="2" maxlength="200" {{ $dis }} class="{{ $inp }}">{{ $d['meta_description'][$l] ?? '' }}</textarea></label>@endforeach
+                @endif
+                @if ($kind !== 'custom_page')
+                    <p class="text-xs text-slate-500">{{ $s('content_hint') }}</p>
+                    @foreach ($locales as $l)<label class="{{ $lbl }}">{{ $s('content') }} ({{ strtoupper($l) }})<textarea data-k="content.{{ $l }}" rows="12" {{ $dis }} class="{{ $inp }}">{{ $d['content'][$l] ?? '' }}</textarea></label>@endforeach
+                @else
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <label class="{{ $lbl }}">{{ $s('categories') }}<input data-k="categories" data-csv value="{{ implode(',', $d['categories'] ?? []) }}" {{ $dis }} class="{{ $inp }}"></label>
+                        <label class="{{ $lbl }}">{{ $s('brands') }}<input data-k="brands" data-csv value="{{ implode(',', $d['brands'] ?? []) }}" {{ $dis }} class="{{ $inp }}"></label>
+                        <label class="{{ $lbl }}">{{ $s('pinned') }}<input data-k="product_ids" data-csv value="{{ implode(',', $d['product_ids'] ?? []) }}" {{ $dis }} class="{{ $inp }}"></label>
+                        <label class="{{ $lbl }}">{{ $s('price_min') }}<input type="number" step="0.01" data-k="price_min" value="{{ $d['price_min'] ?? '' }}" {{ $dis }} class="{{ $inp }}"></label>
+                        <label class="{{ $lbl }}">{{ $s('price_max') }}<input type="number" step="0.01" data-k="price_max" value="{{ $d['price_max'] ?? '' }}" {{ $dis }} class="{{ $inp }}"></label>
+                        <label class="{{ $lbl }}">{{ $s('sort') }}<select data-k="sort" {{ $dis }} class="{{ $inp }}">@foreach (['newest', 'price_asc', 'price_desc', 'best_selling'] as $k)<option value="{{ $k }}" @selected(($d['sort'] ?? 'newest') === $k)>{{ __('growth.sort.'.$k) }}</option>@endforeach</select></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" data-k="flash_sale" data-bool @checked(! empty($d['flash_sale'])) {{ $dis }}>{{ $s('flash_sale') }}</label>
+                    </div>
+                @endif
+            @endif
+
+            @if (! $isContent)
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="{{ $lbl }}">{{ __('ai.gen.fields.starts_at') }}<input type="datetime-local" data-k="starts_at" value="{{ ! empty($d['starts_at']) ? \Illuminate\Support\Carbon::parse($d['starts_at'])->format('Y-m-d\TH:i') : '' }}" {{ $dis }} class="{{ $inp }}"></label>
                     <label class="{{ $lbl }}">{{ __('ai.gen.fields.ends_at') }}<input type="datetime-local" data-k="ends_at" value="{{ ! empty($d['ends_at']) ? \Illuminate\Support\Carbon::parse($d['ends_at'])->format('Y-m-d\TH:i') : '' }}" {{ $dis }} class="{{ $inp }}"></label>
@@ -126,7 +152,7 @@
                 form.querySelectorAll('[data-k]').forEach(e => {
                     const path = e.dataset.k.split('.'); let o = d;
                     path.slice(0, -1).forEach(p => o = (o[p] ??= {}));
-                    o[path.at(-1)] = e.dataset.bool !== undefined ? e.checked : (e.dataset.json !== undefined ? JSON.parse(e.value || '[]') : e.value);
+                    o[path.at(-1)] = e.dataset.bool !== undefined ? e.checked : (e.dataset.csv !== undefined ? e.value.split(',').map(x => parseInt(x, 10)).filter(Boolean) : (e.dataset.json !== undefined ? JSON.parse(e.value || '[]') : e.value));
                 });
                 const rows = [...form.querySelectorAll('[data-row]')];
                 if (rows.length || document.getElementById('gv-items')) d.items = rows.map(tr => { const r = {item: tr.dataset.item}; tr.querySelectorAll('[data-f]').forEach(i => r[i.dataset.f] = i.value); return r; });

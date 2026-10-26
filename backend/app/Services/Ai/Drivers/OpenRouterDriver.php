@@ -3,6 +3,7 @@
 namespace App\Services\Ai\Drivers;
 
 use App\Exceptions\AiException;
+use App\Services\Ai\Support\AiRequest;
 use App\Services\Ai\Support\AiResponse;
 
 /**
@@ -19,6 +20,16 @@ class OpenRouterDriver extends OpenAiDriver
     protected function headers(): array
     {
         return parent::headers() + ['HTTP-Referer' => (string) config('app.url'), 'X-Title' => (string) config('app.name')];
+    }
+
+    public function payload(AiRequest $r): array
+    {
+        $p = parent::payload($r);
+        if ($r->webSearch) {
+            $p['plugins'] = [['id' => 'web']];
+        }
+
+        return $p;
     }
 
     /** /models is public, so probe the authenticated /key endpoint to actually validate the credential. */
@@ -98,6 +109,6 @@ class OpenRouterDriver extends OpenAiDriver
 
     public function supports(string $capability): bool
     {
-        return in_array($capability, ['chat', 'tools', 'image', 'video', 'json_mode'], true);
+        return in_array($capability, ['chat', 'tools', 'image', 'video', 'json_mode', 'web_search'], true);
     }
 }

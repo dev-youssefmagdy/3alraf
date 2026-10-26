@@ -40,6 +40,7 @@ class StorefrontData
     {
         return Cache::remember('sf.footer.'.current_tenant()?->id.'.'.app()->getLocale(), 60, fn () => [
             'pages' => StaticPage::where('is_active', true)->orderBy('id')->get(['slug', 'title'])->map(fn ($p) => ['slug' => $p->slug, 'title' => $p->title])->all(),
+            'blog' => \App\Models\BlogPost::published()->exists(),
             'payments' => PaymentMethod::available()->orderBy('sort_order')->get()->map(fn ($m) => ['name' => $m->name, 'type' => $m->type->value, 'provider' => $m->provider?->value])->all(),
             'apps' => ['ios' => current_tenant()?->settings['app_links']['ios'] ?? null, 'android' => current_tenant()?->settings['app_links']['android'] ?? null],
         ]);

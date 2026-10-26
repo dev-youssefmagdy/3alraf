@@ -77,6 +77,8 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::get('bundles', [\App\Http\Controllers\Storefront\BundleController::class, 'index'])->name('bundles.index');
     Route::get('bundle/{slug}', [\App\Http\Controllers\Storefront\BundleController::class, 'show'])->name('bundle.show');
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
+    Route::get('blog', [\App\Http\Controllers\Storefront\BlogController::class, 'index'])->name('blog.index');
+    Route::get('blog/{slug}', [\App\Http\Controllers\Storefront\BlogController::class, 'show'])->name('blog.show');
     Route::middleware('auth:web')->group(function () {
         Route::post('product/{slug}/reviews/validate', [ReviewController::class, 'validateForm'])->name('reviews.validate');
         Route::post('product/{slug}/reviews', [ReviewController::class, 'store'])->middleware('throttle:reviews')->name('reviews.store');

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Enums\BannerPlacement;
 use App\Services\Ai\AiAccess;
+use App\Services\Ai\ContentGeneratorService;
 use App\Services\Ai\Generators\DraftValidator;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +16,7 @@ class AiGeneratorRequest extends BaseRequest
         $ids = fn ($kind) => Rule::in(app(AiAccess::class)->modelsFor(current_tenant(), $kind)->pluck('id')->all());
 
         return [
-            'kind' => ['required', Rule::in(DraftValidator::KINDS)],
+            'kind' => ['required', Rule::in(array_merge(DraftValidator::KINDS, ContentGeneratorService::KINDS))],
             'goal' => ['required', 'string', 'max:300'],
             'season' => ['nullable', 'string', 'max:80'],
             'margin_floor' => ['nullable', 'numeric', 'min:0', 'max:95'],
@@ -25,6 +26,8 @@ class AiGeneratorRequest extends BaseRequest
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
             'placement' => ['nullable', Rule::enum(BannerPlacement::class)],
+            'tone' => ['nullable', Rule::in(['friendly', 'professional', 'playful', 'luxury', 'inspiring', 'informative'])],
+            'length' => ['nullable', Rule::in(['short', 'medium', 'long'])],
             'ai_model_id' => ['nullable', 'integer', $ids('text')],
             'image_model_id' => ['nullable', 'integer', $ids('image')],
         ];

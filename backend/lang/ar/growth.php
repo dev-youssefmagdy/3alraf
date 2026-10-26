@@ -4,7 +4,7 @@
 return [
     'affiliates' => 'المسوّقون', 'affiliate' => 'المسوّق', 'affiliates_link' => 'التسويق بالعمولة', 'affiliate_login' => 'دخول المسوّق',
     'tiers' => 'شرائح العمولة', 'payouts' => 'المدفوعات', 'product_lists' => 'قوائم المنتجات', 'reviews' => 'التقييمات',
-    'custom_pages' => 'الصفحات المخصصة', 'static_pages' => 'الصفحات الثابتة', 'product' => 'المنتج',
+    'custom_pages' => 'الصفحات المخصصة', 'blog_posts' => 'مقالات المدونة', 'blog' => 'المدونة', 'read_more' => 'اقرأ المزيد', 'static_pages' => 'الصفحات الثابتة', 'product' => 'المنتج',
     'approve' => 'قبول', 'reject' => 'رفض', 'suspend' => 'إيقاف', 'mark_paid' => 'تم الدفع',
     'affiliate_approved' => 'تم قبول المسوّق.', 'affiliate_suspended' => 'تم إيقاف المسوّق.',
     'payout_paid' => 'تم تسجيل الدفعة كمدفوعة.', 'payout_rejected' => 'تم رفض الدفعة.', 'payout_requested' => 'تم طلب السحب.',
@@ -12,7 +12,7 @@ return [
     'review_approved' => 'تم قبول التقييم.', 'review_rejected' => 'تم رفض التقييم.', 'review_submitted' => 'شكراً! سيظهر تقييمك بعد المراجعة.',
     'review_not_purchased' => 'يمكن فقط للعملاء الذين استلموا المنتج تقييمه.',
     'slug_reserved' => 'هذا الرابط محجوز.', 'min_sales_hint' => 'إجمالي المبيعات المسلَّمة التي تُطبَّق منها هذه النسبة.',
-    'static_slug_hint' => 'يظهر على /{اللغة}/page/{الرابط}.', 'custom_slug_hint' => 'عنوان الصفحة: :url (الرابط بعد النطاق).',
+    'blog_slug_hint' => 'يظهر على /{اللغة}/blog/{الرابط}.', 'static_slug_hint' => 'يظهر على /{اللغة}/page/{الرابط}.', 'custom_slug_hint' => 'عنوان الصفحة: :url (الرابط بعد النطاق).',
     'filters' => 'الفلاتر', 'pinned_products' => 'المنتجات المثبّتة', 'pinned_hint' => 'المنتجات المثبّتة تظهر أولاً بهذا الترتيب.', 'pin' => 'تثبيت',
     'lists_intro' => 'المنتجات المثبّتة تظهر أولاً بالترتيب؛ وتُملأ بقية الأماكن تلقائياً بدون تكرار.',
     'fill_hint' => [
@@ -36,7 +36,7 @@ return [
     'related' => 'قد يعجبك أيضاً', 'option' => 'الخيار', 'qty' => 'الكمية', 'apply' => 'تطبيق',
     'sort' => ['newest' => 'الأحدث', 'price_asc' => 'السعر: الأقل للأعلى', 'price_desc' => 'السعر: الأعلى للأقل', 'best_selling' => 'الأكثر مبيعاً'],
     'fields' => [
-        'title' => 'العنوان', 'content' => 'المحتوى', 'amount' => 'المبلغ', 'rating' => 'التقييم', 'body' => 'التعليق', 'min_sales' => 'الحد الأدنى للمبيعات',
+        'title' => 'العنوان', 'content' => 'المحتوى', 'excerpt' => 'المقتطف', 'meta_description' => 'وصف الميتا', 'published_at' => 'تاريخ النشر', 'amount' => 'المبلغ', 'rating' => 'التقييم', 'body' => 'التعليق', 'min_sales' => 'الحد الأدنى للمبيعات',
         'percent' => 'نسبة العمولة %', 'limit' => 'أقصى عدد', 'categories' => 'الأقسام', 'brands' => 'الماركات', 'attributes' => 'قيم الخصائص',
         'price_min' => 'أقل سعر', 'price_max' => 'أعلى سعر', 'sort' => 'الترتيب', 'flash_sale' => 'منتجات العروض السريعة فقط', 'password_confirmation' => 'تأكيد كلمة المرور',
         'filters.price_min' => 'أقل سعر', 'filters.price_max' => 'أعلى سعر', 'product_ids' => 'المنتجات',

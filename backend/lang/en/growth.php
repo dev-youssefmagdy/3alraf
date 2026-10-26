@@ -4,7 +4,7 @@
 return [
     'affiliates' => 'Affiliates', 'affiliate' => 'Affiliate', 'affiliates_link' => 'Affiliates', 'affiliate_login' => 'Affiliate sign in',
     'tiers' => 'Commission tiers', 'payouts' => 'Payouts', 'product_lists' => 'Product lists', 'reviews' => 'Reviews',
-    'custom_pages' => 'Custom pages', 'static_pages' => 'Static pages', 'product' => 'Product',
+    'custom_pages' => 'Custom pages', 'static_pages' => 'Static pages', 'blog_posts' => 'Blog posts', 'blog' => 'Blog', 'read_more' => 'Read more', 'product' => 'Product',
     'approve' => 'Approve', 'reject' => 'Reject', 'suspend' => 'Suspend', 'mark_paid' => 'Mark paid',
     'affiliate_approved' => 'Affiliate approved.', 'affiliate_suspended' => 'Affiliate suspended.',
     'payout_paid' => 'Payout marked as paid.', 'payout_rejected' => 'Payout rejected.', 'payout_requested' => 'Payout requested.',
@@ -12,7 +12,7 @@ return [
     'review_approved' => 'Review approved.', 'review_rejected' => 'Review rejected.', 'review_submitted' => 'Thanks! Your review will appear after moderation.',
     'review_not_purchased' => 'Only customers who received this product can review it.',
     'slug_reserved' => 'This slug is reserved.', 'min_sales_hint' => 'Lifetime delivered sales from which this percentage applies.',
-    'static_slug_hint' => 'Shown at /{locale}/page/{slug}.', 'custom_slug_hint' => 'Page address: :url (slug after the domain).',
+    'static_slug_hint' => 'Shown at /{locale}/page/{slug}.', 'blog_slug_hint' => 'Shown at /{locale}/blog/{slug}.', 'custom_slug_hint' => 'Page address: :url (slug after the domain).',
     'filters' => 'Filters', 'pinned_products' => 'Pinned products', 'pinned_hint' => 'Pinned products always show first, in this order.', 'pin' => 'Pin',
     'lists_intro' => 'Pinned products are shown first (in order); remaining slots are filled automatically and duplicates are removed.',
     'fill_hint' => [
@@ -36,7 +36,7 @@ return [
     'related' => 'You may also like', 'option' => 'Option', 'qty' => 'Qty', 'apply' => 'Apply',
     'sort' => ['newest' => 'Newest', 'price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'best_selling' => 'Best selling'],
     'fields' => [
-        'title' => 'Title', 'content' => 'Content', 'amount' => 'Amount', 'rating' => 'Rating', 'body' => 'Comment', 'min_sales' => 'Minimum lifetime sales',
+        'title' => 'Title', 'content' => 'Content', 'excerpt' => 'Excerpt', 'meta_description' => 'Meta description', 'published_at' => 'Publish date', 'amount' => 'Amount', 'rating' => 'Rating', 'body' => 'Comment', 'min_sales' => 'Minimum lifetime sales',
         'percent' => 'Commission %', 'limit' => 'Max items', 'categories' => 'Categories', 'brands' => 'Brands', 'attributes' => 'Attribute values',
         'price_min' => 'Min price', 'price_max' => 'Max price', 'sort' => 'Sort', 'flash_sale' => 'Only flash-sale products', 'password_confirmation' => 'Confirm password',
         'filters.price_min' => 'Min price', 'filters.price_max' => 'Max price', 'product_ids' => 'Products',

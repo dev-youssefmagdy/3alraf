@@ -60,6 +60,7 @@ return [
         'reviews' => ['view', 'edit', 'delete'],
         'custom_pages' => $crud,
         'static_pages' => $crud,
+        'blog_posts' => $crud,
         // AI
         'ai_settings' => ['view', 'edit'],
         'ai_chat' => ['use'],
