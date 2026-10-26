@@ -242,13 +242,11 @@ function init() {
 
     /* ---------- special packaging checkbox (cart + checkout): toggles the picker; unchecking clears the option ---------- */
     $(document).on('change', '[data-packaging-toggle]', function () {
-        const $w = $(this).closest('[data-packaging]'), on = this.checked, $s = $w.find('[data-packaging-select]');
+        const $w = $(this).closest('[data-packaging]'), on = this.checked;
         $w.find('[data-packaging-picker]').toggleClass('hidden', !on);
-        if (!on) { $s.val('').trigger('change'); } else if (!$s.val()) { $s.val($s.find('option[value!=""]').first().val()).trigger('change'); }
-    });
-    $(document).on('change', '[data-packaging-select]', function () {
-        const id = $(this).val(), $w = $(this).closest('[data-packaging]');
-        $w.find('[data-packaging-desc]').addClass('hidden'); if (id) $w.find('[data-packaging-desc="' + id + '"]').removeClass('hidden');
+        const $r = $w.find('input[data-packaging-select]'); // radios; the first one (value "") means "no packaging"
+        if (!on) { $r.filter('[value=""]').prop('checked', true).trigger('change'); }
+        else if (!$r.filter(':checked').val()) { $r.filter('[value!=""]').first().prop('checked', true).trigger('change'); }
     });
 
     /* ---------- cart page ---------- */
@@ -289,7 +287,7 @@ function init() {
             return $a.length && $a.val() ? String($a.data('city')) : String($f.find('[name=city_id]').val() || '');
         };
         const quote = (fromApply) => {
-            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, input[name=prepay_method_id]:checked, [name=discount_code], [name=packaging_option_id]').serialize();
+            const data = $f.find('input[name=address_id]:checked, [name=city_id], [name=address], [name=shipping_company_id], input[name=payment_method_id]:checked, input[name=prepay_method_id]:checked, [name=discount_code], input[name=packaging_option_id]:checked').serialize();
             return $.post(sf.routes.quote, data).done((r) => {
                 renderTotals($f.find('[data-totals]'), r.data.totals, { shipping: true });
                 togglePrepay(r.data.totals);

@@ -88,7 +88,10 @@ $(document).on('submit', 'form[data-ajax-form]', function (e) {
 
     const vUrl = $form.data('validate-url');
     if (!vUrl) return submit();
-    ajax(vUrl, payload($form)).done(submit).fail((xhr) => { handleFail($form, xhr); done(); });
+    // validate routes are POST-only: drop the method spoof used for the real PUT/PATCH submit
+    const vfd = payload($form);
+    vfd.delete('_method');
+    ajax(vUrl, vfd).done(submit).fail((xhr) => { handleFail($form, xhr); done(); });
 });
 
 // clear single-field error on edit

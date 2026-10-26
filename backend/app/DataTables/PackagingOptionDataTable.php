@@ -16,6 +16,7 @@ class PackagingOptionDataTable extends BaseDataTable
     public function columns(): array
     {
         return [
+            ['data' => 'image_thumb', 'title' => __('orders.packaging.image'), 'orderable' => false, 'searchable' => false],
             ['data' => 'name_label', 'title' => __('admin.fields.name'), 'orderable' => false],
             ['data' => 'price', 'title' => __('orders.packaging.price')],
             ['data' => 'cost', 'title' => __('orders.packaging.cost')],
@@ -26,7 +27,8 @@ class PackagingOptionDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('name_label', fn (PackagingOption $m) => e($m->name))
+        $dt->addColumn('image_thumb', fn (PackagingOption $m) => $m->image ? '<img src="'.e(media_url($m->image)).'" alt="" class="h-10 w-10 rounded border object-cover">' : '—')
+            ->addColumn('name_label', fn (PackagingOption $m) => e($m->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (PackagingOption $m) => $this->badge($m->is_active, __('admin.active'), __('admin.inactive')))
             ->addColumn('actions', fn (PackagingOption $m) => $this->tenantActions($m, 'tenant.packaging', 'packaging'));
@@ -34,6 +36,6 @@ class PackagingOptionDataTable extends BaseDataTable
 
     protected function rawColumns(): array
     {
-        return ['name_label', 'status', 'actions'];
+        return ['image_thumb', 'name_label', 'status', 'actions'];
     }
 }

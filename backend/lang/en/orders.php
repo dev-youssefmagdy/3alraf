@@ -79,7 +79,7 @@ return [
         'in_use' => 'This code was used by orders and cannot be deleted. Deactivate it instead.',
     ],
     'packaging' => [
-        'title' => 'Special packaging', 'price' => 'Price (charged to customer)', 'cost' => 'Cost (merchant only)', 'image' => 'Image',
+        'title' => 'Special packaging', 'price' => 'Price (charged to customer)', 'cost' => 'Cost (merchant only)', 'image_hint' => 'Required. JPG, PNG or WebP, max 4 MB. Shown to the customer when this packaging is selected at checkout.', 'image' => 'Image',
         'price_hint' => 'Added to the order total as its own line. Not discountable, not counted for free shipping.', 'cost_hint' => 'Your packaging cost, used only in profit reports.',
         'checkbox' => 'Special packaging', 'choose' => 'Choose packaging', 'unavailable' => 'This packaging option is not available.',
     ],

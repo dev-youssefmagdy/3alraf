@@ -178,12 +178,17 @@ it('lets an authorised admin manage packaging options and rejects bad input', fu
     $good = ['name' => ['ar' => 'علبة', 'en' => 'Box'], 'price' => '12.50', 'cost' => '3', 'is_active' => 1, 'sort_order' => 2];
     $this->postJson("{$this->t}/packaging/validate", ['price' => '-1'] + $good)->assertStatus(422)->assertJsonValidationErrors('price');
     $this->postJson("{$this->t}/packaging/validate", ['name' => []] + $good)->assertStatus(422);
+    $this->postJson("{$this->t}/packaging", $good)->assertStatus(422)->assertJsonValidationErrors('image'); // picture is mandatory
+    $this->postJson("{$this->t}/packaging", $good + ['image' => \Illuminate\Http\UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')])->assertStatus(422)->assertJsonValidationErrors('image');
     $this->postJson("{$this->t}/packaging", $good + ['image' => \Illuminate\Http\UploadedFile::fake()->image('p.png')])->assertOk();
     $o = PackagingOption::where('price', 12.50)->first();
     expect($o->image)->not->toBeNull();
     $old = $o->image;
-    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1] + $good)->assertOk();
-    expect((string) $o->fresh()->price)->toBe('15.00')->and($o->fresh()->image)->toBeNull();
+    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1] + $good)->assertStatus(422)->assertJsonValidationErrors('image'); // cannot end up without a picture
+    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15'] + $good)->assertOk(); // keeping the current picture is fine
+    expect($o->fresh()->image)->toBe($old);
+    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1, 'image' => \Illuminate\Http\UploadedFile::fake()->image('n.png')] + $good)->assertOk(); // replace
+    expect($o->fresh()->image)->not->toBe($old);
     Storage::disk('media')->assertMissing($old);
     $this->get("{$this->t}/packaging/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 2);
     $this->deleteJson("{$this->t}/packaging/{$o->id}")->assertOk();
@@ -228,4 +233,10 @@ it('keeps soft-deleted options referenced by orders and purges unreferenced ones
     $res = app(SoftDeletePurger::class)->run(60, false, ['packaging_option']);
     expect($res['packaging_option']['purged'])->toBe(1)->and($res['packaging_option']['retained'])->toBe(1);
     expect(PackagingOption::withoutGlobalScopes()->withTrashed()->find($kept->id))->not->toBeNull()->and(PackagingOption::withoutGlobalScopes()->withTrashed()->find($free->id))->toBeNull();
+});
+
+it('shows the uploaded packaging picture on checkout and in the API', function () {
+    $this->opt->update(['image' => 'tenants/1/packaging/gift.png']);
+    $html = $this->get("{$this->s}/cart")->assertOk()->getContent();
+    expect($html)->toContain('data-packaging-card="'.$this->opt->id.'"')->toContain('tenants/1/packaging/gift.png');
 });

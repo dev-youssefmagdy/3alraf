@@ -8,11 +8,11 @@
     </div>
     <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$model->is_active" />
     <div data-field>
-        <label class="form-label" for="f-image">{{ __('orders.packaging.image') }}</label>
+        <label class="form-label" for="f-image">{{ __('orders.packaging.image') }} <span class="text-red-600">*</span></label>
         @if ($model->image)
             <img src="{{ media_url($model->image) }}" class="mb-2 h-20 rounded border object-contain" alt="">
-            <x-checkbox name="remove_image" :label="__('ops.remove_image')" :bool="false" />
         @endif
-        <input id="f-image" type="file" name="image" accept="image/*" class="form-control">
+        <input id="f-image" type="file" name="image" accept="image/jpeg,image/png,image/webp" class="form-control" @required(! $model->image)>
+        <p class="mt-1 text-xs text-slate-500">{{ __('orders.packaging.image_hint') }}</p>
     </div>
 </x-resource-form>
