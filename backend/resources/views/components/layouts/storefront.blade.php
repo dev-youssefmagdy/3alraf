@@ -146,9 +146,9 @@
         </aside>
     </div>
 
-    <main class="mx-auto min-h-[50vh] max-w-7xl px-4 py-6">{{ $slot }}</main>
+    <main class="mx-auto min-h-[50vh] max-w-7xl px-4 py-6 max-lg:pb-24">{{ $slot }}</main>
 
-    <footer class="mt-10 border-t border-slate-200 bg-brand-50 text-slate-600">
+    <footer class="mt-10 max-lg:mb-16 border-t border-slate-200 bg-brand-50 text-slate-600">
         <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
             <div><h3 class="mb-3 text-lg font-bold text-slate-900">{{ $tenant->name }}</h3><p class="text-sm leading-6 text-slate-500">{{ __('store.seo_default_desc') }}</p></div>
             <div><h4 class="mb-3 font-semibold text-slate-900">{{ __('store.about') }}</h4>
@@ -169,4 +169,6 @@
         </div>
         <div class="border-t border-slate-200 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ $tenant->name }}. {{ __('store.rights') }}</div>
     </footer>
+
+    @include('storefront._bottom-bar')
 </x-layouts.base>
