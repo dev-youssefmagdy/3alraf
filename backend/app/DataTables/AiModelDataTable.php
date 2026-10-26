@@ -10,7 +10,12 @@ class AiModelDataTable extends BaseDataTable
 {
     public function query(): Builder
     {
-        return AiModel::query()->with('provider:id,name')->orderBy('kind')->orderByDesc('is_default')->orderBy('label');
+        $r = request();
+
+        return AiModel::query()->with('provider:id,name')
+            ->when($r->integer('provider_id'), fn ($q, $p) => $q->where('ai_provider_id', $p))
+            ->when($r->string('kind')->toString(), fn ($q, $k) => $q->where('kind', $k))
+            ->orderBy('kind')->orderByDesc('is_default')->orderBy('label');
     }
 
     public function columns(): array
