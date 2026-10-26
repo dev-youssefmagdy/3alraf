@@ -2,8 +2,8 @@
     'potentialAction' => ['@type' => 'SearchAction', 'target' => route('storefront.search').'?q={q}', 'query-input' => 'required name=q']]">
     {{-- hero slider --}}
     @if ($hero->isNotEmpty())
-        <section class="relative overflow-hidden rounded-2xl bg-slate-200" data-slider>
-            <div class="flex transition-transform duration-500" data-slides>
+        <section class="relative cursor-grab select-none overflow-hidden rounded-2xl bg-slate-200 active:cursor-grabbing" data-slider aria-roledescription="carousel">
+            <div class="flex will-change-transform" data-slides>
                 @foreach ($hero as $b)
                     <a href="{{ $b->safeLink() ?: '#' }}" class="block w-full shrink-0" data-slide>
                         @if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/6] w-full object-cover" @if (! $loop->first) loading="lazy" @endif>@endif
@@ -11,9 +11,9 @@
                 @endforeach
             </div>
             @if ($hero->count() > 1)
-                <button type="button" data-slide-prev class="absolute start-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow" aria-label="prev">&#8249;</button>
-                <button type="button" data-slide-next class="absolute end-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow" aria-label="next">&#8250;</button>
-                <div class="absolute inset-x-0 bottom-3 flex justify-center gap-1.5" data-dots>@foreach ($hero as $b)<span class="size-2 rounded-full bg-white/60"></span>@endforeach</div>
+                <button type="button" data-slide-prev class="absolute start-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="prev">&#8249;</button>
+                <button type="button" data-slide-next class="absolute end-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="next">&#8250;</button>
+                <div class="absolute inset-x-0 bottom-3 flex justify-center gap-1.5" data-dots>@foreach ($hero as $b)<span class="size-2 cursor-pointer rounded-full bg-white/60 transition-all"></span>@endforeach</div>
             @endif
         </section>
     @endif

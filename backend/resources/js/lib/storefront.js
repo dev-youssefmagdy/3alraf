@@ -104,15 +104,49 @@ function init() {
     })();
 
     /* ---------- hero slider + popup ---------- */
+    // Swipeable slider (no library): pointer drag follows the finger, snaps on release, autoplay pauses while touched/hovered, dots + arrows + keys.
     $('[data-slider]').each(function () {
-        const $s = $(this), $track = $s.find('[data-slides]'), n = $s.find('[data-slide]').length, $dots = $s.find('[data-dots] span'), rtl = sf.dir === 'rtl';
-        let i = 0, timer;
+        const $s = $(this), $track = $s.find('[data-slides]'), n = $s.find('[data-slide]').length, $dots = $s.find('[data-dots] span'), rtl = sf.dir === 'rtl', dir = rtl ? 1 : -1;
+        let i = 0, timer, startX = 0, startY = 0, dx = 0, dragging = false, locked = null, moved = false;
+        const width = () => $s.width() || 1;
+        const render = (px, animate) => {
+            $track.css({ transition: animate ? 'transform .45s ease' : 'none', transform: 'translate3d(' + (dir * i * width() + px) + 'px,0,0)' });
+        };
         const go = (k) => {
-            i = (k + n) % n;
-            $track.css('transform', 'translateX(' + (rtl ? '' : '-') + i * 100 + '%)');
+            i = (k + n) % n; // wraps around
+            render(0, true);
             $dots.removeClass('bg-white').addClass('bg-white/60').eq(i).removeClass('bg-white/60').addClass('bg-white');
         };
-        const auto = () => { clearInterval(timer); if (n > 1) timer = setInterval(() => go(i + 1), 5000); };
+        const auto = () => { clearInterval(timer); if (n > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(() => go(i + 1), 5000); };
+        if (n > 1) {
+            $s.css('touch-action', 'pan-y').attr({ tabindex: 0, role: 'region' });
+            $s.on('pointerdown', (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                dragging = true; locked = null; moved = false; dx = 0; startX = e.clientX; startY = e.clientY; clearInterval(timer);
+            });
+            $(window).on('pointermove', (e) => {
+                if (!dragging) return;
+                const mx = e.clientX - startX, my = e.clientY - startY;
+                if (locked === null && (Math.abs(mx) > 6 || Math.abs(my) > 6)) locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+                if (locked !== 'x') return;
+                moved = true; dx = mx;
+                render(dx, false);
+            });
+            const release = () => {
+                if (!dragging) return; dragging = false;
+                if (locked === 'x' && Math.abs(dx) > Math.min(80, width() * 0.15)) go(i + (dx * dir > 0 ? 1 : -1)); // dragging the track toward `dir` reveals the next slide
+                else render(0, true);
+                dx = 0; auto();
+            };
+            $(window).on('pointerup pointercancel', release);
+            // a drag must not open the banner link
+            $s.on('click', 'a', (e) => { if (moved) { e.preventDefault(); moved = false; } });
+            $s.on('dragstart', 'img', (e) => e.preventDefault());
+            $s.on('mouseenter', () => clearInterval(timer)).on('mouseleave', () => { if (!dragging) auto(); });
+            $s.on('keydown', (e) => { if (e.key === 'ArrowRight') { go(i + (rtl ? -1 : 1)); auto(); } else if (e.key === 'ArrowLeft') { go(i + (rtl ? 1 : -1)); auto(); } });
+            $s.on('click', '[data-dots] span', function () { go($(this).index()); auto(); });
+            $(window).on('resize', () => render(0, false));
+        }
         $s.on('click', '[data-slide-next]', (e) => { e.preventDefault(); go(i + 1); auto(); });
         $s.on('click', '[data-slide-prev]', (e) => { e.preventDefault(); go(i - 1); auto(); });
         go(0); auto();
