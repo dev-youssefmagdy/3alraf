@@ -15,6 +15,8 @@ class AiModelDataTable extends BaseDataTable
         return AiModel::query()->with('provider:id,name')
             ->when($r->integer('provider_id'), fn ($q, $p) => $q->where('ai_provider_id', $p))
             ->when($r->string('kind')->toString(), fn ($q, $k) => $q->where('kind', $k))
+            ->when($r->filled('cost_min'), fn ($q) => $q->where('input_cost', '>=', (float) $r->input('cost_min')))
+            ->when($r->filled('cost_max'), fn ($q) => $q->where('input_cost', '<=', (float) $r->input('cost_max')))
             ->orderBy('kind')->orderByDesc('is_default')->orderBy('label');
     }
 

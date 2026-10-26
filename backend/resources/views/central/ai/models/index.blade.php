@@ -10,6 +10,8 @@
                 @foreach (\App\Enums\AiModelKind::cases() as $k)<option value="{{ $k->value }}">{{ $k->label() }}</option>@endforeach
             </select>
             @can('ai_models.create')<x-button :href="route('central.ai.models.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            <input type="number" min="0" step="any" name="cost_min" data-dt-filter="#ai-models-table" placeholder="$ min" title="{{ __('ai.fields.input_cost') }}" class="form-control !w-28 !py-1.5">
+            <input type="number" min="0" step="any" name="cost_max" data-dt-filter="#ai-models-table" placeholder="$ max" title="{{ __('ai.fields.input_cost') }}" class="form-control !w-28 !py-1.5">
         </x-slot:actions>
         <x-datatable :table="$table" :url="route('central.ai.models.datatable')" id="ai-models-table" />
     </x-card>
