@@ -61,7 +61,7 @@ return [
         'require_https' => env('GROWTH_WEBHOOK_HTTPS', true),
     ],
 
-    'approvals' => ['ttl_days' => 7],
+    'approvals' => ['ttl_days' => 7, 'api_types' => ['note']], // types n8n may propose; handler types execute real changes and are created only by Laravel
 
     // Optional allowlist (IPs or CIDRs, comma separated in env) for the whole /api/integration/v1 prefix. Empty = no restriction.
     'ip_allowlist' => array_values(array_filter(array_map('trim', explode(',', (string) env('GROWTH_INTEGRATION_IPS', ''))))),

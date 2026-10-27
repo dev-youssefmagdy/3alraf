@@ -17,20 +17,27 @@ class GrowthOperate extends Command
 
     public function handle(GrowthFeatures $f, InventoryDecisionService $inv, ReturnIntelService $ret, TrendRadarService $trend, CeoChallengeService $ceo): int
     {
+        $failed = false;
         $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
         foreach ($f->tenantsWith('inventory_engine', 'return_intel', 'trend_radar', 'ceo_challenge') as $t) {
             if ($this->option('tenant') && $t->slug !== $this->option('tenant')) {
                 continue;
             }
             app()->instance('currentTenant', $t);
-            $a = $f->active('inventory_engine', $t) ? $inv->stockToStory() : 0;
-            $b = $f->active('return_intel', $t) ? $ret->generateTasks() : 0;
-            $c = $f->active('trend_radar', $t) ? $trend->scan() : 0;
-            $d = $f->active('ceo_challenge', $t) ? $ceo->generate()->id : 0;
-            $this->info("{$t->slug}: stories $a, return tasks $b, trends $c, challenge $d");
+            try {
+                $a = $f->active('inventory_engine', $t) ? $inv->stockToStory() : 0;
+                $b = $f->active('return_intel', $t) ? $ret->generateTasks() : 0;
+                $c = $f->active('trend_radar', $t) ? $trend->scan() : 0;
+                $d = $f->active('ceo_challenge', $t) ? $ceo->generate()->id : 0;
+                $this->info("{$t->slug}: stories $a, return tasks $b, trends $c, challenge $d");
+            } catch (\Throwable $e) {
+                $failed = true;
+                report($e); // one tenant failing must not stop the others
+                $this->error("{$t->slug}: failed (".class_basename($e).')');
+            }
         }
         $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
 
-        return self::SUCCESS;
+        return $failed ? self::FAILURE : self::SUCCESS;
     }
 }

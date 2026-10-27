@@ -15,19 +15,26 @@ class GrowthAggregate extends Command
 
     public function handle(GrowthFeatures $features, StatsAggregator $stats): int
     {
+        $failed = false;
         $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
         foreach (Tenant::query()->when($this->option('tenant'), fn ($q, $s) => $q->where('slug', $s))->get() as $t) {
             if (! $features->active('integration_api', $t) && ! $features->active('brief', $t)) {
                 continue;
             }
             app()->instance('currentTenant', $t);
-            $tz = $t->timezone ?: config('app.timezone');
-            $to = now($tz)->startOfDay();
-            $rows = $stats->rebuild($to->copy()->subDays(max(0, (int) $this->option('days') - 1)), $to);
-            $this->info("{$t->slug}: $rows rows");
+            try {
+                $tz = $t->timezone ?: config('app.timezone');
+                $to = now($tz)->startOfDay();
+                $rows = $stats->rebuild($to->copy()->subDays(max(0, (int) $this->option('days') - 1)), $to);
+                $this->info("{$t->slug}: $rows rows");
+            } catch (\Throwable $e) {
+                $failed = true;
+                report($e); // one tenant failing must not stop the others
+                $this->error("{$t->slug}: failed (".class_basename($e).')');
+            }
         }
         $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
 
-        return self::SUCCESS;
+        return $failed ? self::FAILURE : self::SUCCESS;
     }
 }
