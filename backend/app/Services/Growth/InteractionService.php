@@ -2,7 +2,9 @@
 
 namespace App\Services\Growth;
 
+use App\Models\Customer;
 use App\Models\Interaction;
+use App\Models\Tenant;
 use App\Models\TenantProduct;
 use Illuminate\Support\Carbon;
 
@@ -13,10 +15,15 @@ use Illuminate\Support\Carbon;
 class InteractionService
 {
     public const CHANNELS = ['whatsapp', 'facebook', 'instagram', 'review', 'site_search', 'email'];
+
     public const CATEGORIES = ['price', 'shipping', 'availability', 'trust', 'photos', 'size_color', 'returns', 'usage', 'safety'];
+
     public const INTENTS = ['purchase_intent', 'question', 'complaint', 'praise', 'other'];
+
     public const URGENCY = ['low', 'normal', 'high'];
+
     public const SENTIMENT = ['negative', 'neutral', 'positive'];
+
     public const MESSAGING = ['whatsapp', 'facebook', 'instagram']; // 24h customer-service window
 
     private const KEYWORDS = [
@@ -30,9 +37,13 @@ class InteractionService
         'size_color' => ['size', 'color', 'colour', 'shade', 'مقاس', 'لون', 'حجم'],
         'usage' => ['how to use', 'how do i', 'usage', 'ingredients', 'استخدام', 'طريقة', 'ازاي', 'إزاي', 'مكونات'],
     ];
+
     private const BUY = ['want to buy', 'order', 'i want', 'interested', 'عايز', 'عاوز', 'اطلب', 'أطلب', 'اشتري', 'حابب'];
+
     private const NEG = ['bad', 'terrible', 'worst', 'angry', 'disappointed', 'broken', 'damaged', 'late', 'سيء', 'وحش', 'زعلان', 'مش راضي', 'تالف', 'اتأخر', 'متأخر', 'نصب'];
+
     private const POS = ['love', 'great', 'excellent', 'thanks', 'perfect', 'تحفة', 'ممتاز', 'شكرا', 'شكراً', 'رائع', 'حلو'];
+
     private const OPT_OUT = ['stop', 'unsubscribe', 'opt out', 'الغاء الاشتراك', 'إلغاء الاشتراك', 'وقف الرسائل', 'بطلوا'];
 
     public function __construct(private ActionLogger $log) {}
@@ -58,7 +69,7 @@ class InteractionService
             'channel' => $d['channel'], 'external_id' => $d['external_id'], 'thread_id' => $d['thread_id'] ?? null, 'product_id' => $productId, 'text_masked' => $masked,
             'text_hash' => sha1($this->normalise($masked)), 'language' => $d['language'] ?? (preg_match('/\p{Arabic}/u', $masked) ? 'ar' : 'en'), 'consent' => (bool) ($d['consent'] ?? false),
             'opted_out' => $optOut, 'received_at' => $received, 'window_expires_at' => in_array($d['channel'], self::MESSAGING, true) ? $received->copy()->addHours(24) : null,
-            'status' => 'classified',
+            'status' => 'classified', 'customer_id' => $this->matchCustomer($d['contact'] ?? null),
         ] + $final);
         $reason = $this->escalationReason($i);
         if ($reason) {
@@ -67,6 +78,18 @@ class InteractionService
         $this->log->log('interaction.ingested', $source === 'n8n' ? 'n8n' : 'admin', null, null, $i, 'ok', ['channel' => $i->channel, 'category' => $i->category]);
 
         return [$i->fresh(), true];
+    }
+
+    /** Customer id by exact email / phone (digits) match; the raw contact is never stored. */
+    private function matchCustomer(?string $contact): ?int
+    {
+        $c = trim((string) $contact);
+        if ($c === '') {
+            return null;
+        }
+        $q = str_contains($c, '@') ? Customer::where('email', mb_strtolower($c)) : Customer::where('phone', $c)->orWhere('phone', preg_replace('/\D+/', '', $c));
+
+        return $q->value('id');
     }
 
     private function classification(array $d): array
@@ -136,7 +159,7 @@ class InteractionService
         return $i->window_expires_at ? $i->window_expires_at->isFuture() : null;
     }
 
-    public function replyLevel(?\App\Models\Tenant $t = null): int
+    public function replyLevel(?Tenant $t = null): int
     {
         $t ??= current_tenant();
 

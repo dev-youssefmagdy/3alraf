@@ -1,1254 +1,3396 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "3alraf Growth Integration API (n8n)",
-    "version": "1.0.0",
-    "description": "Server-to-server API. Auth: Authorization Bearer token + X-Timestamp (unix s, +-300s) + X-Signature = hex HMAC-SHA256(client secret, \"{timestamp}.{raw body}\"). Optional IP allowlist (GROWTH_INTEGRATION_IPS). No endpoint can change prices, refunds, stock or ad budgets. Each endpoint is also gated by the tenant's per-feature switch (403 feature_disabled). Webhook events from Laravel use the same signature scheme (X-Event-Id, X-Event-Type headers)."
-  },
-  "servers": [
-    {
-      "url": "https://{host}/api/integration/v1",
-      "variables": {
-        "host": {
-          "default": "shop.example.com"
+    "openapi": "3.0.3",
+    "info": {
+        "title": "3alraf Growth integration API (n8n)",
+        "version": "1.0.0",
+        "description": "Bearer token + HMAC signature. Aggregate data only; no price, refund, stock or budget endpoints. Every endpoint answers 403 feature_disabled when its Growth switch is OFF."
+    },
+    "servers": [
+        {
+            "url": "/api/integration/v1"
         }
-      }
+    ],
+    "paths": {
+        "/approvals/{id}": {
+            "get": {
+                "operationId": "approvals.show",
+                "summary": "Scope: read; feature: approvals",
+                "x-scope": "read",
+                "x-feature": "approvals",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/brand-memory": {
+            "get": {
+                "operationId": "brand-memory.index",
+                "summary": "Scope: read; feature: brand_memory",
+                "x-scope": "read",
+                "x-feature": "brand_memory",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "product_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/brief/daily": {
+            "get": {
+                "operationId": "brief.daily",
+                "summary": "Scope: read; feature: brief",
+                "x-scope": "read",
+                "x-feature": "brief",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/brief/weekly": {
+            "get": {
+                "operationId": "brief.weekly",
+                "summary": "Scope: read; feature: brief",
+                "x-scope": "read",
+                "x-feature": "brief",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/bundles": {
+            "get": {
+                "operationId": "bundles.index",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ceo-challenge": {
+            "get": {
+                "operationId": "ceo.current",
+                "summary": "Scope: read; feature: ceo_challenge",
+                "x-scope": "read",
+                "x-feature": "ceo_challenge",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/segments": {
+            "get": {
+                "operationId": "customers.segments",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events": {
+            "get": {
+                "operationId": "events.index",
+                "summary": "Scope: events:read; feature: events_outbox",
+                "x-scope": "events:read",
+                "x-feature": "events_outbox",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/experiments/{id}/ad-results": {
+            "post": {
+                "operationId": "experiments.ad-results",
+                "summary": "Scope: ingest:write; feature: experiment_lab",
+                "x-scope": "ingest:write",
+                "x-feature": "experiment_lab",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "rows": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "minimum": 1,
+                                        "maximum": 500
+                                    }
+                                },
+                                "required": [
+                                    "rows"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/experiments/{id}/lab": {
+            "get": {
+                "operationId": "experiments.lab",
+                "summary": "Scope: read; feature: experiment_lab",
+                "x-scope": "read",
+                "x-feature": "experiment_lab",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/experiments/{id}/results": {
+            "post": {
+                "operationId": "experiments.results",
+                "summary": "Scope: ingest:write; feature: experiments",
+                "x-scope": "ingest:write",
+                "x-feature": "experiments",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "metric": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "value": {
+                                        "type": "number"
+                                    },
+                                    "spend": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 999999999999
+                                    },
+                                    "recorded_on": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "maxLength": 300
+                                    }
+                                },
+                                "required": [
+                                    "metric"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/features": {
+            "get": {
+                "operationId": "features.index",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "operationId": "health",
+                "summary": "Scope: any",
+                "x-scope": "any",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/interactions": {
+            "post": {
+                "operationId": "interactions.ingest",
+                "summary": "Scope: ingest:write; feature: interactions",
+                "x-scope": "ingest:write",
+                "x-feature": "interactions",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "channel": {
+                                        "type": "string",
+                                        "enum": [
+                                            "whatsapp",
+                                            "facebook",
+                                            "instagram",
+                                            "review",
+                                            "site_search",
+                                            "email"
+                                        ]
+                                    },
+                                    "external_id": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    },
+                                    "thread_id": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    },
+                                    "product_id": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "maxLength": 5000
+                                    },
+                                    "language": {
+                                        "type": "string",
+                                        "maxLength": 5
+                                    },
+                                    "consent": {
+                                        "type": "boolean"
+                                    },
+                                    "opted_out": {
+                                        "type": "boolean"
+                                    },
+                                    "received_at": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "contact": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "enum": [
+                                            "price",
+                                            "shipping",
+                                            "availability",
+                                            "trust",
+                                            "photos",
+                                            "size_color",
+                                            "returns",
+                                            "usage",
+                                            "safety"
+                                        ]
+                                    },
+                                    "intent": {
+                                        "type": "string",
+                                        "enum": [
+                                            "purchase_intent",
+                                            "question",
+                                            "complaint",
+                                            "praise",
+                                            "other"
+                                        ]
+                                    },
+                                    "urgency": {
+                                        "type": "string",
+                                        "enum": [
+                                            "low",
+                                            "normal",
+                                            "high"
+                                        ]
+                                    },
+                                    "sentiment": {
+                                        "type": "string",
+                                        "enum": [
+                                            "negative",
+                                            "neutral",
+                                            "positive"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "channel",
+                                    "external_id",
+                                    "text"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/interactions/{id}/responded": {
+            "post": {
+                "operationId": "interactions.responded",
+                "summary": "Scope: ingest:write; feature: interactions",
+                "x-scope": "ingest:write",
+                "x-feature": "interactions",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/interactions/{id}/suggested-reply": {
+            "get": {
+                "operationId": "interactions.suggest",
+                "summary": "Scope: read; feature: interactions",
+                "x-scope": "read",
+                "x-feature": "interactions",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/recommendations": {
+            "get": {
+                "operationId": "inventory.recommendations",
+                "summary": "Scope: read; feature: inventory_engine",
+                "x-scope": "read",
+                "x-feature": "inventory_engine",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/velocity": {
+            "get": {
+                "operationId": "inventory.velocity",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics/channels": {
+            "get": {
+                "operationId": "metrics.channels",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics/products": {
+            "get": {
+                "operationId": "metrics.products",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics/summary": {
+            "get": {
+                "operationId": "metrics.summary",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/missed-opportunities/weekly": {
+            "get": {
+                "operationId": "missed.weekly",
+                "summary": "Scope: read; feature: missed_opportunities",
+                "x-scope": "read",
+                "x-feature": "missed_opportunities",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/attribution": {
+            "get": {
+                "operationId": "orders.attribution",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/summary": {
+            "get": {
+                "operationId": "orders.summary",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ping": {
+            "get": {
+                "operationId": "ping",
+                "summary": "Scope: any",
+                "x-scope": "any",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "operationId": "products.index",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}/facts": {
+            "get": {
+                "operationId": "products.facts",
+                "summary": "Scope: read",
+                "x-scope": "read",
+                "x-feature": null,
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "direct",
+                                "affiliate"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/proposals": {
+            "post": {
+                "operationId": "proposals.store",
+                "summary": "Scope: proposals:write; feature: approvals",
+                "x-scope": "proposals:write",
+                "x-feature": "approvals",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "note"
+                                        ],
+                                        "maxLength": 60
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "maxLength": 200
+                                    },
+                                    "payload": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "type",
+                                    "title"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reputation/alerts": {
+            "get": {
+                "operationId": "reputation.alerts",
+                "summary": "Scope: read; feature: reputation_radar",
+                "x-scope": "read",
+                "x-feature": "reputation_radar",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/reasons": {
+            "get": {
+                "operationId": "returns.reasons",
+                "summary": "Scope: read; feature: return_intel",
+                "x-scope": "read",
+                "x-feature": "return_intel",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "returns.reason",
+                "summary": "Scope: ingest:write; feature: return_intel",
+                "x-scope": "ingest:write",
+                "x-feature": "return_intel",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                            "return",
+                                            "cancellation"
+                                        ]
+                                    },
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "enum": [
+                                            "color_differs",
+                                            "size_unclear",
+                                            "damaged_packaging",
+                                            "delivery_delay",
+                                            "description_inaccurate",
+                                            "quality",
+                                            "wrong_item",
+                                            "changed_mind",
+                                            "other"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "kind",
+                                    "id",
+                                    "code"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tracked-links": {
+            "post": {
+                "operationId": "tracked-links.store",
+                "summary": "Scope: ingest:write; feature: comment_to_cart",
+                "x-scope": "ingest:write",
+                "x-feature": "comment_to_cart",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "channel": {
+                                        "type": "string",
+                                        "maxLength": 20
+                                    },
+                                    "interaction_id": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "campaign": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                    }
+                                },
+                                "required": [
+                                    "product_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/trends/candidates": {
+            "get": {
+                "operationId": "trends.candidates",
+                "summary": "Scope: read; feature: trend_radar",
+                "x-scope": "read",
+                "x-feature": "trend_radar",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/truth-guard/check": {
+            "post": {
+                "operationId": "truth-guard.check",
+                "summary": "Scope: read; feature: truth_guard",
+                "x-scope": "read",
+                "x-feature": "truth_guard",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "text": {
+                                        "type": "string",
+                                        "maxLength": 5000
+                                    },
+                                    "product_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "text"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/voc": {
+            "get": {
+                "operationId": "voc.index",
+                "summary": "Scope: read; feature: voc",
+                "x-scope": "read",
+                "x-feature": "voc",
+                "security": [
+                    {
+                        "bearerAuth": [],
+                        "hmacSignature": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthenticated (bad token, signature or stale timestamp)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer"
+            },
+            "hmacSignature": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Signature"
+            }
+        },
+        "schemas": {
+            "Envelope": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "data": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "meta": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string",
+                        "enum": [
+                            "unauthenticated",
+                            "growth_disabled",
+                            "feature_disabled",
+                            "forbidden_scope",
+                            "ip_not_allowed",
+                            "validation",
+                            "too_many_requests"
+                        ]
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
-  ],
-  "paths": {
-    "/approvals/{id}": {
-      "get": {
-        "operationId": "approvals.show",
-        "summary": "Scope: read; feature: approvals",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/brand-memory": {
-      "get": {
-        "operationId": "brand-memory.index",
-        "summary": "Scope: read; feature: brand_memory",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/brief/daily": {
-      "get": {
-        "operationId": "brief.daily",
-        "summary": "Scope: read; feature: brief",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/brief/weekly": {
-      "get": {
-        "operationId": "brief.weekly",
-        "summary": "Scope: read; feature: brief",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/bundles": {
-      "get": {
-        "operationId": "bundles.index",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/ceo-challenge": {
-      "get": {
-        "operationId": "ceo.current",
-        "summary": "Scope: read; feature: ceo_challenge",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/customers/segments": {
-      "get": {
-        "operationId": "customers.segments",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/events": {
-      "get": {
-        "operationId": "events.index",
-        "summary": "Scope: events:read; feature: events_outbox",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/experiments/{id}/ad-results": {
-      "post": {
-        "operationId": "experiments.ad-results",
-        "summary": "Scope: ingest:write; feature: experiment_lab",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/experiments/{id}/lab": {
-      "get": {
-        "operationId": "experiments.lab",
-        "summary": "Scope: read; feature: experiment_lab",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/experiments/{id}/results": {
-      "post": {
-        "operationId": "experiments.results",
-        "summary": "Scope: ingest:write; feature: experiments",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/features": {
-      "get": {
-        "operationId": "features.index",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/health": {
-      "get": {
-        "operationId": "health",
-        "summary": "Scope: any valid client; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/interactions": {
-      "post": {
-        "operationId": "interactions.ingest",
-        "summary": "Scope: ingest:write; feature: interactions",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/interactions/{id}/responded": {
-      "post": {
-        "operationId": "interactions.responded",
-        "summary": "Scope: ingest:write; feature: interactions",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/interactions/{id}/suggested-reply": {
-      "get": {
-        "operationId": "interactions.suggest",
-        "summary": "Scope: read; feature: interactions",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/inventory/recommendations": {
-      "get": {
-        "operationId": "inventory.recommendations",
-        "summary": "Scope: read; feature: inventory_engine",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/inventory/velocity": {
-      "get": {
-        "operationId": "inventory.velocity",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/metrics/channels": {
-      "get": {
-        "operationId": "metrics.channels",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/metrics/products": {
-      "get": {
-        "operationId": "metrics.products",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/metrics/summary": {
-      "get": {
-        "operationId": "metrics.summary",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/missed-opportunities/weekly": {
-      "get": {
-        "operationId": "missed.weekly",
-        "summary": "Scope: read; feature: missed_opportunities",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/orders/attribution": {
-      "get": {
-        "operationId": "orders.attribution",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/orders/summary": {
-      "get": {
-        "operationId": "orders.summary",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/ping": {
-      "get": {
-        "operationId": "ping",
-        "summary": "Scope: any valid client; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/products": {
-      "get": {
-        "operationId": "products.index",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/products/{id}/facts": {
-      "get": {
-        "operationId": "products.facts",
-        "summary": "Scope: read; feature: integration_api",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/proposals": {
-      "post": {
-        "operationId": "proposals.store",
-        "summary": "Scope: proposals:write; feature: approvals",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/reputation/alerts": {
-      "get": {
-        "operationId": "reputation.alerts",
-        "summary": "Scope: read; feature: reputation_radar",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/returns/reasons": {
-      "get": {
-        "operationId": "returns.reasons",
-        "summary": "Scope: read; feature: return_intel",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      },
-      "post": {
-        "operationId": "returns.reason",
-        "summary": "Scope: ingest:write; feature: return_intel",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/tracked-links": {
-      "post": {
-        "operationId": "tracked-links.store",
-        "summary": "Scope: ingest:write; feature: comment_to_cart",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/trends/candidates": {
-      "get": {
-        "operationId": "trends.candidates",
-        "summary": "Scope: read; feature: trend_radar",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    },
-    "/truth-guard/check": {
-      "post": {
-        "operationId": "truth-guard.check",
-        "summary": "Scope: read; feature: truth_guard",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/voc": {
-      "get": {
-        "operationId": "voc.index",
-        "summary": "Scope: read; feature: voc",
-        "security": [
-          {
-            "bearerAuth": [],
-            "hmacSignature": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "unauthenticated (bad token, signature or stale timestamp)"
-          },
-          "403": {
-            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
-          },
-          "422": {
-            "description": "validation"
-          },
-          "429": {
-            "description": "too_many_requests"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
-      },
-      "hmacSignature": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Signature"
-      }
-    }
-  }
 }

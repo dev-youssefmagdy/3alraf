@@ -6,6 +6,7 @@ use App\DTOs\Orders\CheckoutData;
 use App\Http\Requests\Storefront\CartItemRequest;
 use App\Http\Requests\Storefront\CheckoutRequest;
 use App\Http\Resources\Api\CartResource;
+use App\Services\Growth\BundleAbService;
 use App\Services\Orders\CartService;
 use App\Services\Orders\CartSummary;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class CartController extends ApiController
     {
         if ((int) $r->input('bundle_id', 0) > 0) {
             $this->cart->addBundle((int) $r->input('bundle_id'), max(1, (int) $r->input('quantity')));
+            app(BundleAbService::class)->recordCart((int) $r->input('bundle_id'), BundleAbService::visitor($r)); // no-op unless `bundle_ab` is ON and a test runs
         } else {
             $this->cart->add((int) $r->input('product_id'), (int) $r->input('variant_id', 0), max(1, (int) $r->input('quantity')));
         }

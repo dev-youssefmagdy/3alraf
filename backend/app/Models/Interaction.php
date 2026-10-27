@@ -11,7 +11,7 @@ class Interaction extends Model
 
     protected $table = 'interactions';
 
-    protected $fillable = ['channel', 'external_id', 'thread_id', 'product_id', 'text_masked', 'text_hash', 'language', 'category', 'intent', 'urgency', 'sentiment', 'status', 'consent', 'opted_out', 'escalation_reason', 'suggested_reply', 'reply_mode', 'window_expires_at', 'received_at', 'first_response_at'];
+    protected $fillable = ['channel', 'external_id', 'thread_id', 'product_id', 'text_masked', 'text_hash', 'language', 'category', 'intent', 'urgency', 'sentiment', 'status', 'consent', 'opted_out', 'escalation_reason', 'suggested_reply', 'reply_mode', 'window_expires_at', 'received_at', 'first_response_at', 'customer_id'];
 
     protected function casts(): array
     {

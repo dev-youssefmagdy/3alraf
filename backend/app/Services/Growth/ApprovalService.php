@@ -16,6 +16,9 @@ use Illuminate\Validation\ValidationException;
  */
 class ApprovalService
 {
+    /** Approval type -> feature key that must still be ON when the approval is approved (a switch turned off after the request blocks execution). */
+    public const FEATURE_FOR_TYPE = ['experiment_budget' => 'experiment_lab', 'batch_reorder' => 'small_batch_lab', 'inventory_reorder' => 'inventory_engine', 'bundle_draft' => 'bundle_engine'];
+
     /** @var array<string,Closure> */
     private array $handlers = [];
 
@@ -55,6 +58,10 @@ class ApprovalService
             $a = DB::transaction(function () use ($id, $adminId, $reason) {
                 $a = $this->repo->lockForUpdate($id);
                 $this->assertDecidable($a);
+                $feature = self::FEATURE_FOR_TYPE[$a->type] ?? null;
+                if ($feature && ! app(GrowthFeatures::class)->active($feature)) {
+                    throw ValidationException::withMessages(['feature_disabled' => __('growth_gaps.feature_disabled', ['feature' => $feature])]);
+                }
                 $handler = $this->handlers[$a->type] ?? null;
                 if (! $handler) {
                     throw ValidationException::withMessages(['state' => __('growth_hub.approvals.no_handler')]);

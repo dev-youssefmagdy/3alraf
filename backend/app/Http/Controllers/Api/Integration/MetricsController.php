@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api\Integration;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bundle;
-use App\Models\Order;
+use App\Models\Product;
 use App\Models\TenantProduct;
+use App\Services\Growth\BrandMemoryService;
 use App\Services\Growth\BriefService;
 use App\Services\Growth\MetricsService;
 use App\Services\Growth\StatsAggregator;
@@ -38,7 +39,7 @@ class MetricsController extends Controller
         return response()->json(['success' => true, 'data' => $data, 'meta' => $meta]);
     }
 
-    private function name(?\App\Models\Product $p): ?string
+    private function name(?Product $p): ?string
     {
         return $p?->name ?: $p?->name_en ?: $p?->name_ar;
     }
@@ -68,7 +69,7 @@ class MetricsController extends Controller
 
         return $this->out($this->productRow($t) + ['cost' => $cost, 'unit_margin_percent' => $margin, 'stock' => ['on_hand' => $row['on_hand'], 'days_of_cover' => $row['days_of_cover'], 'daily_velocity' => $row['daily_velocity']],
             'period_performance' => $perf, 'description' => mb_substr((string) $t->product?->description, 0, 1000),
-            'approved_claims' => app(\App\Services\Growth\BrandMemoryService::class)->claims($id)->map(fn ($c) => ['type' => $c->type, 'claim' => $c->claim])->values()->all()], ['period' => [$from->toDateString(), $to->toDateString()]]);
+            'approved_claims' => app(BrandMemoryService::class)->claims($id)->map(fn ($c) => ['type' => $c->type, 'claim' => $c->claim])->values()->all()], ['period' => [$from->toDateString(), $to->toDateString()]]);
     }
 
     public function velocity(Request $r): JsonResponse
@@ -95,13 +96,6 @@ class MetricsController extends Controller
         [$from, $to] = $this->period($r);
 
         return $this->out($this->metrics->byChannel($from, $to), ['period' => [$from->toDateString(), $to->toDateString()], 'note' => 'ROAS is not profit']);
-    }
-
-    public function returnReasons(Request $r): JsonResponse
-    {
-        [$from, $to] = $this->period($r);
-
-        return $this->out($this->metrics->returnReasons($from, $to));
     }
 
     public function bundles(Request $r): JsonResponse

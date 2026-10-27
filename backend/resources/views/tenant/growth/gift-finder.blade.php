@@ -8,6 +8,9 @@
                 <div><dt class="text-slate-500">{{ $g('sessions') }}</dt><dd class="text-lg font-bold">{{ $stats['sessions'] }}</dd></div>
                 <div><dt class="text-slate-500">{{ $g('completion') }}</dt><dd class="text-lg font-bold">{{ $stats['completion_rate'] === null ? '-' : $stats['completion_rate'].'%' }}</dd></div>
                 <div><dt class="text-slate-500">{{ $g('cart_rate') }}</dt><dd class="text-lg font-bold">{{ $stats['cart_rate'] === null ? '-' : $stats['cart_rate'].'%' }}</dd></div>
+                <div><dt class="text-slate-500">{{ __('growth_gaps.gift_orders') }}</dt><dd class="text-lg font-bold">{{ $stats['orders'] }}</dd></div>
+                <div><dt class="text-slate-500">{{ __('growth_gaps.gift_order_rate') }}</dt><dd class="text-lg font-bold">{{ $stats['order_rate'] === null ? '-' : $stats['order_rate'].'%' }}</dd></div>
+                <div><dt class="text-slate-500">{{ __('growth_gaps.gift_aov') }}</dt><dd class="text-lg font-bold">{{ $stats['orders_aov'] ?? '-' }}</dd></div>
                 <div><dt class="text-slate-500">{{ $g('avg_budget') }}</dt><dd class="text-lg font-bold">{{ $stats['avg_budget'] ?? '-' }}</dd></div>
                 <div><dt class="text-slate-500">{{ $g('no_result') }}</dt><dd class="text-lg font-bold">{{ $stats['no_result'] }}</dd></div>
             </dl>

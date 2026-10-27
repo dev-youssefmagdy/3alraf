@@ -18,6 +18,7 @@ class NotificationText
             'return_requested' => __('notifications.admin.return_requested', ['number' => $num, 'return' => $d['return'] ?? '']),
             'tenant_created' => __('notifications.admin.tenant_created', ['name' => $d['name'] ?? '']),
             'tenant_status' => __('notifications.admin.tenant_status', ['name' => $d['name'] ?? '', 'state' => __('notifications.admin.'.(($d['active'] ?? false) ? 'tenant_active' : 'tenant_inactive'))]),
+            'ad_cap_exceeded' => __('growth_gaps.ad_cap_title', ['day' => $d['day'] ?? '', 'spend' => $d['spend_f'] ?? '', 'cap' => $d['cap_f'] ?? '']),
             default => $num,
         };
     }

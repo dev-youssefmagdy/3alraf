@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Tenant\Growth;
 
+use App\DataTables\InteractionDataTable;
+use App\DataTables\MissedOpportunityDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\AdminLinkRequest;
 use App\Http\Requests\Tenant\InteractionActionRequest;
@@ -10,7 +12,7 @@ use App\Http\Requests\Tenant\ReplyLevelRequest;
 use App\Http\Requests\Tenant\TaskUpdateRequest;
 use App\Models\ImprovementTask;
 use App\Models\Interaction;
-use App\Models\MissedOpportunity;
+use App\Models\ReputationAlert;
 use App\Models\TrackedLink;
 use App\Services\Growth\InteractionService;
 use App\Services\Growth\MissedOpportunityService;
@@ -19,6 +21,7 @@ use App\Services\Growth\SuggestedReplyService;
 use App\Services\Growth\TrackedLinkService;
 use App\Services\Growth\VocService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -29,15 +32,19 @@ class EngagementAdminController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:growth.view', only: ['inbox', 'voc', 'reputation', 'missed']), new Middleware('can:growth.manage', except: ['inbox', 'voc', 'reputation', 'missed'])];
+        return [new Middleware('can:growth.view', only: ['inbox', 'inboxData', 'voc', 'reputation', 'missed', 'missedData']), new Middleware('can:growth.manage', except: ['inbox', 'inboxData', 'voc', 'reputation', 'missed', 'missedData'])];
     }
 
-    public function inbox(TrackedLinkService $links)
+    public function inboxData(InteractionDataTable $table)
     {
-        $rows = Interaction::with([])->orderByRaw("status = 'escalated' DESC")->orderByDesc('received_at')->limit(100)->get();
+        return $table->ajax();
+    }
+
+    public function inbox(TrackedLinkService $links, InteractionDataTable $table)
+    {
         $tl = TrackedLink::orderByDesc('id')->limit(20)->get()->each(fn ($l) => [$l->stats = $links->stats($l), $l->short = $links->url($l)]);
 
-        return view('tenant.growth.interactions', ['rows' => $rows, 'level' => $this->ix->replyLevel(), 'links' => $tl, 'unanswered' => $this->ix->unanswered()->count()]);
+        return view('tenant.growth.interactions', ['table' => $table, 'level' => $this->ix->replyLevel(), 'links' => $tl, 'unanswered' => $this->ix->unanswered()->count()]);
     }
 
     public function action(InteractionActionRequest $r, SuggestedReplyService $svc, int $id): JsonResponse
@@ -92,7 +99,7 @@ class EngagementAdminController extends Controller implements HasMiddleware
 
     public function reputation(ReputationService $svc)
     {
-        return view('tenant.growth.reputation', ['open' => $svc->open(), 'closed' => \App\Models\ReputationAlert::where('status', 'resolved')->latest('id')->limit(20)->get()]);
+        return view('tenant.growth.reputation', ['open' => $svc->open(), 'closed' => ReputationAlert::where('status', 'resolved')->latest('id')->limit(20)->get()]);
     }
 
     public function reputationScan(ReputationService $svc): JsonResponse
@@ -107,9 +114,21 @@ class EngagementAdminController extends Controller implements HasMiddleware
         return $this->ok(__('admin.saved'), route('tenant.growth.reputation.index'));
     }
 
-    public function missed()
+    public function missed(MissedOpportunityDataTable $table)
     {
-        return view('tenant.growth.missed', ['rows' => MissedOpportunity::orderByRaw("FIELD(status,'open','accepted','done','dismissed')")->orderByRaw("FIELD(confidence,'high','medium','low')")->latest('id')->limit(100)->get()]);
+        return view('tenant.growth.missed', ['table' => $table]);
+    }
+
+    public function missedData(MissedOpportunityDataTable $table)
+    {
+        return $table->ajax();
+    }
+
+    public function missedStatus(Request $r, MissedOpportunityService $svc, int $id): JsonResponse
+    {
+        $svc->update($id, ['status' => (string) $r->validate(['status' => ['required', 'in:'.implode(',', MissedOpportunityService::STATUSES)]])['status']], auth('tenant')->id());
+
+        return $this->ok(__('admin.saved'));
     }
 
     public function missedScan(MissedOpportunityService $svc): JsonResponse

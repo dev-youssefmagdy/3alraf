@@ -5,6 +5,9 @@ namespace App\Services\Growth;
 use App\Models\Bundle;
 use App\Models\BundleAbTest;
 use App\Models\BundleAbVariant;
+use App\Models\GrowthExperiment;
+use App\Models\Order;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,7 +21,7 @@ class BundleAbService
 {
     public function __construct(private ActionLogger $log, private ExperimentService $experiments, private GrowthFeatures $features) {}
 
-    public static function visitor(\Illuminate\Http\Request $r): string
+    public static function visitor(Request $r): string
     {
         return $r->hasSession() ? $r->session()->getId() : sha1($r->ip().'|'.$r->userAgent());
     }
@@ -83,12 +86,17 @@ class BundleAbService
         if ($v && Cache::add('bab:cart:'.$t->id.':'.sha1($visitor), 1, now()->addDay())) {
             BundleAbVariant::whereKey($v->id)->increment('carts');
         }
+        if ($v && request()->hasSession()) { // carried into orders.attribution.bundle_ab so orders can be attributed per variant
+            request()->session()->put('bundle_ab.'.$t->id, $v->label);
+        }
     }
 
     public function results(BundleAbTest $t): array
     {
         $t->loadMissing('variants');
-        $rows = $t->variants->map(fn ($v) => ['label' => $v->label, 'exposures' => $v->exposures, 'carts' => $v->carts, 'cart_rate' => $v->exposures > 0 ? round($v->carts / $v->exposures * 100, 2) : null])->all();
+        $ord = $this->orders($t);
+        $rows = $t->variants->map(fn ($v) => ['label' => $v->label, 'exposures' => $v->exposures, 'carts' => $v->carts, 'cart_rate' => $v->exposures > 0 ? round($v->carts / $v->exposures * 100, 2) : null,
+            'orders' => $ord[$v->label] ?? 0, 'order_rate' => $v->exposures > 0 ? round(($ord[$v->label] ?? 0) / $v->exposures * 100, 2) : null])->all();
         [$a, $b] = [$t->variants->firstWhere('label', 'A'), $t->variants->firstWhere('label', 'B')];
         $rec = 'insufficient_data';
         if ($a && $b && $a->exposures >= $t->min_sample && $b->exposures >= $t->min_sample) {
@@ -98,9 +106,36 @@ class BundleAbService
             $se = sqrt($p * (1 - $p) * (1 / $a->exposures + 1 / $b->exposures));
             $z = $se > 0 ? ($p2 - $p1) / $se : 0;
             $rec = abs($z) >= 1.96 ? ($z > 0 ? 'winner_b' : 'winner_a') : 'inconclusive';
+            // Orders are the stronger signal: when both variants have >= min_sample exposures AND >= 10 orders in total, the order-rate z-test decides.
+            $oa = $ord['A'] ?? 0;
+            $ob = $ord['B'] ?? 0;
+            $metric = 'add_to_cart_rate';
+            if ($oa + $ob >= 10) {
+                $q1 = $oa / $a->exposures;
+                $q2 = $ob / $b->exposures;
+                $q = ($oa + $ob) / ($a->exposures + $b->exposures);
+                $se2 = sqrt($q * (1 - $q) * (1 / $a->exposures + 1 / $b->exposures));
+                $z2 = $se2 > 0 ? ($q2 - $q1) / $se2 : 0;
+                $rec = abs($z2) >= 1.96 ? ($z2 > 0 ? 'winner_b' : 'winner_a') : 'inconclusive';
+                $metric = 'order_rate';
+            }
         }
 
-        return ['variants' => $rows, 'min_sample' => $t->min_sample, 'recommendation' => $rec, 'metric_note' => 'add_to_cart_rate'];
+        return ['variants' => $rows, 'min_sample' => $t->min_sample, 'recommendation' => $rec, 'metric_note' => $metric ?? 'add_to_cart_rate'];
+    }
+
+    /** @return array<string,int> variant label => non-cancelled orders attributed to it (orders.attribution.bundle_ab.{test_id}) since the test started. */
+    public function orders(BundleAbTest $t): array
+    {
+        $out = [];
+        foreach (Order::whereNotNull('attribution->bundle_ab')->where('placed_at', '>=', $t->created_at)->get(['id', 'status', 'attribution']) as $o) {
+            $label = data_get($o->attribution, 'bundle_ab.'.$t->id);
+            if ($label && ($o->status?->value ?? $o->status) !== 'cancelled') {
+                $out[$label] = ($out[$label] ?? 0) + 1;
+            }
+        }
+
+        return $out;
     }
 
     /** Admin decision. Picking B copies its name/description/image to the bundle; A leaves the bundle untouched. */
@@ -122,7 +157,7 @@ class BundleAbService
                 }
                 $b->save();
             }
-            if ($t->experiment_id && $this->features->active('experiments') && ($e = \App\Models\GrowthExperiment::find($t->experiment_id))) {
+            if ($t->experiment_id && $this->features->active('experiments') && ($e = GrowthExperiment::find($t->experiment_id))) {
                 foreach ($this->results($t)['variants'] as $r) {
                     if ($r['cart_rate'] !== null) {
                         $this->experiments->addResult($e, ['metric' => 'cart_rate_'.$r['label'], 'value' => $r['cart_rate'], 'note' => $r['exposures'].' exposures'], 'admin', $adminId);

@@ -5,6 +5,7 @@ namespace App\Services\Growth;
 use App\Enums\AffiliateStatus;
 use App\Models\Affiliate;
 use App\Models\Ambassador;
+use App\Models\AmbassadorReward;
 use App\Models\Order;
 use App\Models\TrackedLink;
 use App\Services\Affiliates\AffiliateCommissionService;
@@ -18,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 class AmbassadorService
 {
     public const CHANNELS = ['instagram', 'facebook', 'tiktok', 'youtube', 'whatsapp', 'blog', 'other'];
+
     public const MAX_REWARD = 10000;
 
     private const FORBIDDEN = '/fake\s+(review|rating|like|follower|comment)|buy(ing)?\s+(review|like|follower)|paid\s+review|(review|rating)s?\s+(in\s+)?(exchange|for\s+(pay|reward|money|free))|positive\s+review|5[\s-]?star\s+review|artificial\s+engagement|like\s+for\s+like|تقييم(ات)?\s+(وهمي|مزيف|مدفوع|مقابل)|مراجع(ة|ات)\s+(وهمي|مزيف|مدفوع)|شراء\s+(لايك|متابع|تقييم)|لايكات\s+مدفوع|متابعين\s+وهمي|تعليقات\s+مدفوع/iu';
@@ -85,6 +87,56 @@ class AmbassadorService
         return $this->commissions->returnWindowDays();
     }
 
+    /**
+     * Idempotent reward ledger (one row per order). valid = delivered, not returned, past the return window; excluded = cancelled/returned (also after having
+     * been valid, unless already paid); pending = everything else. Amount = reward_per_order, frozen once valid. No new money rules: payment happens with the
+     * affiliate payout (settle()).
+     *
+     * @return int rows written
+     */
+    public function syncLedger(?Ambassador $only = null): int
+    {
+        $n = 0;
+        $cutoff = now()->subDays($this->window());
+        foreach ($only ? collect([$only]) : Ambassador::where('status', 'active')->get() as $a) {
+            $orders = Order::with('returns')->where('affiliate_id', $a->affiliate_id)->get();
+            $rows = AmbassadorReward::where('ambassador_id', $a->id)->get()->keyBy('order_id');
+            foreach ($orders as $o) {
+                $st = $o->status?->value ?? $o->status;
+                $row = $rows->get($o->id);
+                if ($row && $row->status === 'paid') {
+                    continue;
+                }
+                if (in_array($st, ['cancelled', 'returned'], true)) {
+                    [$status, $reason] = ['excluded', $st];
+                } elseif ($st === 'delivered' && $o->delivered_at && $o->delivered_at->lte($cutoff)) {
+                    [$status, $reason] = ['valid', null];
+                } else {
+                    [$status, $reason] = [$row && $row->status === 'valid' ? 'valid' : 'pending', null]; // a valid row never falls back to pending
+                }
+                if (! $row && $status === 'excluded') {
+                    continue; // nothing was ever promised for this order
+                }
+                $amount = $row && $row->status === 'valid' ? (float) $row->amount : (float) $a->reward_per_order;
+                if (! $row) {
+                    AmbassadorReward::create(['ambassador_id' => $a->id, 'affiliate_id' => $a->affiliate_id, 'order_id' => $o->id, 'amount' => $amount, 'status' => $status, 'reason' => $reason, 'valid_at' => $status === 'valid' ? now() : null]);
+                    $n++;
+                } elseif ($row->status !== $status || (float) $row->amount !== $amount) {
+                    $row->update(['status' => $status, 'reason' => $reason, 'amount' => $amount, 'valid_at' => $status === 'valid' ? ($row->valid_at ?? now()) : null]);
+                    $n++;
+                }
+            }
+        }
+
+        return $n;
+    }
+
+    /** Called when an affiliate payout is marked paid: the affiliate's valid rewards are settled in the same payment run. */
+    public function settle(int $affiliateId): int
+    {
+        return AmbassadorReward::where('affiliate_id', $affiliateId)->where('status', 'valid')->update(['status' => 'paid', 'paid_at' => now()]);
+    }
+
     /** Participant report for a period (by placed_at). */
     public function report(Ambassador $a, CarbonInterface $from, CarbonInterface $to): array
     {
@@ -103,7 +155,8 @@ class AmbassadorService
             $cm += $f['cm'];
             $missing = $missing || $f['missing_cogs'] || $f['missing_shipping'];
         }
-        $reward = round((float) $a->reward_per_order * $valid->count(), 2);
+        $this->syncLedger($a);
+        $reward = round((float) AmbassadorReward::where('ambassador_id', $a->id)->whereIn('status', ['valid', 'paid'])->whereIn('order_id', $orders->pluck('id'))->sum('amount'), 2);
         $commission = round((float) $valid->sum('affiliate_commission'), 2);
         $codes = TrackedLink::where('ambassador_id', $a->id)->get(['code', 'channel', 'clicks']);
         $byChannel = $codes->groupBy('channel')->map(fn ($g) => ['clicks' => (int) $g->sum('clicks'),

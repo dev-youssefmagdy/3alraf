@@ -30,7 +30,7 @@ class LabController extends Controller implements HasMiddleware
     {
         $rows = GrowthExperiment::whereNotNull('product_id')->orderByDesc('id')->limit(100)->get()->each(fn ($e) => $e->lab = $this->lab->metrics($e));
 
-        return view('tenant.growth.lab', ['rows' => $rows, 'products' => TenantProduct::with('product')->where('is_active', true)->get(), 'cfg' => config('growth.lab')]);
+        return view('tenant.growth.lab', ['rows' => $rows, 'products' => TenantProduct::with('product')->where('is_active', true)->get(), 'cfg' => $this->lab->labConfig()]);
     }
 
     public function show(int $id, TrackedLinkService $links)
@@ -38,7 +38,7 @@ class LabController extends Controller implements HasMiddleware
         $e = GrowthExperiment::whereNotNull('product_id')->findOrFail($id);
         $ls = TrackedLink::where('growth_experiment_id', $e->id)->get()->each(fn ($l) => [$l->stats = $links->stats($l), $l->short = $links->url($l)]);
 
-        return view('tenant.growth.lab-show', ['e' => $e, 'm' => $this->lab->metrics($e), 'fatigue' => $this->lab->fatigue($e), 'angles' => $this->lab->angles((int) $e->product_id), 'links' => $ls, 'cfg' => config('growth.lab')]);
+        return view('tenant.growth.lab-show', ['e' => $e, 'm' => $this->lab->metrics($e), 'fatigue' => $this->lab->fatigue($e), 'angles' => $this->lab->angles((int) $e->product_id), 'links' => $ls, 'cfg' => $this->lab->labConfig()]);
     }
 
     public function store(LabExperimentRequest $r): JsonResponse

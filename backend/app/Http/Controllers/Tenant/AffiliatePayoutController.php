@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tenant;
 use App\DataTables\AffiliatePayoutDataTable;
 use App\Http\Controllers\Controller;
 use App\Services\Affiliates\AffiliateService;
+use App\Services\Growth\AmbassadorService;
+use App\Services\Growth\GrowthFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -34,7 +36,10 @@ class AffiliatePayoutController extends Controller implements HasMiddleware
 
     public function pay(Request $r, int $id): JsonResponse
     {
-        $this->service->markPaid($this->service->findPayout($id), $r->input('note'));
+        $payout = $this->service->markPaid($this->service->findPayout($id), $r->input('note'));
+        if (app(GrowthFeatures::class)->active('ambassadors')) {
+            app(AmbassadorService::class)->settle($payout->affiliate_id); // ambassador rewards of this affiliate are paid in the same run
+        }
 
         return $this->ok(__('growth.payout_paid'));
     }

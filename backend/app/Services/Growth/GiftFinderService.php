@@ -2,8 +2,8 @@
 
 namespace App\Services\Growth;
 
-use App\Models\Bundle;
 use App\Models\GiftFinderSession;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\SeasonalEvent;
 use App\Models\TenantProduct;
@@ -137,6 +137,9 @@ class GiftFinderService
         if ($added && ! $s->cart_at) {
             $s->update(['cart_at' => now()]);
         }
+        if ($added && request()->hasSession()) {
+            request()->session()->put('gift_session_id', $s->id); // carried into orders.attribution.gift_session
+        }
 
         return ['added' => $added, 'skipped' => $skipped];
     }
@@ -148,7 +151,11 @@ class GiftFinderService
         $done = (clone $q)->where('results_count', '>', 0)->count();
         $cart = (clone $q)->whereNotNull('cart_at')->count();
 
-        return ['days' => $days, 'sessions' => $n, 'completion_rate' => $n ? round($done / $n * 100, 1) : null, 'cart_rate' => $done ? round($cart / $done * 100, 1) : null,
+        $orders = Order::whereNotNull('attribution->gift_session')->where('placed_at', '>=', now()->subDays($days))->get(['id', 'status', 'total', 'attribution']);
+        $done_orders = $orders->filter(fn ($o) => ($o->status?->value ?? $o->status) !== 'cancelled');
+
+        return ['days' => $days, 'orders' => $done_orders->count(), 'orders_revenue' => round((float) $done_orders->sum('total'), 2), 'orders_aov' => $done_orders->count() ? round((float) $done_orders->avg('total'), 2) : null,
+            'order_rate' => $cart ? round($done_orders->count() / $cart * 100, 1) : null, 'sessions' => $n, 'completion_rate' => $n ? round($done / $n * 100, 1) : null, 'cart_rate' => $done ? round($cart / $done * 100, 1) : null,
             'avg_budget' => $n ? round((float) (clone $q)->avg('budget'), 2) : null, 'no_result' => $n - $done, 'by_occasion' => (clone $q)->selectRaw('occasion, COUNT(*) c')->groupBy('occasion')->pluck('c', 'occasion')->all()];
     }
 }

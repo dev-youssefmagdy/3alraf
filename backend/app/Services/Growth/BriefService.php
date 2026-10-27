@@ -41,6 +41,10 @@ class BriefService
             $recs[] = $this->rec('test_offer_'.$i['product_id'], 'slow_mover_offer', ['product_id' => $i['product_id']], 3, 2, [$this->ev('stock_levels', 'stock_value', $i['stock_value'], $period), $this->ev('order_items', 'units_sold_30d', 0, '30d')]);
         }
 
+        if (app(GrowthFeatures::class)->active('experiment_lab') && ($b = app(AdCapService::class)->breach($period))) {
+            $recs[] = $this->rec('ad_cap_'.$period, 'ad_cap_exceeded', ['spend' => $b['spend'], 'cap' => $b['cap']], 5, 1, [$this->ev('experiment_ad_days', 'daily_spend', $b['spend'], $period), $this->ev('guardrails', 'ad_daily_budget_cap', $b['cap'], $period)]);
+        }
+
         $out = [
             'type' => 'daily', 'date' => $period, 'generated_at' => now()->toIso8601String(),
             'sales' => ['orders_completed' => $s['orders_completed'], 'revenue' => $s['revenue'], 'aov' => $s['aov'], 'vs_prev_7d_avg_revenue' => $this->prevAvg($base, 7)],

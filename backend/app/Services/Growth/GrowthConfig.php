@@ -13,7 +13,11 @@ class GrowthConfig
         'min_margin_percent' => [0, 95], 'max_discount_percent' => [0, 90], 'low_stock_threshold' => [0, 100000],
         'min_days_of_cover' => [0, 365], 'max_days_of_cover' => [1, 730], 'reorder_cash_cap' => [0, 1e9],
         'ad_daily_budget_cap' => [0, 1e7], 'ad_total_budget_cap' => [0, 1e8],
+        'lab_min_days' => [1, 90], 'lab_min_clicks' => [0, 100000], 'lab_min_orders' => [0, 10000], 'lab_max_budget_increase_percent' => [1, 100],
     ];
+
+    /** Lab threshold keys (config growth.lab.*) that a tenant may override as lab_*. */
+    public const LAB_KEYS = ['min_days', 'min_clicks', 'min_orders', 'max_budget_increase_percent'];
 
     public function all(?Tenant $tenant = null): array
     {

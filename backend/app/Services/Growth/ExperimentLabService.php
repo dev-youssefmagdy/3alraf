@@ -27,7 +27,22 @@ class ExperimentLabService
 
     public function cfg(string $k): float
     {
-        return (float) config('growth.lab.'.$k);
+        return (float) ($this->labConfig()[$k] ?? 0);
+    }
+
+    /** config('growth.lab') with the tenant's overrides (GrowthConfig keys lab_*). */
+    public function labConfig(): array
+    {
+        $c = (array) config('growth.lab');
+        $over = $this->config->overrides();
+        foreach (GrowthConfig::LAB_KEYS as $k) {
+            $v = $over['lab_'.$k] ?? null;
+            if ($v !== null) {
+                $c[$k] = $v;
+            }
+        }
+
+        return $c;
     }
 
     /** Active, costed, in-stock, margin above the floor; else a validation error naming the reason. */
@@ -115,6 +130,7 @@ class ExperimentLabService
             ExperimentAdDay::where('growth_experiment_id', $e->id)->selectRaw('day, SUM(spend) s')->groupBy('day')->get()->each(fn ($d) => GrowthExperimentResult::updateOrCreate(
                 ['growth_experiment_id' => $e->id, 'recorded_on' => $d->day, 'metric' => 'ad_spend', 'source' => 'ad_import'], ['spend' => $d->s, 'value' => $d->s]));
         });
+        app(AdCapService::class)->check(collect($rows)->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10))->all());
         $total = (float) ExperimentAdDay::where('growth_experiment_id', $e->id)->sum('spend');
         $over = $e->budget_cap !== null && $total > (float) $e->budget_cap;
         $this->log->log('lab.ads_imported', $source === 'admin' ? 'admin' : 'n8n', $actorId, null, $e, 'ok', ['rows' => $n, 'over_budget' => $over]);

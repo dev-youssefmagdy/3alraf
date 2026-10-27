@@ -48,6 +48,10 @@
         <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :accent="true" />
     @endif
 
+    @if (app(\App\Services\Growth\GrowthFeatures::class)->active('gift_finder'))
+        <a href="{{ route('storefront.gift-finder.show') }}" class="mt-6 block rounded-2xl bg-brand-50 p-4 text-center text-sm font-bold text-brand-700">{{ __('growth_gaps.gift_cta') }}</a>
+    @endif
+
     @if (! empty($bundles))
         <section class="mt-8">
             <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-extrabold">{{ __('store.bundles') }}</h2><a href="{{ route('storefront.bundles.index') }}" class="text-sm font-semibold text-brand-600">{{ __('store.view_all') }}</a></div>

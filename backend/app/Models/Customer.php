@@ -6,6 +6,8 @@ use App\Models\Concerns\Audited;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\FreesUniqueOnDelete;
 use App\Models\Concerns\RevokesSessionsOnLockout;
+use App\Services\Growth\GrowthFeatures;
+use App\Services\Growth\GrowthRetentionService;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -27,6 +29,22 @@ class Customer extends Authenticatable
     protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
 
     protected $hidden = ['password', 'remember_token', 'google_id'];
+
+    protected static function booted(): void
+    {
+        // Growth data erasure (gated by the `interactions` / `small_batch_lab` / `ambassadors` switches inside the service call site).
+        static::deleted(function (Customer $c) {
+            try {
+                $t = $c->tenant_id ? Tenant::find($c->tenant_id) : null;
+                $f = app(GrowthFeatures::class);
+                if ($t && $f->active('interactions', $t) || $t && $f->active('small_batch_lab', $t) || $t && $f->active('ambassadors', $t)) {
+                    app(GrowthRetentionService::class)->eraseCustomer($t, $c);
+                }
+            } catch (\Throwable $e) {
+                report($e); // never block a customer deletion
+            }
+        });
+    }
 
     /** Hide the soft-delete tombstone suffix (see FreesUniqueOnDelete) from every display. */
     public function getEmailAttribute($v): ?string

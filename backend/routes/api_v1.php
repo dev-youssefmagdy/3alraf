@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AffiliateController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CheckoutController;
+use App\Http\Controllers\Api\V1\GiftFinderController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\StoreController;
 use Illuminate\Support\Facades\Route;
@@ -41,8 +42,8 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('bundles', [StoreController::class, 'bundles'])->name('bundles.index');
         Route::get('bundles/{slug}', [StoreController::class, 'bundle'])->where('slug', '[A-Za-z0-9._-]+')->name('bundles.show');
         Route::middleware('growth.feature:gift_finder')->group(function () {
-            Route::post('gift-finder', [\App\Http\Controllers\Api\V1\GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
-            Route::post('gift-finder/{token}/cart', [\App\Http\Controllers\Api\V1\GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
+            Route::post('gift-finder', [GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
+            Route::post('gift-finder/{token}/cart', [GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
         });
         Route::get('brands', [StoreController::class, 'brands'])->name('brands');
 
@@ -78,6 +79,7 @@ Route::middleware('throttle:api')->group(function () {
         Route::post('cart/merge', [CartController::class, 'merge'])->middleware('throttle:cart')->name('cart.merge');
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::post('orders/{token}/cancel', [OrderController::class, 'cancel'])->middleware('throttle:returns')->name('orders.cancel');
         Route::post('orders/{token}/return', [OrderController::class, 'requestReturn'])->middleware('throttle:returns')->name('orders.return');
 
         Route::get('addresses', [AccountController::class, 'addresses'])->name('addresses.index');

@@ -11,10 +11,13 @@ use Illuminate\Http\Request;
 class AttributionService
 {
     public const SESSION_KEY = 'growth_attr';
+
     public const CHANNELS = ['direct', 'affiliate', 'paid', 'social', 'search', 'email', 'referral', 'other'];
 
     private const SOCIAL = ['facebook', 'fb', 'instagram', 'ig', 'tiktok', 'snapchat', 'twitter', 'x', 'youtube', 'whatsapp', 'pinterest', 'linkedin', 'telegram'];
+
     private const SEARCH = ['google', 'bing', 'yahoo', 'duckduckgo'];
+
     private const BOTS = '/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|monitor|curl|wget|python-requests|lighthouse/i';
 
     public static function isBot(?string $ua): bool
@@ -62,14 +65,24 @@ class AttributionService
     public static function forOrder(?int $affiliateId): array
     {
         $a = null;
+        $extra = [];
         if (app()->bound('request') && request()->hasSession()) {
-            $a = request()->session()->get(self::SESSION_KEY);
+            $sess = request()->session();
+            $a = $sess->get(self::SESSION_KEY);
+            // Growth carry-over ids (gift finder session, bundle A/B variant): ids only, no personal data.
+            if ($g = $sess->get('gift_session_id')) {
+                $extra['gift_session'] = (int) $g;
+            }
+            if ($ab = $sess->get('bundle_ab')) {
+                $extra['bundle_ab'] = $ab;
+            }
         }
+        $attr = $extra ? (($a ?? []) + $extra) : $a;
         if ($affiliateId) {
-            return ['channel' => 'affiliate', 'attribution' => $a];
+            return ['channel' => 'affiliate', 'attribution' => $attr];
         }
 
-        return ['channel' => $a['channel'] ?? 'direct', 'attribution' => $a];
+        return ['channel' => $a['channel'] ?? 'direct', 'attribution' => $attr];
     }
 
     public static function currentChannel(Request $r): string

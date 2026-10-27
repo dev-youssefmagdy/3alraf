@@ -79,6 +79,7 @@ return [
         'reorder_cash_cap' => 50000,
         'ad_daily_budget_cap' => 500,
         'ad_total_budget_cap' => 5000,
+        'lab_min_days' => 7, 'lab_min_clicks' => 100, 'lab_min_orders' => 10, 'lab_max_budget_increase_percent' => 30, // mirror of lab.* (tenant-overridable)
         'auto_reply_allowlist' => [], // FAQ keys that may be answered automatically (N4); empty = nothing automatic
     ],
 

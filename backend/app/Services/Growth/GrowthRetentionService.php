@@ -2,6 +2,9 @@
 
 namespace App\Services\Growth;
 
+use App\Models\Affiliate;
+use App\Models\Ambassador;
+use App\Models\Customer;
 use App\Models\ExperimentAdDay;
 use App\Models\GrowthActionLog;
 use App\Models\Interaction;
@@ -47,6 +50,27 @@ class GrowthRetentionService
             $out['small_batch_signups'] = $hashes ? SmallBatchSignup::withoutGlobalScopes()->where('tenant_id', $tenant->id)->whereIn('contact_hash', $hashes)->delete() : 0;
         }
         GrowthActionLog::withoutGlobalScopes()->create(['tenant_id' => $tenant->id, 'action' => 'data_erasure', 'source' => 'system', 'outcome' => 'ok', 'meta' => $out, 'created_at' => now()]);
+
+        return $out;
+    }
+
+    /**
+     * Customer deletion / anonymisation hook: erases what growth holds about this customer (interactions linked at ingest, small-batch signups by email/phone hash,
+     * ambassador free text of an affiliate with the same email/phone). Audited as `data_erasure`.
+     */
+    public function eraseCustomer(Tenant $tenant, Customer $c): array
+    {
+        $out = ['interactions' => Interaction::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('customer_id', $c->id)->delete(), 'small_batch_signups' => 0, 'ambassadors' => 0];
+        $email = $c->email ? mb_strtolower(trim($c->email)) : null;
+        $phone = $c->phone ? mb_strtolower(trim($c->phone)) : null;
+        $ids = SmallBatchTest::withoutGlobalScopes()->where('tenant_id', $tenant->id)->pluck('id');
+        $hashes = $ids->flatMap(fn ($id) => collect([$email, $phone])->filter()->map(fn ($x) => sha1($tenant->id.'|'.$id.'|'.$x)))->all();
+        $out['small_batch_signups'] = $hashes ? SmallBatchSignup::withoutGlobalScopes()->where('tenant_id', $tenant->id)->whereIn('contact_hash', $hashes)->delete() : 0;
+        $aff = Affiliate::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where(fn ($q) => $q->when($email, fn ($b) => $b->orWhere('email', $email))->when($phone, fn ($b) => $b->orWhere('phone', $phone)))->pluck('id');
+        if ($aff->isNotEmpty()) {
+            $out['ambassadors'] = Ambassador::withoutGlobalScopes()->where('tenant_id', $tenant->id)->whereIn('affiliate_id', $aff)->update(['disclosure' => null, 'reward_rule' => null, 'status' => 'inactive']);
+        }
+        GrowthActionLog::withoutGlobalScopes()->create(['tenant_id' => $tenant->id, 'action' => 'data_erasure', 'source' => 'system', 'outcome' => 'ok', 'meta' => ['customer_id' => $c->id] + $out, 'created_at' => now()]);
 
         return $out;
     }

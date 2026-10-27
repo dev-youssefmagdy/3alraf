@@ -15,28 +15,7 @@
             <p class="mt-1 text-sm">{{ $g('unanswered') }}: <b>{{ $unanswered }}</b></p>
         </x-card>
         <x-card :title="$g('title')">
-            <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-start text-slate-500">@foreach (['channel', 'text', 'category', 'intent', 'status', 'when'] as $c)<th class="p-2 text-start">{{ $g('cols')[$c] }}</th>@endforeach<th></th></tr></thead><tbody>
-                @forelse ($rows as $r)
-                    <tr class="border-t align-top">
-                        <td class="p-2">{{ $g('channels')[$r->channel] ?? $r->channel }}</td>
-                        <td class="max-w-md p-2">{{ $r->text_masked }}
-                            @if ($r->opted_out)<span class="badge badge-danger">{{ $g('opted_out') }}</span>@endif
-                            @if ($r->window_expires_at && $r->window_expires_at->isPast())<span class="badge badge-warning">{{ $g('window_closed') }}</span>@endif
-                            @if ($r->escalation_reason)<span class="badge badge-danger">{{ $g('escalations')[$r->escalation_reason] ?? $r->escalation_reason }}</span>@endif
-                            @if ($r->suggested_reply)<p class="mt-1 rounded bg-slate-50 p-2 text-xs">{{ $r->suggested_reply }}</p>@endif</td>
-                        <td class="p-2">{{ $r->category ? ($g('categories')[$r->category] ?? $r->category) : '-' }}</td>
-                        <td class="p-2">{{ $r->intent ? ($g('intents')[$r->intent] ?? $r->intent) : '-' }}</td>
-                        <td class="p-2">{{ $g('statuses')[$r->status] ?? $r->status }}</td>
-                        <td class="p-2 text-xs" dir="ltr">{{ $r->received_at->format('Y-m-d H:i') }}</td>
-                        <td class="p-2">@can('growth.manage')
-                            @foreach ([['suggest', 'suggest'], ['responded', 'responded'], ['close', 'close']] as [$a, $l])
-                                <form data-ajax-form action="{{ route('tenant.growth.interactions.action', $r->id) }}" method="POST" class="inline" novalidate>@csrf<input type="hidden" name="action" value="{{ $a }}"><button class="text-xs text-brand-700 underline">{{ $g($l) }}</button></form>
-                            @endforeach @endcan</td>
-                    </tr>
-                @empty
-                    <tr><td colspan="7" class="p-4 text-center text-slate-500">{{ $g('empty') }}</td></tr>
-                @endforelse
-            </tbody></table></div>
+            <x-datatable :table="$table" :url="route('tenant.growth.interactions.datatable')" />
         </x-card>
         @growthFeature('comment_to_cart')
             @php $l = fn ($k) => __('growth_hub.links.'.$k); @endphp
@@ -56,4 +35,5 @@
             </x-card>
         @endgrowthFeature
     </div>
+    @include('tenant.growth._actions')
 </x-layouts.admin>

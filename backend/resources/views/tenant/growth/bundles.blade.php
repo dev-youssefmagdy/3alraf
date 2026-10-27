@@ -49,7 +49,7 @@
                     <div class="border-t border-slate-100 py-2 text-sm" data-test="{{ $t->id }}">
                         <div class="flex flex-wrap items-center gap-2"><b>{{ $t->bundle?->name }}</b><span class="badge {{ $t->status === 'running' ? 'badge-warning' : 'badge-muted' }}">{{ $b($t->status) }}</span>
                             <span class="text-slate-500">{{ $b('recs.'.$t->results['recommendation']) }}</span>@if ($t->winner)<span class="badge badge-success">{{ $t->winner }}</span>@endif</div>
-                        @foreach ($t->results['variants'] as $v)<p class="text-slate-600">{{ $v['label'] }}: {{ $b('exposures') }} {{ $v['exposures'] }}, {{ $b('carts') }} {{ $v['carts'] }}, {{ $b('rate') }} {{ $v['cart_rate'] ?? '-' }}%</p>@endforeach
+                        @foreach ($t->results['variants'] as $v)<p class="text-slate-600">{{ $v['label'] }}: {{ $b('exposures') }} {{ $v['exposures'] }}, {{ $b('carts') }} {{ $v['carts'] }}, {{ $b('rate') }} {{ $v['cart_rate'] ?? '-' }}%, {{ __('growth_gaps.ab_orders') }} {{ $v['orders'] }}, {{ __('growth_gaps.ab_order_rate') }} {{ $v['order_rate'] ?? '-' }}%</p>@endforeach
                         @can('growth.manage')@if ($t->status === 'running')<button type="button" data-win="A" class="text-xs text-brand-700 underline">{{ $b('ab_keep_a') }}</button> <button type="button" data-win="B" class="text-xs text-brand-700 underline">{{ $b('ab_use_b') }}</button>@endif @endcan
                     </div>
                 @endforeach

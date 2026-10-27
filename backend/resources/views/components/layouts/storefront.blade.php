@@ -119,6 +119,9 @@
                         @endif
                     </li>
                 @endforeach
+                @if (app(\App\Services\Growth\GrowthFeatures::class)->active('gift_finder'))
+                    <li><a href="{{ route('storefront.gift-finder.show') }}" class="block px-3 py-2.5 text-brand-600 hover:underline">{{ __('growth_gaps.gift_nav') }}</a></li>
+                @endif
             </ul>
         </nav>
     </header>
