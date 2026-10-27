@@ -33,6 +33,20 @@ class AiGeneratorRequest extends BaseRequest
         ];
     }
 
+    public function withValidator($v): void
+    {
+        $v->after(function ($v) {
+            if ($this->input('kind') !== ContentGeneratorService::PACKAGE) {
+                return;
+            }
+            if (! app(\App\Services\Growth\GrowthAccess::class)->enabled(current_tenant()) || ! $this->user('tenant')?->can('growth.manage')) {
+                $v->errors()->add('kind', __('growth_hub.content.not_allowed'));
+            } elseif (count((array) $this->input('product_ids', [])) !== 1) {
+                $v->errors()->add('product_ids', __('growth_hub.content.one_product'));
+            }
+        });
+    }
+
     public function attributes(): array
     {
         return trans('ai.gen.fields');

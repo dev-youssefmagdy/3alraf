@@ -19,6 +19,7 @@ enum AiGenerationType: string
     case STATIC_PAGE = 'static_page';
     case CUSTOM_PAGE = 'custom_page';
     case BLOG_POST = 'blog_post';
+    case CONTENT_PACKAGE = 'content_package';
 
     public function label(): string
     {

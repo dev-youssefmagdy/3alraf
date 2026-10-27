@@ -34,7 +34,7 @@ use Illuminate\Support\Str;
  */
 class GeneratorService
 {
-    public const TYPES = [AiGenerationType::BANNER, AiGenerationType::OFFER, AiGenerationType::BUNDLE, AiGenerationType::STATIC_PAGE, AiGenerationType::CUSTOM_PAGE, AiGenerationType::BLOG_POST];
+    public const TYPES = [AiGenerationType::BANNER, AiGenerationType::OFFER, AiGenerationType::BUNDLE, AiGenerationType::STATIC_PAGE, AiGenerationType::CUSTOM_PAGE, AiGenerationType::BLOG_POST, AiGenerationType::CONTENT_PACKAGE];
 
     public const TTL_DAYS = 7;
 
@@ -61,6 +61,7 @@ class GeneratorService
             'static_page' => AiGenerationType::STATIC_PAGE,
             'custom_page' => AiGenerationType::CUSTOM_PAGE,
             'blog_post' => AiGenerationType::BLOG_POST,
+            'content_package' => AiGenerationType::CONTENT_PACKAGE,
             default => AiGenerationType::OFFER,
         };
     }
@@ -110,23 +111,54 @@ class GeneratorService
         }
         $isContent = ContentGeneratorService::handles($i['kind']);
         $req = new AiRequest($model->model_id, [['role' => 'user', 'content' => $isContent ? $this->content->prompt($i) : $this->prompt($i)]],
-            system: $isContent ? $this->content->system() : $this->system(), maxTokens: $isContent ? 8000 : 3000, json: true);
+            system: $isContent ? $this->content->system($i['kind']) : $this->system(), maxTokens: $isContent ? 8000 : 3000, json: true);
         $res = $this->gateway->chat($model, $req, 'generators', [], $ctx);
         $draft = $this->parse($res->text);
+        $guard = $this->truth($i, $draft);
+        $draft = $guard['draft'];
         if ($isContent) {
-            $v = $this->content->validate($i['kind'], $this->content->uniqueSlug($i['kind'], $draft));
+            $v = $this->content->validate($i['kind'], $this->content->uniqueSlug($i['kind'], $draft), null, $i);
+            $v = $this->withTruth($v, $guard);
             $g->forceFill(['ai_model_id' => $model->id, 'output' => $this->pack($i['kind'], $v, $draft), 'media' => [], 'status' => AiGenerationStatus::DRAFT, 'error' => null])->save();
 
             return;
         }
         $draft = $this->forceDefaults($i, $draft);
         $floor = (float) $i['margin_floor'];
-        $v = $this->validator->validate($i['kind'], $draft, $floor);
+        $v = $this->withTruth($this->validator->validate($i['kind'], $draft, $floor), $guard);
         $g->forceFill(['ai_model_id' => $model->id, 'output' => $this->pack($i['kind'], $v, $draft), 'media' => [], 'status' => AiGenerationStatus::DRAFT, 'error' => null])->save();
 
         if ($i['kind'] === 'banner') {
             $this->bannerImage($g, (string) ($draft['image_prompt'] ?? ''), (string) ($v['draft']['placement'] ?? 'home_hero'));
         }
+    }
+
+    /** Product Truth Guard over every generated draft (Growth tenants, when real products are attached). @return array{draft:array,removed:array,flagged:array} */
+    private function truth(array $i, array $draft): array
+    {
+        $ids = array_values(array_filter((array) ($i['product_ids'] ?? [])));
+        if (! $ids || ! app(\App\Services\Growth\GrowthAccess::class)->enabled(current_tenant())) {
+            return ['draft' => $draft, 'removed' => [], 'flagged' => []];
+        }
+        $g = app(\App\Services\Growth\TruthGuardService::class)->guardDraft($draft, $ids, ['slug', 'url', 'sort', 'image_prompt', 'placement', 'code', 'type', 'scope', 'discount_type', 'starts_at', 'ends_at', 'item']);
+        if ($g['removed'] || $g['flagged']) {
+            app(\App\Services\Growth\ActionLogger::class)->log('truth_guard.checked', 'system', null, null, null, 'ok', ['kind' => $i['kind'] ?? null, 'removed' => count($g['removed']), 'flagged' => count($g['flagged'])]);
+        }
+
+        return $g;
+    }
+
+    /** Non-package generators: removed/flagged claims surface as warnings (the package validator already turns conflicts into a blocking error). */
+    private function withTruth(array $v, array $guard): array
+    {
+        if (($guard['removed'] ?? []) && ! collect($v['warnings'])->contains('code', 'claims_removed')) {
+            $v['warnings'][] = ['code' => 'claims_removed', 'params' => ['n' => count($guard['removed'])]];
+        }
+        if (($guard['flagged'] ?? []) && ! collect($v['errors'])->contains('code', 'truth_conflict')) {
+            $v['warnings'][] = ['code' => 'truth_conflict_warn', 'params' => ['n' => count($guard['flagged'])]];
+        }
+
+        return $v;
     }
 
     public function fail(AiGeneration $g, string $message): void
@@ -164,7 +196,7 @@ class GeneratorService
     {
         $this->assertOpen($g);
         $kind = $g->output['kind'] ?? ($g->inputs['kind'] ?? 'banner');
-        $v = ContentGeneratorService::handles($kind) ? $this->content->validate($kind, $draft) : $this->validator->validate($kind, $draft, (float) ($g->inputs['margin_floor'] ?? 10));
+        $v = ContentGeneratorService::handles($kind) ? $this->content->validate($kind, $draft, null, (array) $g->inputs) : $this->validator->validate($kind, $draft, (float) ($g->inputs['margin_floor'] ?? 10));
         $g->forceFill(['output' => $this->pack($kind, $v, $v['draft'])])->save();
 
         return $g;
@@ -175,7 +207,7 @@ class GeneratorService
     {
         $kind = $g->output['kind'] ?? ($g->inputs['kind'] ?? 'banner');
         if (ContentGeneratorService::handles($kind)) {
-            return $this->content->validate($kind, (array) ($g->output['draft'] ?? []));
+            return $this->content->validate($kind, (array) ($g->output['draft'] ?? []), null, (array) $g->inputs);
         }
         $v = $this->validator->validate($kind, (array) ($g->output['draft'] ?? []), (float) ($g->inputs['margin_floor'] ?? 10));
         if ($kind === 'banner' && ! $this->readyImage($g)) {
@@ -202,7 +234,7 @@ class GeneratorService
                 'flash_sale' => app(FlashSaleService::class)->create($this->flashDto($v['draft'])),
                 'discount_code' => app(DiscountCodeService::class)->create($this->codeDto($v['draft'])),
                 'bundle' => app(BundleService::class)->create($this->bundleDto($v['draft'])),
-                'static_page', 'custom_page', 'blog_post' => $this->content->create($kind, $v['draft']),
+                'static_page', 'custom_page', 'blog_post', 'content_package' => $this->content->create($kind, $v['draft'], $g->id),
             };
             $g->forceFill(['status' => AiGenerationStatus::APPROVED, 'target_type' => $model::class, 'target_id' => $model->getKey(), 'reviewed_by' => $userId, 'reviewed_at' => now(), 'reject_reason' => null])->save();
             activity('ai_generator')->performedOn($g)->causedBy(auth('tenant')->user())->withProperties(['kind' => $kind, 'target_type' => $model::class, 'target_id' => $model->getKey()])->log('approved');

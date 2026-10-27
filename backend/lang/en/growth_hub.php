@@ -3,7 +3,7 @@
 return [
     'title' => 'Growth system',
     'disabled' => 'The Growth system is not enabled for this store. Ask the platform administrator to switch it on.',
-    'menu' => ['group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
+    'menu' => ['brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
@@ -52,5 +52,23 @@ return [
         'conversations' => 'Conversations and complaints: not available yet.', 'channels' => 'Channel profitability', 'bundles' => 'Bundles', 'reasons' => 'Why customers do not buy', 'cancel' => 'Cancel rate', 'return' => 'Return rate',
         'reorder' => 'Reorder candidates', 'experiments' => 'Experiment results', 'recs' => 'Recommendations', 'impact' => 'Impact', 'effort' => 'Effort', 'ai_summary' => 'AI summary', 'none' => 'Nothing to report.',
         'kind' => ['inventory_low' => 'Restock soon', 'slow_mover_offer' => 'Test an offer on a slow mover', 'reorder' => 'Reorder', 'review_cancellations' => 'Review why orders are cancelled', 'address_return_reason' => 'Address the top return reason'],
+    ],
+    'brand' => [
+        'title' => 'Brand memory', 'hint' => 'One source of truth for voice, wording, policies, FAQs, approved claims and offer rules. Every generator and reply suggestion uses it. Each edit keeps a version.',
+        'add' => 'Add entry', 'versions' => 'History', 'version' => 'Version', 'active' => 'Active', 'confirm_delete' => 'Delete this entry?',
+        'kinds' => ['voice' => 'Brand voice', 'preferred_words' => 'Preferred wording', 'prohibited_words' => 'Prohibited wording', 'reply_policy' => 'Reply policies', 'faq' => 'FAQs', 'approved_claim' => 'Approved claims (general)', 'offer_rule' => 'Offer and discount rules'],
+        'claims_title' => 'Approved product claims', 'claims_hint' => 'Only these ingredient / benefit / authenticity / result statements may appear in generated content for the product. Anything else is removed by the Truth Guard.',
+        'claim_types' => ['ingredient' => 'Ingredient', 'benefit' => 'Benefit', 'authenticity' => 'Authenticity', 'result' => 'Result', 'other' => 'Other'],
+        'fields' => ['kind' => 'Kind', 'title' => 'Title', 'body' => 'Content', 'is_active' => 'Active', 'product_id' => 'Product', 'type' => 'Type', 'claim' => 'Claim'],
+    ],
+    'content' => [
+        'title' => 'Content calendar', 'hint' => 'Approved content assets and their manual publishing tasks. Nothing is posted automatically: publish yourself, then mark it done.',
+        'generate' => 'Generate a content package', 'assets' => 'Approved assets', 'calendar' => 'Calendar', 'schedule' => 'Schedule', 'marked' => 'Marked as published.', 'mark' => 'Mark published', 'skip' => 'Skip',
+        'tracked' => 'Tracked link', 'retired' => 'This asset is retired.', 'not_allowed' => 'Content packages need the Growth system and the growth.manage permission.', 'one_product' => 'Choose exactly one product for a content package.',
+        'no_assets' => 'No approved assets yet.', 'no_items' => 'Nothing scheduled.', 'ai_note' => 'AI-written drafts: verify before publishing. Never present an AI image as a real photo of the product.',
+        'types' => ['short_description' => 'Short description', 'long_description' => 'Long description', 'angle' => 'Angle', 'hook' => 'Hook', 'reel_script' => 'Reel script', 'tiktok_script' => 'TikTok script', 'story' => 'Story', 'ad_copy' => 'Ad copy', 'cta' => 'Call to action', 'faq' => 'FAQ', 'bundle_idea' => 'Bundle idea', 'photo_brief' => 'Photo brief', 'ab_variant' => 'A/B variant'],
+        'statuses' => ['planned' => 'Planned', 'published' => 'Published', 'skipped' => 'Skipped', 'approved' => 'Approved', 'retired' => 'Retired'],
+        'fields' => ['content_asset_id' => 'Asset', 'channel' => 'Channel', 'scheduled_for' => 'Date', 'note' => 'Note'],
+        'package' => ['short_description' => 'Short description', 'long_description' => 'Long description', 'angles' => 'Marketing angles', 'hooks' => 'Hooks', 'reel_scripts' => 'Reel scripts', 'tiktok_scripts' => 'TikTok scripts', 'stories' => 'Stories', 'ad_copy' => 'Ad copy', 'ctas' => 'Calls to action', 'faq' => 'FAQ', 'bundle_ideas' => 'Bundle ideas', 'photo_briefs' => 'Photography briefs', 'ab_variants' => 'A/B variants', 'edit_hint' => 'One item per line. Edit and press Save; the Truth Guard re-checks every save.'],
     ],
 ];

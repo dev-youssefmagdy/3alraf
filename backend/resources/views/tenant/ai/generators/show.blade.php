@@ -11,8 +11,11 @@
         $target = $g['target_type'] && $g['target_id'] ? match ($kind) {
             'banner' => route('tenant.banners.edit', $g['target_id']), 'flash_sale' => route('tenant.flash-sales.edit', $g['target_id']),
             'discount_code' => route('tenant.discount-codes.edit', $g['target_id']), 'bundle' => route('tenant.bundles.edit', $g['target_id']),
-            'static_page' => route('tenant.static-pages.edit', $g['target_id']), 'custom_page' => route('tenant.custom-pages.edit', $g['target_id']), 'blog_post' => route('tenant.blog-posts.edit', $g['target_id']), default => null } : null;
+            'static_page' => route('tenant.static-pages.edit', $g['target_id']), 'custom_page' => route('tenant.custom-pages.edit', $g['target_id']), 'blog_post' => route('tenant.blog-posts.edit', $g['target_id']), 'content_package' => route('tenant.growth.content.index'), default => null } : null;
         $isContent = in_array($kind, ['static_page', 'custom_page', 'blog_post'], true);
+        $isPkg = $kind === 'content_package';
+        $pk = fn ($k) => __('growth_hub.content.package.'.$k);
+        $listKeys = ['hooks', 'reel_scripts', 'tiktok_scripts', 'stories', 'ad_copy', 'ctas', 'bundle_ideas', 'photo_briefs'];
     @endphp
     <div id="gv" class="space-y-4" data-id="{{ $g['id'] }}" data-base="{{ route('tenant.ai.generators.show', $g['id']) }}" data-pending="{{ $g['pending'] ? 1 : 0 }}" data-open="{{ $open ? 1 : 0 }}">
         <div class="flex flex-wrap items-center gap-3">
@@ -71,6 +74,16 @@
                 @if (($g['preview'][0]['headroom_pct'] ?? null) !== null)<p class="text-sm text-slate-600">{{ $s('headroom') }}: <b>{{ $g['preview'][0]['headroom_pct'] }}%</b></p>@endif
             @endif
 
+            @if ($isPkg)
+                <p class="text-xs text-amber-700">{{ __('growth_hub.content.ai_note') }} {{ $pk('edit_hint') }}</p>
+                <input type="hidden" data-k="product_id" value="{{ $d['product_id'] ?? '' }}">
+                @foreach (['short_description', 'long_description'] as $f)@foreach ($locales as $l)<label class="{{ $lbl }}">{{ $pk($f) }} ({{ strtoupper($l) }})<textarea data-k="{{ $f }}.{{ $l }}" rows="{{ $f === 'long_description' ? 6 : 2 }}" {{ $dis }} class="{{ $inp }}">{{ $d[$f][$l] ?? '' }}</textarea></label>@endforeach @endforeach
+                <label class="{{ $lbl }}">{{ $pk('angles') }} (name | pitch)<textarea data-k="angles" data-lines="angles" rows="4" {{ $dis }} class="{{ $inp }}">{{ collect($d['angles'] ?? [])->map(fn ($a) => $a['name'].' | '.$a['pitch'])->implode("\n") }}</textarea></label>
+                @foreach ($listKeys as $f)<label class="{{ $lbl }}">{{ $pk($f) }}<textarea data-k="{{ $f }}" data-lines="list" rows="3" {{ $dis }} class="{{ $inp }}">{{ implode("\n", $d[$f] ?? []) }}</textarea></label>@endforeach
+                <label class="{{ $lbl }}">{{ $pk('faq') }} (question | answer)<textarea data-k="faq" data-lines="faq" rows="4" {{ $dis }} class="{{ $inp }}">{{ collect($d['faq'] ?? [])->map(fn ($a) => $a['q'].' | '.$a['a'])->implode("\n") }}</textarea></label>
+                <label class="{{ $lbl }}">{{ $pk('ab_variants') }} (label | text)<textarea data-k="ab_variants" data-lines="ab" rows="3" {{ $dis }} class="{{ $inp }}">{{ collect($d['ab_variants'] ?? [])->map(fn ($a) => $a['label'].' | '.$a['text'])->implode("\n") }}</textarea></label>
+            @endif
+
             @if ($isContent)
                 <label class="{{ $lbl }}">{{ $s('slug') }}<input data-k="slug" value="{{ $d['slug'] ?? '' }}" maxlength="100" {{ $dis }} class="{{ $inp }}" dir="ltr"></label>
                 @if (! empty($g['preview'][0]['url']))<p class="text-xs text-slate-500">{{ $s('page_url') }}: <span dir="ltr">{{ $g['preview'][0]['url'] }}</span></p>@endif
@@ -95,7 +108,7 @@
                 @endif
             @endif
 
-            @if (! $isContent)
+            @if (! $isContent && ! $isPkg)
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="{{ $lbl }}">{{ __('ai.gen.fields.starts_at') }}<input type="datetime-local" data-k="starts_at" value="{{ ! empty($d['starts_at']) ? \Illuminate\Support\Carbon::parse($d['starts_at'])->format('Y-m-d\TH:i') : '' }}" {{ $dis }} class="{{ $inp }}"></label>
                     <label class="{{ $lbl }}">{{ __('ai.gen.fields.ends_at') }}<input type="datetime-local" data-k="ends_at" value="{{ ! empty($d['ends_at']) ? \Illuminate\Support\Carbon::parse($d['ends_at'])->format('Y-m-d\TH:i') : '' }}" {{ $dis }} class="{{ $inp }}"></label>
@@ -152,6 +165,9 @@
                 form.querySelectorAll('[data-k]').forEach(e => {
                     const path = e.dataset.k.split('.'); let o = d;
                     path.slice(0, -1).forEach(p => o = (o[p] ??= {}));
+                    const pair = (line, a, b) => { const [x, ...y] = line.split('|'); return {[a]: (x || '').trim(), [b]: y.join('|').trim()}; };
+                    const L = e.dataset.lines; if (L) { const ls = e.value.split('\n').map(x => x.trim()).filter(Boolean);
+                        o[path.at(-1)] = L === 'list' ? ls : ls.map(x => L === 'angles' ? pair(x, 'name', 'pitch') : (L === 'faq' ? pair(x, 'q', 'a') : pair(x, 'label', 'text'))); return; }
                     o[path.at(-1)] = e.dataset.bool !== undefined ? e.checked : (e.dataset.csv !== undefined ? e.value.split(',').map(x => parseInt(x, 10)).filter(Boolean) : (e.dataset.json !== undefined ? JSON.parse(e.value || '[]') : e.value));
                 });
                 const rows = [...form.querySelectorAll('[data-row]')];

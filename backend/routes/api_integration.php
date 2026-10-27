@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Integration\ApprovalProposalController;
+use App\Http\Controllers\Api\Integration\BrandMemoryController;
 use App\Http\Controllers\Api\Integration\EventController;
 use App\Http\Controllers\Api\Integration\ExperimentResultController;
 use App\Http\Controllers\Api\Integration\PingController;
@@ -30,3 +31,7 @@ Route::middleware('integration.auth:read')->controller(MetricsController::class)
     Route::get('brief/daily', 'daily')->name('brief.daily');
     Route::get('brief/weekly', 'weekly')->name('brief.weekly');
 });
+
+// N2 brand memory + truth guard (scope `read`; the check endpoint only reads and returns a verdict).
+Route::get('brand-memory', [BrandMemoryController::class, 'index'])->middleware('integration.auth:read')->name('brand-memory.index');
+Route::post('truth-guard/check', [BrandMemoryController::class, 'check'])->middleware('integration.auth:read')->name('truth-guard.check');

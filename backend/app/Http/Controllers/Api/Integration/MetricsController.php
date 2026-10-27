@@ -67,7 +67,8 @@ class MetricsController extends Controller
         $perf = collect($this->metrics->byProduct($from, $to, 1000))->firstWhere('product_id', $id);
 
         return $this->out($this->productRow($t) + ['cost' => $cost, 'unit_margin_percent' => $margin, 'stock' => ['on_hand' => $row['on_hand'], 'days_of_cover' => $row['days_of_cover'], 'daily_velocity' => $row['daily_velocity']],
-            'period_performance' => $perf, 'description' => mb_substr((string) $t->product?->description, 0, 1000)], ['period' => [$from->toDateString(), $to->toDateString()]]);
+            'period_performance' => $perf, 'description' => mb_substr((string) $t->product?->description, 0, 1000),
+            'approved_claims' => app(\App\Services\Growth\BrandMemoryService::class)->claims($id)->map(fn ($c) => ['type' => $c->type, 'claim' => $c->claim])->values()->all()], ['period' => [$from->toDateString(), $to->toDateString()]]);
     }
 
     public function velocity(Request $r): JsonResponse
