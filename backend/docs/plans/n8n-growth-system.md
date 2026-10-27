@@ -124,3 +124,11 @@ External dependencies not solvable in code: Meta/WhatsApp Business API approval 
 
 ## 8. Execution order
 Strictly sequential N0 → N8 (shared migrations/models); each runs in its own sub-agent, then the CTO reviews the diff summary and test result before starting the next.
+
+## 9. Per-feature switches (added requirement; applies to every sprint)
+
+Every Growth feature must be independently switchable ON/OFF. Registry in `config/growth.php` `features` (key, label ar/en, group, depends_on[], default off). Keys: `integration_api`, `events_outbox`, `approvals`, `experiments`, `brief`, `brand_memory`, `truth_guard`, `content_factory`, `bundle_engine`, `bundle_ab`, `seasonal_calendar`, `gift_finder`, `interactions`, `voc`, `reputation_radar`, `comment_to_cart`, `auto_reply`, `missed_opportunities`, `experiment_lab`, `small_batch_lab`, `ambassadors`, `inventory_engine`, `return_intel`, `trend_radar`, `ceo_challenge`.
+- Two levels: central master `growth.enabled` (existing) + per-tenant feature switches stored in `tenants.settings.growth.features.{key}` (owner/`growth.manage`, audited via ActionLogger). A feature is active only if master ON, switch ON and all `depends_on` active. `auto_reply` additionally needs `interactions`.
+- One service `Growth\GrowthFeatures::active($key, $tenant)` + middleware `growth.feature:{key}` + Blade `@growthFeature`. OFF means: admin routes 404/redirect with notice, sidebar item hidden, integration endpoints return 403 `feature_disabled`, scheduled commands/jobs skip the tenant, event emission skipped, storefront widgets (gift finder, tracked links) not rendered. Data is never deleted by switching off; switching back on resumes.
+- Settings page `/admin/growth/settings` shows grouped toggles with dependency hints; API `GET /api/integration/v1/features` lets n8n read what is active.
+- Tests per feature: OFF blocks UI + API + jobs, ON works, dependency respected, tenant isolation.
