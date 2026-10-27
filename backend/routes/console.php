@@ -25,3 +25,7 @@ Schedule::command('media:prune-orphans --dry-run')->weeklyOn(0, '05:00');
 Schedule::command('retention:purge')->dailyAt('04:45')->withoutOverlapping()->onOneServer();
 
 Schedule::command('ai:expire-drafts')->dailyAt('02:30');
+
+// n8n growth system: outbox retries every minute, housekeeping nightly.
+Schedule::command('growth:dispatch-pending')->everyMinute()->withoutOverlapping();
+Schedule::command('growth:maintain')->dailyAt('02:45');

@@ -96,6 +96,31 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
 
+        // n8n growth system (feature flag `growth`; perms growth.view|manage|approve)
+        Route::middleware('growth.enabled')->prefix('growth')->name('growth.')->group(function () {
+            Route::get('clients', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'index'])->name('clients.index');
+            Route::get('clients/datatable', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'datatable'])->name('clients.datatable');
+            Route::post('clients', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'store'])->name('clients.store');
+            Route::post('clients/{id}/rotate', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'rotate'])->whereNumber('id')->name('clients.rotate');
+            Route::post('clients/{id}/revoke', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'revoke'])->whereNumber('id')->name('clients.revoke');
+            Route::get('events', [\App\Http\Controllers\Tenant\Growth\EventController::class, 'index'])->name('events.index');
+            Route::get('events/datatable', [\App\Http\Controllers\Tenant\Growth\EventController::class, 'datatable'])->name('events.datatable');
+            Route::post('events/{id}/replay', [\App\Http\Controllers\Tenant\Growth\EventController::class, 'replay'])->whereNumber('id')->name('events.replay');
+            Route::get('approvals', [\App\Http\Controllers\Tenant\Growth\ApprovalController::class, 'index'])->name('approvals.index');
+            Route::get('approvals/datatable', [\App\Http\Controllers\Tenant\Growth\ApprovalController::class, 'datatable'])->name('approvals.datatable');
+            Route::post('approvals/{id}/approve', [\App\Http\Controllers\Tenant\Growth\ApprovalController::class, 'approve'])->whereNumber('id')->name('approvals.approve');
+            Route::post('approvals/{id}/reject', [\App\Http\Controllers\Tenant\Growth\ApprovalController::class, 'reject'])->whereNumber('id')->name('approvals.reject');
+            Route::get('experiments', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'index'])->name('experiments.index');
+            Route::get('experiments/datatable', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'datatable'])->name('experiments.datatable');
+            Route::post('experiments', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'store'])->name('experiments.store');
+            Route::get('experiments/{id}', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'show'])->whereNumber('id')->name('experiments.show');
+            Route::put('experiments/{id}', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'update'])->whereNumber('id')->name('experiments.update');
+            Route::delete('experiments/{id}', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'destroy'])->whereNumber('id')->name('experiments.destroy');
+            Route::post('experiments/{id}/results', [\App\Http\Controllers\Tenant\Growth\ExperimentController::class, 'storeResult'])->whereNumber('id')->name('experiments.results');
+            Route::get('settings', [\App\Http\Controllers\Tenant\Growth\SettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [\App\Http\Controllers\Tenant\Growth\SettingsController::class, 'update'])->name('settings.update');
+        });
+
         Route::middleware('ai.enabled')->prefix('ai')->name('ai.')->group(function () {
             Route::get('settings', [AiSettingsController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [AiSettingsController::class, 'update'])->name('settings.update');

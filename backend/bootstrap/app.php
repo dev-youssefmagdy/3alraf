@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api', 'api.context'])->domain('{tenant}.'.$central)->prefix('api/v1')->name('api.v1.')->group(base_path('routes/api_v1.php'));
             Route::middleware(['api', 'api.context'])->domain($central)->prefix('api/v1')->name('api.v1.h.')->group(base_path('routes/api_v1.php'));
             Route::middleware('api')->domain($central)->prefix('api/v1')->group(base_path('routes/api.php'));
+            // n8n integration API (bearer + HMAC, tenant resolved from the token, any host).
+            Route::middleware(['api', 'throttle:integration-ip'])->prefix('api/integration/v1')->name('integration.')->group(base_path('routes/api_integration.php'));
             Route::middleware(['web', CentralContext::class, 'auth.active'])->domain($central)->group(base_path('routes/central.php'));
             Route::middleware(['web', 'tenant.resolve', 'auth.active'])->domain('{tenant}.'.$central)->group(function () {
                 // order matters: /admin first, then the /{locale} storefront
@@ -43,6 +45,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.auth' => \App\Http\Middleware\Api\ApiAuth::class,
             'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
             'ai.enabled' => \App\Http\Middleware\EnsureAiEnabled::class,
+            'integration.auth' => \App\Http\Middleware\Api\IntegrationAuth::class,
+            'growth.enabled' => \App\Http\Middleware\EnsureGrowthEnabled::class,
             'auth.active' => \App\Http\Middleware\EnsureAccountActive::class,
         ]);
         // Inactive-account logout must run before route auth (Authenticate is priority-sorted ahead of plain group middleware).

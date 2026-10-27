@@ -68,5 +68,7 @@ return [
         'ai_studio' => ['use'],
         'ai_editor' => ['use'],
         'ai_generators' => ['use', 'approve'],
+        // n8n growth system (feature flag `growth`)
+        'growth' => ['view', 'manage', 'approve'],
     ],
 ];

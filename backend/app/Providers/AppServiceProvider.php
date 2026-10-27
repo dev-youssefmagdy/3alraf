@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(\App\Services\Ai\AiAccess::class);
+        $this->app->singleton(\App\Services\Growth\ApprovalService::class); // module handlers register on it
     }
 
     /**
@@ -51,6 +52,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::subscribe(NotifyCustomerOfOrder::class);
+        Event::subscribe(\App\Listeners\EmitGrowthEvents::class);
+        \App\Listeners\EmitGrowthEvents::hookModels();
+        RateLimiter::for('integration-ip', fn (Request $r) => Limit::perMinute(300)->by('integration-ip|'.$r->ip()));
         require base_path('routes/channels.php');
 
         // Super admins bypass permission checks within their guard.

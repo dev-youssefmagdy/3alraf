@@ -50,6 +50,11 @@
             ['tenant.purchases.index', 'ops.purchases', 'M3 4h2l2 12h10l2-9H6', 'purchases.view'],
             ['tenant.stock-transfers.index', 'ops.stock_transfers', 'M7 7h12l-3-3m3 13H7l3 3', 'stock_transfers.view'],
             ['tenant.stock-adjustments.index', 'ops.stock_adjustments', 'M4 20h4L19 9l-4-4L4 16z', 'stock_adjustments.view']];
+    $growthMenu = (! $isCentral && app(\App\Services\Growth\GrowthAccess::class)->enabled($tenant))
+        ? [['tenant.growth.approvals.index', 'growth_hub.menu.approvals', 'M5 13l4 4L19 7', 'growth.view', 'tenant.growth.approvals.*'], ['tenant.growth.experiments.index', 'growth_hub.menu.experiments', 'M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3', 'growth.view', 'tenant.growth.experiments.*'],
+            ['tenant.growth.events.index', 'growth_hub.menu.events', 'M13 10V3L4 14h7v7l9-11z', 'growth.view', 'tenant.growth.events.*'], ['tenant.growth.clients.index', 'growth_hub.menu.clients', 'M15 7a4 4 0 11-8 0 4 4 0 018 0zM3 21v-1a6 6 0 0112 0v1M19 8v6M16 11h6', 'growth.view', 'tenant.growth.clients.*'],
+            ['tenant.growth.settings.edit', 'growth_hub.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'growth.view', 'tenant.growth.settings.*']]
+        : [];
     $aiMenu = $isCentral
         ? [['central.ai.providers.index', 'ai.menu.providers', 'M5 12h14M12 5v14M4 4h16v16H4z', 'ai_providers.view', 'central.ai.providers.*'], ['central.ai.models.index', 'ai.menu.models', 'M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'ai_models.view', 'central.ai.models.*'],
             ['central.ai.tenants.index', 'ai.menu.tenants', 'M3 21h18M5 21V7l7-4 7 4v14', 'ai_tenants.view', 'central.ai.tenants.*'], ['central.ai.usage.index', 'ai.menu.usage', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'ai_usage.view', 'central.ai.usage.*']]
@@ -85,6 +90,10 @@
                 ];
                 $grouped = collect($groups)->flatMap(fn ($g) => $g[2])->all();
                 $aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3]));
+                $growthVisible = collect($growthMenu)->filter(fn ($i) => $user?->can($i[3]));
+                if ($growthVisible->isNotEmpty()) {
+                    $groups[] = ['growth_hub.menu.group', 'M3 17l6-6 4 4 8-8M15 7h6v6', 'growth'];
+                }
                 if ($aiVisible->isNotEmpty()) {
                     $groups[] = ['ai.menu.group', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', null];
                 }
@@ -102,9 +111,11 @@
 
                 @foreach ($groups as $g)
                     @php
-                        $items = $g[2] === null
+                        $items = $g[2] === 'growth'
+                            ? $growthVisible->values()
+                            : ($g[2] === null
                             ? $aiVisible->map(fn ($i) => [$i[0], $i[1], $i[2], $i[3], $i[4]])
-                            : collect($g[2])->map(fn ($n) => $visible[$n] ?? null)->filter();
+                            : collect($g[2])->map(fn ($n) => $visible[$n] ?? null)->filter());
                         $open = $items->contains(fn ($i) => $isActive($i));
                     @endphp
                     @continue($items->isEmpty())
