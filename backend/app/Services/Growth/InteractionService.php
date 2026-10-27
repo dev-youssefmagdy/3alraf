@@ -45,9 +45,9 @@ class InteractionService
 
     private const BUY = ['want to buy', 'order', 'i want', 'interested', 'عايز', 'عاوز', 'اطلب', 'أطلب', 'اشتري', 'حابب'];
 
-    private const NEG = ['bad', 'terrible', 'worst', 'angry', 'disappointed', 'broken', 'damaged', 'late', 'سيء', 'وحش', 'زعلان', 'مش راضي', 'تالف', 'اتأخر', 'متأخر', 'نصب'];
+    private const NEG = ['bad', 'terrible', 'worst', 'angry', 'disappointed', 'broken', 'damaged', 'late', 'سيء', 'وحش', 'زعلان', 'مش راضي', 'تالف', 'اتأخر', 'متأخر', 'نصب', 'poor', 'scam', 'wrong', 'not working', 'not as described', 'charged twice', 'waste of', 'complain', 'زبالة', 'مكسور', 'غلط', 'مش شغال', 'مش زي', 'مش حلو', 'نصاب', 'حرامي', 'حرامية', 'مستحيل', 'اشتكي', 'محدش بيرد', 'ما وصلنيش', 'مرتين', 'غالية', 'zbala', 'mesh zay', 'ta2akhar', 'tzabto'];
 
-    private const POS = ['love', 'great', 'excellent', 'thanks', 'perfect', 'تحفة', 'ممتاز', 'شكرا', 'شكراً', 'رائع', 'حلو'];
+    private const POS = ['love', 'great', 'excellent', 'thanks', 'perfect', 'تحفة', 'ممتاز', 'شكرا', 'شكراً', 'رائع', 'حلو', 'happy', 'best', 'amazing', 'احلى', 'أحلى', 'محترم', 'تسلموا', 'ربنا يكرمكم', 'شغل عالي', 'shokran', 'hamdellah', 'عجبتني', '👍'];
 
     private const OPT_OUT = ['stop', 'unsubscribe', 'opt out', 'الغاء الاشتراك', 'إلغاء الاشتراك', 'وقف الرسائل', 'بطلوا'];
 
@@ -129,7 +129,7 @@ class InteractionService
     public function aiFallback(string $maskedText): array
     {
         try {
-            if (! app(GrowthFeatures::class)->active('ai_classify') || ! app(AiAccess::class)->enabled(current_tenant()) || ! ($model = app(StudioService::class)->model('text', null))) {
+            if (! app(GrowthFeatures::class)->active('ai_classify') || ! $this->realEvalPasses() || ! app(AiAccess::class)->enabled(current_tenant()) || ! ($model = app(StudioService::class)->model('text', null))) {
                 return [];
             }
             $data = json_encode(['text' => mb_substr($maskedText, 0, (int) config('growth.classifier.ai_max_chars', 600))], JSON_UNESCAPED_UNICODE);
@@ -174,6 +174,93 @@ class InteractionService
         return ['n' => count($set), 'low_confidence' => $low, 'accuracy' => array_map(fn ($c) => round($c / $n, 4), $ok), 'confusion' => $conf];
     }
 
+    /**
+     * Blind set (written by an independent author with its own label vocabulary). Only sentiment and a coarse intent are comparable with the
+     * production taxonomy; the topic category is not (blind: question/complaint/request/praise/spam/other vs production: price/shipping/...), so it is reported as null.
+     */
+    public const BLIND_INTENT = ['purchase' => ['purchase_intent'], 'inquiry' => ['question'], 'support' => ['complaint', 'question'], 'return' => ['complaint', 'question'], 'other' => ['other', 'question', 'praise']];
+
+    public function evaluateBlind(array $set): array
+    {
+        $ok = ['intent' => 0, 'sentiment' => 0];
+        $conf = [];
+        foreach ($set as $r) {
+            $p = $this->fallback((string) ($r['message'] ?? $r['text'] ?? ''));
+            $allowed = self::BLIND_INTENT[$r['intent'] ?? 'other'] ?? ['other'];
+            if (($r['category'] ?? null) === 'praise') {
+                $allowed[] = 'praise';
+            }
+            if (($r['category'] ?? null) === 'spam') {
+                $allowed = ['other', 'question'];
+            }
+            $ok['intent'] += in_array($p['intent'], $allowed, true) ? 1 : 0;
+            $hit = ($p['sentiment'] ?? null) === ($r['sentiment'] ?? null);
+            $ok['sentiment'] += $hit ? 1 : 0;
+            if (! $hit) {
+                $k = ($r['sentiment'] ?? 'none').' -> '.($p['sentiment'] ?? 'none');
+                $conf[$k] = ($conf[$k] ?? 0) + 1;
+            }
+        }
+        $n = max(1, count($set));
+        arsort($conf);
+
+        return ['n' => count($set), 'accuracy' => ['category' => null] + array_map(fn ($c) => round($c / $n, 4), $ok), 'confusion' => $conf];
+    }
+
+    /** Accuracy of the stored classification against human-reviewed rows of the current tenant. Refuses a verdict below the minimum sample. */
+    public function evaluateReal(): array
+    {
+        $rows = Interaction::whereNotNull('reviewed_at')->get(['category', 'intent', 'sentiment', 'reviewed_category', 'reviewed_intent', 'reviewed_sentiment']);
+        $min = (int) config('growth.classifier.min_reviewed', 300);
+        $ok = ['category' => 0, 'intent' => 0, 'sentiment' => 0];
+        $conf = [];
+        foreach ($rows as $r) {
+            foreach ($ok as $f => $_) {
+                $ok[$f] += $r->{$f} === $r->{'reviewed_'.$f} ? 1 : 0;
+            }
+            if ($r->category !== $r->reviewed_category) {
+                $k = ($r->reviewed_category ?? 'none').' -> '.($r->category ?? 'none');
+                $conf[$k] = ($conf[$k] ?? 0) + 1;
+            }
+        }
+        $n = $rows->count();
+        arsort($conf);
+        $acc = array_map(fn ($c) => $n ? round($c / $n, 4) : null, $ok);
+        $target = (array) config('growth.classifier.target_accuracy', []);
+        $verdict = $n < $min ? 'insufficient_data' : (collect($acc)->every(fn ($a, $f) => $a >= (float) ($target[$f] ?? 0)) ? 'meets_target' : 'below_target');
+
+        return ['n' => $n, 'min' => $min, 'verdict' => $verdict, 'accuracy' => $acc, 'confusion' => $conf, 'at' => now()->toDateTimeString()];
+    }
+
+    public function storeRealEval(array $res): void
+    {
+        $t = current_tenant();
+        $s = $t->settings ?? [];
+        $s['growth']['classifier_eval'] = $res;
+        $t->update(['settings' => $s]);
+    }
+
+    /** AI fallback / L3 auto-reply stay blocked until the last stored real evaluation (>= min reviewed rows) met the targets. */
+    public function realEvalPasses(?Tenant $t = null): bool
+    {
+        if (! config('growth.classifier.require_real_eval', true)) {
+            return true;
+        }
+        $t ??= current_tenant();
+
+        return ((($t?->settings ?? [])['growth'] ?? [])['classifier_eval']['verdict'] ?? null) === 'meets_target';
+    }
+
+    /** Human correction of one interaction (audited). Values must be from the fixed enums; category may be null. */
+    public function review(int $id, array $d, ?int $adminId): Interaction
+    {
+        $i = Interaction::findOrFail($id);
+        $i->forceFill(['reviewed_category' => $d['category'] ?: null, 'reviewed_intent' => $d['intent'], 'reviewed_sentiment' => $d['sentiment'], 'reviewed_by' => $adminId, 'reviewed_at' => now()])->save();
+        $this->log->log('interaction.reviewed', 'admin', $adminId, null, $i, 'ok', ['predicted' => [$i->category, $i->intent, $i->sentiment], 'reviewed' => [$i->reviewed_category, $i->reviewed_intent, $i->reviewed_sentiment]]);
+
+        return $i;
+    }
+
     /** Rule-based fallback classifier (EN + Egyptian Arabic keywords). */
     public function fallback(string $text): array
     {
@@ -185,6 +272,7 @@ class InteractionService
                 break;
             }
         }
+        $t = str_replace(['مش وحش', 'مش وحشة', 'مش سيء'], 'حلو', $t); // negated negative = positive
         $neg = $this->contains($t, self::NEG) || in_array($cat, ['safety'], true);
         $sent = $neg ? 'negative' : ($this->contains($t, self::POS) ? 'positive' : 'neutral');
         $intent = $this->contains($t, self::BUY) ? 'purchase_intent' : ($neg || $cat === 'returns' ? 'complaint' : ($sent === 'positive' ? 'praise' : (str_contains($t, '?') || str_contains($t, '؟') || $cat ? 'question' : 'other')));

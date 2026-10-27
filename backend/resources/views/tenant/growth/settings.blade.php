@@ -38,4 +38,9 @@
             <div class="sm:col-span-2"><x-button type="submit">{{ __('admin.save') }}</x-button></div>
         </form>
     </x-card>
+    @php($ce = data_get(current_tenant()?->settings, 'growth.classifier_eval'))
+    <x-card :title="__('growth_hub.settings.cls_title')">
+        <p class="text-sm text-slate-600">{{ __('growth_hub.settings.cls_hint', ['n' => config('growth.classifier.min_reviewed')]) }}</p>
+        <p class="mt-2 text-sm font-semibold">{{ $ce ? __('growth_hub.settings.cls_verdict.'.$ce['verdict']).' (N='.$ce['n'].', '.$ce['at'].')' : __('growth_hub.settings.cls_none') }}</p>
+    </x-card>
 </x-layouts.admin>

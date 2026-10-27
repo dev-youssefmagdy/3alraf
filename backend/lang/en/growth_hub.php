@@ -41,6 +41,7 @@ return [
         'outcomes' => ['win' => 'Win', 'loss' => 'Loss', 'inconclusive' => 'Inconclusive'],
     ],
     'settings' => [
+        'cls_title' => 'Classifier accuracy on real data', 'cls_hint' => 'AI fallback and L3 auto-reply stay blocked until a real evaluation on at least :n human-reviewed messages meets the accuracy targets (php artisan growth:eval-classifier --real --tenant=slug).', 'cls_none' => 'Not evaluated yet (blocked).', 'cls_verdict' => ['insufficient_data' => 'Insufficient data (blocked)', 'below_target' => 'Below target (blocked)', 'meets_target' => 'Meets target (allowed)'],
         'title' => 'Growth guardrails', 'hint' => 'Store-level limits used by every growth module. Leave a field empty to use the platform default.', 'default' => 'Default: :v',
         'out_of_range' => 'Must be between :min and :max.', 'cover_order' => 'Minimum days of cover cannot exceed the maximum.', 'allowlist_hint' => 'Comma-separated FAQ keys that may be answered automatically. Empty = nothing is automatic.',
         'fields' => ['min_margin_percent' => 'Minimum margin %', 'max_discount_percent' => 'Maximum discount %', 'low_stock_threshold' => 'Low-stock threshold (units)', 'min_days_of_cover' => 'Minimum days of cover',
@@ -116,6 +117,7 @@ return [
     'central' => ['title' => 'Growth system', 'hint' => 'Master switch. Store owners cannot enable it themselves; each feature then has its own switch in the store.', 'enabled' => 'Enable the Growth system for this store'],
 
     'inbox' => [
+        'review' => 'Save label', 'review_hint' => 'Correct label (category / intent / sentiment): measures real accuracy',
         'title' => 'Interactions inbox', 'hint' => 'Customer messages ingested by n8n. Text is masked before storage. Nothing is sent from here: replies are copied by a human (or sent by n8n for allowlisted FAQs only).',
         'level' => 'Maturity level', 'levels' => [1 => 'L1 classify only', 2 => 'L2 suggest replies', 3 => 'L3 auto-reply allowlisted FAQs', 4 => 'L4 routing'],
         'l3_hint' => 'L3 also needs the Auto reply feature and FAQ keys in the guardrail allowlist (faq + FAQ id, e.g. faq12).',

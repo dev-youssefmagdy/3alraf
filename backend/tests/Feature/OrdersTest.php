@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\DiscountCode;
+use App\Models\DiscountCodeUsage;
 use App\Models\FlashSale;
 use App\Models\FlashSaleItem;
 use App\Models\Order;
@@ -16,6 +17,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockLevel;
+use App\Models\StockMovement;
 use App\Models\Tenant;
 use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
@@ -55,6 +57,11 @@ beforeEach(function () {
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o));
     $this->place = fn (int $qty = 2, array $o = []) => app(OrderPlacementService::class)->place(($this->checkout)($o), ($this->lines)($qty))['order'];
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 function lvl(): StockLevel
@@ -102,7 +109,7 @@ it('validates discount codes (dates, limits, minimum, scope)', function () {
     $fails($mk(['usage_limit' => 1, 'used_count' => 1])->code);
     $fails($mk(['min_order' => 500])->code);
     $limited = $mk(['per_customer_limit' => 1]);
-    \App\Models\DiscountCodeUsage::create(['discount_code_id' => $limited->id, 'order_id' => ($this->place)(1)->id, 'customer_id' => 1, 'amount' => 5]);
+    DiscountCodeUsage::create(['discount_code_id' => $limited->id, 'order_id' => ($this->place)(1)->id, 'customer_id' => 1, 'amount' => 5]);
     $fails($limited->code);
     expect($v->validate($limited->code, $lines, 2)['model']->id)->toBe($limited->id);   // another customer is fine
 
@@ -132,7 +139,7 @@ it('places an order, reserves stock, ships (sale_out), and releases on cancel', 
         $st->change($order, $to);
     }
     expect(lvl()->on_hand)->toBe(8)->and(lvl()->reserved)->toBe(0)->and($order->fresh()->stock_deducted)->toBeTrue()
-        ->and(\App\Models\StockMovement::where('type', 'sale_out')->value('quantity'))->toBe(-2);
+        ->and(StockMovement::where('type', 'sale_out')->value('quantity'))->toBe(-2);
     $st->change($order, S::DELIVERED);
     $order->refresh();
     expect($order->payment_status)->toBe(PaymentStatus::PAID)->and((string) $order->paid_amount)->toBe('240.00');   // COD collected on delivery
@@ -208,7 +215,7 @@ it('runs the storefront cart -> checkout flow and the admin order pages', functi
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 99])->assertStatus(422);
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 2])->assertOk()->assertJsonPath('data.totals.subtotal', '200.00');
     $this->postJson("{$this->s}/checkout/validate", [])->assertStatus(422)->assertJsonValidationErrors(['name', 'shipping_company_id', 'payment_method_id']);
-    $payload = ['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id, 'discount_code' => 'WELCOME10'];
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id, 'discount_code' => 'WELCOME10']);
     $this->postJson("{$this->s}/checkout/validate", $payload)->assertOk();
     $this->postJson("{$this->s}/checkout/validate", ['discount_code' => 'NOPE'] + $payload)->assertStatus(422)->assertJsonValidationErrors(['discount_code']);
     $res = $this->postJson("{$this->s}/checkout", $payload)->assertOk();

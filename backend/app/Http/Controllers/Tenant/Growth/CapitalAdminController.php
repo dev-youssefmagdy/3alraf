@@ -7,13 +7,17 @@ use App\Http\Requests\Tenant\ChallengeReviewRequest;
 use App\Http\Requests\Tenant\InventoryReorderRequest;
 use App\Http\Requests\Tenant\ReturnReasonRequest;
 use App\Http\Requests\Tenant\ReturnTaskRequest;
+use App\Http\Requests\Tenant\SupplierPriceRequest;
 use App\Http\Requests\Tenant\SupplyTermsRequest;
 use App\Models\Branch;
+use App\Models\ImprovementTask;
 use App\Models\ProductSupplyTerm;
 use App\Models\Supplier;
+use App\Models\SupplierProductPrice;
 use App\Services\Growth\CeoChallengeService;
 use App\Services\Growth\InventoryDecisionService;
 use App\Services\Growth\ReturnIntelService;
+use App\Services\Growth\SupplierPriceService;
 use App\Services\Growth\TrendRadarService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -30,7 +34,8 @@ class CapitalAdminController extends Controller implements HasMiddleware
     public function inventory(InventoryDecisionService $svc)
     {
         return view('tenant.growth.inventory', $svc->analyze() + ['suppliers' => Supplier::where('is_active', true)->pluck('name', 'id')->all(), 'branches' => Branch::pluck('name', 'id')->all(), 'terms' => ProductSupplyTerm::get()->keyBy('product_id'),
-            'tasks' => \App\Models\ImprovementTask::where('rule', 'stock_to_story')->whereIn('status', ['open', 'doing'])->latest('id')->limit(30)->get()]);
+            'prices' => SupplierProductPrice::with('supplier')->latest('id')->limit(100)->get(),
+            'tasks' => ImprovementTask::where('rule', 'stock_to_story')->whereIn('status', ['open', 'doing'])->latest('id')->limit(30)->get()]);
     }
 
     public function reorder(InventoryReorderRequest $r, InventoryDecisionService $svc): JsonResponse
@@ -45,6 +50,20 @@ class CapitalAdminController extends Controller implements HasMiddleware
     {
         $d = $r->validated();
         $svc->saveTerms($d['product_id'], $d, auth('tenant')->id());
+
+        return $this->ok(__('admin.saved'), route('tenant.growth.inventory.index'));
+    }
+
+    public function savePrice(SupplierPriceRequest $r, SupplierPriceService $svc): JsonResponse
+    {
+        $svc->save($r->validated(), auth('tenant')->id());
+
+        return $this->ok(__('admin.saved'), route('tenant.growth.inventory.index'));
+    }
+
+    public function deletePrice(int $id, SupplierPriceService $svc): JsonResponse
+    {
+        $svc->delete($id, auth('tenant')->id());
 
         return $this->ok(__('admin.saved'), route('tenant.growth.inventory.index'));
     }

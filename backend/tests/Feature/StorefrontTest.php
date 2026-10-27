@@ -17,6 +17,7 @@ use App\Models\ProductVariant;
 use App\Models\ShippingCompany;
 use App\Models\Tenant;
 use App\Models\TenantProduct;
+use App\Services\BarcodeService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Cache;
@@ -38,7 +39,7 @@ beforeEach(function () {
     $this->sub->update(['path' => $this->cat->id.'/'.$this->sub->id]);
     $this->brand = Brand::create(['name' => ['ar' => 'سوني', 'en' => 'Sony'], 'slug' => 'sony', 'is_active' => true]);
     $this->mk = function (string $slug, $price, ?Category $cat = null, ?Brand $brand = null, $sale = null) {
-        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'brand_id' => $brand?->id]);
+        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique(), 'brand_id' => $brand?->id]);
         if ($cat) {
             $p->categories()->attach($cat->id);
         }
@@ -50,6 +51,11 @@ beforeEach(function () {
     $this->p1 = ($this->mk)('cheap', 100, $this->sub, $this->brand);
     $this->p2 = ($this->mk)('mid', 300, $this->cat);
     $this->p3 = ($this->mk)('sale', 500, $this->sub, null, 400);
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 test('home renders menu, rails, flash sale countdown and banners', function () {
@@ -129,7 +135,7 @@ test('cart page, live quote with partial selections, shipping options and checko
     expect($opts)->not->toBeEmpty()->and($opts[0])->toHaveKeys(['id', 'name', 'fee', 'total', 'supports_cod']);
     expect(bccomp($opts[0]['total'], '200.00', 2))->toBeGreaterThanOrEqual(0);
 
-    $payload = ['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id];
+    $payload = withSavedAddress(['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
     $res = $this->withCredentials()->postJson("{$this->s}/checkout", $payload)->assertOk();
     $token = $res->json('data.token');
     $this->get("{$this->s}/order/$token")->assertOk()->assertSee($res->json('data.number'))->assertSee('منتج cheap');
@@ -138,6 +144,7 @@ test('cart page, live quote with partial selections, shipping options and checko
 });
 
 test('account area for a logged in customer', function () {
+    $this->app['auth']->forgetGuards(); // API / guest-cart flow: no web session
     $this->postJson("{$this->s}/register", ['name' => 'Sara', 'email' => 'sara@egy.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'])->assertOk();
     $c = Customer::where('email', 'sara@egy.test')->first();
     expect($c)->not->toBeNull();
@@ -154,4 +161,12 @@ test('sitemap, custom/static pages keep working inside the new layout', function
     $this->get('http://egy.3alraf.test/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml')->assertSee('/ar/product/cheap', false)->assertSee('/en/category/devices', false);
     $this->get("{$this->s}/page/about")->assertOk()->assertSee('data-cart-count', false);
     $this->get('http://egy.3alraf.test/offers')->assertOk()->assertSee('data-cart-count', false)->assertSee('?lang=en', false);
+});
+
+test('web checkout is signed-in only: guests are redirected to login (page) or get 401 (JSON); the cart stays open', function () {
+    $this->app['auth']->forgetGuards();
+    $this->get("{$this->s}/cart")->assertOk();
+    $this->get("{$this->s}/checkout")->assertRedirect();
+    $this->postJson("{$this->s}/checkout", ['name' => 'Ali'])->assertStatus(401);
+    $this->postJson("{$this->s}/checkout/validate", [])->assertStatus(401);
 });

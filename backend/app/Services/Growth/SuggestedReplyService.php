@@ -43,7 +43,7 @@ class SuggestedReplyService
             return $this->done($i, $persist, ['mode' => 'human', 'reason' => 'truth_guard'] + $out);
         }
         $out = ['mode' => 'suggest', 'reply' => $text, 'faq_key' => $faqKey] + $out;
-        if ($faqKey && $level >= 3 && $this->features->active('auto_reply') && in_array($faqKey, (array) $this->config->get('auto_reply_allowlist', []), true) && ! $this->paused($i)) {
+        if ($faqKey && $level >= 3 && $this->features->active('auto_reply') && $this->ix->realEvalPasses() && in_array($faqKey, (array) $this->config->get('auto_reply_allowlist', []), true) && ! $this->paused($i)) {
             $out['mode'] = 'auto';
             $out['auto_allowed'] = true;
         }

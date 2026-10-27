@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AffiliateStatus;
+use App\Exceptions\IrreversibleMigrationException;
 use App\Models\Affiliate;
 use App\Models\Banner;
 use App\Models\CentralAdmin;
@@ -8,22 +9,28 @@ use App\Models\City;
 use App\Models\Customer;
 use App\Models\CustomPage;
 use App\Models\Order;
+use App\Models\OrderReturnItem;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\PurchaseOrderItem;
 use App\Models\ShippingCompany;
+use App\Models\StockAdjustmentItem;
+use App\Models\StockTransferItem;
 use App\Models\Tenant;
 use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
 use App\Notifications\AuthCodeNotification;
-use App\Services\Auth\SessionRevoker;
+use App\Services\Api\AuthCodeService;
 use App\Services\Orders\OrderPaymentService;
 use App\Support\SafeUrl;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -51,6 +58,11 @@ beforeEach(function () {
 
         return $a;
     };
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 // ---------------------------------------------------------------- (1) role assignment
@@ -204,6 +216,7 @@ it('keys sensitive limiters by tenant + IP + route and ignores X-Tenant on subdo
 });
 
 it('does not give garbage bearer tokens their own api bucket', function () {
+    $this->app['auth']->forgetGuards(); // API / guest-cart flow: no web session
     foreach (range(1, 120) as $i) {
         $this->getJson("{$this->api}/store", ['Authorization' => "Bearer junk$i"]);
     }
@@ -214,7 +227,7 @@ it('does not give garbage bearer tokens their own api bucket', function () {
 it('keeps the wrong-code counter across re-issues and applies a per-email issue cooldown', function () {
     Notification::fake();
     $c = Customer::where('email', 'customer@egy.test')->first();
-    $svc = app(\App\Services\Api\AuthCodeService::class);
+    $svc = app(AuthCodeService::class);
     $svc->sendReset($c->email);
     foreach (range(1, 3) as $i) {
         try {
@@ -237,7 +250,7 @@ it('keeps the wrong-code counter across re-issues and applies a per-email issue 
 it('keeps order secrets and customer PII out of the audit log', function () {
     $o = Order::query()->first() ?? Order::create(['number' => 'T-1', 'public_token' => 'tok-secret', 'customer_name' => 'Ali', 'customer_phone' => '0100', 'customer_email' => 'a@x.test', 'address' => 'St', 'status' => 'pending', 'payment_status' => 'unpaid', 'subtotal' => 1, 'total' => 1, 'currency' => 'EGP']);
     $o->update(['customer_name' => 'Changed', 'address' => 'New street', 'payment_proof' => 'proofs/x.jpg', 'notes' => 'n2']);
-    $props = \Spatie\Activitylog\Models\Activity::where('subject_type', $o->getMorphClass())->where('subject_id', $o->id)->latest('id')->first()->properties->toArray();
+    $props = Activity::where('subject_type', $o->getMorphClass())->where('subject_id', $o->id)->latest('id')->first()->properties->toArray();
     expect(json_encode($props))->not->toContain('Changed')->not->toContain('New street')->not->toContain('proofs/x.jpg')->not->toContain($o->public_token)->toContain('n2');
 });
 
@@ -267,7 +280,7 @@ it('requires the current password to change e-mail or password, unverifies a new
     $this->actingAs($c, 'web')->putJson("{$this->s}/account/profile", ['name' => 'X', 'email' => 'new@x.test', 'password' => 'brandnew123', 'password_confirmation' => 'brandnew123'])
         ->assertStatus(422)->assertJsonValidationErrors('current_password');
     $this->putJson("{$this->s}/account/profile", ['name' => 'X', 'email' => 'new@x.test', 'password' => 'brandnew123', 'password_confirmation' => 'brandnew123', 'current_password' => 'password'])->assertOk();
-    expect(\Illuminate\Support\Facades\Hash::check('brandnew123', $c->fresh()->password))->toBeTrue();
+    expect(Hash::check('brandnew123', $c->fresh()->password))->toBeTrue();
 });
 
 // ---------------------------------------------------------------- (10) payment attempts
@@ -286,13 +299,13 @@ it('widens payment_attempts and refuses new payment links beyond the cap', funct
 it('rejects an inactive city at checkout', function () {
     $city = City::first();
     $city->update(['is_active' => false]);
-    $this->postJson("{$this->s}/checkout/validate", ['name' => 'A', 'phone' => '1', 'city_id' => $city->id, 'address' => 'St', 'shipping_company_id' => ShippingCompany::first()->id, 'payment_method_id' => PaymentMethod::first()->id])
+    $this->postJson("{$this->s}/checkout/validate", withSavedAddress(['name' => 'A', 'phone' => '1', 'city_id' => $city->id, 'address' => 'St', 'shipping_company_id' => ShippingCompany::first()->id, 'payment_method_id' => PaymentMethod::first()->id]))
         ->assertStatus(422)->assertJsonValidationErrors('city_id');
 });
 
 // ---------------------------------------------------------------- (13) explicit fillable
 it('declares explicit fillable columns on the document item models', function () {
-    foreach ([\App\Models\PurchaseOrderItem::class, \App\Models\StockAdjustmentItem::class, \App\Models\StockTransferItem::class, \App\Models\OrderReturnItem::class] as $cls) {
+    foreach ([PurchaseOrderItem::class, StockAdjustmentItem::class, StockTransferItem::class, OrderReturnItem::class] as $cls) {
         $m = new $cls;
         expect($m->getGuarded())->toBe(['*'])->and($m->getFillable())->not->toBeEmpty()->not->toContain('id');
     }
@@ -301,7 +314,7 @@ it('declares explicit fillable columns on the document item models', function ()
 // ---------------------------------------------------------------- (14) irreversible migration
 it('refuses to roll back the affiliate e-mail normalisation', function () {
     $m = require database_path('migrations/2026_10_27_100001_affiliate_email_unique.php');
-    expect(fn () => $m->down())->toThrow(\App\Exceptions\IrreversibleMigrationException::class);
+    expect(fn () => $m->down())->toThrow(IrreversibleMigrationException::class);
 });
 
 // ---------------------------------------------------------------- (15) custom pages API

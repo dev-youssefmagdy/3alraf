@@ -5,9 +5,15 @@ use App\DTOs\Orders\ReturnRequestData;
 use App\Enums\OrderStatus as S;
 use App\Enums\PaymentStatus;
 use App\Enums\StockMovementType as T;
+use App\Listeners\NotifyAdminsOfNewOrder;
+use App\Listeners\NotifyAdminsOfPaymentProof;
+use App\Listeners\NotifyAdminsOfStatusChange;
 use App\Models\Branch;
 use App\Models\City;
+use App\Models\Customer;
+use App\Models\DiscountCode;
 use App\Models\Order;
+use App\Models\PaymentEvent;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
@@ -20,11 +26,15 @@ use App\Services\Orders\OrderStatusService;
 use App\Services\Orders\ReturnService;
 use App\Services\Payments\Drivers\FawryPayGateway;
 use App\Services\Payments\Drivers\PaymobGateway;
+use App\Services\Payments\PaymentGatewayFactory;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -56,10 +66,15 @@ beforeEach(function () {
     $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
 });
 
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
+});
+
 /** Fresh Http fake per call (stubs registered earlier would otherwise win). */
 function fakeHttp(array|Closure $map): void
 {
-    Http::swap(new \Illuminate\Http\Client\Factory);
+    Http::swap(new Factory);
     Http::fake($map);
 }
 
@@ -80,7 +95,7 @@ function paymobHook(Order $o, array $over = [], ?array $requery = null, string $
     ]);
     $hmac = PaymobGateway::hmac($obj, $secret);
 
-    return test()->call('POST', "http://egy.3alraf.test/webhooks/payments/".test()->paymob->id.'?hmac='.$hmac, [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['type' => 'TRANSACTION', 'obj' => $obj]));
+    return test()->call('POST', 'http://egy.3alraf.test/webhooks/payments/'.test()->paymob->id.'?hmac='.$hmac, [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['type' => 'TRANSACTION', 'obj' => $obj]));
 }
 
 function fawryBody(Order $o, array $over = []): array
@@ -139,7 +154,7 @@ it('verifies Paymob HMAC-SHA512, re-queries the transaction, settles once and ig
         ->and($order->status)->toBe(S::PENDING);                       // paid online still waits for the admin (auto_confirm_paid_online off)
     Http::assertSent(fn ($r) => str_contains($r->url(), '/api/acceptance/transactions/5001'));
     paymobHook($order)->assertOk()->assertJson(['duplicate' => true]);   // replay
-    expect(\App\Models\PaymentEvent::where('provider', 'paymob')->count())->toBe(1);
+    expect(PaymentEvent::where('provider', 'paymob')->count())->toBe(1);
     expect($order->histories()->where('note', __('orders.gateway_paid_note'))->count())->toBe(1);
 });
 
@@ -152,7 +167,7 @@ it('rejects Paymob webhooks with a bad signature, wrong amount/currency/status o
     paymobHook($order, [], paymobTx($order, ['order' => ['merchant_order_id' => 'ORD-OTHER']]))->assertStatus(422); // provider's order reference differs
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);
     paymobHook($order, ['order' => ['merchant_order_id' => 'ORD-404404']])->assertOk()->assertJson(['ignored' => true]);
-    expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID)->and(\App\Models\PaymentEvent::count())->toBe(0);
+    expect($order->fresh()->payment_status)->toBe(PaymentStatus::UNPAID)->and(PaymentEvent::count())->toBe(0);
     paymobHook($order, ['success' => false])->assertOk();                                                          // genuine failed payment
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::FAILED);
 });
@@ -212,7 +227,7 @@ it('does not accept another tenant\'s webhook / method id and stubs unimplemente
     $this->postJson("http://egy.3alraf.test/webhooks/payments/{$foreign->id}", ['x' => 1])->assertNotFound();
     // checkout with a foreign payment method / prepay method id is a validation error, never an order
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->assertOk();
-    $payload = ['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id];
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id]);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $foreign->id])->assertStatus(422)->assertJsonValidationErrors(['payment_method_id']);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $foreign->id])->assertStatus(422)->assertJsonValidationErrors(['prepay_method_id']);
     // stripe is a clean "not implemented" stub and is never offered
@@ -220,7 +235,7 @@ it('does not accept another tenant\'s webhook / method id and stubs unimplemente
     expect(PaymentMethod::available()->pluck('id'))->not->toContain($stripe->id);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $stripe->id])->assertStatus(422);
     $this->postJson("http://egy.3alraf.test/webhooks/payments/{$stripe->id}", [])->assertStatus(501);
-    expect(app(\App\Services\Payments\PaymentGatewayFactory::class)->make($stripe)->refund('x', '1.00')->status)->toBe('failed');
+    expect(app(PaymentGatewayFactory::class)->make($stripe)->refund('x', '1.00')->status)->toBe('failed');
 });
 
 // ------------------------------------------------------------------ refunds
@@ -367,7 +382,7 @@ it('keeps proofs on the private disk, served only to tenant admins and the order
     Storage::disk('private')->assertExists($order->payment_proof);
     expect(Storage::disk('private')->allFiles())->toHaveCount(1);
     $this->get("{$this->s}/order/{$order->public_token}/proof")->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
-    $this->get("{$this->s}/order/".\Illuminate\Support\Str::uuid().'/proof')->assertNotFound();
+    $this->get("{$this->s}/order/".Str::uuid().'/proof')->assertNotFound();
     $this->get("{$this->t}/orders/{$order->id}/proof")->assertRedirect();                                              // guests are sent to login
     ($this->owner)();
     $this->get("{$this->t}/orders/{$order->id}/proof")->assertOk();
@@ -416,8 +431,8 @@ it('reports COD carrier settlement per shipping company', function () {
 });
 
 it('queues the admin notification listeners', function () {
-    foreach ([\App\Listeners\NotifyAdminsOfNewOrder::class, \App\Listeners\NotifyAdminsOfPaymentProof::class, \App\Listeners\NotifyAdminsOfStatusChange::class] as $l) {
-        expect(new $l)->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
+    foreach ([NotifyAdminsOfNewOrder::class, NotifyAdminsOfPaymentProof::class, NotifyAdminsOfStatusChange::class] as $l) {
+        expect(new $l)->toBeInstanceOf(ShouldQueue::class);
     }
 });
 
@@ -469,11 +484,11 @@ it('refunds shipping only once when a second return also asks for refund_shippin
 });
 
 it('releases the unique code / e-mail of soft-deleted discount codes and customers', function () {
-    $mk = fn () => \App\Models\DiscountCode::create(['code' => 'SAVE10', 'type' => 'percent', 'value' => 10, 'scope' => 'all', 'is_active' => true]);
+    $mk = fn () => DiscountCode::create(['code' => 'SAVE10', 'type' => 'percent', 'value' => 10, 'scope' => 'all', 'is_active' => true]);
     $mk()->delete();
     $again = $mk();                                                                  // would violate unique(tenant_id, code) without the tombstone
-    expect($again->exists)->toBeTrue()->and(\App\Models\DiscountCode::withTrashed()->where('code', 'SAVE10')->count())->toBe(1);
-    $c = \App\Models\Customer::create(['name' => 'A', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true]);
+    expect($again->exists)->toBeTrue()->and(DiscountCode::withTrashed()->where('code', 'SAVE10')->count())->toBe(1);
+    $c = Customer::create(['name' => 'A', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true]);
     $c->delete();
-    expect(\App\Models\Customer::create(['name' => 'B', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true])->exists)->toBeTrue();
+    expect(Customer::create(['name' => 'B', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true])->exists)->toBeTrue();
 });

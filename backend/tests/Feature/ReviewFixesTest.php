@@ -5,8 +5,13 @@ use App\Enums\OrderStatus;
 use App\Enums\ProofStatus;
 use App\Enums\StockMovementType as T;
 use App\Models\Branch;
+use App\Models\Bundle;
+use App\Models\BundleItem;
 use App\Models\City;
+use App\Models\Customer;
+use App\Models\DiscountCode;
 use App\Models\Order;
+use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
@@ -15,6 +20,7 @@ use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
 use App\Services\Orders\OfflineCheckoutThrottle;
 use App\Services\Orders\OrderPlacementService;
+use App\Services\Orders\OrderStatusService;
 use App\Services\Orders\PaymentProofFiles;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -22,7 +28,9 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 /* Regression tests for the review of offline payment proof / bundles / special packaging. */
 
@@ -48,11 +56,16 @@ beforeEach(function () {
         'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->wallet->id, 'proof' => testProof(),
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 1, 'bundle_id' => 0]])['order'];
-    $this->payload = fn (array $o = []) => array_merge([
+    $this->payload = fn (array $o = []) => withSavedAddress(array_merge([
         'name' => 'Ali', 'phone' => '0100'.random_int(1000000, 9999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
         'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->wallet->id,
-    ], $o);
+    ], $o));
     $this->post = fn (string $path, array $data) => $this->withHeader('Accept', 'application/json')->post("{$this->s}/$path", $data);
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 it('counts offline pre-validate calls that carry a file in their own looser tier', function () {
@@ -73,7 +86,8 @@ it('treats Arabic-Indic digits in a phone like their ASCII form (limiter key, st
         ->and(OfflineCheckoutThrottle::phoneKey('۰۱۰۰۱۱۱۲۲۲۲'))->toBe('1001112222');
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->assertOk();
     ($this->post)('checkout', ($this->payload)(['phone' => '٠١٠٠١١١٢٢٢٢']) + ['proof' => testProof()])->assertOk();
-    expect(Order::first()->customer_phone)->toBe('01001112222');
+    // logged-in checkout takes the phone from the saved address (stored as saved); the limiter key still folds digits
+    expect(OfflineCheckoutThrottle::phoneKey(Order::first()->customer_phone))->toBe('1001112222');
     config(['checkout.offline.open_cap' => 1]);
     expect(app(OfflineCheckoutThrottle::class)->openOrders('+20 100-111-2222', null, null))->toBe(1)
         ->and(app(OfflineCheckoutThrottle::class)->openOrders('(0100) 1112222', null, null))->toBe(1);
@@ -83,7 +97,7 @@ it('has a DB-level guard: two live orders can never share a proof hash, rejected
     $a = ($this->place)();
     $copy = function () use ($a) {
         $b = $a->replicate(['number', 'proof_guard']);
-        $b->public_token = (string) \Illuminate\Support\Str::uuid();
+        $b->public_token = (string) Str::uuid();
         $b->number = 'ORD-X'.random_int(100000, 999999);
         $b->save();
 
@@ -104,7 +118,8 @@ it('turns a lost proof-hash race into a clean 422 instead of a 500 and removes t
     $bytes = testProof();
     ($this->place)(['proof' => $bytes]);
     // simulate the race: the application-level check passes (TOCTOU), the DB guard decides
-    $this->app->bind(PaymentProofFiles::class, fn () => new class extends PaymentProofFiles {
+    $this->app->bind(PaymentProofFiles::class, fn () => new class extends PaymentProofFiles
+    {
         public function assertNotReused(string $hash, ?int $exceptOrderId = null): void {}
     });
     $same = UploadedFile::fake()->createWithContent('again.png', file_get_contents($bytes->getRealPath()));
@@ -142,7 +157,7 @@ it('documents the checkout as multipart when it takes the proof file, and keeps 
     $migration = require base_path('database/migrations/2026_11_01_100002_seed_bundle_packaging_permissions.php');
     $migration->up();
     $migration->up();
-    $role = \Spatie\Permission\Models\Role::where('name', 'tenant-owner')->where('guard_name', 'tenant')->first();
+    $role = Role::where('name', 'tenant-owner')->where('guard_name', 'tenant')->first();
     expect($role->hasPermissionTo('bundles.create'))->toBeTrue()->and($role->hasPermissionTo('packaging.delete'))->toBeTrue();
 });
 
@@ -175,17 +190,17 @@ it('keeps order net_profit, the net-profit report and the customer totals consis
     $p2 = Product::create(['type' => 'simple', 'name' => ['ar' => 'ب'], 'slug' => 'rv2', 'sku' => 'RV2', 'barcode' => '2000000000101']);
     TenantProduct::create(['product_id' => $p2->id, 'price' => 33.33, 'cost' => 10, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $p2->id, 0, T::PURCHASE_IN, 50, '10.00');
-    $bundle = \App\Models\Bundle::create(['name' => ['ar' => 'باقة'], 'slug' => 'rvb', 'price' => '111.11', 'is_active' => true]);
+    $bundle = Bundle::create(['name' => ['ar' => 'باقة'], 'slug' => 'rvb', 'price' => '111.11', 'is_active' => true]);
     foreach ([[$this->product, 1], [$p2, 3]] as [$pr, $q]) {
-        \App\Models\BundleItem::create(['bundle_id' => $bundle->id, 'product_id' => $pr->id, 'product_variant_id' => 0, 'quantity' => $q]);
+        BundleItem::create(['bundle_id' => $bundle->id, 'product_id' => $pr->id, 'product_variant_id' => 0, 'quantity' => $q]);
     }
-    $opt = \App\Models\PackagingOption::create(['name' => ['ar' => 'هدية'], 'price' => 22.80, 'cost' => 5, 'is_active' => true]);
-    \App\Models\DiscountCode::create(['code' => 'RV7', 'type' => 'percent', 'value' => 7, 'scope' => 'all', 'is_active' => true, 'min_order' => 0]);
+    $opt = PackagingOption::create(['name' => ['ar' => 'هدية'], 'price' => 22.80, 'cost' => 5, 'is_active' => true]);
+    DiscountCode::create(['code' => 'RV7', 'type' => 'percent', 'value' => 7, 'scope' => 'all', 'is_active' => true, 'min_order' => 0]);
     $o = app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '0100', cityId: $this->city->id, address: 'St', shippingCompanyId: $this->company->id,
         paymentMethodId: $this->cod->id, discountCode: 'RV7', packagingOptionId: $opt->id), [['product_id' => 0, 'variant_id' => 0, 'qty' => 3, 'bundle_id' => $bundle->id]])['order'];
     expect((string) $o->subtotal)->toBe('333.33');
     foreach ([OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED] as $to) {
-        app(\App\Services\Orders\OrderStatusService::class)->change($o, $to);
+        app(OrderStatusService::class)->change($o, $to);
     }
     $o->refresh();
     $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');

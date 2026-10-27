@@ -160,6 +160,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::get('interactions', [$en, 'inbox'])->middleware('growth.feature:interactions')->name('interactions.index');
             Route::get('interactions/datatable', [$en, 'inboxData'])->middleware('growth.feature:interactions')->name('interactions.datatable');
             Route::post('interactions/level', [$en, 'level'])->middleware('growth.feature:interactions')->name('interactions.level');
+            Route::post('interactions/{id}/review', [$en, 'review'])->whereNumber('id')->middleware('growth.feature:interactions')->name('interactions.review');
             Route::post('interactions/{id}/action', [$en, 'action'])->whereNumber('id')->middleware('growth.feature:interactions')->name('interactions.action');
             Route::post('interactions/links', [$en, 'link'])->middleware('growth.feature:comment_to_cart')->name('interactions.links');
             Route::get('voc', [$en, 'voc'])->middleware('growth.feature:voc')->name('voc.index');
@@ -195,6 +196,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::get('inventory', [$cp, 'inventory'])->middleware('growth.feature:inventory_engine')->name('inventory.index');
             Route::post('inventory/reorder', [$cp, 'reorder'])->middleware(['growth.feature:inventory_engine', 'growth.feature:approvals'])->name('inventory.reorder');
             Route::post('inventory/terms', [$cp, 'terms'])->middleware('growth.feature:inventory_engine')->name('inventory.terms');
+            Route::post('inventory/prices', [$cp, 'savePrice'])->middleware('growth.feature:inventory_engine')->name('inventory.prices.save');
+            Route::delete('inventory/prices/{id}', [$cp, 'deletePrice'])->whereNumber('id')->middleware('growth.feature:inventory_engine')->name('inventory.prices.delete');
             Route::post('inventory/story', [$cp, 'story'])->middleware('growth.feature:inventory_engine')->name('inventory.story');
             Route::get('returns-intel', [$cp, 'returns'])->middleware('growth.feature:return_intel')->name('returns-intel.index');
             Route::post('returns-intel/reason', [$cp, 'reason'])->middleware('growth.feature:return_intel')->name('returns-intel.reason');

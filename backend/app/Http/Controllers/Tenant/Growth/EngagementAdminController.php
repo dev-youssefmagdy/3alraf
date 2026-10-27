@@ -7,6 +7,7 @@ use App\DataTables\MissedOpportunityDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\AdminLinkRequest;
 use App\Http\Requests\Tenant\InteractionActionRequest;
+use App\Http\Requests\Tenant\InteractionReviewRequest;
 use App\Http\Requests\Tenant\MissedUpdateRequest;
 use App\Http\Requests\Tenant\ReplyLevelRequest;
 use App\Http\Requests\Tenant\TaskUpdateRequest;
@@ -46,6 +47,13 @@ class EngagementAdminController extends Controller implements HasMiddleware
         $tl = TrackedLink::orderByDesc('id')->limit(20)->get()->each(fn ($l) => [$l->stats = $links->stats($l), $l->short = $links->url($l)]);
 
         return view('tenant.growth.interactions', ['table' => $table, 'level' => $this->ix->replyLevel(), 'links' => $tl, 'unanswered' => $this->ix->unanswered()->count()]);
+    }
+
+    public function review(InteractionReviewRequest $r, int $id): JsonResponse
+    {
+        $this->ix->review($id, $r->validated(), auth('tenant')->id());
+
+        return $this->ok(__('admin.saved'), route('tenant.growth.interactions.index'));
     }
 
     public function action(InteractionActionRequest $r, SuggestedReplyService $svc, int $id): JsonResponse

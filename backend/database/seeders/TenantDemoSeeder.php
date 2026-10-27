@@ -25,6 +25,7 @@ use App\Services\Orders\OrderStatusService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\Support\PlaceholderImage;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /** Per-tenant storefront demo: enabled products + prices + stock, banners, flash sale, sample orders & reviews. Runs after Operations/Orders seeders. */
 class TenantDemoSeeder extends Seeder
@@ -71,7 +72,7 @@ class TenantDemoSeeder extends Seeder
             $r = new \ReflectionClass(CatalogSeeder::class);
             $rows = $r->getProperty('products')->getValue(new CatalogSeeder);
 
-            return collect($rows)->mapWithKeys(fn ($x) => [\Illuminate\Support\Str::slug($x[1]) => $x[4]])->all();
+            return collect($rows)->mapWithKeys(fn ($x) => [Str::slug($x[1]) => $x[4]])->all();
         })();
 
         return (float) ($map[$p->slug] ?? 500);
@@ -124,7 +125,6 @@ class TenantDemoSeeder extends Seeder
         $city = City::orderBy('id')->first();
         $company = ShippingCompany::first();
         $cod = PaymentMethod::where('type', 'cod')->first();
-        $wallet = PaymentMethod::where('type', 'wallet')->first(); // demo: shipping prepaid by an (already approved) wallet transfer
         $tps = TenantProduct::with('product.variants')->orderBy('id')->get();
         $path = [OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED];
         // final status index: -1 pending, 0..3 along $path, 9 cancelled
@@ -135,11 +135,9 @@ class TenantDemoSeeder extends Seeder
                 $p = $tps[$idx]->product;
                 $lines[] = ['product_id' => $p->id, 'variant_id' => $p->isVariable() ? $p->variants->first()->id : 0, 'qty' => 1 + $n % 2];
             }
-            $d = new CheckoutData($customer?->id, $customer?->name ?? 'Demo', '0100000000'.$n, $customer?->email, $city->id, 'Demo street '.$n, null, $company->id, $cod->id, prepayMethodId: $wallet?->id);
+            $d = new CheckoutData($customer?->id, $customer?->name ?? 'Demo', '0100000000'.$n, $customer?->email, $city->id, 'Demo street '.$n, null, $company->id, $cod->id);
             $order = $placer->place($d, $lines)['order'];
-            if ($order->prepay_method_id) {
-                $order->forceFill(['proof_status' => 'approved', 'payment_status' => 'partially_paid', 'paid_amount' => $order->prepaid_shipping])->save();
-            }
+            // Plain COD demo orders: a prepay method would (rightly) require an uploaded proof, and money columns stay as the calculator set them.
             if ($final === 9) {
                 $status->change($order, OrderStatus::CANCELLED, 'Demo cancel');
             } else {

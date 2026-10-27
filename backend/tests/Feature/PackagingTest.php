@@ -16,6 +16,7 @@ use App\Models\ShippingCompany;
 use App\Models\Tenant;
 use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
+use App\Services\BarcodeService;
 use App\Services\Orders\CartService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
@@ -23,6 +24,7 @@ use App\Services\Orders\ReturnService;
 use App\Services\Retention\SoftDeletePurger;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
@@ -40,7 +42,7 @@ beforeEach(function () {
     $this->city = City::first();
     $this->company = ShippingCompany::first();      // price 40, cost 30
     $this->cod = PaymentMethod::where('type', 'cod')->first();
-    $this->p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Prod'], 'slug' => 'pk1', 'sku' => 'PK1', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
+    $this->p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Prod'], 'slug' => 'pk1', 'sku' => 'PK1', 'barcode' => app(BarcodeService::class)->generateUnique()]);
     TenantProduct::create(['product_id' => $this->p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->p->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->opt = PackagingOption::create(['name' => ['ar' => 'هدية', 'en' => 'Gift box'], 'price' => 25, 'cost' => 8, 'is_active' => true]);
@@ -57,6 +59,11 @@ beforeEach(function () {
         return $o->refresh();
     };
     $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 it('snapshots the option on the order with totals, profit and no discount on packaging', function () {
@@ -133,7 +140,8 @@ it('keeps packaging out of an inclusive order partial-return refund and reverses
     $o->update(['paid_amount' => $o->total]);
     $o = ($this->deliver)($o)->load('items');
     // profit excludes the VAT inside goods (200*14/114) and inside the packaging (25*14/114)
-    $vatGoods = (string) $o->tax; $vatPack = (string) $o->packaging_tax;
+    $vatGoods = (string) $o->tax;
+    $vatPack = (string) $o->packaging_tax;
     expect(bcadd($vatGoods, $vatPack, 2))->not->toBe('0.00');
     // net = (200 - vat) - 120 + 40 - 30 + (25 - vatPack - 8)
     $net = bcadd(bcadd(bcsub(bcsub('200', $vatGoods, 2), '120', 2), '10', 2), bcsub(bcsub('25', $vatPack, 2), '8', 2), 2);
@@ -145,6 +153,7 @@ it('keeps packaging out of an inclusive order partial-return refund and reverses
 });
 
 it('persists the choice on the cart and merges a guest choice into the customer cart', function () {
+    $this->app['auth']->forgetGuards(); // start as a guest, then log in below
     $cart = app(CartService::class);
     $cart->add($this->p->id, 0, 1);
     $cart->setPackaging($this->opt->id);
@@ -179,15 +188,15 @@ it('lets an authorised admin manage packaging options and rejects bad input', fu
     $this->postJson("{$this->t}/packaging/validate", ['price' => '-1'] + $good)->assertStatus(422)->assertJsonValidationErrors('price');
     $this->postJson("{$this->t}/packaging/validate", ['name' => []] + $good)->assertStatus(422);
     $this->postJson("{$this->t}/packaging", $good)->assertStatus(422)->assertJsonValidationErrors('image'); // picture is mandatory
-    $this->postJson("{$this->t}/packaging", $good + ['image' => \Illuminate\Http\UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')])->assertStatus(422)->assertJsonValidationErrors('image');
-    $this->postJson("{$this->t}/packaging", $good + ['image' => \Illuminate\Http\UploadedFile::fake()->image('p.png')])->assertOk();
+    $this->postJson("{$this->t}/packaging", $good + ['image' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')])->assertStatus(422)->assertJsonValidationErrors('image');
+    $this->postJson("{$this->t}/packaging", $good + ['image' => UploadedFile::fake()->image('p.png')])->assertOk();
     $o = PackagingOption::where('price', 12.50)->first();
     expect($o->image)->not->toBeNull();
     $old = $o->image;
     $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1] + $good)->assertStatus(422)->assertJsonValidationErrors('image'); // cannot end up without a picture
     $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15'] + $good)->assertOk(); // keeping the current picture is fine
     expect($o->fresh()->image)->toBe($old);
-    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1, 'image' => \Illuminate\Http\UploadedFile::fake()->image('n.png')] + $good)->assertOk(); // replace
+    $this->putJson("{$this->t}/packaging/{$o->id}", ['price' => '15', 'remove_image' => 1, 'image' => UploadedFile::fake()->image('n.png')] + $good)->assertOk(); // replace
     expect($o->fresh()->image)->not->toBe($old);
     Storage::disk('media')->assertMissing($old);
     $this->get("{$this->t}/packaging/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 2);

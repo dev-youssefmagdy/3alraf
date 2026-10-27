@@ -6,14 +6,18 @@ use App\Models\ImprovementTask;
 use App\Models\Interaction;
 use App\Models\MissedOpportunity;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ReputationAlert;
 use App\Models\Tenant;
 use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
 use App\Models\TrackedLink;
+use App\Services\BarcodeService;
+use App\Services\Growth\BrandMemoryService;
 use App\Services\Growth\BriefService;
 use App\Services\Growth\GrowthAccess;
+use App\Services\Growth\GrowthConfig;
 use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\IntegrationClientService;
 use App\Services\Growth\InteractionService;
@@ -26,8 +30,10 @@ use App\Services\Growth\VocService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
+    config(['growth.classifier.require_real_eval' => false]); // the real-data gate has its own tests (GrowthOpenItemsTest)
     $this->seed(FoundationSeeder::class);
     Cache::flush();
     $this->tenant = Tenant::where('slug', 'egy')->first();
@@ -48,7 +54,7 @@ beforeEach(function () {
     };
     $this->level = fn (int $l) => app(InteractionService::class)->setReplyLevel($l, null);
     $this->product = function (string $slug = 'serum', string $price = '100.00') {
-        $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
+        $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique()]);
         TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => 50, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, 10, 50);
 
@@ -170,13 +176,13 @@ it('reply maturity: L1 classifies only, L2 suggests from live facts, escalations
 
 it('auto-reply only for allowlisted FAQs at L3 with the feature on and no reputation pause', function () {
     $p = ($this->product)();
-    $faq = app(\App\Services\Growth\BrandMemoryService::class)->save(['kind' => 'faq', 'title' => 'Do you deliver to Cairo', 'body' => 'Yes, we deliver to Cairo in 1-2 days.'], null, null);
+    $faq = app(BrandMemoryService::class)->save(['kind' => 'faq', 'title' => 'Do you deliver to Cairo', 'body' => 'Yes, we deliver to Cairo in 1-2 days.'], null, null);
     $i = ($this->ix)(['text' => 'Hi, do you deliver to Cairo?', 'product_id' => $p->id]);
     $svc = app(SuggestedReplyService::class);
     ($this->level)(3);
     expect($svc->suggest($i)['mode'])->toBe('suggest')->and($svc->suggest($i)['faq_key'])->toBe('faq'.$faq->id); // not allowlisted
     $t = current_tenant();
-    app(\App\Services\Growth\GrowthConfig::class)->update($t, ['auto_reply_allowlist' => 'faq'.$faq->id]);
+    app(GrowthConfig::class)->update($t, ['auto_reply_allowlist' => 'faq'.$faq->id]);
     app()->instance('currentTenant', $t->refresh());
     expect($svc->suggest($i)['mode'])->toBe('auto');
     ReputationAlert::create(['product_id' => $p->id, 'topic' => 'shipping', 'rate' => 50, 'baseline_rate' => 5, 'z_score' => 5, 'sample' => 10, 'status' => 'open', 'detected_on' => now()]);
@@ -185,7 +191,7 @@ it('auto-reply only for allowlisted FAQs at L3 with the feature on and no reputa
     ($this->off)('auto_reply');
     expect($svc->suggest($i)['mode'])->toBe('suggest');
     ($this->level)(2);
-    app(\App\Services\Growth\GrowthFeatures::class)->update(current_tenant(), ['auto_reply' => true]);
+    app(GrowthFeatures::class)->update(current_tenant(), ['auto_reply' => true]);
     expect($svc->suggest($i)['mode'])->toBe('suggest'); // level too low
 });
 
@@ -259,7 +265,7 @@ it('missed opportunities: orders satisfy the inquiry rule so it is not raised', 
     for ($k = 0; $k < 2; $k++) {
         $o = new Order;
         $o->forceFill(['number' => 'N4'.$k, 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '0100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 100, 'cogs' => 50, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now()])->save();
-        (new \App\Models\OrderItem)->forceFill(['order_id' => $o->id, 'product_id' => $p->id, 'name' => 'P', 'unit_price' => 100, 'unit_cost' => 50, 'quantity' => 1, 'line_subtotal' => 100, 'line_discount' => 0])->save();
+        (new OrderItem)->forceFill(['order_id' => $o->id, 'product_id' => $p->id, 'name' => 'P', 'unit_price' => 100, 'unit_cost' => 50, 'quantity' => 1, 'line_subtotal' => 100, 'line_discount' => 0])->save();
     }
     app(MissedOpportunityService::class)->scan();
     expect(MissedOpportunity::where('rule', 'inquiries_gt_orders')->count())->toBe(0);
@@ -281,7 +287,7 @@ it('tracked link redirects with UTM, counts human clicks only, attributes orders
     app()->instance('currentTenant', $this->other);
     expect(TrackedLink::count())->toBe(0);
     $this->call('GET', 'http://sa.3alraf.test/l/'.$l->code)->assertNotFound();
-    expect(fn () => $svc->create($p->id, null, null, null))->toThrow(\Illuminate\Validation\ValidationException::class); // not this tenant's product
+    expect(fn () => $svc->create($p->id, null, null, null))->toThrow(ValidationException::class); // not this tenant's product
 });
 
 it('owner brief conversations section: not available when off, real numbers when on', function () {

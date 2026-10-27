@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Interaction;
+use App\Services\Growth\InteractionService;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -55,6 +56,14 @@ class InteractionDataTable extends BaseDataTable
                 foreach (['suggest', 'responded', 'close'] as $a) {
                     $h .= '<button type="button" class="btn-sm btn-secondary me-1" data-gpost="'.e(route('tenant.growth.interactions.action', $r->id).'?action='.$a).'">'.e($g($a)).'</button>';
                 }
+
+                $opt = fn (array $vals, ?string $cur, bool $blank = false) => ($blank ? '<option value="">-</option>' : '').collect($vals)->map(fn ($v) => '<option value="'.e($v).'"'.($v === $cur ? ' selected' : '').'>'.e($v).'</option>')->implode('');
+                $sel = 'class="rounded border border-slate-300 px-1 py-0.5 text-xs"';
+                $h .= '<div class="review-box mt-1 flex flex-wrap items-center gap-1" title="'.e($g('review_hint')).'">'
+                    .'<select name="category" '.$sel.'>'.$opt(InteractionService::CATEGORIES, $r->reviewed_category ?? $r->category, true).'</select>'
+                    .'<select name="intent" '.$sel.'>'.$opt(InteractionService::INTENTS, $r->reviewed_intent ?? $r->intent).'</select>'
+                    .'<select name="sentiment" '.$sel.'>'.$opt(InteractionService::SENTIMENT, $r->reviewed_sentiment ?? $r->sentiment).'</select>'
+                    .'<button type="button" class="btn-sm btn-secondary" data-gpost="'.e(route('tenant.growth.interactions.review', $r->id)).'">'.e($g('review')).($r->reviewed_at ? ' &#10003;' : '').'</button></div>';
 
                 return $h;
             });

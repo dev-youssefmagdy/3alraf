@@ -6,6 +6,7 @@ use App\Enums\ProofStatus;
 use App\Enums\StockMovementType as T;
 use App\Models\Branch;
 use App\Models\City;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
@@ -44,17 +45,26 @@ beforeEach(function () {
     config(['checkout.offline.ip_attempts' => 1000, 'checkout.offline.ip_daily' => 1000, 'checkout.offline.contact_attempts' => 1000, 'checkout.offline.open_cap' => 1000]);
     $this->n = 0;
     // distinct bytes per call: identical files would (rightly) be rejected as a reused proof
-    $this->proof = function () { $this->n++; return UploadedFile::fake()->image("p{$this->n}.png", 10 + $this->n, 12); };
-    $this->payload = fn (array $o = []) => array_merge([
+    $this->proof = function () {
+        $this->n++;
+
+        return UploadedFile::fake()->image("p{$this->n}.png", 10 + $this->n, 12);
+    };
+    $this->payload = fn (array $o = []) => withSavedAddress(array_merge([
         'name' => 'Ali', 'phone' => '0100'.random_int(1000000, 9999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
         'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->wallet->id,
-    ], $o);
+    ], $o));
     $this->webCart = fn (int $q = 1) => $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => $q])->assertOk();
     $this->webPost = fn (string $path, array $data) => $this->withHeader('Accept', 'application/json')->post("{$this->s}/$path", $data);
     $this->place = fn (array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
         'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->wallet->id,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 1]]);
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 it('web: wallet checkout without a proof file is a 422 on both pre-validate and store', function () {
@@ -146,9 +156,14 @@ it('a failed placement deletes the stored proof file', function () {
 });
 
 it('api: same rules (422 without file, order created with file, COD unaffected, pre-validate stores nothing)', function () {
+    $this->app['auth']->forgetGuards(); // API / guest-cart flow: no web session
     $cartHeaders = fn () => ['X-Cart-Token' => $this->postJson("{$this->api}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->headers->get('X-Cart-Token'), 'Accept' => 'application/json'];
     $h = $cartHeaders();
-    $post = function ($path, $data) use (&$h) { return $this->post("{$this->api}/$path", $data, $h); };
+    $post = function ($path, $data) use (&$h) {
+        unset($data['address_id']);
+
+        return $this->post("{$this->api}/$path", $data, $h);
+    };
     $post('checkout/validate', ($this->payload)())->assertStatus(422)->assertJsonStructure(['success', 'message', 'errors' => ['proof']]);
     $post('checkout', ($this->payload)())->assertStatus(422)->assertJsonStructure(['errors' => ['proof']]);
     $post('checkout/validate', ($this->payload)() + ['proof' => ($this->proof)()])->assertOk();
@@ -216,7 +231,8 @@ it('limiter open-order cap: too many offline orders still awaiting review for on
 
 it('limiter keys cannot be dodged through the X-Tenant header and the api answers with the envelope + Retry-After', function () {
     config(['checkout.offline.ip_attempts' => 2]);
-    $post = fn ($tenantHeader) => $this->withHeaders(['X-Tenant' => $tenantHeader, 'Accept' => 'application/json'])->post("{$this->hdr}/checkout", ($this->payload)());
+    $this->app['auth']->forgetGuards(); // API / guest-cart flow: no web session
+    $post = fn ($tenantHeader) => $this->withHeaders(['X-Tenant' => $tenantHeader, 'Accept' => 'application/json'])->post("{$this->hdr}/checkout", array_diff_key(($this->payload)(), ['address_id' => 1]));
     $post('egy')->assertStatus(422);
     $post('egy')->assertStatus(422);
     $post('no-such-tenant')->assertNotFound();           // unknown tenants never reach (or mint) an offline bucket
@@ -224,7 +240,7 @@ it('limiter keys cannot be dodged through the X-Tenant header and the api answer
     $r->assertStatus(429)->assertJsonStructure(['success', 'message', 'data', 'meta'])->assertJsonPath('success', false);
     expect((int) $r->headers->get('Retry-After'))->toBeGreaterThan(0);
     // the tenant-subdomain twin shares the bucket as well
-    $this->withHeader('Accept', 'application/json')->post("{$this->api}/checkout", ($this->payload)())->assertStatus(429);
+    $this->withHeader('Accept', 'application/json')->post("{$this->api}/checkout", array_diff_key(($this->payload)(), ['address_id' => 1]))->assertStatus(429);
 });
 
 it('the proof re-upload route has its own stricter limiter', function () {

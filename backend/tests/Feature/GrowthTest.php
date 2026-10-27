@@ -1,6 +1,7 @@
 <?php
 
 use App\DTOs\Orders\CheckoutData;
+use App\DTOs\Orders\ReturnRequestData;
 use App\Enums\AffiliateStatus;
 use App\Enums\CommissionStatus;
 use App\Enums\OrderStatus as S;
@@ -10,7 +11,6 @@ use App\Enums\StockMovementType as T;
 use App\Models\Affiliate;
 use App\Models\AffiliateClick;
 use App\Models\AffiliateCommission;
-use App\Models\AffiliateTier;
 use App\Models\Branch;
 use App\Models\City;
 use App\Models\Customer;
@@ -26,9 +26,11 @@ use App\Models\TenantAdmin;
 use App\Models\TenantProduct;
 use App\Services\Affiliates\AffiliateCommissionService;
 use App\Services\Affiliates\AffiliateService;
+use App\Services\BarcodeService;
 use App\Services\Lists\ProductListResolver;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
+use App\Services\Orders\ReturnService;
 use App\Services\Stock\StockLedger;
 use App\Support\ReservedSlugs;
 use Database\Seeders\FoundationSeeder;
@@ -46,7 +48,7 @@ beforeEach(function () {
     $this->company = ShippingCompany::first();
     $this->cod = PaymentMethod::where('type', 'cod')->first();
     $this->mk = function (string $slug, $price = 100) {
-        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
+        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique()]);
         TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => 60, 'is_active' => true]);
         app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 100, '60.00');
 
@@ -67,6 +69,11 @@ beforeEach(function () {
 
         return $o->refresh();
     };
+});
+
+// Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
+beforeEach(function () {
+    $this->actingAs(Customer::where('email', 'customer@egy.test')->first(), 'web');
 });
 
 it('picks the commission tier from approved lifetime delivered sales before the order', function () {
@@ -114,8 +121,8 @@ it('voids commission on cancel, reduces it on partial return and approves after 
     expect($c->status)->toBe(CommissionStatus::PENDING);
 
     // partial return of 1 of 4 units -> commission reduced pro-rata (20 * 100/400 = 5)
-    $ret = app(\App\Services\Orders\ReturnService::class);
-    $r = $ret->request($o, new \App\DTOs\Orders\ReturnRequestData([$o->items->first()->id => 1], 'x', true, false));
+    $ret = app(ReturnService::class);
+    $r = $ret->request($o, new ReturnRequestData([$o->items->first()->id => 1], 'x', true, false));
     $ret->approve($r);
     expect((string) $c->fresh()->amount)->toBe('15.00');
 
@@ -140,7 +147,7 @@ it('tracks affiliate clicks with a 30 day cookie and attributes the order to the
     $this->get("{$this->s}/product/{$this->product->slug}?aff={$this->aff->uuid}")->assertOk();               // missing utm_source: no click
     expect(AffiliateClick::count())->toBe(1);
 
-    $payload = ['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id];
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 2])->assertOk();
     $res = $this->withCredentials()->withCookie('aff', $this->aff->uuid)->postJson("{$this->s}/checkout", $payload)->assertOk();
     $order = Order::where('number', $res->json('data.number'))->first();
@@ -317,13 +324,13 @@ it('manages static pages, tiers, affiliates and payouts from the tenant admin', 
 
 it('recomputes the commission from the CUMULATIVE returned value and lets returns reduce lifetime sales', function () {
     $svc = app(AffiliateCommissionService::class);
-    $ret = app(\App\Services\Orders\ReturnService::class);
+    $ret = app(ReturnService::class);
     $o = ($this->place)(4, $this->aff->id);                    // 400 @5% = 20.00
     ($this->deliver)($o);
     $c = AffiliateCommission::where('order_id', $o->id)->first();
     $itemId = $o->items->first()->id;
-    $ret->approve($ret->request($o->refresh(), new \App\DTOs\Orders\ReturnRequestData([$itemId => 1], 'x', true, false)));
-    $ret->approve($ret->request($o->refresh(), new \App\DTOs\Orders\ReturnRequestData([$itemId => 1], 'y', true, false)));
+    $ret->approve($ret->request($o->refresh(), new ReturnRequestData([$itemId => 1], 'x', true, false)));
+    $ret->approve($ret->request($o->refresh(), new ReturnRequestData([$itemId => 1], 'y', true, false)));
     // (400 - 200) x 5% = 10.00, mirrored on the order
     expect((string) $c->fresh()->amount)->toBe('10.00')->and((string) $o->fresh()->affiliate_commission)->toBe('10.00');
     expect($svc->lifetimeSales($this->aff))->toBe('200.00');   // 400 delivered - 200 returned

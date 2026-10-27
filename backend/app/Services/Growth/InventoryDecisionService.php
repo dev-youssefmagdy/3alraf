@@ -83,6 +83,9 @@ class InventoryDecisionService
                 }
                 $stockoutDays = max(0.0, $lead - $cover);
                 $impact = round($stockoutDays * $perDay * $unitMargin, 2); // margin that would be lost while waiting for delivery
+                $alts = app(SupplierPriceService::class)->options($tp->product_id, $cost, $price, $floor, (int) ceil($lead + $minCover));
+                $row['suppliers'] = $alts;
+                $row['supplier_id'] ??= $alts[0]['supplier_id'] ?? null;
                 $row['scenarios']['reorder'] = ['qty' => $qty, 'cash' => round($qty * $cost, 2), 'impact' => $impact, 'blocked' => $blocked, 'basis' => 'lost_margin_during_lead_time'];
             }
             // promo / clearance: slow stock, discount bounded by margin floor and max discount; uplift is an ASSUMPTION
@@ -161,6 +164,11 @@ class InventoryDecisionService
             throw ValidationException::withMessages(['product_id' => __('growth_capital.inv.not_recommended')]);
         }
         $supplierId ??= $row['supplier_id'];
+        $chosen = collect($row['suppliers'] ?? [])->firstWhere('supplier_id', (int) $supplierId);
+        if ($chosen && $chosen['below_margin_floor']) {
+            throw ValidationException::withMessages(['supplier_id' => __('growth_capital.inv.supplier_margin')]);
+        }
+        $unitCost = $chosen['unit_cost'] ?? $row['unit_cost'];
         if (! $supplierId || ! Supplier::whereKey($supplierId)->where('is_active', true)->exists()) {
             throw ValidationException::withMessages(['supplier_id' => __('growth_capital.inv.need_supplier')]);
         }
@@ -169,7 +177,7 @@ class InventoryDecisionService
             throw ValidationException::withMessages(['product_id' => __('growth_capital.inv.already_pending')]);
         }
         $a = $this->approvals->request('inventory_reorder', __('growth_capital.inv.approval_title', ['product' => $row['name'], 'qty' => $sc['qty']]),
-            ['product_id' => $productId, 'qty' => $sc['qty'], 'supplier_id' => $supplierId, 'branch_id' => $branchId, 'unit_cost' => $row['unit_cost'], 'cash' => $sc['cash'], 'days_of_cover' => $row['days_of_cover'], 'lead_time_days' => $row['lead_time_days']], null, $adminId ? 'admin:'.$adminId : 'system');
+            ['product_id' => $productId, 'qty' => $sc['qty'], 'supplier_id' => $supplierId, 'branch_id' => $branchId, 'unit_cost' => $unitCost, 'cost_variance_pct' => $chosen['variance_pct'] ?? null, 'cash' => round($sc['qty'] * $unitCost, 2), 'days_of_cover' => $row['days_of_cover'], 'lead_time_days' => $row['lead_time_days']], null, $adminId ? 'admin:'.$adminId : 'system');
         $this->log->log('inventory.reorder_proposed', 'admin', $adminId, null, $a, 'ok', ['product_id' => $productId, 'qty' => $sc['qty']]);
 
         return $a;
@@ -182,17 +190,18 @@ class InventoryDecisionService
         $tp = TenantProduct::where('product_id', (int) $p['product_id'])->where('is_active', true)->first();
         $qty = (int) $p['qty'];
         $cap = (float) $this->config->get('reorder_cash_cap', 0);
-        if (! $tp || (float) $tp->cost <= 0 || $qty < 1) {
+        $unitCost = app(SupplierPriceService::class)->costFor((int) $p['supplier_id'], (int) $p['product_id']) ?? (float) $tp?->cost; // supplier quote, product cost as fallback; tenant_products.cost is never changed
+        if (! $tp || $unitCost <= 0 || $qty < 1) {
             throw ValidationException::withMessages(['state' => __('growth_capital.inv.recheck_failed')]);
         }
-        if ($cap > 0 && $qty * (float) $tp->cost > $cap) {
+        if ($cap > 0 && $qty * $unitCost > $cap) {
             throw ValidationException::withMessages(['state' => __('growth_capital.inv.over_cap')]);
         }
         if (! Supplier::whereKey((int) $p['supplier_id'])->where('is_active', true)->exists() || ! Branch::whereKey((int) $p['branch_id'])->exists()) {
             throw ValidationException::withMessages(['state' => __('growth_capital.inv.need_supplier')]);
         }
         $po = $this->purchases->create(new PurchaseOrderData((int) $p['supplier_id'], (int) $p['branch_id'], now()->toDateString(), '0', '0', __('growth_capital.inv.po_note'),
-            [['product_id' => (int) $p['product_id'], 'variant_id' => 0, 'quantity' => $qty, 'unit_cost' => (string) $tp->cost]], false));
+            [['product_id' => (int) $p['product_id'], 'variant_id' => 0, 'quantity' => $qty, 'unit_cost' => number_format($unitCost, 2, '.', '')]], false));
 
         return ['purchase_order_id' => $po->id, 'status' => 'draft'];
     }

@@ -30,7 +30,7 @@ Laravel 13 / PHP 8.3 / MySQL (db `3alraf`) in `/var/www/3alraf/backend`. Design 
 
 ## 4. Commerce modules (tenant)
 - **Branches**, **Stock** (per branch × product/variant), **Stock Transfer** (branch→branch, statuses draft/in-transit/received, movement ledger), **Stock Adjustment** (increase/decrease with reason). All changes write `stock_movements` ledger.
-- **Orders**: cart→checkout (guest or customer), items snapshot (name, sku, barcode, unit price, cost), totals computed ONLY by `OrderCalculator` following `docs/CALCULATIONS.md`. Statuses enum with history log; fires notification events. Returns & refunds sub-flows. Invoice (printable/PDF), wallet payment proof upload.
+- **Orders**: cart (open to guests) → checkout (web: signed-in customer only, guests are redirected to login and the cart is kept; `/api/v1` checkout still accepts guests), items snapshot (name, sku, barcode, unit price, cost), totals computed ONLY by `OrderCalculator` following `docs/CALCULATIONS.md`. Statuses enum with history log; fires notification events. Returns & refunds sub-flows. Invoice (printable/PDF), wallet payment proof upload.
 - **Flash sales**: start/end datetime, products/variants with sale price or %, qty limit, countdown on storefront.
 - **Discount codes**: percent/fixed, min order, max discount cap, usage limit total/per customer, date range, scope (all/products/categories), free-shipping option.
 - **Customers**: addresses (city), order history, wishlist, reviews.

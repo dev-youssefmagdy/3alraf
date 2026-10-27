@@ -33,6 +33,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
+    config(['growth.classifier.require_real_eval' => false]); // the real-data gate has its own tests (GrowthOpenItemsTest)
     $this->seed(FoundationSeeder::class);
     Cache::flush();
     $this->tenant = Tenant::where('slug', 'egy')->first();

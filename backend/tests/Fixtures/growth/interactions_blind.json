@@ -1,0 +1,1370 @@
+[
+ {
+  "message": "الاوردر بتاعي فين؟ بقاله اسبوع",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "هو الهدية دي بكام؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز اطلب 3 علب هدايا للعيد",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "المنتج وصلني مكسور حرام عليكم",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "شكرا جدا الهدية عجبتني اوي",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ازاي ارجع المنتج؟",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "fein el order bta3y? mn 5 ayam w lesa",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "el sa3r kam?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "3ayez a3mel order dlwa2ty",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "the package arrived damaged",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "Where is my order? It's been 10 days",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "How much is the red gift box?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "I want to buy two of these",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "Great service, thank you!",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "عايز استرجع فلوسي",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "اشتري 5 جيفت بوكس واخد خصم؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "خدمة زبالة مش هتعامل معاكم تاني",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ممتاز تسلم ايديكم",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "الشحن بياخد قد ايه لاسكندرية؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل متاح الدفع عند الاستلام؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "بيع تابلت رخيص جدا اضغط على الرابط www.cheap-deals.xyz",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "اربح 1000 دولار يوميا من البيت واتساب 0100000000",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "Click here to win a free iPhone!!! http://bit.ly/xx",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "Follow my page for followers 10k only 5$",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عروض خاصة اشترك في قناتنا على تليجرام",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "تسلم ايدك بس الاوردر اتأخر 3 ايام",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المنتج حلو بس التوصيل متأخر",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مش وحش",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "مش حلو خالص",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ما وصلنيش حاجة لحد دلوقتي",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "يا سلام على الخدمة، جبتوا المنتج بعد شهر",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "برافو عليكم، كسرتوا الهدية وبعتوها كده",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "شكرا ع التأخير الجميل، 3 اسابيع!",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "هو الشحن مجاني؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "في ألوان تانية؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "متاح مقاس اكبر؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز اغير المقاس",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ممكن اغير العنوان قبل الشحن؟",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "رقم الاوردر 4521 لسه ما اتشحنش؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ابعتلي رقم التتبع لو سمحت",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "tracking number plz",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ازيك عامل ايه",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "صباح الخير",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "شكرا",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "تمام",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ok thanks",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "hello",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هو انتوا فين؟ في فرع في مدينة نصر؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "مواعيد الشغل ايه؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "الجودة ممتازة والتغليف تحفة",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "احلى هدية جبتها لمراتي، ربنا يكرمكم",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "best store ever, will order again",
+  "category": "praise",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "منتجاتكم غالية اوي",
+  "category": "complaint",
+  "intent": "inquiry",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الاسعار نار",
+  "category": "complaint",
+  "intent": "inquiry",
+  "sentiment": "negative"
+ },
+ {
+  "message": "في تخفيضات دلوقتي؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عندكم كوبون خصم؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ايه طرق الدفع؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "بتقبلوا فيزا؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل المنتج اصلي؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "في ضمان على المنتج؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "المنتج مش زي الصورة خالص",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "جالي حاجة غلط مش اللي طلبته",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "عايز ارجع الاوردر وارجع فلوسي",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مدة الاسترجاع كام يوم؟",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل ينفع استبدال المنتج؟",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "I want a refund immediately",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "How do I return an item?",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "Can I exchange it for a different color?",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "the product is not as described, want my money back",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "wrong item delivered",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ana 3ayez arga3 el mntg dah",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "el montag mesh zay el sora",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "2ldelivery ta2akhar awy",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "el shehna b2et 2 ayam bs el hamdellah",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "shokran gedan 3la el hadya, 3agebet 7abibty",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ya rayt tzabto el 5edma, zbala",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "mafish rad mn el customer service",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "حد يرد عليا؟؟؟",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "بكلمكم من الصبح ومحدش بيرد",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الموظف كان محترم ومتعاون جدا",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "الكول سنتر معاملته وحشة",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "عايز اكلم المدير",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "عايز اشتكي",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "منتجكم رائع",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "شغل عالي",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "تحفة والله",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "كويس بس مش اوي",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عادي",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "مش عارف انا عايز ايه",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هبعت لكم بكره",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هو في جيفت كارت؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل تقدرو تكتبو رسالة على الهدية؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز تغليف هدية فاخر",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ينفع اطلب هدية لصاحبي واوصلها لعنوانه؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "محتاج 20 هدية للشركة، في سعر جملة؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "wholesale price for 50 pcs?",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "do you deliver to Alexandria?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "do you ship outside Egypt?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "what are your working hours",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "is cash on delivery available",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "is this in stock?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "المنتج ده متوفر؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "خلص من المخزن؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هيرجع امتى؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "اضيف للسلة ازاي؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "الموقع بيهنج وماقدرتش ادفع",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الدفع مش شغال",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الكارت اتسحب منه الفلوس مرتين",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "payment failed but money deducted",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "I was charged twice",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "the website keeps crashing",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "cant login to my account",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "نسيت الباسورد",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "مش قادر ادخل على حسابي",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الكود مش شغال",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "coupon code not working",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الخصم ماظهرش في الفاتورة",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ابعتلي فاتورة",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز فاتورة ضريبية",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "الاوردر اتلغى ليه؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "لغيت الاوردر ممكن؟",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "cancel my order please",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز الغي الطلب فورا",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ابعتوا المندوب تاني",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المندوب مش بيرد على التليفون",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المندوب اتأخر ساعتين",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المندوب كان زوق وجه الاوردر بدري",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "مندوب محترم جدا شكرا",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "وصل في ميعاده تسلموا",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "اوردرتي وصل بسرعة مش مصدق",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "fast delivery, very happy",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "the quality is poor, waste of money",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "لا اوصي بالمتجر ده ابدا",
+  "category": "complaint",
+  "intent": "other",
+  "sentiment": "negative"
+ },
+ {
+  "message": "نصابين",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "حرامية ما بعتوش حاجة",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "هبلغ حماية المستهلك",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "I will report you to consumer protection",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "this is a scam",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مستحيل اشتري منكم تاني",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "هشتري تاني بالتأكيد",
+  "category": "praise",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "هطلب تاني ان شاء الله",
+  "category": "praise",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "عايز اطلب نفس الهدية تاني",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "هاخدها",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "خلاص هاخد الاتنين",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "اكد الطلب لو سمحت",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "confirm my order",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "i'll take it",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ready to buy, how do i pay?",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ازاي ادفع؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ابعتلي لينك الدفع",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز اشتري بس مش متأكد",
+  "category": "other",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ممكن صور اكتر للمنتج؟",
+  "category": "request",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ابعتلي صورة حقيقية",
+  "category": "request",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل الخامة قطن؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ايه مقاسات المنتج؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "وزنه كام؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "المنتج بيشتغل بالبطارية؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "in",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": ".",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "؟؟؟",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "👍",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "😡😡😡",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "negative"
+ },
+ {
+  "message": "❤️❤️",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "حلوة اوي بس غالية",
+  "category": "other",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "الهدية حلوة بس اتأخرت ومش هطلب تاني",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المنتج ممتاز لكن التوصيل كان وحش",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "loved the gift but delivery was terrible",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "good product, bad support",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المنتج حلو اوي عايز اطلب منه كمان وكام سعره؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "positive"
+ },
+ {
+  "message": "شكرا على الاوردر، بس عايز ارجع واحدة",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "thanks for the fast reply, how much is shipping?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "positive"
+ },
+ {
+  "message": "الف شكر، بس فين الاوردر؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ازاي اتواصل مع الدعم؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "رقم التليفون بتاعكم ايه؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عنوان المحل فين؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "لينك الصفحة على انستجرام؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "اعلان: خدمات تصميم لوجو بأقل الأسعار تواصل معنا",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "شراء متابعين لايكات انستجرام",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "FREE crypto airdrop claim now",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "Make money online fast!!! no investment",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "We offer SEO services for your website, contact us",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ادخل الرابط واكسب جوايز",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "bit.ly/win-big اضغط واكسب",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "بيع حسابات فيسبوك مضمونة",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "viagra cheap pills order now",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "زوروا صفحتنا للعقارات شقق بالتقسيط",
+  "category": "spam",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هو الشحن لسيناء متاح؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "الشحن للصعيد بكام؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ممكن اوصل بكره؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "التوصيل في نفس اليوم متاح؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "هل في توصيل يوم الجمعة؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "اتصل بيا حد ضروري",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ابعتلي رسالة على الواتس",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "please call me back",
+  "category": "request",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "send me the catalog",
+  "category": "request",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ابعتلي الكتالوج",
+  "category": "request",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عندكم منتجات جديدة؟",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ايه احسن هدية لخطيبتي؟",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "اقترحوا عليا هدية بميزانية 500 جنيه",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "عايز هدية لعيد ميلاد طفل",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "gift ideas for my mom?",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "recommend a gift under 300 EGP",
+  "category": "request",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "شحنتوا الاوردر؟",
+  "category": "question",
+  "intent": "support",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "el order wasal w kol 7aga tmam shokran",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "mesh 3agbani el montag",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "3ayez 2a3raf el sa3r bs",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "ezay a3mel order?",
+  "category": "question",
+  "intent": "purchase",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "fe shipping l 2skndria?",
+  "category": "question",
+  "intent": "inquiry",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "el 2ard mkasar w 3ayez a3awed",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الكرتونة وصلت مفتوحة",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "ناقص قطعة من الطقم",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "الاوردر ناقص حاجة",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "جالي لون غير اللي طلبته",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "المنتج بايظ من اول استخدام",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "اشتغل يومين وبعدين وقف",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "عايز ضمان واستبدال",
+  "category": "request",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مفيش حد بيرد على الاسترجاع",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "فين فلوسي اللي رجعتوها؟",
+  "category": "question",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مر اسبوعين ولسه الاسترداد ماوصلش",
+  "category": "complaint",
+  "intent": "return",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مش بحب خدمتكم لكن المنتج كويس",
+  "category": "complaint",
+  "intent": "support",
+  "sentiment": "negative"
+ },
+ {
+  "message": "مش وحش خالص الصراحة",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ماقدرش اقول انه سيء",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "مش هقول مش حلو",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "ولا مرة اتأخرتوا عليا، شكرا",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "عمري ما شفت خدمة احسن من كده",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "مفيش اي مشكلة كله تمام",
+  "category": "praise",
+  "intent": "other",
+  "sentiment": "positive"
+ },
+ {
+  "message": "لا شكرا مش محتاج حاجة",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "message": "غلطت في الرقم، اسف",
+  "category": "other",
+  "intent": "other",
+  "sentiment": "neutral"
+ }
+]

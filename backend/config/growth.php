@@ -93,7 +93,7 @@ return [
 
     // N6 decision engine / trend radar / CEO challenge. Assumptions are labelled as such in the UI.
     // Interaction classifier: keyword confidence below `low_confidence` (0-1) lets the optional AI fallback decide. Accuracy targets are checked by growth:eval-classifier.
-    'classifier' => ['low_confidence' => 0.6, 'target_accuracy' => ['category' => 0.70, 'intent' => 0.70, 'sentiment' => 0.70], 'ai_max_chars' => 600],
+    'classifier' => ['low_confidence' => 0.6, 'target_accuracy' => ['category' => 0.70, 'intent' => 0.70, 'sentiment' => 0.70], 'ai_max_chars' => 600, 'min_reviewed' => 300, 'require_real_eval' => true],
     'capital' => [
         'horizon_days' => 30, 'aged_days' => 90, 'promo_uplift' => 1.5, 'promo_baseline_sell_through' => 0.1, 'abc_a_share' => 80, 'abc_b_share' => 95,
         'story_min_questions' => 3, 'story_max_sold_30d' => 3, 'season_hold_days' => 60, 'expiry_urgent_share' => 0.7, 'min_history_days' => 14,

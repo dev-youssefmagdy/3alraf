@@ -10,6 +10,8 @@ document.addEventListener('click', async (ev) => {
         if (!r) return;
         body.append('reason', r);
     }
+    const box = b.closest('.review-box');
+    if (box) box.querySelectorAll('select').forEach((s) => body.append(s.name, s.value));
     b.disabled = true;
     try {
         const res = await fetch(b.dataset.gpost, {method: 'POST', body, headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json'}});
