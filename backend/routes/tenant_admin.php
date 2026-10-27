@@ -98,6 +98,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
 
         // n8n growth system (feature flag `growth`; perms growth.view|manage|approve)
         Route::middleware('growth.enabled')->prefix('growth')->name('growth.')->group(function () {
+            Route::get('brief', [\App\Http\Controllers\Tenant\Growth\BriefController::class, 'index'])->name('brief.index');
+            Route::get('brief/data', [\App\Http\Controllers\Tenant\Growth\BriefController::class, 'data'])->name('brief.data');
             Route::get('clients', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'index'])->name('clients.index');
             Route::get('clients/datatable', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'datatable'])->name('clients.datatable');
             Route::post('clients', [\App\Http\Controllers\Tenant\Growth\ClientController::class, 'store'])->name('clients.store');

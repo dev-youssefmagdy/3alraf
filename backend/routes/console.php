@@ -28,4 +28,5 @@ Schedule::command('ai:expire-drafts')->dailyAt('02:30');
 
 // n8n growth system: outbox retries every minute, housekeeping nightly.
 Schedule::command('growth:dispatch-pending')->everyMinute()->withoutOverlapping();
+Schedule::command('growth:aggregate')->hourly()->withoutOverlapping();
 Schedule::command('growth:maintain')->dailyAt('02:45');

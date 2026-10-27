@@ -3,7 +3,7 @@
 return [
     'title' => 'Growth system',
     'disabled' => 'The Growth system is not enabled for this store. Ask the platform administrator to switch it on.',
-    'menu' => ['group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails'],
+    'menu' => ['group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
@@ -43,5 +43,14 @@ return [
         'out_of_range' => 'Must be between :min and :max.', 'cover_order' => 'Minimum days of cover cannot exceed the maximum.', 'allowlist_hint' => 'Comma-separated FAQ keys that may be answered automatically. Empty = nothing is automatic.',
         'fields' => ['min_margin_percent' => 'Minimum margin %', 'max_discount_percent' => 'Maximum discount %', 'low_stock_threshold' => 'Low-stock threshold (units)', 'min_days_of_cover' => 'Minimum days of cover',
             'max_days_of_cover' => 'Maximum days of cover', 'reorder_cash_cap' => 'Reorder cash cap', 'ad_daily_budget_cap' => 'Ad daily budget cap', 'ad_total_budget_cap' => 'Ad total budget cap', 'auto_reply_allowlist' => 'Auto-reply allowlist'],
+    ],
+    'brief' => [
+        'title' => 'Owner brief', 'daily' => 'Daily', 'weekly' => 'Weekly', 'date' => 'Date', 'load' => 'Load', 'ai' => 'Add AI summary (uses only the numbers below)', 'loading' => 'Loading...', 'error' => 'Could not load the brief.',
+        'confirmed' => 'Confirmed', 'estimated' => 'Estimated', 'insufficient' => 'Insufficient data', 'missing' => 'Missing', 'evidence' => 'Evidence',
+        'sales' => 'Sales (completed orders)', 'orders' => 'Completed orders', 'revenue' => 'Revenue (ex VAT)', 'aov' => 'Average order value', 'margin' => 'Contribution margin', 'margin_pct' => 'Margin %',
+        'margin_note' => 'Shown only when every cost is known. Advertising is not included; ROAS is not profit.', 'interest' => 'Products gaining interest', 'inventory' => 'Inventory issues', 'cover' => 'days of cover', 'on_hand' => 'on hand',
+        'conversations' => 'Conversations and complaints: not available yet.', 'channels' => 'Channel profitability', 'bundles' => 'Bundles', 'reasons' => 'Why customers do not buy', 'cancel' => 'Cancel rate', 'return' => 'Return rate',
+        'reorder' => 'Reorder candidates', 'experiments' => 'Experiment results', 'recs' => 'Recommendations', 'impact' => 'Impact', 'effort' => 'Effort', 'ai_summary' => 'AI summary', 'none' => 'Nothing to report.',
+        'kind' => ['inventory_low' => 'Restock soon', 'slow_mover_offer' => 'Test an offer on a slow mover', 'reorder' => 'Reorder', 'review_cancellations' => 'Review why orders are cancelled', 'address_return_reason' => 'Address the top return reason'],
     ],
 ];
