@@ -2,7 +2,7 @@
 
 return [
     // Logo drawn in the centre of every QR. PLACEHOLDER asset: replace the file (or point QR_LOGO_PATH elsewhere), no code change needed.
-    'logo_path' => env('QR_LOGO_PATH', resource_path('branding/3alraf-logo.png')),
+    'logo_path' => env('QR_LOGO_PATH', public_path('logo.png')),
     // Output PNG edge in px (white quiet zone included).
     'size' => (int) env('QR_SIZE', 600),
     'margin' => (int) env('QR_MARGIN', 36),
