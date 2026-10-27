@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'root'])->name('storefront.root');
 Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
-Route::get('l/{code}', \App\Http\Controllers\Storefront\TrackedLinkController::class)->middleware('growth.feature:comment_to_cart')->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
+Route::get('l/{code}', \App\Http\Controllers\Storefront\TrackedLinkController::class)->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
 
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)
 Route::post('webhooks/payments/{method}', PaymentWebhookController::class)->middleware('throttle:webhooks')->whereNumber('method')->name('webhooks.payments');
@@ -82,6 +82,10 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
         Route::post('gift-finder', [\App\Http\Controllers\Storefront\GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
         Route::post('gift-finder/{token}/cart', [\App\Http\Controllers\Storefront\GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
     });
+    Route::middleware('growth.feature:small_batch_lab')->group(function () {
+        Route::get('launch/{code}', [\App\Http\Controllers\Storefront\SmallBatchPublicController::class, 'show'])->where('code', '[a-z0-9]{6,12}')->name('launch.show');
+        Route::post('launch/{code}', [\App\Http\Controllers\Storefront\SmallBatchPublicController::class, 'signup'])->where('code', '[a-z0-9]{6,12}')->middleware('throttle:search')->name('launch.signup');
+    });
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::get('blog', [\App\Http\Controllers\Storefront\BlogController::class, 'index'])->name('blog.index');
     Route::get('blog/{slug}', [\App\Http\Controllers\Storefront\BlogController::class, 'show'])->name('blog.show');
@@ -107,6 +111,11 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
             Route::get('/', [AffiliateDashboardController::class, 'dashboard'])->name('dashboard');
             Route::get('products', [AffiliateDashboardController::class, 'products'])->name('products');
             Route::get('qr/{slug}', [AffiliateDashboardController::class, 'qr'])->name('qr');
+            Route::middleware('growth.feature:ambassadors')->group(function () {
+                Route::get('ambassador', [\App\Http\Controllers\Storefront\AmbassadorPortalController::class, 'show'])->name('ambassador');
+                Route::post('ambassador', [\App\Http\Controllers\Storefront\AmbassadorPortalController::class, 'join'])->name('ambassador.join');
+                Route::post('ambassador/links', [\App\Http\Controllers\Storefront\AmbassadorPortalController::class, 'link'])->name('ambassador.links');
+            });
             Route::post('payouts', [AffiliateDashboardController::class, 'requestPayout'])->middleware('throttle:payout')->name('payouts.request');
         });
     });

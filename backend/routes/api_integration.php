@@ -52,3 +52,7 @@ Route::controller(\App\Http\Controllers\Api\Integration\EngagementController::cl
     Route::get('reputation/alerts', 'alerts')->middleware('integration.auth:read,reputation_radar')->name('reputation.alerts');
     Route::get('missed-opportunities/weekly', 'missed')->middleware('integration.auth:read,missed_opportunities')->name('missed.weekly');
 });
+
+// N5 experiment lab: ad results import (ingest) + lab metrics / recommendation (read). No budget or spend instruction exists.
+Route::post('experiments/{id}/ad-results', [\App\Http\Controllers\Api\Integration\AdResultsController::class, 'store'])->middleware('integration.auth:ingest:write,experiment_lab')->whereNumber('id')->name('experiments.ad-results');
+Route::get('experiments/{id}/lab', [\App\Http\Controllers\Api\Integration\AdResultsController::class, 'show'])->middleware('integration.auth:read,experiment_lab')->whereNumber('id')->name('experiments.lab');

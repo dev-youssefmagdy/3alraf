@@ -37,8 +37,14 @@ class TrackedLinkService
             return null;
         }
 
-        return route('storefront.product.show', ['locale' => current_tenant()->default_locale, 'slug' => $slug])
-            .'?'.http_build_query(['utm_source' => $l->utm_source, 'utm_medium' => 'social', 'utm_campaign' => $l->utm_campaign, 'utm_content' => 'tl'.$l->code]);
+        $q = ['utm_source' => $l->utm_source, 'utm_medium' => 'social', 'utm_campaign' => $l->utm_campaign, 'utm_content' => 'tl'.$l->code];
+        if ($l->ambassador_id && ($uuid = \App\Models\Affiliate::whereKey(\App\Models\Ambassador::whereKey($l->ambassador_id)->value('affiliate_id'))->value('uuid'))) {
+            $q = ['utm_source' => 'affiliate', 'aff' => $uuid, 'utm_medium' => $l->channel ?: 'social'] + $q; // existing affiliate click + commission flow
+        } elseif ($l->growth_experiment_id) {
+            $q['utm_medium'] = 'paid';
+        }
+
+        return route('storefront.product.show', ['locale' => current_tenant()->default_locale, 'slug' => $slug]).'?'.http_build_query($q);
     }
 
     public function click(TrackedLink $l, ?string $ua): void

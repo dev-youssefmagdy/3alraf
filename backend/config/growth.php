@@ -29,9 +29,9 @@ return [
         'comment_to_cart' => ['ar' => 'من التعليق للسلة', 'en' => 'Comment to cart', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
         'auto_reply' => ['ar' => 'الرد الآلي', 'en' => 'Auto reply', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
         'missed_opportunities' => ['ar' => 'الفرص الضائعة', 'en' => 'Missed opportunities', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
-        'experiment_lab' => ['ar' => 'معمل التجارب', 'en' => 'Experiment lab', 'group' => 'growth', 'depends_on' => ['experiments'], 'built' => false],
-        'small_batch_lab' => ['ar' => 'معمل الدفعات الصغيرة', 'en' => 'Small-batch lab', 'group' => 'growth', 'depends_on' => [], 'built' => false],
-        'ambassadors' => ['ar' => 'السفراء', 'en' => 'Ambassadors', 'group' => 'growth', 'depends_on' => [], 'built' => false],
+        'experiment_lab' => ['ar' => 'معمل التجارب', 'en' => 'Experiment lab', 'group' => 'growth', 'depends_on' => ['experiments'], 'built' => true],
+        'small_batch_lab' => ['ar' => 'معمل الدفعات الصغيرة', 'en' => 'Small-batch lab', 'group' => 'growth', 'depends_on' => [], 'built' => true],
+        'ambassadors' => ['ar' => 'السفراء', 'en' => 'Ambassadors', 'group' => 'growth', 'depends_on' => [], 'built' => true],
         'inventory_engine' => ['ar' => 'محرك المخزون', 'en' => 'Inventory engine', 'group' => 'operations', 'depends_on' => [], 'built' => false],
         'return_intel' => ['ar' => 'ذكاء المرتجعات', 'en' => 'Return intelligence', 'group' => 'operations', 'depends_on' => [], 'built' => false],
         'trend_radar' => ['ar' => 'رادار الترند', 'en' => 'Trend radar', 'group' => 'operations', 'depends_on' => [], 'built' => false],
@@ -74,6 +74,13 @@ return [
         'ad_daily_budget_cap' => 500,
         'ad_total_budget_cap' => 5000,
         'auto_reply_allowlist' => [], // FAQ keys that may be answered automatically (N4); empty = nothing automatic
+    ],
+
+    // N5 lab thresholds: no stop/scale/revise advice below these minimums (a few days or clicks is noise, not evidence).
+    'lab' => [
+        'min_days' => 7, 'min_clicks' => 100, 'min_orders' => 10, 'max_budget_increase_percent' => 30,
+        'scale_cm_ratio' => 0.5, 'fatigue_min_impressions' => 1000, 'fatigue_ctr_drop_percent' => 25, 'fatigue_recent_days' => 3, 'fatigue_baseline_days' => 7,
+        'ambassador_min_orders_for_report' => 1, 'smallbatch_min_days' => 3,
     ],
 
     // Personal data never leaves Laravel unmasked (events carry ids and amounts only).
