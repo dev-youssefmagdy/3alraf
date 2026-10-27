@@ -16,6 +16,7 @@ use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\InteractionService;
 use App\Services\Growth\SupplierPriceService;
+use Database\Seeders\CatalogSeeder;
 use Database\Seeders\FoundationSeeder;
 use Database\Seeders\TenantDemoSeeder;
 use Illuminate\Support\Facades\Cache;
@@ -48,7 +49,7 @@ function ocFeature(string $k, bool $on = true): void
 
 // ---- A seeder
 it('A: the demo seeder runs clean and seeds >= 10 orders (no proof_required failure)', function () {
-    $this->seed(TenantDemoSeeder::class);
+    $this->seed([CatalogSeeder::class, TenantDemoSeeder::class]);
     expect(Order::withoutGlobalScopes()->count())->toBeGreaterThanOrEqual(10)
         ->and(Order::withoutGlobalScopes()->where('status', 'delivered')->count())->toBeGreaterThanOrEqual(4)
         ->and(Order::withoutGlobalScopes()->where('status', 'cancelled')->count())->toBe(1);
@@ -63,7 +64,7 @@ it('C: ranks suppliers (history + explicit), flags margin, never touches tenant 
     $c = Supplier::create(['name' => 'C', 'is_active' => true]);
     $branch = Branch::first();
     foreach ([[$a, 55, '2026-01-01'], [$a, 65, '2026-02-01'], [$b, 70, '2026-02-01']] as [$s, $cost, $at]) {
-        $po = PurchaseOrder::create(['number' => 'PO'.$s->id.$cost, 'supplier_id' => $s->id, 'branch_id' => $branch->id, 'status' => PurchaseStatus::RECEIVED, 'items_total' => 0, 'total_cost' => 0, 'received_at' => $at]);
+        $po = PurchaseOrder::create(['number' => 'PO'.$s->id.$cost, 'supplier_id' => $s->id, 'branch_id' => $branch->id, 'status' => PurchaseStatus::RECEIVED, 'items_total' => 0, 'total_cost' => 0, 'ordered_at' => $at, 'received_at' => $at]);
         $po->items()->create(['product_id' => $p->id, 'product_variant_id' => 0, 'quantity' => 10, 'unit_cost' => $cost, 'line_total' => $cost * 10]);
     }
     $svc = app(SupplierPriceService::class);

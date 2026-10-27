@@ -126,6 +126,9 @@ class TenantDemoSeeder extends Seeder
         $company = ShippingCompany::first();
         $cod = PaymentMethod::where('type', 'cod')->first();
         $tps = TenantProduct::with('product.variants')->orderBy('id')->get();
+        // Plain COD demo orders need the carrier-collects-everything mode; restore the tenant's own setting afterwards.
+        $before = $t->settings;
+        $t->update(['settings' => array_merge($before ?? [], ['cod_collect_shipping_upfront' => false])]);
         $path = [OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED];
         // final status index: -1 pending, 0..3 along $path, 9 cancelled
         $plans = [3, 3, 3, 3, 2, 1, 0, -1, -1, 9];
@@ -152,5 +155,6 @@ class TenantDemoSeeder extends Seeder
                 Review::firstOrCreate(['product_id' => $pid, 'customer_id' => $customer->id], ['order_id' => $order->id, 'rating' => 5 - $n % 2, 'body' => 'Great product, fast delivery.', 'status' => 'approved']);
             }
         }
+        $t->update(['settings' => $before]);
     }
 }
