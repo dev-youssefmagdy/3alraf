@@ -41,3 +41,14 @@ Route::post('truth-guard/check', [BrandMemoryController::class, 'check'])->middl
 
 // Which Growth features are active for this tenant (n8n reads this to skip disabled flows).
 Route::get('features', [\App\Http\Controllers\Api\Integration\FeatureController::class, 'index'])->middleware('integration.auth:read')->name('features.index');
+
+// N4 engagement (ingest = scope `ingest:write`; reads = `read`). Nothing here sends a message to a customer.
+Route::controller(\App\Http\Controllers\Api\Integration\EngagementController::class)->group(function () {
+    Route::post('interactions', 'ingest')->middleware('integration.auth:ingest:write,interactions')->name('interactions.ingest');
+    Route::get('interactions/{id}/suggested-reply', 'suggest')->whereNumber('id')->middleware('integration.auth:read,interactions')->name('interactions.suggest');
+    Route::post('interactions/{id}/responded', 'responded')->whereNumber('id')->middleware('integration.auth:ingest:write,interactions')->name('interactions.responded');
+    Route::post('tracked-links', 'link')->middleware('integration.auth:ingest:write,comment_to_cart')->name('tracked-links.store');
+    Route::get('voc', 'voc')->middleware('integration.auth:read,voc')->name('voc.index');
+    Route::get('reputation/alerts', 'alerts')->middleware('integration.auth:read,reputation_radar')->name('reputation.alerts');
+    Route::get('missed-opportunities/weekly', 'missed')->middleware('integration.auth:read,missed_opportunities')->name('missed.weekly');
+});

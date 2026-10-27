@@ -31,3 +31,4 @@ Schedule::command('growth:dispatch-pending')->everyMinute()->withoutOverlapping(
 Schedule::command('growth:scan-low-stock')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('growth:aggregate')->hourly()->withoutOverlapping();
 Schedule::command('growth:maintain')->dailyAt('02:45');
+Schedule::command('growth:engage')->hourly()->withoutOverlapping();

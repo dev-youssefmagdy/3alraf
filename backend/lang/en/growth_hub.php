@@ -3,7 +3,7 @@
 return [
     'title' => 'Growth system',
     'disabled' => 'The Growth system is not enabled for this store. Ask the platform administrator to switch it on.',
-    'menu' => ['bundles' => 'Bundle engine', 'seasonal' => 'Seasonal calendar', 'gift' => 'Gift Finder', 'brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
+    'menu' => ['inbox' => 'Interactions', 'voc' => 'Voice of customer', 'rep' => 'Reputation radar', 'missed' => 'Missed opportunities', 'bundles' => 'Bundle engine', 'seasonal' => 'Seasonal calendar', 'gift' => 'Gift Finder', 'brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
@@ -54,7 +54,7 @@ return [
         'confirmed' => 'Confirmed', 'estimated' => 'Estimated', 'insufficient' => 'Insufficient data', 'missing' => 'Missing', 'evidence' => 'Evidence',
         'sales' => 'Sales (completed orders)', 'orders' => 'Completed orders', 'revenue' => 'Revenue (ex VAT)', 'aov' => 'Average order value', 'margin' => 'Contribution margin', 'margin_pct' => 'Margin %',
         'margin_note' => 'Shown only when every cost is known. Advertising is not included; ROAS is not profit.', 'interest' => 'Products gaining interest', 'inventory' => 'Inventory issues', 'cover' => 'days of cover', 'on_hand' => 'on hand',
-        'conversations' => 'Conversations and complaints: not available yet.', 'channels' => 'Channel profitability', 'bundles' => 'Bundles', 'reasons' => 'Why customers do not buy', 'cancel' => 'Cancel rate', 'return' => 'Return rate',
+        'conv_title' => 'Conversations and complaints', 'conv_total' => 'Messages', 'conv_complaints' => 'Complaints', 'conv_unanswered' => 'Unanswered beyond SLA', 'conv_alerts' => 'Open reputation alerts', 'conv_tasks' => 'Open improvement tasks', 'conv_cat' => ['price' => 'Price', 'shipping' => 'Shipping', 'availability' => 'Availability', 'trust' => 'Trust / authenticity', 'photos' => 'Photos', 'size_color' => 'Size / color', 'returns' => 'Returns', 'usage' => 'Usage', 'safety' => 'Safety'], 'conversations' => 'Not available: the Interactions feature is off.', 'channels' => 'Channel profitability', 'bundles' => 'Bundles', 'reasons' => 'Why customers do not buy', 'cancel' => 'Cancel rate', 'return' => 'Return rate',
         'reorder' => 'Reorder candidates', 'experiments' => 'Experiment results', 'recs' => 'Recommendations', 'impact' => 'Impact', 'effort' => 'Effort', 'ai_summary' => 'AI summary', 'none' => 'Nothing to report.',
         'kind' => ['inventory_low' => 'Restock soon', 'slow_mover_offer' => 'Test an offer on a slow mover', 'reorder' => 'Reorder', 'review_cancellations' => 'Review why orders are cancelled', 'address_return_reason' => 'Address the top return reason'],
     ],
@@ -113,4 +113,40 @@ return [
     'features' => ['title' => 'Feature switches', 'hint' => 'Turn each Growth feature on or off. Data is never deleted; switching back on resumes where you left off.', 'needs' => 'Needs', 'inactive_dep' => 'On, but inactive: a required feature is off.',
         'groups' => ['foundation' => 'Foundation', 'insight' => 'Insight', 'content' => 'Content', 'offers' => 'Offers', 'engagement' => 'Engagement', 'growth' => 'Growth', 'operations' => 'Operations']],
     'central' => ['title' => 'Growth system', 'hint' => 'Master switch. Store owners cannot enable it themselves; each feature then has its own switch in the store.', 'enabled' => 'Enable the Growth system for this store'],
+
+    'inbox' => [
+        'title' => 'Interactions inbox', 'hint' => 'Customer messages ingested by n8n. Text is masked before storage. Nothing is sent from here: replies are copied by a human (or sent by n8n for allowlisted FAQs only).',
+        'level' => 'Maturity level', 'levels' => [1 => 'L1 classify only', 2 => 'L2 suggest replies', 3 => 'L3 auto-reply allowlisted FAQs', 4 => 'L4 routing'],
+        'l3_hint' => 'L3 also needs the Auto reply feature and FAQ keys in the guardrail allowlist (faq + FAQ id, e.g. faq12).',
+        'unanswered' => 'Unanswered beyond SLA', 'suggest' => 'Suggest reply', 'responded' => 'Mark responded', 'close' => 'Close',
+        'no_reply' => 'No automatic suggestion (:reason): a human should answer.', 'empty' => 'No interactions yet.',
+        'cols' => ['channel' => 'Channel', 'text' => 'Message (masked)', 'category' => 'Category', 'intent' => 'Intent', 'status' => 'Status', 'when' => 'Received'],
+        'statuses' => ['new' => 'New', 'classified' => 'Classified', 'escalated' => 'Escalated', 'replied' => 'Replied', 'closed' => 'Closed'],
+        'categories' => ['price' => 'Price', 'shipping' => 'Shipping', 'availability' => 'Availability', 'trust' => 'Trust / authenticity', 'photos' => 'Photos', 'size_color' => 'Size / color', 'returns' => 'Returns', 'usage' => 'Usage', 'safety' => 'Safety'], 'channels' => ['whatsapp' => 'WhatsApp', 'facebook' => 'Facebook', 'instagram' => 'Instagram', 'review' => 'Review', 'site_search' => 'Site search', 'email' => 'Email'], 'intents' => ['purchase_intent' => 'Purchase intent', 'question' => 'Question', 'complaint' => 'Complaint', 'praise' => 'Praise', 'other' => 'Other'], 'escalations' => ['complaint' => 'Complaint', 'safety' => 'Safety', 'refund' => 'Refund / return', 'conflict' => 'Conflict', 'missing_data' => 'Missing data', 'opted_out' => 'Opted out', 'truth_guard' => 'Needs review (claims)'], 'window_closed' => '24h window closed: use a template message', 'opted_out' => 'Opted out: do not message',
+    ],
+    'links' => [
+        'title' => 'Comment-to-Cart links', 'hint' => 'A short tracked link opens the product with UTM; clicks and orders are counted.', 'create' => 'Create link',
+        'created' => 'Link created: :url', 'bad_product' => 'The product is not active in this store.', 'clicks' => 'Clicks', 'orders' => 'Orders', 'revenue' => 'Revenue',
+        'product' => 'Product ID', 'channel' => 'Channel', 'campaign' => 'Campaign',
+    ],
+    'voc' => [
+        'title' => 'Voice of Customer', 'hint' => 'What customers ask and complain about, by product, channel and topic (last 30 days).', 'by_category' => 'By topic', 'by_channel' => 'By channel',
+        'by_product' => 'By product', 'recurring' => 'Recurring objections', 'tasks' => 'Improvement tasks', 'generate' => 'Create tasks from recurring objections',
+        'generated' => ':n task(s) created.', 'bad_status' => 'Invalid status.', 'none' => 'Nothing to show yet.', 'before' => 'Before', 'after' => 'After', 'owner' => 'Owner', 'due' => 'Due',
+        'mentions' => 'mentions', 'actions' => ['price' => 'Recurring "Price" questions about :product: fix the product page / content and re-check in 30 days.', 'shipping' => 'Recurring "Shipping" questions about :product: fix the product page / content and re-check in 30 days.', 'trust' => 'Recurring "Trust / authenticity" questions about :product: fix the product page / content and re-check in 30 days.', 'photos' => 'Recurring "Photos" questions about :product: fix the product page / content and re-check in 30 days.', 'size_color' => 'Recurring "Size / color" questions about :product: fix the product page / content and re-check in 30 days.', 'returns' => 'Recurring "Returns" questions about :product: fix the product page / content and re-check in 30 days.', 'usage' => 'Recurring "Usage" questions about :product: fix the product page / content and re-check in 30 days.'], 'statuses' => ['open' => 'Open', 'doing' => 'In progress', 'done' => 'Done', 'dismissed' => 'Dismissed'],
+    ],
+    'rep' => [
+        'title' => 'Reputation Radar', 'hint' => 'Flags a spike in complaints per product (vs the previous 4 weeks, minimum sample) and pauses auto-reply for it. It never deletes or argues with anything.',
+        'scan' => 'Run detection now', 'scanned' => ':n alert(s) opened or refreshed.', 'resolve' => 'Resolve and resume auto-reply', 'open' => 'Open alerts', 'resolved' => 'Resolved',
+        'none' => 'No alerts.', 'rate' => 'Complaint rate', 'baseline' => 'Baseline', 'sample' => 'Sample', 'paused' => 'Auto-reply paused',
+    ],
+    'missed' => [
+        'title' => 'Missed opportunities', 'hint' => 'Rule-based findings with evidence, probable cause and one experiment to try. Probable causes are hypotheses, not facts.',
+        'scan' => 'Scan now', 'scanned' => ':n new item(s).', 'evidence' => 'Evidence', 'cause' => 'Probable cause', 'confidence' => 'Confidence', 'experiment' => 'Experiment to try',
+        'owner' => 'Owner', 'due' => 'Due', 'result' => 'Result note', 'none' => 'Nothing found.', 'statuses' => ['open' => 'Open', 'accepted' => 'Accepted', 'done' => 'Done', 'dismissed' => 'Dismissed'],
+        'cause_topic' => 'Customers mostly ask about: :topic', 'cause_unknown' => 'Unclear: messages are not categorised.', 'cause_no_content' => 'Customers ask but there is no approved content for this product.',
+        'cause_conversion' => 'Visitors view the product but few buy: page, price or trust may be the blocker.', 'cause_sla' => 'Messages waiting longer than the reply SLA.',
+        'cause_carts' => 'Carts left without checkout (estimated: carts are cleared when an order is placed).', 'cause_clicks' => 'People click the link but do not order.',
+        'rules' => ['inquiries_gt_orders' => 'Many inquiries, few orders: :product', 'traffic_low_conversion' => 'Traffic with low conversion: :product', 'unanswered_sla' => 'Customer messages unanswered beyond the SLA', 'abandoned_carts' => 'Abandoned carts', 'clicks_low_profit' => 'Tracked link clicks without orders: :product', 'demand_no_content' => 'Demand without content: :product', 'recurring_objection' => 'Recurring objection: :product'], 'experiments' => ['inquiries_gt_orders' => 'Test a clearer offer or answer on the product page for 14 days and compare conversion.', 'traffic_low_conversion' => 'A/B test the product page (photos / price display) for 14 days.', 'unanswered_sla' => 'Assign an owner and test a saved-reply set for the top question for 7 days.', 'abandoned_carts' => 'Test a free-shipping threshold message at checkout for 14 days.', 'clicks_low_profit' => 'Replace the landing product or offer for this link and compare orders per click.', 'demand_no_content' => 'Generate and approve a content package for this product, then track its link.', 'recurring_objection' => 'Add the answer to the FAQ and product page, then measure mentions for 30 days.'],
+    ],
 ];

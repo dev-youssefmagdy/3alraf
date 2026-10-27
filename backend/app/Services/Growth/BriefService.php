@@ -44,7 +44,7 @@ class BriefService
             'sales' => ['orders_completed' => $s['orders_completed'], 'revenue' => $s['revenue'], 'aov' => $s['aov'], 'vs_prev_7d_avg_revenue' => $this->prevAvg($base, 7)],
             'contribution_margin' => ['value' => $s['contribution_margin'], 'percent' => $s['contribution_margin_percent'], 'note_key' => $s['contribution_margin']['value'] === null ? 'cost_data_missing' : 'confirmed_costs'],
             'products_gaining_interest' => $interest, 'inventory_issues' => $issues,
-            'conversations_and_complaints' => ['available' => false], // customer messaging module arrives in a later sprint
+            'conversations_and_complaints' => $this->conversations(1),
             'recommendations' => $this->rank($recs, 5), 'data_quality' => app(DataQuality::class)->issues(),
         ];
         $out['ai_summary'] = $narrate ? $this->narrate($out) : null;
@@ -91,7 +91,7 @@ class BriefService
             'advertising' => ['spend_recorded' => $s['cac']['missing'] === ['ad_spend'] ? null : true, 'cac' => $s['cac'], 'note_key' => 'roas_is_not_profit'],
             'why_customers_do_not_buy' => ['cancel_rate' => $s['cancel_rate'], 'return_rate' => $s['return_rate'], 'return_reasons' => $reasons],
             'reorder_candidates' => $reorder, 'experiment_results' => $experiments,
-            'recommendations' => $this->rank($recs, 3), 'data_quality' => app(DataQuality::class)->issues(),
+            'conversations_and_complaints' => $this->conversations(7), 'recommendations' => $this->rank($recs, 3), 'data_quality' => app(DataQuality::class)->issues(),
         ];
         $out['ai_summary'] = $narrate ? $this->narrate($out) : null;
 
@@ -176,5 +176,22 @@ class BriefService
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    /** Conversations / complaints section (N4). `available` = false only when the interactions feature is off. */
+    private function conversations(int $days): array
+    {
+        if (! app(GrowthFeatures::class)->active('interactions')) {
+            return ['available' => false];
+        }
+        $from = now()->subDays($days)->startOfDay();
+        $rows = \App\Models\Interaction::where('received_at', '>=', $from)->get(['product_id', 'category', 'sentiment', 'intent', 'status']);
+        $complaints = $rows->filter(fn ($r) => $r->sentiment === 'negative' || $r->intent === 'complaint');
+
+        return ['available' => true, 'period_days' => $days, 'total' => $rows->count(), 'complaints' => $complaints->count(),
+            'unanswered_over_sla' => app(InteractionService::class)->unanswered(MissedOpportunityService::SLA_HOURS)->count(),
+            'top_categories' => $rows->whereNotNull('category')->groupBy('category')->map->count()->sortDesc()->take(3)->all(),
+            'open_reputation_alerts' => app(GrowthFeatures::class)->active('reputation_radar') ? \App\Models\ReputationAlert::where('status', 'open')->count() : null,
+            'open_improvement_tasks' => app(GrowthFeatures::class)->active('voc') ? \App\Models\ImprovementTask::whereIn('status', ['open', 'doing'])->count() : null];
     }
 }

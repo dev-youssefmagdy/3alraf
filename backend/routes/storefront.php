@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'root'])->name('storefront.root');
 Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
+Route::get('l/{code}', \App\Http\Controllers\Storefront\TrackedLinkController::class)->middleware('growth.feature:comment_to_cart')->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
 
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)
 Route::post('webhooks/payments/{method}', PaymentWebhookController::class)->middleware('throttle:webhooks')->whereNumber('method')->name('webhooks.payments');
