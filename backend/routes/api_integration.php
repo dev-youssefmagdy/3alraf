@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 // n8n integration API: /api/integration/v1 (bootstrap/app.php). Auth = bearer + HMAC (integration.auth:{scope}). NO price/refund/stock/budget endpoints exist.
 Route::get('ping', PingController::class)->middleware('integration.auth')->name('ping');
+Route::get('health', \App\Http\Controllers\Api\Integration\HealthController::class)->middleware('integration.auth')->name('health');
 Route::get('events', [EventController::class, 'index'])->middleware('integration.auth:events:read,events_outbox')->name('events.index');
 Route::get('approvals/{id}', [ApprovalProposalController::class, 'show'])->middleware('integration.auth:read,approvals')->whereNumber('id')->name('approvals.show');
 Route::post('proposals', [ApprovalProposalController::class, 'store'])->middleware('integration.auth:proposals:write,approvals')->name('proposals.store');

@@ -1,0 +1,86 @@
+{
+  "name": "3alraf - 00 Error handler",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "s",
+      "name": "Summarize failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "text",
+              "type": "string",
+              "value": "=Growth workflow failed: {{$json.workflow.name}} at {{$json.execution.lastNodeExecuted}} - {{$json.execution.error.message}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {},
+      "notes": "Replace with your Slack / Telegram / Email node using a NAMED credential (e.g. '3alraf Owner Alerts'). No token in this file."
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Summarize failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize failure": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "features": []
+  },
+  "tags": [
+    {
+      "name": "3alraf-growth"
+    }
+  ]
+}

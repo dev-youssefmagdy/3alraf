@@ -1,0 +1,422 @@
+{
+  "name": "3alraf - 06 Owner brief daily and weekly",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cron",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sign-features",
+      "name": "Sign features",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// HMAC-SHA256(secret, \"{timestamp}.{raw body}\") -> X-Signature. Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto. Secret comes from env, never from this file.\nconst crypto = require('crypto');\nconst base = $env.GROWTH_API_BASE.replace(/\\/$/, '');\nconst secret = $env.GROWTH_HMAC_SECRET;\nconst T = $('Schedule').first().json; // trigger payload\nconst req = {method:\"GET\",path:\"/features\"};\nconst body = req.body ? JSON.stringify(req.body) : '';\nconst ts = String(Math.floor(Date.now() / 1000));\nconst sig = crypto.createHmac('sha256', secret).update(ts + '.' + body).digest('hex');\nconst headers = { 'X-Timestamp': ts, 'X-Signature': sig, 'Accept': 'application/json' };\nif (body) { headers['Content-Type'] = 'application/json'; headers['Idempotency-Key'] = req.idem || crypto.createHash('sha256').update(req.path + body).digest('hex'); }\nreturn [{ json: { url: base + req.path, method: req.method, body, headers, ctx: $json } }];"
+      }
+    },
+    {
+      "id": "get-features",
+      "name": "GET features",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "={{$json.method}}",
+        "url": "={{$json.url}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{JSON.stringify($json.headers)}}",
+        "sendBody": "={{$json.body !== ''}}",
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "3alraf Integration Bearer"
+        }
+      }
+    },
+    {
+      "id": "gate",
+      "name": "Features active?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ (()=>{const f=$json.data.features; return f['brief'] === true || (f['brief'] && f['brief'].active === true);})() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "sign-daily-brief",
+      "name": "Sign daily brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// HMAC-SHA256(secret, \"{timestamp}.{raw body}\") -> X-Signature. Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto. Secret comes from env, never from this file.\nconst crypto = require('crypto');\nconst base = $env.GROWTH_API_BASE.replace(/\\/$/, '');\nconst secret = $env.GROWTH_HMAC_SECRET;\nconst T = $('Schedule').first().json; // trigger payload\nconst req = {method:\"GET\",path:\"/brief/daily\"};\nconst body = req.body ? JSON.stringify(req.body) : '';\nconst ts = String(Math.floor(Date.now() / 1000));\nconst sig = crypto.createHmac('sha256', secret).update(ts + '.' + body).digest('hex');\nconst headers = { 'X-Timestamp': ts, 'X-Signature': sig, 'Accept': 'application/json' };\nif (body) { headers['Content-Type'] = 'application/json'; headers['Idempotency-Key'] = req.idem || crypto.createHash('sha256').update(req.path + body).digest('hex'); }\nreturn [{ json: { url: base + req.path, method: req.method, body, headers, ctx: $json } }];"
+      }
+    },
+    {
+      "id": "call-daily-brief",
+      "name": "Call daily brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "={{$json.method}}",
+        "url": "={{$json.url}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{JSON.stringify($json.headers)}}",
+        "sendBody": "={{$json.body !== ''}}",
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "3alraf Integration Bearer"
+        }
+      }
+    },
+    {
+      "id": "sign-weekly-brief",
+      "name": "Sign weekly brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// HMAC-SHA256(secret, \"{timestamp}.{raw body}\") -> X-Signature. Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto. Secret comes from env, never from this file.\nconst crypto = require('crypto');\nconst base = $env.GROWTH_API_BASE.replace(/\\/$/, '');\nconst secret = $env.GROWTH_HMAC_SECRET;\nconst T = $('Schedule').first().json; // trigger payload\nconst req = {method:\"GET\",path:\"/brief/weekly\"};\nconst body = req.body ? JSON.stringify(req.body) : '';\nconst ts = String(Math.floor(Date.now() / 1000));\nconst sig = crypto.createHmac('sha256', secret).update(ts + '.' + body).digest('hex');\nconst headers = { 'X-Timestamp': ts, 'X-Signature': sig, 'Accept': 'application/json' };\nif (body) { headers['Content-Type'] = 'application/json'; headers['Idempotency-Key'] = req.idem || crypto.createHash('sha256').update(req.path + body).digest('hex'); }\nreturn [{ json: { url: base + req.path, method: req.method, body, headers, ctx: $json } }];"
+      }
+    },
+    {
+      "id": "call-weekly-brief",
+      "name": "Call weekly brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "={{$json.method}}",
+        "url": "={{$json.url}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{JSON.stringify($json.headers)}}",
+        "sendBody": "={{$json.body !== ''}}",
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "3alraf Integration Bearer"
+        }
+      }
+    },
+    {
+      "id": "sign-metrics-summary",
+      "name": "Sign metrics summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// HMAC-SHA256(secret, \"{timestamp}.{raw body}\") -> X-Signature. Needs NODE_FUNCTION_ALLOW_BUILTIN=crypto. Secret comes from env, never from this file.\nconst crypto = require('crypto');\nconst base = $env.GROWTH_API_BASE.replace(/\\/$/, '');\nconst secret = $env.GROWTH_HMAC_SECRET;\nconst T = $('Schedule').first().json; // trigger payload\nconst req = {method:\"GET\",path:\"/metrics/summary\"};\nconst body = req.body ? JSON.stringify(req.body) : '';\nconst ts = String(Math.floor(Date.now() / 1000));\nconst sig = crypto.createHmac('sha256', secret).update(ts + '.' + body).digest('hex');\nconst headers = { 'X-Timestamp': ts, 'X-Signature': sig, 'Accept': 'application/json' };\nif (body) { headers['Content-Type'] = 'application/json'; headers['Idempotency-Key'] = req.idem || crypto.createHash('sha256').update(req.path + body).digest('hex'); }\nreturn [{ json: { url: base + req.path, method: req.method, body, headers, ctx: $json } }];"
+      }
+    },
+    {
+      "id": "call-metrics-summary",
+      "name": "Call metrics summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "method": "={{$json.method}}",
+        "url": "={{$json.url}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{JSON.stringify($json.headers)}}",
+        "sendBody": "={{$json.body !== ''}}",
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.body}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "3alraf Integration Bearer"
+        }
+      }
+    },
+    {
+      "id": "hand-off-to-owner-or-next-step",
+      "name": "Hand off to owner or next step",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {},
+      "notes": "Send the brief text to the owner channel (Telegram/WhatsApp/Email via named credential). Weekly runs may be filtered to Sundays with an IF on $now.weekday."
+    },
+    {
+      "id": "feature-off---stop",
+      "name": "Feature OFF - stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {},
+      "notes": "Feature switched off for this tenant (or master flag off): nothing to do. No retries."
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Sign features",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign features": {
+      "main": [
+        [
+          {
+            "node": "GET features",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET features": {
+      "main": [
+        [
+          {
+            "node": "Features active?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Features active?": {
+      "main": [
+        [
+          {
+            "node": "Sign daily brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feature OFF - stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign daily brief": {
+      "main": [
+        [
+          {
+            "node": "Call daily brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call daily brief": {
+      "main": [
+        [
+          {
+            "node": "Sign weekly brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign weekly brief": {
+      "main": [
+        [
+          {
+            "node": "Call weekly brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call weekly brief": {
+      "main": [
+        [
+          {
+            "node": "Sign metrics summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign metrics summary": {
+      "main": [
+        [
+          {
+            "node": "Call metrics summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call metrics summary": {
+      "main": [
+        [
+          {
+            "node": "Hand off to owner or next step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "3alraf - 00 Error handler",
+    "saveManualExecutions": true
+  },
+  "meta": {
+    "features": [
+      "brief"
+    ],
+    "template": "Credentials by name only; secrets from n8n env (GROWTH_API_BASE, GROWTH_HMAC_SECRET). Import, bind credential '3alraf Integration Bearer' (HTTP Header Auth: Authorization = Bearer <token>), then activate."
+  },
+  "tags": [
+    {
+      "name": "3alraf-growth"
+    }
+  ]
+}

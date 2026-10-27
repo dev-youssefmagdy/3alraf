@@ -1,0 +1,1254 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "3alraf Growth Integration API (n8n)",
+    "version": "1.0.0",
+    "description": "Server-to-server API. Auth: Authorization Bearer token + X-Timestamp (unix s, +-300s) + X-Signature = hex HMAC-SHA256(client secret, \"{timestamp}.{raw body}\"). Optional IP allowlist (GROWTH_INTEGRATION_IPS). No endpoint can change prices, refunds, stock or ad budgets. Each endpoint is also gated by the tenant's per-feature switch (403 feature_disabled). Webhook events from Laravel use the same signature scheme (X-Event-Id, X-Event-Type headers)."
+  },
+  "servers": [
+    {
+      "url": "https://{host}/api/integration/v1",
+      "variables": {
+        "host": {
+          "default": "shop.example.com"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/approvals/{id}": {
+      "get": {
+        "operationId": "approvals.show",
+        "summary": "Scope: read; feature: approvals",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/brand-memory": {
+      "get": {
+        "operationId": "brand-memory.index",
+        "summary": "Scope: read; feature: brand_memory",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/brief/daily": {
+      "get": {
+        "operationId": "brief.daily",
+        "summary": "Scope: read; feature: brief",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/brief/weekly": {
+      "get": {
+        "operationId": "brief.weekly",
+        "summary": "Scope: read; feature: brief",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/bundles": {
+      "get": {
+        "operationId": "bundles.index",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/ceo-challenge": {
+      "get": {
+        "operationId": "ceo.current",
+        "summary": "Scope: read; feature: ceo_challenge",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/customers/segments": {
+      "get": {
+        "operationId": "customers.segments",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "events.index",
+        "summary": "Scope: events:read; feature: events_outbox",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/experiments/{id}/ad-results": {
+      "post": {
+        "operationId": "experiments.ad-results",
+        "summary": "Scope: ingest:write; feature: experiment_lab",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/experiments/{id}/lab": {
+      "get": {
+        "operationId": "experiments.lab",
+        "summary": "Scope: read; feature: experiment_lab",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/experiments/{id}/results": {
+      "post": {
+        "operationId": "experiments.results",
+        "summary": "Scope: ingest:write; feature: experiments",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/features": {
+      "get": {
+        "operationId": "features.index",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Scope: any valid client; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/interactions": {
+      "post": {
+        "operationId": "interactions.ingest",
+        "summary": "Scope: ingest:write; feature: interactions",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interactions/{id}/responded": {
+      "post": {
+        "operationId": "interactions.responded",
+        "summary": "Scope: ingest:write; feature: interactions",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interactions/{id}/suggested-reply": {
+      "get": {
+        "operationId": "interactions.suggest",
+        "summary": "Scope: read; feature: interactions",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/inventory/recommendations": {
+      "get": {
+        "operationId": "inventory.recommendations",
+        "summary": "Scope: read; feature: inventory_engine",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/inventory/velocity": {
+      "get": {
+        "operationId": "inventory.velocity",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/metrics/channels": {
+      "get": {
+        "operationId": "metrics.channels",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/metrics/products": {
+      "get": {
+        "operationId": "metrics.products",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/metrics/summary": {
+      "get": {
+        "operationId": "metrics.summary",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/missed-opportunities/weekly": {
+      "get": {
+        "operationId": "missed.weekly",
+        "summary": "Scope: read; feature: missed_opportunities",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/orders/attribution": {
+      "get": {
+        "operationId": "orders.attribution",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/orders/summary": {
+      "get": {
+        "operationId": "orders.summary",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "operationId": "ping",
+        "summary": "Scope: any valid client; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "operationId": "products.index",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/products/{id}/facts": {
+      "get": {
+        "operationId": "products.facts",
+        "summary": "Scope: read; feature: integration_api",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/proposals": {
+      "post": {
+        "operationId": "proposals.store",
+        "summary": "Scope: proposals:write; feature: approvals",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reputation/alerts": {
+      "get": {
+        "operationId": "reputation.alerts",
+        "summary": "Scope: read; feature: reputation_radar",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/returns/reasons": {
+      "get": {
+        "operationId": "returns.reasons",
+        "summary": "Scope: read; feature: return_intel",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      },
+      "post": {
+        "operationId": "returns.reason",
+        "summary": "Scope: ingest:write; feature: return_intel",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tracked-links": {
+      "post": {
+        "operationId": "tracked-links.store",
+        "summary": "Scope: ingest:write; feature: comment_to_cart",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trends/candidates": {
+      "get": {
+        "operationId": "trends.candidates",
+        "summary": "Scope: read; feature: trend_radar",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    },
+    "/truth-guard/check": {
+      "post": {
+        "operationId": "truth-guard.check",
+        "summary": "Scope: read; feature: truth_guard",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/voc": {
+      "get": {
+        "operationId": "voc.index",
+        "summary": "Scope: read; feature: voc",
+        "security": [
+          {
+            "bearerAuth": [],
+            "hmacSignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "unauthenticated (bad token, signature or stale timestamp)"
+          },
+          "403": {
+            "description": "growth_disabled | feature_disabled | forbidden_scope | ip_not_allowed"
+          },
+          "422": {
+            "description": "validation"
+          },
+          "429": {
+            "description": "too_many_requests"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "hmacSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Signature"
+      }
+    }
+  }
+}

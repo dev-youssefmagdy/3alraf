@@ -63,6 +63,12 @@ return [
 
     'approvals' => ['ttl_days' => 7],
 
+    // Optional allowlist (IPs or CIDRs, comma separated in env) for the whole /api/integration/v1 prefix. Empty = no restriction.
+    'ip_allowlist' => array_values(array_filter(array_map('trim', explode(',', (string) env('GROWTH_INTEGRATION_IPS', ''))))),
+
+    // growth:prune retention windows (days). Personal data (interactions, small-batch contacts) is kept the shortest.
+    'retention' => ['interactions_days' => 180, 'small_batch_days' => 180, 'ad_days_days' => 730, 'action_log_days' => 730, 'integration_requests_days' => 30],
+
     // Guardrails (tenant-overridable). Percentages are 0-100.
     'guardrails' => [
         'min_margin_percent' => 15,
