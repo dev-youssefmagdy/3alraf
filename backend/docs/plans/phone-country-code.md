@@ -1,0 +1,27 @@
+# Storefront phone numbers: fixed tenant country code (contract for prompts/34-phone-country-code.md)
+
+## Requirement
+Every phone input on a tenant storefront is locked to the tenant's country dial code (egy.3alraf.loc => +20, sa => +966 ...). The customer types the national number only (e.g. `01008489183`). The code is added by the system, stored in a SEPARATE column, and shown concatenated everywhere the phone appears.
+
+## Analysis (verified in code)
+- Storefront phone inputs: register, checkout (guest/quote), account profile, address form (account + checkout), affiliate register (`x-input name="phone"` in 5 views + `_checkout-addresses`). API v1 (mobile) has the same flows. Validation today is just `string|max:30` in AddressRequest, ProfileRequest, CheckoutRequest, CustomerRegisterRequest, AffiliateRegisterRequest.
+- Phone columns: `customers.phone`, `customer_addresses.phone`, `orders.customer_phone` (+ affiliates.phone). Display points: order page (`customer_phone`), checkout address list, account, OrderNotification mail, invoice PDF, admin order/customer screens, WhatsApp/tel links.
+- Tenant country: `tenants.country` (set per tenant in FoundationSeeder). No dial code data exists. `countries` table is someone else's uncommitted WIP (ISO code + name only): DO NOT depend on or touch it (City.php, DatabaseSeeder.php, Country*, CitySeeder*, database/data/countries.json, migration 2026_11_21_100001); keep dial data in our own file so it merges cleanly later.
+- Existing `OfflineCheckoutThrottle::phoneKey` (last 10 digits, ASCII-folded) stays as the dedupe key and is unaffected.
+
+## Decisions
+1. Dial code is **+20** for Egypt (the "+2" in the request is not a country code). Mapping ISO country => dial code, national trunk prefix, and accepted national patterns lives in `config/phone.php` (full ISO list generated from standard ITU data; Arab/Gulf countries with explicit patterns, others generic 6-12 digits).
+2. Storage: new column `phone_country_code` (varchar(6), e.g. `+20`) beside each phone column (customers, customer_addresses, orders, affiliates). `phone` keeps the national number exactly as customers type it (`01008489183`, digits only, Arabic digits folded). Order phone is a snapshot at order time.
+3. The server decides the code: it comes from `current_tenant()->country` and any client-sent code is ignored (tested). No tenant-level override in v1; unknown country => no prefix shown, validation falls back to generic digits, and the central tenant screen shows a warning.
+4. Input forgiveness: normaliser accepts `01008489183`, `1008489183`, `+201008489183`, `00201008489183`, `201008489183` (only when it matches the tenant's own code), spaces/dashes, Arabic-Indic digits. A DIFFERENT explicit country code (e.g. +966 on an Egypt store) is rejected with a clear message. Egypt rule: mobile `01[0125]` + 8 digits (11 digits with trunk 0) normalised with trunk 0 kept in `phone`.
+5. Concatenation: `Support\Phone` value helper builds E.164 (`+201008489183`: code + national number WITHOUT the trunk 0) for tel:/wa.me/notifications/exports, and a display form (`+20 100 848 9183`) rendered inside `<bdi dir="ltr">` so RTL pages stay correct. Model accessors `phone_full` / `phone_display` on Customer, CustomerAddress, Order, Affiliate; all storefront/admin/mail/PDF display points switch to them.
+6. UI: Blade component `<x-phone-input>` (fixed read-only prefix chip showing the code, LTR, `inputmode=tel`, `autocomplete=tel-national`, digits-only filter, maxlength from config, accessible label that includes the code; works in RTL). One shared FormRequest rule/trait `ValidatesTenantPhone` (merge-normalise in `prepareForValidation`, then validate) used by web and `/api/v1` requests so data is consistent for mobile too. API responses return both `phone`, `phone_country_code` and `phone_full`; update docs/api/openapi.json.
+7. Backfill: idempotent chunked migration/command parses existing rows with the row's tenant country (`+20...`, `0020...`, `0100...`, Arabic digits), sets `phone_country_code` and normalised `phone`; unparsable rows keep their value with code NULL and are listed by `php artisan phone:audit` (does not guess). Reversible down().
+8. Admin forms (branches/suppliers/staff) are out of scope (not storefront); admin SCREENS that display customer/order phones use the concatenated accessors.
+9. Growth module: interaction contact matching keeps hashing via phoneKey; verify no regression; no PII added to events/logs (events already scrub).
+
+## Tests (tests/Feature/StorefrontPhoneTest.php, tests/Unit/PhoneTest.php)
+Normaliser matrix (all inputs above, wrong country, too short/long, letters), per-tenant code (egy +20, sa +966), client-sent code ignored, each storefront form web + API stores national + code and displays concatenated, order snapshot, backfill, display in RTL (`<bdi dir=ltr>`), notification/PDF text, existing checkout/guest/throttle tests still pass, full suite 0 new failures. Browser: extend tests/Browser smoke (separate DB only) to type 01008489183 into register/checkout/address and assert the chip and stored value.
+
+## Rules
+Follow backend/CLAUDE.md layering (FormRequest > DTO > Service > Repository > Model), Blade components, AR/EN lang, additive migrations, Pint on changed files only, PROGRESS.md <= 15 lines, update docs/REQUIREMENTS.md. Use a separate DB (3alraf_smoke) for anything destructive; never touch the default dev DB. Commit on main (own files only; never the Country/City WIP files, n8n_features.md, config/qr.php); no push.
