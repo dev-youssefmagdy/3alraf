@@ -1,0 +1,1266 @@
+[
+    {
+        "state": {
+            "ar": "القاهرة",
+            "en": "Cairo"
+        },
+        "cities": [
+            {
+                "ar": "القاهرة",
+                "en": "Cairo"
+            },
+            {
+                "ar": "مدينة نصر",
+                "en": "Nasr City"
+            },
+            {
+                "ar": "مصر الجديدة",
+                "en": "Heliopolis"
+            },
+            {
+                "ar": "المعادي",
+                "en": "Maadi"
+            },
+            {
+                "ar": "التجمع الخامس",
+                "en": "Fifth Settlement"
+            },
+            {
+                "ar": "الشروق",
+                "en": "El Shorouk"
+            },
+            {
+                "ar": "بدر",
+                "en": "Badr City"
+            },
+            {
+                "ar": "العبور",
+                "en": "Obour City"
+            },
+            {
+                "ar": "القاهرة الجديدة",
+                "en": "New Cairo"
+            },
+            {
+                "ar": "المقطم",
+                "en": "Mokattam"
+            },
+            {
+                "ar": "شبرا",
+                "en": "Shubra"
+            },
+            {
+                "ar": "حلوان",
+                "en": "Helwan"
+            },
+            {
+                "ar": "15 مايو",
+                "en": "15th of May City"
+            },
+            {
+                "ar": "العاصمة الإدارية الجديدة",
+                "en": "New Administrative Capital"
+            },
+            {
+                "ar": "الزيتون",
+                "en": "El Zeitoun"
+            },
+            {
+                "ar": "عين شمس",
+                "en": "Ain Shams"
+            },
+            {
+                "ar": "المطرية",
+                "en": "El Matareya"
+            },
+            {
+                "ar": "السلام",
+                "en": "El Salam"
+            },
+            {
+                "ar": "التبين",
+                "en": "El Tebbin"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الجيزة",
+            "en": "Giza"
+        },
+        "cities": [
+            {
+                "ar": "الجيزة",
+                "en": "Giza"
+            },
+            {
+                "ar": "6 أكتوبر",
+                "en": "6th of October"
+            },
+            {
+                "ar": "الشيخ زايد",
+                "en": "Sheikh Zayed"
+            },
+            {
+                "ar": "الدقي",
+                "en": "Dokki"
+            },
+            {
+                "ar": "المهندسين",
+                "en": "Mohandessin"
+            },
+            {
+                "ar": "العجوزة",
+                "en": "Agouza"
+            },
+            {
+                "ar": "إمبابة",
+                "en": "Imbaba"
+            },
+            {
+                "ar": "بولاق الدكرور",
+                "en": "Boulaq El Dakrour"
+            },
+            {
+                "ar": "الهرم",
+                "en": "Haram"
+            },
+            {
+                "ar": "فيصل",
+                "en": "Faisal"
+            },
+            {
+                "ar": "العياط",
+                "en": "El Ayat"
+            },
+            {
+                "ar": "الصف",
+                "en": "El Saf"
+            },
+            {
+                "ar": "أطفيح",
+                "en": "Atfih"
+            },
+            {
+                "ar": "أوسيم",
+                "en": "Awsim"
+            },
+            {
+                "ar": "كرداسة",
+                "en": "Kerdasa"
+            },
+            {
+                "ar": "منشأة القناطر",
+                "en": "Manshiyat El Qanater"
+            },
+            {
+                "ar": "الحوامدية",
+                "en": "El Hawamdeya"
+            },
+            {
+                "ar": "البدرشين",
+                "en": "El Badrashin"
+            },
+            {
+                "ar": "الواحات البحرية",
+                "en": "Bahariya Oasis"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الإسكندرية",
+            "en": "Alexandria"
+        },
+        "cities": [
+            {
+                "ar": "الإسكندرية",
+                "en": "Alexandria"
+            },
+            {
+                "ar": "برج العرب",
+                "en": "Borg El Arab"
+            },
+            {
+                "ar": "العجمي",
+                "en": "Agami"
+            },
+            {
+                "ar": "المنتزه",
+                "en": "Montaza"
+            },
+            {
+                "ar": "سيدي بشر",
+                "en": "Sidi Bishr"
+            },
+            {
+                "ar": "العامرية",
+                "en": "Amreya"
+            },
+            {
+                "ar": "كرموز",
+                "en": "Karmouz"
+            },
+            {
+                "ar": "العطارين",
+                "en": "Attarin"
+            },
+            {
+                "ar": "محرم بك",
+                "en": "Moharam Bek"
+            },
+            {
+                "ar": "سموحة",
+                "en": "Smouha"
+            },
+            {
+                "ar": "سيدي جابر",
+                "en": "Sidi Gaber"
+            },
+            {
+                "ar": "اللبان",
+                "en": "El Labban"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "القليوبية",
+            "en": "Qalyubia"
+        },
+        "cities": [
+            {
+                "ar": "بنها",
+                "en": "Banha"
+            },
+            {
+                "ar": "قليوب",
+                "en": "Qalyub"
+            },
+            {
+                "ar": "شبرا الخيمة",
+                "en": "Shubra El Kheima"
+            },
+            {
+                "ar": "الخانكة",
+                "en": "El Khanka"
+            },
+            {
+                "ar": "القناطر الخيرية",
+                "en": "El Qanater El Khayreya"
+            },
+            {
+                "ar": "كفر شكر",
+                "en": "Kafr Shukr"
+            },
+            {
+                "ar": "طوخ",
+                "en": "Tukh"
+            },
+            {
+                "ar": "الخصوص",
+                "en": "El Khosous"
+            },
+            {
+                "ar": "شبين القناطر",
+                "en": "Shibin El Qanater"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الشرقية",
+            "en": "Sharqia"
+        },
+        "cities": [
+            {
+                "ar": "الزقازيق",
+                "en": "Zagazig"
+            },
+            {
+                "ar": "العاشر من رمضان",
+                "en": "10th of Ramadan City"
+            },
+            {
+                "ar": "بلبيس",
+                "en": "Bilbeis"
+            },
+            {
+                "ar": "منيا القمح",
+                "en": "Minya El Qamh"
+            },
+            {
+                "ar": "أبو كبير",
+                "en": "Abu Kabir"
+            },
+            {
+                "ar": "فاقوس",
+                "en": "Faqous"
+            },
+            {
+                "ar": "ههيا",
+                "en": "Hihya"
+            },
+            {
+                "ar": "ديرب نجم",
+                "en": "Dyarb Negm"
+            },
+            {
+                "ar": "كفر صقر",
+                "en": "Kafr Saqr"
+            },
+            {
+                "ar": "أبو حماد",
+                "en": "Abu Hammad"
+            },
+            {
+                "ar": "الحسينية",
+                "en": "El Husseiniya"
+            },
+            {
+                "ar": "مشتول السوق",
+                "en": "Mashtoul El Souk"
+            },
+            {
+                "ar": "الإبراهيمية",
+                "en": "El Ibrahimiya"
+            },
+            {
+                "ar": "القرين",
+                "en": "El Qurein"
+            },
+            {
+                "ar": "صان الحجر",
+                "en": "San El Hagar"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الدقهلية",
+            "en": "Dakahlia"
+        },
+        "cities": [
+            {
+                "ar": "المنصورة",
+                "en": "Mansoura"
+            },
+            {
+                "ar": "طلخا",
+                "en": "Talkha"
+            },
+            {
+                "ar": "ميت غمر",
+                "en": "Mit Ghamr"
+            },
+            {
+                "ar": "دكرنس",
+                "en": "Dekernes"
+            },
+            {
+                "ar": "أجا",
+                "en": "Aga"
+            },
+            {
+                "ar": "منية النصر",
+                "en": "Minyat El Nasr"
+            },
+            {
+                "ar": "السنبلاوين",
+                "en": "El Senbellawein"
+            },
+            {
+                "ar": "بلقاس",
+                "en": "Belqas"
+            },
+            {
+                "ar": "المطرية",
+                "en": "El Matareya"
+            },
+            {
+                "ar": "شربين",
+                "en": "Sherbin"
+            },
+            {
+                "ar": "بني عبيد",
+                "en": "Bani Ubaid"
+            },
+            {
+                "ar": "المنزلة",
+                "en": "El Manzala"
+            },
+            {
+                "ar": "تمي الأمديد",
+                "en": "Temay El Amdid"
+            },
+            {
+                "ar": "الجمالية",
+                "en": "El Gamalia"
+            },
+            {
+                "ar": "نبروه",
+                "en": "Nabaroh"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "البحيرة",
+            "en": "Beheira"
+        },
+        "cities": [
+            {
+                "ar": "دمنهور",
+                "en": "Damanhour"
+            },
+            {
+                "ar": "كفر الدوار",
+                "en": "Kafr El Dawwar"
+            },
+            {
+                "ar": "رشيد",
+                "en": "Rosetta"
+            },
+            {
+                "ar": "إدكو",
+                "en": "Edku"
+            },
+            {
+                "ar": "أبو حمص",
+                "en": "Abu Hummus"
+            },
+            {
+                "ar": "الدلنجات",
+                "en": "El Delengat"
+            },
+            {
+                "ar": "المحمودية",
+                "en": "El Mahmoudiya"
+            },
+            {
+                "ar": "إيتاي البارود",
+                "en": "Itay El Barud"
+            },
+            {
+                "ar": "كوم حمادة",
+                "en": "Kom Hamada"
+            },
+            {
+                "ar": "حوش عيسى",
+                "en": "Hosh Essa"
+            },
+            {
+                "ar": "شبراخيت",
+                "en": "Shubrakhit"
+            },
+            {
+                "ar": "وادي النطرون",
+                "en": "Wadi El Natrun"
+            },
+            {
+                "ar": "النوبارية الجديدة",
+                "en": "New Nubaria"
+            },
+            {
+                "ar": "أبو المطامير",
+                "en": "Abu El Matamir"
+            },
+            {
+                "ar": "بدر",
+                "en": "Badr"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "كفر الشيخ",
+            "en": "Kafr El Sheikh"
+        },
+        "cities": [
+            {
+                "ar": "كفر الشيخ",
+                "en": "Kafr El Sheikh"
+            },
+            {
+                "ar": "دسوق",
+                "en": "Desouk"
+            },
+            {
+                "ar": "فوه",
+                "en": "Fuwa"
+            },
+            {
+                "ar": "بيلا",
+                "en": "Bella"
+            },
+            {
+                "ar": "مطوبس",
+                "en": "Metoubes"
+            },
+            {
+                "ar": "بلطيم",
+                "en": "Baltim"
+            },
+            {
+                "ar": "الحامول",
+                "en": "El Hamool"
+            },
+            {
+                "ar": "سيدي سالم",
+                "en": "Sidi Salem"
+            },
+            {
+                "ar": "قلين",
+                "en": "Qallin"
+            },
+            {
+                "ar": "الرياض",
+                "en": "El Riyad"
+            },
+            {
+                "ar": "البرلس",
+                "en": "Burullus"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الغربية",
+            "en": "Gharbia"
+        },
+        "cities": [
+            {
+                "ar": "طنطا",
+                "en": "Tanta"
+            },
+            {
+                "ar": "المحلة الكبرى",
+                "en": "El Mahalla El Kubra"
+            },
+            {
+                "ar": "كفر الزيات",
+                "en": "Kafr El Zayat"
+            },
+            {
+                "ar": "زفتى",
+                "en": "Zifta"
+            },
+            {
+                "ar": "السنطة",
+                "en": "El Santa"
+            },
+            {
+                "ar": "بسيون",
+                "en": "Basyoun"
+            },
+            {
+                "ar": "قطور",
+                "en": "Qutur"
+            },
+            {
+                "ar": "سمنود",
+                "en": "Samannoud"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "المنوفية",
+            "en": "Monufia"
+        },
+        "cities": [
+            {
+                "ar": "شبين الكوم",
+                "en": "Shebin El Kom"
+            },
+            {
+                "ar": "مدينة السادات",
+                "en": "Sadat City"
+            },
+            {
+                "ar": "منوف",
+                "en": "Menouf"
+            },
+            {
+                "ar": "أشمون",
+                "en": "Ashmoun"
+            },
+            {
+                "ar": "الباجور",
+                "en": "El Bagour"
+            },
+            {
+                "ar": "قويسنا",
+                "en": "Quesna"
+            },
+            {
+                "ar": "بركة السبع",
+                "en": "Berket El Sab"
+            },
+            {
+                "ar": "تلا",
+                "en": "Tala"
+            },
+            {
+                "ar": "الشهداء",
+                "en": "El Shohada"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "دمياط",
+            "en": "Damietta"
+        },
+        "cities": [
+            {
+                "ar": "دمياط",
+                "en": "Damietta"
+            },
+            {
+                "ar": "دمياط الجديدة",
+                "en": "New Damietta"
+            },
+            {
+                "ar": "رأس البر",
+                "en": "Ras El Bar"
+            },
+            {
+                "ar": "فارسكور",
+                "en": "Faraskur"
+            },
+            {
+                "ar": "كفر سعد",
+                "en": "Kafr Saad"
+            },
+            {
+                "ar": "الزرقا",
+                "en": "El Zarka"
+            },
+            {
+                "ar": "كفر البطيخ",
+                "en": "Kafr El Batikh"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "بورسعيد",
+            "en": "Port Said"
+        },
+        "cities": [
+            {
+                "ar": "بورسعيد",
+                "en": "Port Said"
+            },
+            {
+                "ar": "بورفؤاد",
+                "en": "Port Fouad"
+            },
+            {
+                "ar": "حي الشرق",
+                "en": "El Sharq"
+            },
+            {
+                "ar": "حي العرب",
+                "en": "El Arab"
+            },
+            {
+                "ar": "حي الضواحي",
+                "en": "El Dawahi"
+            },
+            {
+                "ar": "حي المناخ",
+                "en": "El Manakh"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الإسماعيلية",
+            "en": "Ismailia"
+        },
+        "cities": [
+            {
+                "ar": "الإسماعيلية",
+                "en": "Ismailia"
+            },
+            {
+                "ar": "فايد",
+                "en": "Fayed"
+            },
+            {
+                "ar": "القنطرة شرق",
+                "en": "Qantara Sharq"
+            },
+            {
+                "ar": "القنطرة غرب",
+                "en": "Qantara Gharb"
+            },
+            {
+                "ar": "التل الكبير",
+                "en": "Tell El Kebir"
+            },
+            {
+                "ar": "أبو صوير",
+                "en": "Abu Suwir"
+            },
+            {
+                "ar": "القصاصين",
+                "en": "El Qassasin"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "السويس",
+            "en": "Suez"
+        },
+        "cities": [
+            {
+                "ar": "السويس",
+                "en": "Suez"
+            },
+            {
+                "ar": "الأربعين",
+                "en": "El Arbaeen"
+            },
+            {
+                "ar": "عتاقة",
+                "en": "Ataqa"
+            },
+            {
+                "ar": "الجناين",
+                "en": "El Ganayen"
+            },
+            {
+                "ar": "فيصل",
+                "en": "Faisal"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "شمال سيناء",
+            "en": "North Sinai"
+        },
+        "cities": [
+            {
+                "ar": "العريش",
+                "en": "Arish"
+            },
+            {
+                "ar": "الشيخ زويد",
+                "en": "Sheikh Zuweid"
+            },
+            {
+                "ar": "رفح",
+                "en": "Rafah"
+            },
+            {
+                "ar": "بئر العبد",
+                "en": "Bir El Abd"
+            },
+            {
+                "ar": "الحسنة",
+                "en": "El Hasana"
+            },
+            {
+                "ar": "نخل",
+                "en": "Nakhl"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "جنوب سيناء",
+            "en": "South Sinai"
+        },
+        "cities": [
+            {
+                "ar": "الطور",
+                "en": "El Tor"
+            },
+            {
+                "ar": "شرم الشيخ",
+                "en": "Sharm El Sheikh"
+            },
+            {
+                "ar": "دهب",
+                "en": "Dahab"
+            },
+            {
+                "ar": "نويبع",
+                "en": "Nuweiba"
+            },
+            {
+                "ar": "طابا",
+                "en": "Taba"
+            },
+            {
+                "ar": "سانت كاترين",
+                "en": "Saint Catherine"
+            },
+            {
+                "ar": "أبو رديس",
+                "en": "Abu Rudeis"
+            },
+            {
+                "ar": "رأس سدر",
+                "en": "Ras Sedr"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الفيوم",
+            "en": "Faiyum"
+        },
+        "cities": [
+            {
+                "ar": "الفيوم",
+                "en": "Faiyum"
+            },
+            {
+                "ar": "سنورس",
+                "en": "Sinnuris"
+            },
+            {
+                "ar": "إطسا",
+                "en": "Itsa"
+            },
+            {
+                "ar": "طامية",
+                "en": "Tamiya"
+            },
+            {
+                "ar": "إبشواي",
+                "en": "Ibshaway"
+            },
+            {
+                "ar": "يوسف الصديق",
+                "en": "Youssef El Seddik"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "بني سويف",
+            "en": "Beni Suef"
+        },
+        "cities": [
+            {
+                "ar": "بني سويف",
+                "en": "Beni Suef"
+            },
+            {
+                "ar": "الواسطى",
+                "en": "El Wasta"
+            },
+            {
+                "ar": "ناصر",
+                "en": "Nasser"
+            },
+            {
+                "ar": "إهناسيا",
+                "en": "Ehnasia"
+            },
+            {
+                "ar": "ببا",
+                "en": "Beba"
+            },
+            {
+                "ar": "الفشن",
+                "en": "El Fashn"
+            },
+            {
+                "ar": "سمسطا",
+                "en": "Somosta"
+            },
+            {
+                "ar": "بني سويف الجديدة",
+                "en": "New Beni Suef"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "المنيا",
+            "en": "Minya"
+        },
+        "cities": [
+            {
+                "ar": "المنيا",
+                "en": "Minya"
+            },
+            {
+                "ar": "ملوي",
+                "en": "Mallawi"
+            },
+            {
+                "ar": "سمالوط",
+                "en": "Samalut"
+            },
+            {
+                "ar": "مغاغة",
+                "en": "Maghagha"
+            },
+            {
+                "ar": "بني مزار",
+                "en": "Beni Mazar"
+            },
+            {
+                "ar": "المنيا الجديدة",
+                "en": "New Minya"
+            },
+            {
+                "ar": "أبو قرقاص",
+                "en": "Abu Qirqas"
+            },
+            {
+                "ar": "العدوة",
+                "en": "El Idwa"
+            },
+            {
+                "ar": "مطاي",
+                "en": "Matai"
+            },
+            {
+                "ar": "دير مواس",
+                "en": "Deir Mawas"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "أسيوط",
+            "en": "Assiut"
+        },
+        "cities": [
+            {
+                "ar": "أسيوط",
+                "en": "Assiut"
+            },
+            {
+                "ar": "ديروط",
+                "en": "Dairut"
+            },
+            {
+                "ar": "القوصية",
+                "en": "El Qusiya"
+            },
+            {
+                "ar": "منفلوط",
+                "en": "Manfalut"
+            },
+            {
+                "ar": "أبنوب",
+                "en": "Abnub"
+            },
+            {
+                "ar": "أبو تيج",
+                "en": "Abu Tig"
+            },
+            {
+                "ar": "الغنايم",
+                "en": "El Ghanayem"
+            },
+            {
+                "ar": "صدفا",
+                "en": "Sidfa"
+            },
+            {
+                "ar": "الفتح",
+                "en": "El Fateh"
+            },
+            {
+                "ar": "ساحل سليم",
+                "en": "Sahel Selim"
+            },
+            {
+                "ar": "البداري",
+                "en": "El Badari"
+            },
+            {
+                "ar": "أسيوط الجديدة",
+                "en": "New Assiut"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "سوهاج",
+            "en": "Sohag"
+        },
+        "cities": [
+            {
+                "ar": "سوهاج",
+                "en": "Sohag"
+            },
+            {
+                "ar": "أخميم",
+                "en": "Akhmim"
+            },
+            {
+                "ar": "طما",
+                "en": "Tema"
+            },
+            {
+                "ar": "طهطا",
+                "en": "Tahta"
+            },
+            {
+                "ar": "جرجا",
+                "en": "Girga"
+            },
+            {
+                "ar": "المراغة",
+                "en": "El Maragha"
+            },
+            {
+                "ar": "البلينا",
+                "en": "El Balyana"
+            },
+            {
+                "ar": "دار السلام",
+                "en": "Dar El Salam"
+            },
+            {
+                "ar": "جهينة",
+                "en": "Juhayna"
+            },
+            {
+                "ar": "المنشأة",
+                "en": "El Mansha"
+            },
+            {
+                "ar": "سوهاج الجديدة",
+                "en": "New Sohag"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "قنا",
+            "en": "Qena"
+        },
+        "cities": [
+            {
+                "ar": "قنا",
+                "en": "Qena"
+            },
+            {
+                "ar": "نجع حمادي",
+                "en": "Nag Hammadi"
+            },
+            {
+                "ar": "دشنا",
+                "en": "Dishna"
+            },
+            {
+                "ar": "قوص",
+                "en": "Qus"
+            },
+            {
+                "ar": "أبو تشت",
+                "en": "Abu Tesht"
+            },
+            {
+                "ar": "فرشوط",
+                "en": "Farshut"
+            },
+            {
+                "ar": "نقادة",
+                "en": "Naqada"
+            },
+            {
+                "ar": "الوقف",
+                "en": "El Waqf"
+            },
+            {
+                "ar": "قفط",
+                "en": "Qift"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الأقصر",
+            "en": "Luxor"
+        },
+        "cities": [
+            {
+                "ar": "الأقصر",
+                "en": "Luxor"
+            },
+            {
+                "ar": "إسنا",
+                "en": "Esna"
+            },
+            {
+                "ar": "أرمنت",
+                "en": "Armant"
+            },
+            {
+                "ar": "الطود",
+                "en": "El Tod"
+            },
+            {
+                "ar": "البياضية",
+                "en": "El Bayadeya"
+            },
+            {
+                "ar": "القرنة",
+                "en": "El Qurna"
+            },
+            {
+                "ar": "الزينية",
+                "en": "El Zeinya"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "أسوان",
+            "en": "Aswan"
+        },
+        "cities": [
+            {
+                "ar": "أسوان",
+                "en": "Aswan"
+            },
+            {
+                "ar": "كوم أمبو",
+                "en": "Kom Ombo"
+            },
+            {
+                "ar": "إدفو",
+                "en": "Edfu"
+            },
+            {
+                "ar": "دراو",
+                "en": "Daraw"
+            },
+            {
+                "ar": "نصر النوبة",
+                "en": "Nasr El Nuba"
+            },
+            {
+                "ar": "أبو سمبل",
+                "en": "Abu Simbel"
+            },
+            {
+                "ar": "كلابشة",
+                "en": "Kalabsha"
+            },
+            {
+                "ar": "البصيلية",
+                "en": "El Basiliya"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "البحر الأحمر",
+            "en": "Red Sea"
+        },
+        "cities": [
+            {
+                "ar": "الغردقة",
+                "en": "Hurghada"
+            },
+            {
+                "ar": "رأس غارب",
+                "en": "Ras Gharib"
+            },
+            {
+                "ar": "سفاجا",
+                "en": "Safaga"
+            },
+            {
+                "ar": "القصير",
+                "en": "Quseer"
+            },
+            {
+                "ar": "مرسى علم",
+                "en": "Marsa Alam"
+            },
+            {
+                "ar": "الشلاتين",
+                "en": "Shalateen"
+            },
+            {
+                "ar": "حلايب",
+                "en": "Halayeb"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "الوادي الجديد",
+            "en": "New Valley"
+        },
+        "cities": [
+            {
+                "ar": "الخارجة",
+                "en": "Kharga"
+            },
+            {
+                "ar": "الداخلة",
+                "en": "Dakhla"
+            },
+            {
+                "ar": "الفرافرة",
+                "en": "Farafra"
+            },
+            {
+                "ar": "باريس",
+                "en": "Paris"
+            },
+            {
+                "ar": "بلاط",
+                "en": "Balat"
+            }
+        ]
+    },
+    {
+        "state": {
+            "ar": "مطروح",
+            "en": "Matrouh"
+        },
+        "cities": [
+            {
+                "ar": "مرسى مطروح",
+                "en": "Marsa Matruh"
+            },
+            {
+                "ar": "الحمام",
+                "en": "El Hamam"
+            },
+            {
+                "ar": "العلمين",
+                "en": "El Alamein"
+            },
+            {
+                "ar": "الضبعة",
+                "en": "El Dabaa"
+            },
+            {
+                "ar": "النجيلة",
+                "en": "Negila"
+            },
+            {
+                "ar": "سيدي براني",
+                "en": "Sidi Barani"
+            },
+            {
+                "ar": "السلوم",
+                "en": "El Salloum"
+            },
+            {
+                "ar": "سيوة",
+                "en": "Siwa"
+            }
+        ]
+    }
+]

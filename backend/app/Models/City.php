@@ -11,13 +11,18 @@ class City extends Model
 {
     use BelongsToTenant, HasTranslations, SoftDeletes;
 
-    protected array $translatable = ['name'];
+    protected array $translatable = ['name', 'state'];
 
-    protected $fillable = ['name', 'is_active', 'sort_order'];
+    protected $fillable = ['country_id', 'name', 'state', 'is_active', 'sort_order'];
 
     protected function casts(): array
     {
         return ['is_active' => 'bool'];
+    }
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
     }
 
     public function branches()

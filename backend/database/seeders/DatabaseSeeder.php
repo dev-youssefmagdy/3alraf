@@ -15,6 +15,6 @@ class DatabaseSeeder extends FoundationSeeder
 
     protected function demo(): void
     {
-        $this->call([CatalogSeeder::class, TenantDemoSeeder::class]);
+        $this->call([CountrySeeder::class, CitySeeder::class, CatalogSeeder::class, TenantDemoSeeder::class]);
     }
 }
