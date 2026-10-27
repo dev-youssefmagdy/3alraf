@@ -8,6 +8,7 @@ use App\Models\GrowthExperimentResult;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\StockLevel;
+use App\Models\StorefrontVisit;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
@@ -53,11 +54,19 @@ class MetricsService
         ] + $this->inventory($to);
     }
 
-    /** Orders per cart created (no visit tracking exists): an estimate, only when carts exist. */
+    /**
+     * Conversion = orders placed / unique storefront sessions (storefront_visits, site-wide rows) => `confirmed` once visits exist.
+     * Without any visit data it falls back to orders per cart created (`estimated`).
+     */
     private function conversion(CarbonInterface $from, CarbonInterface $to, int $placed, ?string $channel): array
     {
+        $sessions = (int) StorefrontVisit::where('product_id', 0)->whereBetween('visit_date', [$from->toDateString(), $to->toDateString()])
+            ->when($channel, fn ($q) => $q->where('channel', $channel))->sum('unique_sessions');
+        if ($sessions > 0) {
+            return self::m(min($placed, $sessions) / $sessions * 100, 'confirmed');
+        }
         if ($channel) {
-            return self::m(null, 'estimated', ['channel_visits']);
+            return self::m(null, 'estimated', ['visits']);
         }
         $carts = Cart::whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count();
 
@@ -143,7 +152,8 @@ class MetricsService
     public function byChannel(CarbonInterface $from, CarbonInterface $to): array
     {
         $out = [];
-        foreach (['direct', 'affiliate'] as $ch) {
+        $channels = GrowthDailyStat::where('scope', 'order')->whereBetween('stat_date', [$from->toDateString(), $to->toDateString()])->distinct()->pluck('channel')->all();
+        foreach ($channels ?: ['direct'] as $ch) {
             $s = $this->summary($from, $to, $ch);
             $out[$ch] = array_intersect_key($s, array_flip(['orders_placed', 'orders_completed', 'revenue', 'contribution_margin', 'contribution_margin_percent', 'aov', 'cancel_rate', 'return_rate']));
         }
@@ -151,15 +161,43 @@ class MetricsService
         return $out;
     }
 
-    /** Bundle performance from order lines (revenue, cogs, units, orders). Line-level margin: shipping/fees are not allocated to bundles. */
+    /**
+     * Bundle performance from delivered order lines, NET of partial returns. Margin allocates the order's other variable costs
+     * (packaging, shipping subsidy, net payment fees, affiliate commission, return shipping) to each bundle line by its share of the order's line subtotal.
+     */
     public function bundles(CarbonInterface $from, CarbonInterface $to): array
     {
-        return OrderItem::whereNotNull('bundle_id')->whereHas('order', fn ($q) => $q->where('status', 'delivered')->whereBetween('placed_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]))
-            ->selectRaw('bundle_id, MAX(bundle_name) name, SUM(quantity) units, COUNT(DISTINCT order_id) orders, SUM(line_subtotal - line_discount) revenue, SUM(unit_cost * quantity) cogs, SUM(CASE WHEN unit_cost IS NULL OR unit_cost <= 0 THEN 1 ELSE 0 END) nocost')
-            ->groupBy('bundle_id')->get()->map(fn ($r) => [
-                'bundle_id' => (int) $r->bundle_id, 'name' => $r->name, 'units' => (int) $r->units, 'orders' => (int) $r->orders, 'revenue' => round((float) $r->revenue, 2),
-                'line_margin' => $r->nocost > 0 ? self::m(null, 'confirmed', ['cogs']) : self::m((float) $r->revenue - (float) $r->cogs),
-            ])->all();
+        $acc = [];
+        Order::with('items', 'returns')->where('status', 'delivered')->whereBetween('placed_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->whereHas('items', fn ($q) => $q->whereNotNull('bundle_id'))->chunkById(200, function ($orders) use (&$acc) {
+                foreach ($orders as $o) {
+                    $f = StatsAggregator::orderFigures($o);
+                    $gross = max((float) $o->items->sum('line_subtotal'), 0.01);
+                    foreach ($o->items->whereNotNull('bundle_id') as $it) {
+                        $kept = StatsAggregator::keptRatio($it);
+                        $qty = max((int) $it->quantity - (int) $it->returned_qty, 0);
+                        $a = &$acc[$it->bundle_id];
+                        $a ??= ['name' => $it->bundle_name, 'units' => 0, 'orders' => [], 'revenue' => 0.0, 'cogs' => 0.0, 'other' => 0.0, 'missing' => []];
+                        $a['units'] += $qty;
+                        $a['orders'][$o->id] = true;
+                        $a['revenue'] += ((float) $it->line_subtotal - (float) $it->line_discount) * $kept;
+                        $a['cogs'] += (float) $it->unit_cost * $qty;
+                        $a['other'] += $f['other'] * ((float) $it->line_subtotal / $gross);
+                        if ($it->unit_cost === null || (float) $it->unit_cost <= 0) {
+                            $a['missing']['cogs'] = 'cogs';
+                        }
+                        if ($f['missing_shipping']) {
+                            $a['missing']['shipping_cost'] = 'shipping_cost';
+                        }
+                        unset($a);
+                    }
+                }
+            });
+
+        return collect($acc)->map(fn ($a, $id) => [
+            'bundle_id' => (int) $id, 'name' => $a['name'], 'units' => $a['units'], 'orders' => count($a['orders']), 'revenue' => round($a['revenue'], 2),
+            'line_margin' => $a['missing'] ? self::m(null, 'confirmed', array_values($a['missing'])) : self::m($a['revenue'] - $a['cogs'] - $a['other']),
+        ])->values()->all();
     }
 
     /** Return reasons (counts + value), PII-free. */

@@ -26,7 +26,7 @@ Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)
 Route::post('webhooks/payments/{method}', PaymentWebhookController::class)->middleware('throttle:webhooks')->whereNumber('method')->name('webhooks.payments');
 
-Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->middleware(['set.locale', 'affiliate.track'])->name('storefront.')->group(function () {
+Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->middleware(['set.locale', 'affiliate.track', 'growth.track'])->name('storefront.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
     Route::middleware('guest:web')->group(function () {

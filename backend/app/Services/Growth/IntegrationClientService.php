@@ -3,13 +3,19 @@
 namespace App\Services\Growth;
 
 use App\Models\IntegrationClient;
+use App\Repositories\Contracts\IntegrationClientRepositoryInterface;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /** Issues / rotates / revokes integration credentials. Plain token + HMAC secret are returned ONCE (only a hash / ciphertext is stored). */
 class IntegrationClientService
 {
-    public function __construct(private ActionLogger $log) {}
+    public function __construct(private ActionLogger $log, private IntegrationClientRepositoryInterface $repo) {}
+
+    public function findOrFail(int $id): IntegrationClient
+    {
+        return $this->repo->findOrFail($id);
+    }
 
     /** @return array{0:IntegrationClient,1:string,2:string} client, plain token, plain hmac secret */
     public function create(string $name, array $scopes, ?string $webhookUrl, ?int $adminId): array
@@ -17,7 +23,7 @@ class IntegrationClientService
         $scopes = $this->validScopes($scopes);
         $this->assertWebhook($webhookUrl);
         [$prefix, $token, $secret] = $this->credentials();
-        $client = IntegrationClient::create(['name' => $name, 'token_prefix' => $prefix, 'token_hash' => hash('sha256', $token), 'hmac_secret' => $secret, 'scopes' => $scopes, 'webhook_url' => $webhookUrl ?: null]);
+        $client = $this->repo->create(['name' => $name, 'token_prefix' => $prefix, 'token_hash' => hash('sha256', $token), 'hmac_secret' => $secret, 'scopes' => $scopes, 'webhook_url' => $webhookUrl ?: null]);
         $this->log->log('integration.client.created', 'admin', $adminId, null, $client, 'ok', ['scopes' => $scopes]);
 
         return [$client, $prefix.'.'.$token, $secret];
@@ -27,7 +33,7 @@ class IntegrationClientService
     {
         $scopes = $this->validScopes($scopes);
         $this->assertWebhook($webhookUrl);
-        $c->update(['name' => $name, 'scopes' => $scopes, 'webhook_url' => $webhookUrl ?: null]);
+        $c = $this->repo->update($c, ['name' => $name, 'scopes' => $scopes, 'webhook_url' => $webhookUrl ?: null]);
         $this->log->log('integration.client.updated', 'admin', $adminId, null, $c, 'ok', ['scopes' => $scopes]);
 
         return $c;
@@ -40,7 +46,7 @@ class IntegrationClientService
             throw ValidationException::withMessages(['state' => __('growth_hub.clients.already_revoked')]);
         }
         [$prefix, $token, $secret] = $this->credentials();
-        $c->update(['token_prefix' => $prefix, 'token_hash' => hash('sha256', $token), 'hmac_secret' => $secret]);
+        $this->repo->update($c, ['token_prefix' => $prefix, 'token_hash' => hash('sha256', $token), 'hmac_secret' => $secret]);
         $this->log->log('integration.client.rotated', 'admin', $adminId, null, $c);
 
         return [$prefix.'.'.$token, $secret];
@@ -48,7 +54,7 @@ class IntegrationClientService
 
     public function revoke(IntegrationClient $c, ?int $adminId): void
     {
-        $c->update(['revoked_at' => now()]);
+        $this->repo->update($c, ['revoked_at' => now()]);
         $this->log->log('integration.client.revoked', 'admin', $adminId, null, $c);
     }
 
@@ -59,7 +65,7 @@ class IntegrationClientService
             return null;
         }
         [$prefix, $token] = explode('.', $bearer, 2);
-        $c = IntegrationClient::withoutGlobalScopes()->where('token_prefix', $prefix)->first();
+        $c = $this->repo->findByPrefix($prefix);
 
         return $c && ! $c->isRevoked() && hash_equals($c->token_hash, hash('sha256', $token)) ? $c : null;
     }
@@ -92,7 +98,7 @@ class IntegrationClientService
     {
         do {
             $prefix = Str::lower(Str::random(10));
-        } while (IntegrationClient::withoutGlobalScopes()->where('token_prefix', $prefix)->exists());
+        } while ($this->repo->prefixExists($prefix));
 
         return [$prefix, Str::random(48), Str::random(48)];
     }

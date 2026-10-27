@@ -4,6 +4,7 @@ namespace App\Services\Growth;
 
 use App\Models\GrowthExperiment;
 use App\Models\GrowthExperimentResult;
+use App\Repositories\Contracts\GrowthExperimentRepositoryInterface;
 use Illuminate\Validation\ValidationException;
 
 /** Experiment & outcome log. Budget caps are bounded by the tenant guardrail; a cap is a ceiling, never a spend instruction. */
@@ -12,12 +13,17 @@ class ExperimentService
     public const STATUSES = ['draft', 'running', 'paused', 'completed', 'cancelled'];
     public const OUTCOMES = ['win', 'loss', 'inconclusive'];
 
-    public function __construct(private ActionLogger $log, private GrowthConfig $config) {}
+    public function __construct(private ActionLogger $log, private GrowthConfig $config, private GrowthExperimentRepositoryInterface $repo) {}
+
+    public function find(int $id): GrowthExperiment
+    {
+        return $this->repo->findWithResults($id);
+    }
 
     public function create(array $d, ?int $adminId): GrowthExperiment
     {
         $this->check($d);
-        $e = GrowthExperiment::create($this->clean($d) + ['created_by' => $adminId]);
+        $e = $this->repo->create($this->clean($d) + ['created_by' => $adminId]);
         $this->log->log('experiment.created', 'admin', $adminId, null, $e);
 
         return $e;
@@ -26,7 +32,7 @@ class ExperimentService
     public function update(GrowthExperiment $e, array $d, ?int $adminId): GrowthExperiment
     {
         $this->check($d);
-        $e->update($this->clean($d));
+        $e = $this->repo->update($e, $this->clean($d));
         $this->log->log('experiment.updated', 'admin', $adminId, null, $e, 'ok', ['status' => $e->status, 'outcome' => $e->outcome]);
 
         return $e;
@@ -35,7 +41,7 @@ class ExperimentService
     public function delete(GrowthExperiment $e, ?int $adminId): void
     {
         $this->log->log('experiment.deleted', 'admin', $adminId, null, $e);
-        $e->delete();
+        $this->repo->delete($e);
     }
 
     public function addResult(GrowthExperiment $e, array $d, string $source = 'admin', ?int $actorId = null): GrowthExperimentResult

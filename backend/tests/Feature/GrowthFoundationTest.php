@@ -24,7 +24,9 @@ beforeEach(function () {
     $this->tenant = Tenant::where('slug', 'egy')->first();
     $this->other = Tenant::create(['slug' => 'uae', 'name' => 'UAE Store', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
     app(GrowthAccess::class)->set($this->tenant, true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->tenant);
     app(GrowthAccess::class)->set($this->other, true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->other);
     app()->instance('currentTenant', $this->tenant->refresh());
     $this->base = 'http://egy.3alraf.test';
 });

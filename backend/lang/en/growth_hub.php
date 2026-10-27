@@ -7,11 +7,13 @@ return [
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
+        'feature_disabled' => 'This Growth feature is switched off for this tenant.',
         'unauthenticated' => 'Invalid credentials, signature or timestamp.', 'growth_disabled' => 'Growth system is disabled for this tenant.', 'forbidden_scope' => 'This client lacks the required scope.',
         'too_many_requests' => 'Too many requests.', 'idempotency_required' => 'The Idempotency-Key header is required (max 120 chars).',
         'idempotency_mismatch' => 'This Idempotency-Key was already used with a different request.', 'in_flight' => 'A request with this Idempotency-Key is still being processed.',
     ],
     'clients' => [
+        'updated' => 'Integration updated.',
         'title' => 'Integration clients (n8n)', 'hint' => 'Each client gets a bearer token and an HMAC secret. There is no scope that can change prices, refunds, stock or ad budgets. API base:',
         'create' => 'Create client', 'created' => 'Client created. Copy the credentials now.', 'show_once' => 'Copy these now: they are shown only once.', 'token' => 'Bearer token', 'hmac' => 'HMAC secret',
         'webhook_hint' => 'Public https endpoint that receives signed events (optional).', 'last_used' => 'Last used', 'active' => 'Active', 'revoked' => 'Revoked',
@@ -45,6 +47,9 @@ return [
             'max_days_of_cover' => 'Maximum days of cover', 'reorder_cash_cap' => 'Reorder cash cap', 'ad_daily_budget_cap' => 'Ad daily budget cap', 'ad_total_budget_cap' => 'Ad total budget cap', 'auto_reply_allowlist' => 'Auto-reply allowlist'],
     ],
     'brief' => [
+        'data_quality' => 'Data quality', 'dq' => ['product_cost_missing' => 'Active products with no cost (0 = unknown)', 'order_line_cost_missing' => 'Delivered order lines with no cost', 'shipping_cost_missing' => 'Delivered orders where shipping cost is 0 though the customer paid shipping'],
+        'decision' => 'Decision', 'decision_status' => ['accepted' => 'Accepted', 'dismissed' => 'Dismissed', 'done' => 'Done'], 'accept' => 'Accept', 'accept_experiment' => 'Accept + create experiment', 'mark_done' => 'Mark done', 'dismiss' => 'Dismiss',
+        'note_prompt' => 'Note / owner (optional)', 'after_prompt' => 'Metric value after the action (optional)',
         'title' => 'Owner brief', 'daily' => 'Daily', 'weekly' => 'Weekly', 'date' => 'Date', 'load' => 'Load', 'ai' => 'Add AI summary (uses only the numbers below)', 'loading' => 'Loading...', 'error' => 'Could not load the brief.',
         'confirmed' => 'Confirmed', 'estimated' => 'Estimated', 'insufficient' => 'Insufficient data', 'missing' => 'Missing', 'evidence' => 'Evidence',
         'sales' => 'Sales (completed orders)', 'orders' => 'Completed orders', 'revenue' => 'Revenue (ex VAT)', 'aov' => 'Average order value', 'margin' => 'Contribution margin', 'margin_pct' => 'Margin %',
@@ -71,4 +76,10 @@ return [
         'fields' => ['content_asset_id' => 'Asset', 'channel' => 'Channel', 'scheduled_for' => 'Date', 'note' => 'Note'],
         'package' => ['short_description' => 'Short description', 'long_description' => 'Long description', 'angles' => 'Marketing angles', 'hooks' => 'Hooks', 'reel_scripts' => 'Reel scripts', 'tiktok_scripts' => 'TikTok scripts', 'stories' => 'Stories', 'ad_copy' => 'Ad copy', 'ctas' => 'Calls to action', 'faq' => 'FAQ', 'bundle_ideas' => 'Bundle ideas', 'photo_briefs' => 'Photography briefs', 'ab_variants' => 'A/B variants', 'edit_hint' => 'One item per line. Edit and press Save; the Truth Guard re-checks every save.'],
     ],
+
+    'feature_disabled' => 'This Growth feature is switched off.',
+    'decisions' => ['bad_status' => 'Invalid decision status.'],
+    'features' => ['title' => 'Feature switches', 'hint' => 'Turn each Growth feature on or off. Data is never deleted; switching back on resumes where you left off.', 'needs' => 'Needs', 'inactive_dep' => 'On, but inactive: a required feature is off.',
+        'groups' => ['foundation' => 'Foundation', 'insight' => 'Insight', 'content' => 'Content', 'offers' => 'Offers', 'engagement' => 'Engagement', 'growth' => 'Growth', 'operations' => 'Operations']],
+    'central' => ['title' => 'Growth system', 'hint' => 'Master switch. Store owners cannot enable it themselves; each feature then has its own switch in the store.', 'enabled' => 'Enable the Growth system for this store'],
 ];

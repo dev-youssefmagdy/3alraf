@@ -8,6 +8,36 @@ return [
     // Platform default of the per-tenant `growth` feature flag (tenants.settings.growth.enabled overrides).
     'enabled_default' => env('GROWTH_ENABLED_DEFAULT', false),
 
+    // Per-feature switches (plan section 9). A feature is active only if the master flag is on, its own switch is on
+    // (tenants.settings.growth.features.{key}, default OFF) and every depends_on feature is active. built=false = not yet implemented (hidden in UI).
+    'features' => [
+        'integration_api' => ['ar' => 'واجهة التكامل (n8n)', 'en' => 'Integration API (n8n)', 'group' => 'foundation', 'depends_on' => [], 'built' => true],
+        'events_outbox' => ['ar' => 'إرسال الأحداث (Webhooks)', 'en' => 'Event outbox (webhooks)', 'group' => 'foundation', 'depends_on' => ['integration_api'], 'built' => true],
+        'approvals' => ['ar' => 'طابور الموافقات', 'en' => 'Approval queue', 'group' => 'foundation', 'depends_on' => [], 'built' => true],
+        'experiments' => ['ar' => 'التجارب', 'en' => 'Experiments', 'group' => 'foundation', 'depends_on' => [], 'built' => true],
+        'brief' => ['ar' => 'تقرير المالك اليومي', 'en' => 'Owner brief', 'group' => 'insight', 'depends_on' => [], 'built' => true],
+        'brand_memory' => ['ar' => 'ذاكرة العلامة', 'en' => 'Brand memory', 'group' => 'content', 'depends_on' => [], 'built' => true],
+        'truth_guard' => ['ar' => 'حارس صدق المنتج', 'en' => 'Product truth guard', 'group' => 'content', 'depends_on' => ['brand_memory'], 'built' => true],
+        'content_factory' => ['ar' => 'مصنع المحتوى', 'en' => 'Content factory', 'group' => 'content', 'depends_on' => ['brand_memory'], 'built' => true],
+        'bundle_engine' => ['ar' => 'محرك الباندل', 'en' => 'Bundle engine', 'group' => 'offers', 'depends_on' => [], 'built' => false],
+        'bundle_ab' => ['ar' => 'اختبار الباندل A/B', 'en' => 'Bundle A/B', 'group' => 'offers', 'depends_on' => ['bundle_engine', 'experiments'], 'built' => false],
+        'seasonal_calendar' => ['ar' => 'التقويم الموسمي', 'en' => 'Seasonal calendar', 'group' => 'offers', 'depends_on' => [], 'built' => false],
+        'gift_finder' => ['ar' => 'باحث الهدايا', 'en' => 'Gift finder', 'group' => 'offers', 'depends_on' => [], 'built' => false],
+        'interactions' => ['ar' => 'المحادثات والتفاعلات', 'en' => 'Interactions', 'group' => 'engagement', 'depends_on' => ['integration_api'], 'built' => false],
+        'voc' => ['ar' => 'صوت العميل', 'en' => 'Voice of customer', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => false],
+        'reputation_radar' => ['ar' => 'رادار السمعة', 'en' => 'Reputation radar', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => false],
+        'comment_to_cart' => ['ar' => 'من التعليق للسلة', 'en' => 'Comment to cart', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => false],
+        'auto_reply' => ['ar' => 'الرد الآلي', 'en' => 'Auto reply', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => false],
+        'missed_opportunities' => ['ar' => 'الفرص الضائعة', 'en' => 'Missed opportunities', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => false],
+        'experiment_lab' => ['ar' => 'معمل التجارب', 'en' => 'Experiment lab', 'group' => 'growth', 'depends_on' => ['experiments'], 'built' => false],
+        'small_batch_lab' => ['ar' => 'معمل الدفعات الصغيرة', 'en' => 'Small-batch lab', 'group' => 'growth', 'depends_on' => [], 'built' => false],
+        'ambassadors' => ['ar' => 'السفراء', 'en' => 'Ambassadors', 'group' => 'growth', 'depends_on' => [], 'built' => false],
+        'inventory_engine' => ['ar' => 'محرك المخزون', 'en' => 'Inventory engine', 'group' => 'operations', 'depends_on' => [], 'built' => false],
+        'return_intel' => ['ar' => 'ذكاء المرتجعات', 'en' => 'Return intelligence', 'group' => 'operations', 'depends_on' => [], 'built' => false],
+        'trend_radar' => ['ar' => 'رادار الترند', 'en' => 'Trend radar', 'group' => 'operations', 'depends_on' => [], 'built' => false],
+        'ceo_challenge' => ['ar' => 'تحدي المدير', 'en' => 'CEO challenge', 'group' => 'operations', 'depends_on' => [], 'built' => false],
+    ],
+
     // Scopes an integration client may hold. There is deliberately NO scope for prices, refunds, stock or ad budgets.
     'scopes' => [
         'read' => 'Read catalog / metrics / orders (aggregate, no PII)',

@@ -52,7 +52,7 @@ class EmitGrowthEvents
                 $now = $s->on_hand - $s->reserved;
                 $before = ($s->getOriginal('on_hand') ?? $s->on_hand) - ($s->getOriginal('reserved') ?? $s->reserved);
                 if ($now <= $threshold && $before > $threshold) { // crossing only: no event per movement while already low
-                    $self()->emit('stock.low', $s->tenant_id, ['product_id' => $s->product_id, 'variant_id' => $s->product_variant_id ?: null, 'branch_id' => $s->branch_id, 'available' => $now, 'threshold' => $threshold]);
+                    $self()->emitLowStock($s->tenant_id, ['product_id' => $s->product_id, 'variant_id' => $s->product_variant_id ?: null, 'branch_id' => $s->branch_id, 'available' => $now, 'threshold' => $threshold]);
                 }
             });
         });
@@ -61,6 +61,12 @@ class EmitGrowthEvents
     private function order(Order $o): array
     {
         return ['order_id' => $o->id, 'number' => $o->number, 'status' => $o->status?->value ?? (string) $o->status, 'total' => (string) $o->total, 'currency' => $o->currency, 'affiliate_id' => $o->affiliate_id];
+    }
+
+    public function emitLowStock(?int $tenantId, array $data): void
+    {
+        $tenant = $tenantId ? Tenant::find($tenantId) : current_tenant();
+        $this->events->emitOnce(GrowthEventService::lowStockKey($data), 'stock.low', $data, $tenant);
     }
 
     public function emit(string $type, ?int $tenantId, array $data): void

@@ -17,12 +17,22 @@ class BriefController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:growth.view')];
+        return [new Middleware('can:growth.view'), new Middleware('can:growth.manage', only: ['decide'])];
     }
 
     public function index()
     {
         return view('tenant.growth.brief');
+    }
+
+    public function decide(Request $r, \App\Services\Growth\BriefDecisionService $decisions): JsonResponse
+    {
+        $d = $r->validate(['recommendation_key' => 'required|string|max:120', 'status' => 'required|in:accepted,dismissed,done', 'kind' => 'nullable|string|max:60', 'owner' => 'nullable|string|max:100', 'note' => 'nullable|string|max:500',
+            'metric_after' => 'nullable|numeric', 'create_experiment' => 'nullable|boolean', 'evidence' => 'nullable|array', 'evidence.*.source' => 'string|max:60', 'evidence.*.metric' => 'string|max:60', 'evidence.*.value' => 'nullable', 'evidence.*.period' => 'nullable|string|max:40']);
+        $d['create_experiment'] = $r->boolean('create_experiment') && app(\App\Services\Growth\GrowthFeatures::class)->active('experiments', current_tenant());
+        $row = $decisions->decide($d, auth('tenant')->id());
+
+        return $this->ok(__('admin.saved'), null, ['status' => $row->status, 'experiment_id' => $row->experiment_id]);
     }
 
     public function data(Request $r): JsonResponse

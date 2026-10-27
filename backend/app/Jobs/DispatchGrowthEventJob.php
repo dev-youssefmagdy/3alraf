@@ -24,7 +24,7 @@ class DispatchGrowthEventJob implements ShouldQueue
     {
         // claim: only a pending, due event; bump attempts under lock so concurrent workers cannot double-send
         $e = DB::transaction(function () {
-            $e = GrowthEvent::withoutGlobalScopes()->lockForUpdate()->find($this->eventId);
+            $e = app(\App\Repositories\Contracts\GrowthEventRepositoryInterface::class)->lockForUpdate($this->eventId);
             if (! $e || $e->status !== 'pending' || ($e->next_attempt_at && $e->next_attempt_at->isFuture())) {
                 return null;
             }
@@ -38,7 +38,7 @@ class DispatchGrowthEventJob implements ShouldQueue
             return;
         }
 
-        $clients = IntegrationClient::withoutGlobalScopes()->where('tenant_id', $e->tenant_id)->whereNull('revoked_at')->whereNotNull('webhook_url')->get();
+        $clients = app(\App\Repositories\Contracts\IntegrationClientRepositoryInterface::class)->webhookTargets($e->tenant_id);
         $done = (array) ($e->delivered_to ?? []);
         $body = json_encode($e->payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $errors = [];

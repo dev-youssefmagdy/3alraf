@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Central;
 
+use App\Services\Growth\ActionLogger;
+use App\Services\Growth\GrowthAccess;
 use App\DataTables\TenantDataTable;
 use App\DTOs\TenantData;
 use App\Http\Controllers\Controller;
@@ -22,7 +24,7 @@ class TenantController extends Controller implements HasMiddleware
         return [
             new Middleware('can:tenants.view', only: ['index', 'datatable']),
             new Middleware('can:tenants.create', only: ['create', 'store']),
-            new Middleware('can:tenants.edit', only: ['edit', 'update']),
+            new Middleware('can:tenants.edit', only: ['edit', 'update', 'growth']),
             new Middleware('can:tenants.delete', only: ['destroy']),
         ];
     }
@@ -61,6 +63,19 @@ class TenantController extends Controller implements HasMiddleware
         $this->service->update($tenant, TenantData::fromRequest($request));
 
         return $this->ok(__('admin.saved'), route('central.tenants.index'));
+    }
+
+    /** Central admin only: master switch of the Growth system for a tenant (audited). */
+    public function growth(\Illuminate\Http\Request $request, Tenant $tenant, GrowthAccess $access, ActionLogger $log): JsonResponse
+    {
+        $on = $request->boolean('growth_enabled');
+        $access->set($tenant, $on);
+        $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
+        app()->instance('currentTenant', $tenant);
+        $log->log($on ? 'growth.enabled' : 'growth.disabled', 'admin', null, null, $tenant, 'ok', ['central_admin_id' => auth('central')->id()]);
+        $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
+
+        return $this->ok(__('admin.saved'), route('central.tenants.edit', $tenant));
     }
 
     public function destroy(Tenant $tenant): JsonResponse

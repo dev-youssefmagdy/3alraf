@@ -12,7 +12,7 @@
     <div id="brief-out" class="mt-4 space-y-4"></div>
     <script>
     (function () {
-        const T = @json($t), url = @json(route('tenant.growth.brief.data'));
+        const T = @json($t), url = @json(route('tenant.growth.brief.data')), decideUrl = @json(route('tenant.growth.brief.decision')), canManage = @json(auth('tenant')->user()?->can('growth.manage') ?? false);
         const out = document.getElementById('brief-out');
         const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined && text !== null) e.textContent = text; if (cls) e.className = cls; return e; };
         const metric = (m) => { if (!m) return '-'; if (m.value === null) return T.insufficient + (m.missing && m.missing.length ? ' (' + T.missing + ': ' + m.missing.join(', ') + ')' : ''); return m.value + ' [' + T[m.confidence] + ']'; };
@@ -31,11 +31,25 @@
             if (b.why_customers_do_not_buy) { const w = b.why_customers_do_not_buy, c = card(T.reasons); line(c, T.cancel + ': ' + metric(w.cancel_rate)); line(c, T['return'] + ': ' + metric(w.return_rate)); w.return_reasons.forEach(r => line(c, r.reason + ': ' + r.count)); }
             if (b.reorder_candidates) { const c = card(T.reorder); if (!b.reorder_candidates.length) line(c, T.none); b.reorder_candidates.forEach(p => line(c, (names[p.product_id] || '#' + p.product_id) + ': ' + (p.days_of_cover ?? '-') + ' ' + T.cover)); }
             if (b.experiment_results) { const c = card(T.experiments); if (!b.experiment_results.length) line(c, T.none); b.experiment_results.forEach(x => line(c, x.name + ' [' + x.status + '] ' + (x.outcome || ''))); }
+            if (b.data_quality && b.data_quality.length) { const c = card(T.data_quality); b.data_quality.forEach(q => line(c, (T.dq[q.key] || q.key) + ': ' + q.count + (q.ids.length ? ' (#' + q.ids.join(', #') + ')' : ''))); }
             const r = card(T.recs); if (!b.recommendations.length) line(r, T.none);
             b.recommendations.forEach(x => { const d = el('div', null, 'mb-2 rounded bg-slate-50 p-2'); d.appendChild(el('p', (T.kind[x.kind] || x.kind) + (x.params.product_id ? ': ' + (names[x.params.product_id] || '#' + x.params.product_id) : ''), 'text-sm font-medium'));
                 d.appendChild(el('p', T.impact + ' ' + x.impact + '/5, ' + T.effort + ' ' + x.effort + '/5', 'text-xs text-slate-500'));
-                x.evidence.forEach(e => d.appendChild(el('p', T.evidence + ': ' + e.source + '.' + e.metric + ' = ' + e.value + ' (' + e.period + ')', 'text-xs text-slate-500'))); r.appendChild(d); });
+                x.evidence.forEach(e => d.appendChild(el('p', T.evidence + ': ' + e.source + '.' + e.metric + ' = ' + e.value + ' (' + e.period + ')', 'text-xs text-slate-500')));
+                if (x.decision) d.appendChild(el('p', T.decision + ': ' + (T.decision_status[x.decision.status] || x.decision.status) + (x.decision.experiment_id ? ' #' + x.decision.experiment_id : ''), 'text-xs font-semibold text-emerald-700'));
+                if (canManage) { const bar = el('div', null, 'mt-1 flex flex-wrap gap-2'); [['accepted', T.accept, false], ['accepted', T.accept_experiment, true], ['done', T.mark_done, false], ['dismissed', T.dismiss, false]].forEach(([st, label, exp]) => { const bt = el('button', label, 'btn-sm btn-secondary'); bt.type = 'button'; bt.addEventListener('click', () => decide(x, st, exp)); bar.appendChild(bt); }); d.appendChild(bar); }
+                r.appendChild(d); });
             if (b.ai_summary) { const c = card(T.ai_summary); c.appendChild(el('p', b.ai_summary, 'whitespace-pre-line text-sm')); }
+        }
+        async function decide(x, status, exp) {
+            let note = null, after = null;
+            if (status !== 'dismissed') { note = prompt(T.note_prompt) || null; }
+            if (status === 'done') { after = prompt(T.after_prompt); }
+            const res = await fetch(decideUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ recommendation_key: x.key, kind: x.kind, status, note, metric_after: after === '' ? null : after, create_experiment: exp, evidence: x.evidence }) });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok) { toastr.error(j.message || 'Error'); return; }
+            toastr.success(j.message); document.getElementById('brief-form').requestSubmit();
         }
         document.getElementById('brief-form').addEventListener('submit', async (e) => {
             e.preventDefault(); out.replaceChildren(el('p', T.loading));

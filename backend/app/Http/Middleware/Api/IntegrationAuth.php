@@ -4,6 +4,7 @@ namespace App\Http\Middleware\Api;
 
 use App\Models\Tenant;
 use App\Services\Growth\GrowthAccess;
+use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\IntegrationClientService;
 use App\Services\Growth\SignatureService;
 use Closure;
@@ -18,9 +19,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class IntegrationAuth
 {
-    public function __construct(private IntegrationClientService $clients, private SignatureService $sig, private GrowthAccess $access) {}
+    public function __construct(private IntegrationClientService $clients, private SignatureService $sig, private GrowthAccess $access, private GrowthFeatures $features) {}
 
-    public function handle(Request $request, Closure $next, string $scope = ''): Response
+    public function handle(Request $request, Closure $next, string $scope = '', string $feature = ''): Response
     {
         Auth::forgetGuards();
         $bearer = (string) $request->bearerToken();
@@ -34,6 +35,9 @@ class IntegrationAuth
         $tenant = Tenant::find($client->tenant_id);
         if (! $tenant || ! $this->access->enabled($tenant)) {
             return $this->deny(403, 'growth_disabled');
+        }
+        if (! $this->features->active('integration_api', $tenant) || ($feature !== '' && ! $this->features->active($feature, $tenant))) {
+            return $this->deny(403, 'feature_disabled');
         }
         if ($scope !== '' && ! $client->hasScope($scope)) {
             return $this->deny(403, 'forbidden_scope');

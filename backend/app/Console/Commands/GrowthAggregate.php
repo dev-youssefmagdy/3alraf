@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Tenant;
-use App\Services\Growth\GrowthAccess;
+use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\StatsAggregator;
 use Illuminate\Console\Command;
 
@@ -13,11 +13,11 @@ class GrowthAggregate extends Command
 
     protected $description = 'Rebuild growth_daily_stats for growth-enabled tenants (idempotent)';
 
-    public function handle(GrowthAccess $access, StatsAggregator $stats): int
+    public function handle(GrowthFeatures $features, StatsAggregator $stats): int
     {
         $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
         foreach (Tenant::query()->when($this->option('tenant'), fn ($q, $s) => $q->where('slug', $s))->get() as $t) {
-            if (! $access->enabled($t)) {
+            if (! $features->active('integration_api', $t) && ! $features->active('brief', $t)) {
                 continue;
             }
             app()->instance('currentTenant', $t);

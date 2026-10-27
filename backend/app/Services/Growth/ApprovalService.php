@@ -3,6 +3,7 @@
 namespace App\Services\Growth;
 
 use App\Models\GrowthApproval;
+use App\Repositories\Contracts\GrowthApprovalRepositoryInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -18,7 +19,7 @@ class ApprovalService
     /** @var array<string,Closure> */
     private array $handlers = [];
 
-    public function __construct(private ActionLogger $log)
+    public function __construct(private ActionLogger $log, private GrowthApprovalRepositoryInterface $repo)
     {
         // Built-in no-op type: a note / task for a human (useful for n8n proposals before module handlers exist).
         $this->register('note', fn (GrowthApproval $a): array => ['acknowledged' => true]);
@@ -39,7 +40,7 @@ class ApprovalService
         if (! isset($this->handlers[$type])) {
             throw ValidationException::withMessages(['type' => __('growth_hub.approvals.unknown_type', ['type' => $type])]);
         }
-        $a = GrowthApproval::create([
+        $a = $this->repo->create([
             'type' => $type, 'title' => mb_substr($title, 0, 200), 'payload' => PiiScrubber::scrub($payload), 'status' => GrowthApproval::PENDING, 'requested_by' => $requestedBy,
             'subject_type' => $subject?->getMorphClass(), 'subject_id' => $subject?->getKey(), 'expires_at' => now()->addDays($ttlDays ?? (int) config('growth.approvals.ttl_days')),
         ]);
@@ -52,7 +53,7 @@ class ApprovalService
     {
         try {
             $a = DB::transaction(function () use ($id, $adminId, $reason) {
-                $a = GrowthApproval::lockForUpdate()->findOrFail($id);
+                $a = $this->repo->lockForUpdate($id);
                 $this->assertDecidable($a);
                 $handler = $this->handlers[$a->type] ?? null;
                 if (! $handler) {
@@ -69,7 +70,7 @@ class ApprovalService
             $this->markExpired($id);
             throw ValidationException::withMessages(['state' => __('growth_hub.approvals.expired')]);
         } catch (\Throwable $e) {
-            $this->log->log('approval.approve', 'admin', $adminId, $reason, GrowthApproval::find($id), 'failed', ['error' => class_basename($e)]);
+            $this->log->log('approval.approve', 'admin', $adminId, $reason, $this->repo->find($id), 'failed', ['error' => class_basename($e)]);
             throw ValidationException::withMessages(['state' => __('growth_hub.approvals.handler_failed')]);
         }
         $this->log->log('approval.approved', 'admin', $adminId, $reason, $a, 'ok', ['type' => $a->type]);
@@ -81,7 +82,7 @@ class ApprovalService
     {
         try {
             $a = DB::transaction(function () use ($id, $adminId, $reason) {
-                $a = GrowthApproval::lockForUpdate()->findOrFail($id);
+                $a = $this->repo->lockForUpdate($id);
                 $this->assertDecidable($a);
                 $a->update(['status' => GrowthApproval::REJECTED, 'decided_by' => $adminId, 'decided_at' => now(), 'reason' => $reason]);
 
@@ -98,8 +99,7 @@ class ApprovalService
 
     public function expireDue(): int
     {
-        return GrowthApproval::withoutGlobalScopes()->where('status', GrowthApproval::PENDING)->where('expires_at', '<', now())
-            ->update(['status' => GrowthApproval::EXPIRED, 'decided_at' => now()]);
+        return $this->repo->expireDue(app(GrowthFeatures::class)->tenantsWith('approvals')->pluck('id'));
     }
 
     private function assertDecidable(GrowthApproval $a): void
@@ -114,7 +114,7 @@ class ApprovalService
 
     private function markExpired(int $id): void
     {
-        GrowthApproval::where('id', $id)->where('status', GrowthApproval::PENDING)->update(['status' => GrowthApproval::EXPIRED, 'decided_at' => now()]);
+        $this->repo->markExpired($id);
     }
 }
 

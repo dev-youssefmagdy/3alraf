@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Blade::if('growthFeature', fn (string $key) => app(\App\Services\Growth\GrowthFeatures::class)->active($key, current_tenant()));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
         // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).
         foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {

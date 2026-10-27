@@ -15,7 +15,7 @@ class Order extends Model
 {
     use Audited, BelongsToTenant, SoftDeletes;
 
-    protected $fillable = ['locale', 'number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'status', 'payment_status', 'payment_proof', 'payment_proof_hash', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'packaging_option_id', 'packaging_name', 'packaging_fee', 'packaging_cost', 'packaging_tax', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
+    protected $fillable = ['locale', 'number', 'public_token', 'customer_id', 'customer_name', 'customer_phone', 'customer_email', 'city_id', 'address', 'notes', 'branch_id', 'shipping_company_id', 'payment_method_id', 'prepay_method_id', 'cod_amount', 'prepaid_shipping', 'discount_code_id', 'affiliate_id', 'channel', 'attribution', 'status', 'payment_status', 'payment_proof', 'payment_proof_hash', 'proof_status', 'gateway_reference', 'payment_attempts', 'subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'cod_fee_label', 'packaging_option_id', 'packaging_name', 'packaging_fee', 'packaging_cost', 'packaging_tax', 'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit', 'currency', 'stock_deducted', 'placed_at', 'delivered_at', 'carrier_settled_at', 'cancelled_at'];
 
     /** Kept out of the audit log: guest-access secret, uploaded proof path and customer PII (customer_id stays for traceability). */
     protected array $auditExcept = ['public_token', 'payment_proof', 'payment_proof_hash', 'proof_guard', 'customer_name', 'customer_phone', 'customer_email', 'address'];
@@ -25,7 +25,7 @@ class Order extends Model
         $dec = array_fill_keys(['subtotal', 'discount', 'shipping', 'shipping_discount', 'shipping_net', 'shipping_cost', 'tax', 'payment_fee', 'payment_fee_charged', 'cod_fee', 'packaging_fee', 'packaging_cost', 'packaging_tax',
             'total', 'paid_amount', 'refunded_amount', 'cogs', 'affiliate_commission', 'net_profit'], 'decimal:2');
 
-        return $dec + ['cod_fee_label' => 'array', 'packaging_name' => 'array', 'status' => OrderStatus::class, 'payment_status' => PaymentStatus::class, 'proof_status' => ProofStatus::class,
+        return $dec + ['attribution' => 'array', 'cod_fee_label' => 'array', 'packaging_name' => 'array', 'status' => OrderStatus::class, 'payment_status' => PaymentStatus::class, 'proof_status' => ProofStatus::class,
             'stock_deducted' => 'bool', 'placed_at' => 'datetime', 'delivered_at' => 'datetime', 'carrier_settled_at' => 'datetime', 'cancelled_at' => 'datetime'];
     }
 

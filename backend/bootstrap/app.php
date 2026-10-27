@@ -47,6 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'ai.enabled' => \App\Http\Middleware\EnsureAiEnabled::class,
             'integration.auth' => \App\Http\Middleware\Api\IntegrationAuth::class,
             'growth.enabled' => \App\Http\Middleware\EnsureGrowthEnabled::class,
+            'growth.track' => \App\Http\Middleware\TrackStorefrontTraffic::class,
+            'growth.feature' => \App\Http\Middleware\EnsureGrowthFeature::class,
             'auth.active' => \App\Http\Middleware\EnsureAccountActive::class,
         ]);
         // Inactive-account logout must run before route auth (Authenticate is priority-sorted ahead of plain group middleware).

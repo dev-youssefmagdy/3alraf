@@ -32,7 +32,7 @@ class EventController extends Controller implements HasMiddleware
 
     public function replay(int $id): JsonResponse
     {
-        $e = $this->events->replay(GrowthEvent::findOrFail($id));
+        $e = $this->events->replay($this->events->find($id));
         $this->log->log('event.replayed', 'admin', auth('tenant')->id(), null, $e);
 
         return $this->ok(__('growth_hub.events.replayed'));

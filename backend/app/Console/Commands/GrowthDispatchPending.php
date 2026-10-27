@@ -3,7 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Jobs\DispatchGrowthEventJob;
-use App\Models\GrowthEvent;
+use App\Repositories\Contracts\GrowthEventRepositoryInterface;
+use App\Services\Growth\GrowthFeatures;
 use Illuminate\Console\Command;
 
 class GrowthDispatchPending extends Command
@@ -12,10 +13,11 @@ class GrowthDispatchPending extends Command
 
     protected $description = 'Queue due outbox events (retries with backoff, crashed leases)';
 
-    public function handle(): int
+    public function handle(GrowthFeatures $features, GrowthEventRepositoryInterface $repo): int
     {
         $n = 0;
-        GrowthEvent::withoutGlobalScopes()->where('status', 'pending')->where('next_attempt_at', '<=', now())->orderBy('id')->limit(500)->pluck('id')
+        $tenantIds = $features->tenantsWith('events_outbox')->pluck('id');
+        $repo->dueIds($tenantIds)
             ->each(function ($id) use (&$n) {
                 DispatchGrowthEventJob::dispatch($id);
                 $n++;

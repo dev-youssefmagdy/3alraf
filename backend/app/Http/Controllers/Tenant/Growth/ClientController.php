@@ -38,16 +38,24 @@ class ClientController extends Controller implements HasMiddleware
         return response()->json(['success' => true, 'message' => __('growth_hub.clients.created'), 'data' => ['id' => $client->id, 'token' => $token, 'secret' => $secret]], 201);
     }
 
+    /** Name, scopes (money scopes stay impossible) and webhook only; token / secret are untouched. */
+    public function update(GrowthClientRequest $r, int $id): JsonResponse
+    {
+        $this->service->update($this->service->findOrFail($id), $r->validated('name'), $r->validated('scopes'), $r->validated('webhook_url'), auth('tenant')->id());
+
+        return $this->ok(__('growth_hub.clients.updated'), route('tenant.growth.clients.index'));
+    }
+
     public function rotate(int $id): JsonResponse
     {
-        [$token, $secret] = $this->service->rotate(IntegrationClient::findOrFail($id), auth('tenant')->id());
+        [$token, $secret] = $this->service->rotate($this->service->findOrFail($id), auth('tenant')->id());
 
         return response()->json(['success' => true, 'message' => __('growth_hub.clients.rotated'), 'data' => ['token' => $token, 'secret' => $secret]]);
     }
 
     public function revoke(int $id): JsonResponse
     {
-        $this->service->revoke(IntegrationClient::findOrFail($id), auth('tenant')->id());
+        $this->service->revoke($this->service->findOrFail($id), auth('tenant')->id());
 
         return $this->ok(__('growth_hub.clients.revoked_ok'));
     }

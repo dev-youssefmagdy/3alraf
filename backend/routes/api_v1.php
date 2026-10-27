@@ -36,7 +36,7 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('catalog', [StoreController::class, 'catalog'])->middleware('throttle:search')->name('catalog');
         Route::get('catalog/facets', [StoreController::class, 'facets'])->middleware('throttle:search')->name('catalog.facets');
         Route::get('catalog/suggest', [StoreController::class, 'suggest'])->middleware('throttle:search')->name('catalog.suggest');
-        Route::get('products/{slug}', [StoreController::class, 'product'])->name('products.show');
+        Route::get('products/{slug}', [StoreController::class, 'product'])->middleware('growth.track')->name('products.show');
         Route::get('products/{slug}/reviews', [AccountController::class, 'reviews'])->name('products.reviews');
         Route::get('bundles', [StoreController::class, 'bundles'])->name('bundles.index');
         Route::get('bundles/{slug}', [StoreController::class, 'bundle'])->where('slug', '[A-Za-z0-9._-]+')->name('bundles.show');

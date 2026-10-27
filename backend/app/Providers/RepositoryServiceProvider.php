@@ -135,6 +135,10 @@ class RepositoryServiceProvider extends ServiceProvider
         CustomerRepositoryInterface::class => CustomerRepository::class,
         CustomerAddressRepositoryInterface::class => CustomerAddressRepository::class,
         CartRepositoryInterface::class => CartRepository::class,
+        \App\Repositories\Contracts\GrowthApprovalRepositoryInterface::class => \App\Repositories\Eloquent\GrowthApprovalRepository::class,
+        \App\Repositories\Contracts\GrowthExperimentRepositoryInterface::class => \App\Repositories\Eloquent\GrowthExperimentRepository::class,
+        \App\Repositories\Contracts\IntegrationClientRepositoryInterface::class => \App\Repositories\Eloquent\IntegrationClientRepository::class,
+        \App\Repositories\Contracts\GrowthEventRepositoryInterface::class => \App\Repositories\Eloquent\GrowthEventRepository::class,
         \App\Repositories\Contracts\QrCodeRepositoryInterface::class => \App\Repositories\Eloquent\QrCodeRepository::class,
         \App\Repositories\Contracts\RetentionRepositoryInterface::class => \App\Repositories\Eloquent\RetentionRepository::class,
     ];

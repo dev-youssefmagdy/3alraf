@@ -33,7 +33,7 @@ class ExperimentController extends Controller implements HasMiddleware
 
     public function show(int $id)
     {
-        return view('tenant.growth.experiment', ['exp' => GrowthExperiment::with('results')->findOrFail($id)]);
+        return view('tenant.growth.experiment', ['exp' => $this->service->find($id)]);
     }
 
     public function store(GrowthExperimentRequest $r): JsonResponse
@@ -45,21 +45,21 @@ class ExperimentController extends Controller implements HasMiddleware
 
     public function update(GrowthExperimentRequest $r, int $id): JsonResponse
     {
-        $this->service->update($e = GrowthExperiment::findOrFail($id), $r->validated(), auth('tenant')->id());
+        $this->service->update($e = $this->service->find($id), $r->validated(), auth('tenant')->id());
 
         return $this->ok(__('admin.saved'), route('tenant.growth.experiments.show', $e->id));
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $this->service->delete(GrowthExperiment::findOrFail($id), auth('tenant')->id());
+        $this->service->delete($this->service->find($id), auth('tenant')->id());
 
         return $this->ok(__('admin.deleted'), route('tenant.growth.experiments.index'));
     }
 
     public function storeResult(GrowthExperimentResultRequest $r, int $id): JsonResponse
     {
-        $this->service->addResult(GrowthExperiment::findOrFail($id), $r->validated(), 'admin', auth('tenant')->id());
+        $this->service->addResult($this->service->find($id), $r->validated(), 'admin', auth('tenant')->id());
 
         return $this->ok(__('admin.saved'), route('tenant.growth.experiments.show', $id));
     }

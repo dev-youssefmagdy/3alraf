@@ -45,7 +45,7 @@ class BriefService
             'contribution_margin' => ['value' => $s['contribution_margin'], 'percent' => $s['contribution_margin_percent'], 'note_key' => $s['contribution_margin']['value'] === null ? 'cost_data_missing' : 'confirmed_costs'],
             'products_gaining_interest' => $interest, 'inventory_issues' => $issues,
             'conversations_and_complaints' => ['available' => false], // customer messaging module arrives in a later sprint
-            'recommendations' => $this->rank($recs, 5),
+            'recommendations' => $this->rank($recs, 5), 'data_quality' => app(DataQuality::class)->issues(),
         ];
         $out['ai_summary'] = $narrate ? $this->narrate($out) : null;
 
@@ -65,7 +65,7 @@ class BriefService
         $reorder = $cover->filter(fn ($r) => $r['days_of_cover'] !== null && $r['days_of_cover'] < $min)->take(10)->values()->all();
         $reasons = $this->metrics->returnReasons($from, $end);
         $bundles = $this->metrics->bundles($from, $end);
-        $experiments = GrowthExperiment::with('results')->whereIn('status', ['running', 'completed', 'concluded', 'done'])->latest('id')->limit(5)->get()
+        $experiments = app(\App\Repositories\Contracts\GrowthExperimentRepositoryInterface::class)->running(5)
             ->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'status' => $e->status, 'outcome' => $e->outcome, 'learnings' => $e->learnings])->all();
 
         $recs = [];
@@ -91,7 +91,7 @@ class BriefService
             'advertising' => ['spend_recorded' => $s['cac']['missing'] === ['ad_spend'] ? null : true, 'cac' => $s['cac'], 'note_key' => 'roas_is_not_profit'],
             'why_customers_do_not_buy' => ['cancel_rate' => $s['cancel_rate'], 'return_rate' => $s['return_rate'], 'return_reasons' => $reasons],
             'reorder_candidates' => $reorder, 'experiment_results' => $experiments,
-            'recommendations' => $this->rank($recs, 3),
+            'recommendations' => $this->rank($recs, 3), 'data_quality' => app(DataQuality::class)->issues(),
         ];
         $out['ai_summary'] = $narrate ? $this->narrate($out) : null;
 
@@ -111,7 +111,12 @@ class BriefService
     /** Highest impact/effort first; a recommendation without evidence is dropped. */
     private function rank(array $recs, int $limit): array
     {
-        return collect($recs)->filter(fn ($r) => ! empty($r['evidence']))->sortByDesc(fn ($r) => [$r['score'], $r['impact']])->take($limit)->values()->all();
+        $decided = app(BriefDecisionService::class)->map();
+
+        return collect($recs)->filter(fn ($r) => ! empty($r['evidence']) && ($decided[$r['key']]->status ?? null) !== 'dismissed')
+            ->sortByDesc(fn ($r) => [$r['score'], $r['impact']])->take($limit)
+            ->map(fn ($r) => $r + ['decision' => isset($decided[$r['key']]) ? ['status' => $decided[$r['key']]->status, 'owner' => $decided[$r['key']]->owner, 'note' => $decided[$r['key']]->note, 'experiment_id' => $decided[$r['key']]->experiment_id, 'metric_before' => $decided[$r['key']]->metric_before, 'metric_after' => $decided[$r['key']]->metric_after] : null])
+            ->values()->all();
     }
 
     private function prevAvg(array $base, int $days): array

@@ -24,6 +24,8 @@ class ProductDetail
         $tp = TenantProduct::where('product_id', $product->id)->where('is_active', true)->firstOrFail();
         $tp->setRelation('product', $product)->applyContent();   // tenant wording overlay (AI product editor)
 
+        request()->attributes->set('growth_product_id', $product->id);
+
         return [
             'product' => $product, 'tp' => $tp, 'summary' => $this->reviews->summary($product),
             'reviews' => Review::with('customer')->where('product_id', $product->id)->where('status', ReviewStatus::APPROVED->value)->latest('id')->limit(30)->get(),

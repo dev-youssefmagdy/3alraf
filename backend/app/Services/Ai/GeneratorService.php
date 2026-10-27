@@ -137,7 +137,7 @@ class GeneratorService
     private function truth(array $i, array $draft): array
     {
         $ids = array_values(array_filter((array) ($i['product_ids'] ?? [])));
-        if (! $ids || ! app(\App\Services\Growth\GrowthAccess::class)->enabled(current_tenant())) {
+        if (! $ids || ! app(\App\Services\Growth\GrowthFeatures::class)->active('truth_guard', current_tenant())) {
             return ['draft' => $draft, 'removed' => [], 'flagged' => []];
         }
         $g = app(\App\Services\Growth\TruthGuardService::class)->guardDraft($draft, $ids, ['slug', 'url', 'sort', 'image_prompt', 'placement', 'code', 'type', 'scope', 'discount_type', 'starts_at', 'ends_at', 'item']);

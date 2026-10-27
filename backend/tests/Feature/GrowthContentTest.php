@@ -67,7 +67,9 @@ beforeEach(function () {
     $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
     app()->instance('currentTenant', $this->tenant);
     app(GrowthAccess::class)->set($this->tenant, true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->tenant);
     app(GrowthAccess::class)->set($this->other, true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->other);
     app()->instance('currentTenant', $this->tenant->refresh());
     $p = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'oa-gen', 'api_key' => 'sk-test-1234567', 'is_active' => true]);
     $this->text = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'gpt-gen', 'label' => 'T', 'kind' => 'text', 'capabilities' => ['json_mode' => true], 'is_active' => true]);

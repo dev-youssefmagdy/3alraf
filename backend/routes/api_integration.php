@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Route;
 
 // n8n integration API: /api/integration/v1 (bootstrap/app.php). Auth = bearer + HMAC (integration.auth:{scope}). NO price/refund/stock/budget endpoints exist.
 Route::get('ping', PingController::class)->middleware('integration.auth')->name('ping');
-Route::get('events', [EventController::class, 'index'])->middleware('integration.auth:events:read')->name('events.index');
-Route::get('approvals/{id}', [ApprovalProposalController::class, 'show'])->middleware('integration.auth:read')->whereNumber('id')->name('approvals.show');
-Route::post('proposals', [ApprovalProposalController::class, 'store'])->middleware('integration.auth:proposals:write')->name('proposals.store');
-Route::post('experiments/{id}/results', [ExperimentResultController::class, 'store'])->middleware('integration.auth:ingest:write')->whereNumber('id')->name('experiments.results');
+Route::get('events', [EventController::class, 'index'])->middleware('integration.auth:events:read,events_outbox')->name('events.index');
+Route::get('approvals/{id}', [ApprovalProposalController::class, 'show'])->middleware('integration.auth:read,approvals')->whereNumber('id')->name('approvals.show');
+Route::post('proposals', [ApprovalProposalController::class, 'store'])->middleware('integration.auth:proposals:write,approvals')->name('proposals.store');
+Route::post('experiments/{id}/results', [ExperimentResultController::class, 'store'])->middleware('integration.auth:ingest:write,experiments')->whereNumber('id')->name('experiments.results');
 
 // N1 read API (scope `read`; aggregate, no PII).
 Route::middleware('integration.auth:read')->controller(MetricsController::class)->group(function () {
@@ -28,10 +28,16 @@ Route::middleware('integration.auth:read')->controller(MetricsController::class)
     Route::get('metrics/summary', 'summary')->name('metrics.summary');
     Route::get('metrics/products', 'metricsProducts')->name('metrics.products');
     Route::get('metrics/channels', 'metricsChannels')->name('metrics.channels');
+});
+
+Route::middleware('integration.auth:read,brief')->controller(MetricsController::class)->group(function () {
     Route::get('brief/daily', 'daily')->name('brief.daily');
     Route::get('brief/weekly', 'weekly')->name('brief.weekly');
 });
 
 // N2 brand memory + truth guard (scope `read`; the check endpoint only reads and returns a verdict).
-Route::get('brand-memory', [BrandMemoryController::class, 'index'])->middleware('integration.auth:read')->name('brand-memory.index');
-Route::post('truth-guard/check', [BrandMemoryController::class, 'check'])->middleware('integration.auth:read')->name('truth-guard.check');
+Route::get('brand-memory', [BrandMemoryController::class, 'index'])->middleware('integration.auth:read,brand_memory')->name('brand-memory.index');
+Route::post('truth-guard/check', [BrandMemoryController::class, 'check'])->middleware('integration.auth:read,truth_guard')->name('truth-guard.check');
+
+// Which Growth features are active for this tenant (n8n reads this to skip disabled flows).
+Route::get('features', [\App\Http\Controllers\Api\Integration\FeatureController::class, 'index'])->middleware('integration.auth:read')->name('features.index');

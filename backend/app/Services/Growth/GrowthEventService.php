@@ -4,7 +4,8 @@ namespace App\Services\Growth;
 
 use App\Jobs\DispatchGrowthEventJob;
 use App\Models\GrowthEvent;
-use App\Models\IntegrationClient;
+use App\Repositories\Contracts\GrowthEventRepositoryInterface;
+use App\Repositories\Contracts\IntegrationClientRepositoryInterface;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,26 +15,42 @@ class GrowthEventService
 {
     public const TYPES = ['order.placed', 'order.cancelled', 'order.returned', 'stock.low', 'review.created', 'product.created', 'bundle.created', 'affiliate.order'];
 
-    public function __construct(private GrowthAccess $access) {}
+    public static function lowStockKey(array $d): string
+    {
+        return 'stock.low:'.($d['product_id'] ?? 0).':'.($d['variant_id'] ?? 0).':'.($d['branch_id'] ?? 0);
+    }
+
+    public function __construct(private GrowthAccess $access, private GrowthFeatures $features, private GrowthEventRepositoryInterface $repo, private IntegrationClientRepositoryInterface $clients) {}
 
     public function emit(string $type, array $data, ?Tenant $tenant = null): ?GrowthEvent
     {
         $tenant ??= current_tenant();
-        if (! $tenant || ! $this->access->enabled($tenant) || ! in_array($type, self::TYPES, true)) {
+        if (! $tenant || ! $this->access->enabled($tenant) || ! $this->features->active('events_outbox', $tenant) || ! in_array($type, self::TYPES, true)) {
             return null;
         }
-        $hasTarget = IntegrationClient::withoutGlobalScopes()->where('tenant_id', $tenant->id)->whereNull('revoked_at')->whereNotNull('webhook_url')->exists();
+        $hasTarget = $this->clients->webhookTargets($tenant->id)->isNotEmpty();
         if (! $hasTarget) {
             return null;
         }
         $id = (string) Str::uuid();
-        $event = GrowthEvent::withoutGlobalScopes()->create([
+        $event = $this->repo->createForTenant([
             'tenant_id' => $tenant->id, 'event_id' => $id, 'type' => $type, 'status' => 'pending', 'next_attempt_at' => now(),
             'payload' => ['event_id' => $id, 'type' => $type, 'tenant' => $tenant->slug, 'occurred_at' => now()->toIso8601String(), 'data' => PiiScrubber::scrub($data)],
         ]);
         DB::afterCommit(fn () => DispatchGrowthEventJob::dispatch($event->id));
 
         return $event;
+    }
+
+    /** Emit at most once per $key per tenant-local day (model-event + scan safety net never double-fire). */
+    public function emitOnce(string $key, string $type, array $data, ?Tenant $tenant = null): ?GrowthEvent
+    {
+        $tenant ??= current_tenant();
+        if (! $tenant || ! \Illuminate\Support\Facades\Cache::add('growth:once:'.$tenant->id.':'.$key.':'.now($tenant->timezone ?: config('app.timezone'))->toDateString(), 1, now()->addHours(26))) {
+            return null;
+        }
+
+        return $this->emit($type, $data, $tenant);
     }
 
     /** Re-queue an event (dead or delivered) from the admin event log. */
@@ -45,8 +62,13 @@ class GrowthEventService
         return $e;
     }
 
+    public function find(int $id): GrowthEvent
+    {
+        return $this->repo->findOrFail($id);
+    }
+
     public function prune(): int
     {
-        return GrowthEvent::withoutGlobalScopes()->whereIn('status', ['delivered', 'dead'])->where('created_at', '<', now()->subDays((int) config('growth.events.retention_days')))->delete();
+        return $this->repo->prune((int) config('growth.events.retention_days'));
     }
 }

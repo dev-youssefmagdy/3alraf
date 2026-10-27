@@ -39,4 +39,15 @@
             <x-form-actions :cancel="route('central.tenants.index')" />
         </form>
     </x-card>
+    @if ($editing)
+        <x-card class="mt-4 max-w-3xl">
+            <form data-ajax-form data-method="PUT" action="{{ route('central.tenants.growth', $tenant) }}" method="POST" class="space-y-3" novalidate>
+                @csrf
+                <p class="font-semibold">{{ __('growth_hub.central.title') }}</p>
+                <p class="text-xs text-slate-500">{{ __('growth_hub.central.hint') }}</p>
+                <x-checkbox name="growth_enabled" :label="__('growth_hub.central.enabled')" :checked="app(\App\Services\Growth\GrowthAccess::class)->enabled($tenant)" />
+                <x-button type="submit">{{ __('admin.save') }}</x-button>
+            </form>
+        </x-card>
+    @endif
 </x-layouts.admin>

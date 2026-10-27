@@ -96,6 +96,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
 
         Route::get('tenants/datatable', [TenantController::class, 'datatable'])->name('tenants.datatable');
         Route::post('tenants/validate/{tenant?}', [TenantController::class, 'validateForm'])->name('tenants.validate');
+        Route::put('tenants/{tenant}/growth', [TenantController::class, 'growth'])->name('tenants.growth');
         Route::resource('tenants', TenantController::class)->except('show');
     });
 });

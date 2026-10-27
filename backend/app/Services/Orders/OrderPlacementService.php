@@ -61,7 +61,7 @@ class OrderPlacementService
                 $order = $this->orders->create([
                     'public_token' => (string) Str::uuid(), 'customer_id' => $d->customerId, 'customer_name' => $d->name, 'customer_phone' => $d->phone,
                     'customer_email' => $d->email, 'city_id' => $d->cityId, 'address' => $d->address, 'notes' => $d->notes, 'branch_id' => $branchId,
-                    'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'prepay_method_id' => ($t->prepaidShipping > 0 && $q['prepay']) ? $q['prepay']->id : null, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id,
+                    'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'prepay_method_id' => ($t->prepaidShipping > 0 && $q['prepay']) ? $q['prepay']->id : null, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id, ...\App\Services\Growth\AttributionService::forOrder($q['affiliate']?->id),
                     'status' => OrderStatus::PENDING, 'payment_status' => $proof ? PaymentStatus::REVIEW : PaymentStatus::UNPAID,
                     'subtotal' => $t->subtotal, 'discount' => $t->discount, 'shipping' => $t->shipping, 'shipping_discount' => $t->shippingDiscount, 'shipping_net' => $t->shippingNet,
                     'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'cod_fee' => $t->codFee, 'cod_fee_label' => bccomp($t->codFee, '0', 2) > 0 ? $q['cod_fee_label'] : null, 'total' => $t->total, 'cod_amount' => $t->codAmount, 'prepaid_shipping' => $t->prepaidShipping,
