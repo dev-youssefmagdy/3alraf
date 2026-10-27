@@ -75,7 +75,7 @@ class ReturnService
             }
 
             $ret = $this->returns->create([
-                'order_id' => $order->id, 'status' => ReturnStatus::REQUESTED, 'reason' => $d->reason, 'restock' => $d->restock, 'branch_id' => $d->branchId ?? $order->branch_id,
+                'order_id' => $order->id, 'status' => ReturnStatus::REQUESTED, 'reason' => $d->reason, 'reason_code' => $d->reasonCode, 'restock' => $d->restock, 'branch_id' => $d->branchId ?? $order->branch_id,
                 'refund_shipping' => $d->refundShipping, 'return_value' => $value, 'returned_cogs' => $cogs, 'return_shipping_cost' => Money::round($d->returnShippingCost),
             ]);
             $ret->update(['number' => sprintf('RET-%06d', $ret->id)]);

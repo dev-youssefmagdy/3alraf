@@ -56,3 +56,12 @@ Route::controller(\App\Http\Controllers\Api\Integration\EngagementController::cl
 // N5 experiment lab: ad results import (ingest) + lab metrics / recommendation (read). No budget or spend instruction exists.
 Route::post('experiments/{id}/ad-results', [\App\Http\Controllers\Api\Integration\AdResultsController::class, 'store'])->middleware('integration.auth:ingest:write,experiment_lab')->whereNumber('id')->name('experiments.ad-results');
 Route::get('experiments/{id}/lab', [\App\Http\Controllers\Api\Integration\AdResultsController::class, 'show'])->middleware('integration.auth:read,experiment_lab')->whereNumber('id')->name('experiments.lab');
+
+// N6 capital & returns & trends & CEO challenge (read; reason codes use ingest:write). No purchase, price or refund capability exists here.
+Route::controller(\App\Http\Controllers\Api\Integration\CapitalController::class)->group(function () {
+    Route::get('inventory/recommendations', 'inventory')->middleware('integration.auth:read,inventory_engine')->name('inventory.recommendations');
+    Route::get('returns/reasons', 'returns')->middleware('integration.auth:read,return_intel')->name('returns.reasons');
+    Route::post('returns/reasons', 'reason')->middleware('integration.auth:ingest:write,return_intel')->name('returns.reason');
+    Route::get('trends/candidates', 'trends')->middleware('integration.auth:read,trend_radar')->name('trends.candidates');
+    Route::get('ceo-challenge', 'challenge')->middleware('integration.auth:read,ceo_challenge')->name('ceo.current');
+});

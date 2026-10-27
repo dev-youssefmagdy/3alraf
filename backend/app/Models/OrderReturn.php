@@ -11,7 +11,7 @@ class OrderReturn extends Model
 {
     use Audited, BelongsToTenant;
 
-    protected $fillable = ['number', 'order_id', 'status', 'reason', 'restock', 'branch_id', 'refund_shipping', 'return_value', 'refund_amount', 'return_shipping_cost', 'returned_cogs', 'approved_at', 'refunded_at'];
+    protected $fillable = ['number', 'order_id', 'status', 'reason', 'restock', 'branch_id', 'refund_shipping', 'return_value', 'refund_amount', 'return_shipping_cost', 'returned_cogs', 'approved_at', 'refunded_at', 'reason_code'];
 
     protected function casts(): array
     {

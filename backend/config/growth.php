@@ -32,10 +32,10 @@ return [
         'experiment_lab' => ['ar' => 'معمل التجارب', 'en' => 'Experiment lab', 'group' => 'growth', 'depends_on' => ['experiments'], 'built' => true],
         'small_batch_lab' => ['ar' => 'معمل الدفعات الصغيرة', 'en' => 'Small-batch lab', 'group' => 'growth', 'depends_on' => [], 'built' => true],
         'ambassadors' => ['ar' => 'السفراء', 'en' => 'Ambassadors', 'group' => 'growth', 'depends_on' => [], 'built' => true],
-        'inventory_engine' => ['ar' => 'محرك المخزون', 'en' => 'Inventory engine', 'group' => 'operations', 'depends_on' => [], 'built' => false],
-        'return_intel' => ['ar' => 'ذكاء المرتجعات', 'en' => 'Return intelligence', 'group' => 'operations', 'depends_on' => [], 'built' => false],
-        'trend_radar' => ['ar' => 'رادار الترند', 'en' => 'Trend radar', 'group' => 'operations', 'depends_on' => [], 'built' => false],
-        'ceo_challenge' => ['ar' => 'تحدي المدير', 'en' => 'CEO challenge', 'group' => 'operations', 'depends_on' => [], 'built' => false],
+        'inventory_engine' => ['ar' => 'محرك المخزون', 'en' => 'Inventory engine', 'group' => 'operations', 'depends_on' => [], 'built' => true],
+        'return_intel' => ['ar' => 'ذكاء المرتجعات', 'en' => 'Return intelligence', 'group' => 'operations', 'depends_on' => [], 'built' => true],
+        'trend_radar' => ['ar' => 'رادار الترند', 'en' => 'Trend radar', 'group' => 'operations', 'depends_on' => [], 'built' => true],
+        'ceo_challenge' => ['ar' => 'تحدي المدير', 'en' => 'CEO challenge', 'group' => 'operations', 'depends_on' => [], 'built' => true],
     ],
 
     // Scopes an integration client may hold. There is deliberately NO scope for prices, refunds, stock or ad budgets.
@@ -82,6 +82,15 @@ return [
         'scale_cm_ratio' => 0.5, 'fatigue_min_impressions' => 1000, 'fatigue_ctr_drop_percent' => 25, 'fatigue_recent_days' => 3, 'fatigue_baseline_days' => 7,
         'ambassador_min_orders_for_report' => 1, 'smallbatch_min_days' => 3,
     ],
+
+    // N6 decision engine / trend radar / CEO challenge. Assumptions are labelled as such in the UI.
+    'capital' => [
+        'horizon_days' => 30, 'promo_uplift' => 1.5, 'promo_baseline_sell_through' => 0.1, 'abc_a_share' => 80, 'abc_b_share' => 95,
+        'story_min_questions' => 3, 'story_max_sold_30d' => 3, 'season_hold_days' => 60, 'expiry_urgent_share' => 0.7, 'min_history_days' => 14,
+    ],
+    'returns' => ['recurring_min' => 3, 'window_days' => 30],
+    'trend' => ['weights' => ['demand' => 25, 'margin' => 25, 'supplier' => 15, 'audience' => 15, 'risk' => 10, 'content' => 10], 'min_score' => 40, 'max_candidates' => 15],
+    'ceo' => ['cooldown_weeks' => 4, 'duration_days' => 14],
 
     // Personal data never leaves Laravel unmasked (events carry ids and amounts only).
     'pii' => [

@@ -46,6 +46,7 @@
                             <x-select name="branch_id" :label="__('ops.fields.branch')" :options="$branches" :value="$order->branch_id" />
                             <x-input name="return_shipping_cost" type="number" step="0.01" min="0" :label="__('orders.fields.return_shipping_cost')" :value="0" />
                             <x-input name="reason" :label="__('ops.fields.reason')" />
+                            <x-select name="reason_code" :label="__('growth_capital.ret.code')" :options="__('growth_capital.ret.codes')" :placeholder="'—'" />
                         </div>
                         <div class="flex flex-wrap gap-4">
                             <x-checkbox name="restock" :label="__('orders.fields.restock')" :checked="true" />
