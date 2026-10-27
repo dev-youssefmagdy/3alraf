@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(\App\Services\Ai\AiAccess::class);
         $this->app->singleton(\App\Services\Growth\ApprovalService::class); // module handlers register on it
+        $this->app->resolving(\App\Services\Growth\ApprovalService::class, fn ($a) => $a->register('bundle_draft', fn ($ap) => app(\App\Services\Growth\BundleProposalService::class)->materialize($ap)));
     }
 
     /**

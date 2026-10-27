@@ -3,7 +3,7 @@
 return [
     'title' => 'Growth system',
     'disabled' => 'The Growth system is not enabled for this store. Ask the platform administrator to switch it on.',
-    'menu' => ['brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
+    'menu' => ['bundles' => 'Bundle engine', 'seasonal' => 'Seasonal calendar', 'gift' => 'Gift Finder', 'brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
@@ -75,6 +75,37 @@ return [
         'statuses' => ['planned' => 'Planned', 'published' => 'Published', 'skipped' => 'Skipped', 'approved' => 'Approved', 'retired' => 'Retired'],
         'fields' => ['content_asset_id' => 'Asset', 'channel' => 'Channel', 'scheduled_for' => 'Date', 'note' => 'Note'],
         'package' => ['short_description' => 'Short description', 'long_description' => 'Long description', 'angles' => 'Marketing angles', 'hooks' => 'Hooks', 'reel_scripts' => 'Reel scripts', 'tiktok_scripts' => 'TikTok scripts', 'stories' => 'Stories', 'ad_copy' => 'Ad copy', 'ctas' => 'Calls to action', 'faq' => 'FAQ', 'bundle_ideas' => 'Bundle ideas', 'photo_briefs' => 'Photography briefs', 'ab_variants' => 'A/B variants', 'edit_hint' => 'One item per line. Edit and press Save; the Truth Guard re-checks every save.'],
+    ],
+
+    'bundles' => [
+        'title' => 'Bundle engine', 'hint' => 'Rule-based bundle proposals. Margin is computed by the system (never by AI); proposals go to Approvals and become INACTIVE drafts you activate from Bundles.',
+        'propose' => 'Generate proposals', 'proposed' => ':n proposal(s) sent to Approvals, :rej rejected by the margin rules.', 'bad_mode' => 'Unknown mode.', 'pending' => 'Pending proposals', 'none_pending' => 'No pending proposals.',
+        'modes' => ['complementary' => 'Complementary products', 'slow_mover' => 'Slow-mover pairing', 'budget_box' => 'Budget box', 'seasonal_gift' => 'Seasonal gift builder'],
+        'budgets_hint' => 'Budgets, comma separated (budget box only)', 'performance' => 'Performance (last 30 days, delivered orders)',
+        'cols' => ['bundle' => 'Bundle', 'orders' => 'Orders', 'units' => 'Units', 'revenue' => 'Revenue', 'margin' => 'Margin', 'uplift' => 'AOV uplift', 'sell' => 'Sell-through', 'indiv' => 'Components sold alone'],
+        'insufficient' => 'insufficient data', 'ab_title' => 'Bundle A/B test', 'ab_hint' => 'Variant B overrides the name / description / image shown on the bundle page for part of the visitors. Results are add-to-cart rates.',
+        'ab_start' => 'Start test', 'ab_running' => 'A test is already running for this bundle.', 'ab_empty' => 'Enter at least a name, description or image for variant B.', 'ab_bad_state' => 'This test cannot be concluded.',
+        'ab_keep_a' => 'Keep A (original)', 'ab_use_b' => 'Use B', 'exposures' => 'Views', 'carts' => 'Add to cart', 'rate' => 'Rate', 'stopped' => 'Stopped', 'running' => 'Running',
+        'recs' => ['insufficient_data' => 'Not enough data yet', 'inconclusive' => 'No clear difference', 'winner_a' => 'A is better', 'winner_b' => 'B is better'],
+        'fields' => ['mode' => 'Mode', 'budgets' => 'Budgets', 'event_id' => 'Event', 'bundle_id' => 'Bundle', 'name' => 'Name', 'description' => 'Description', 'image' => 'Image', 'split_b' => 'Share of visitors for B (%)', 'min_sample' => 'Minimum views per variant'],
+    ],
+    'seasonal' => [
+        'title' => 'Seasonal calendar', 'hint' => 'Hijri dates are computed (tabular calendar, may differ by a day from the moon sighting): edit them when announced.', 'year' => 'Year', 'create_year' => 'Create standard events',
+        'closed' => 'This season is closed.', 'not_ended' => 'The season has not ended yet.', 'readiness' => 'Readiness', 'tasks' => 'Checklist', 'propose' => 'Propose bundles', 'save' => 'Save', 'close' => 'Close season and store lessons',
+        'memory' => 'Seasonal memory', 'last' => 'Last year', 'none' => 'No events for this year yet.', 'categories' => 'Mapped categories', 'best' => 'Best products', 'bundles_top' => 'Most profitable bundles',
+        'checks' => ['lead_time' => 'Lead time', 'categories' => 'Category mapping', 'products' => 'Products in stock', 'margin' => 'Margins', 'cover' => 'Stock vs expected demand', 'bundles' => 'Bundles'],
+        'ev' => ['days_left' => 'days left', 'lead_time_days' => 'lead days', 'mapped' => 'mapped', 'mapped_products' => 'mapped products', 'in_stock' => 'in stock', 'missing_cost' => 'missing cost', 'below_floor' => 'below margin floor', 'floor_percent' => 'floor %', 'products_short_for_season' => 'may run short', 'season_days' => 'season days', 'bundles' => 'bundles'],
+        'fields' => ['starts_on' => 'Starts', 'ends_on' => 'Ends', 'lead_time_days' => 'Lead time (days)', 'notes' => 'Notes', 'category_ids' => 'Categories', 'content_formats' => 'Best content formats', 'start_timing' => 'Campaign start timing', 'objections' => 'Customer objections', 'lessons' => 'Lessons'],
+    ],
+    'gift' => [
+        'title' => 'Gift Finder', 'admin_hint' => 'Storefront page that recommends gifts by occasion and budget. Margin is only a tie-breaker: it never hides a better fit and the budget is never exceeded silently.',
+        'link' => 'Storefront page', 'sessions' => 'Searches', 'completion' => 'Completion rate', 'cart_rate' => 'Added to cart', 'avg_budget' => 'Average budget', 'no_result' => 'Without results', 'by_occasion' => 'By occasion',
+        'budget_required' => 'Enter a budget.', 'template' => ':name costs :price, within your budget of :budget.', 'cat_match' => 'It matches the category you chose.',
+        'find' => 'Find gifts', 'results' => 'Suggestions', 'none' => 'Nothing available within this budget.', 'near' => 'Slightly above your budget (not included above)', 'bundles' => 'Bundles within your budget', 'add_all' => 'Add these to my cart',
+        'occasions' => ['birthday' => 'Birthday', 'mothers_day' => 'Mother\'s Day', 'valentine' => 'Valentine', 'wedding' => 'Wedding', 'eid_fitr' => 'Eid al-Fitr', 'eid_adha' => 'Eid al-Adha', 'ramadan' => 'Ramadan', 'graduation' => 'Graduation', 'thanks' => 'Thank you', 'self' => 'Treat myself'],
+        'recipients' => ['mother' => 'Mother', 'partner' => 'Partner', 'friend' => 'Friend', 'sister' => 'Sister', 'colleague' => 'Colleague', 'child' => 'Child', 'self' => 'Myself', 'other' => 'Other'],
+        'fields' => ['budget' => 'Budget', 'occasion' => 'Occasion', 'recipient' => 'Recipient', 'category_id' => 'Category', 'restrictions' => 'Words to avoid'],
+        'any' => 'Any',
     ],
 
     'feature_disabled' => 'This Growth feature is switched off.',

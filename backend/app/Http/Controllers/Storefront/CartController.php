@@ -29,6 +29,7 @@ class CartController extends Controller
     {
         if ((int) $r->input('bundle_id', 0) > 0) {
             $this->cart->addBundle((int) $r->input('bundle_id'), max(1, (int) $r->input('quantity')));
+            app(\App\Services\Growth\BundleAbService::class)->recordCart((int) $r->input('bundle_id'), \App\Services\Growth\BundleAbService::visitor($r));
         } else {
             $this->cart->add((int) $r->input('product_id'), (int) $r->input('variant_id', 0), max(1, (int) $r->input('quantity')));
         }

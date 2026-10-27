@@ -76,6 +76,11 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::get('product/{slug}', [ProductController::class, 'show'])->name('product.show');
     Route::get('bundles', [\App\Http\Controllers\Storefront\BundleController::class, 'index'])->name('bundles.index');
     Route::get('bundle/{slug}', [\App\Http\Controllers\Storefront\BundleController::class, 'show'])->name('bundle.show');
+    Route::middleware('growth.feature:gift_finder')->group(function () {
+        Route::get('gift-finder', [\App\Http\Controllers\Storefront\GiftFinderController::class, 'show'])->name('gift-finder.show');
+        Route::post('gift-finder', [\App\Http\Controllers\Storefront\GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
+        Route::post('gift-finder/{token}/cart', [\App\Http\Controllers\Storefront\GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
+    });
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::get('blog', [\App\Http\Controllers\Storefront\BlogController::class, 'index'])->name('blog.index');
     Route::get('blog/{slug}', [\App\Http\Controllers\Storefront\BlogController::class, 'show'])->name('blog.show');

@@ -40,6 +40,10 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('products/{slug}/reviews', [AccountController::class, 'reviews'])->name('products.reviews');
         Route::get('bundles', [StoreController::class, 'bundles'])->name('bundles.index');
         Route::get('bundles/{slug}', [StoreController::class, 'bundle'])->where('slug', '[A-Za-z0-9._-]+')->name('bundles.show');
+        Route::middleware('growth.feature:gift_finder')->group(function () {
+            Route::post('gift-finder', [\App\Http\Controllers\Api\V1\GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
+            Route::post('gift-finder/{token}/cart', [\App\Http\Controllers\Api\V1\GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
+        });
         Route::get('brands', [StoreController::class, 'brands'])->name('brands');
 
         Route::get('cart', [CartController::class, 'show'])->name('cart.show');
