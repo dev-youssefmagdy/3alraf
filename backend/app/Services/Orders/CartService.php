@@ -3,8 +3,10 @@
 namespace App\Services\Orders;
 
 use App\Models\Cart;
+use App\Models\PackagingOption;
 use App\Models\StockLevel;
 use App\Repositories\Contracts\CartRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -14,6 +16,30 @@ class CartService
     public function __construct(private CartRepositoryInterface $carts, private PriceResolver $prices, private BundleResolver $bundles) {}
 
     public function cart(bool $create = true): ?Cart
+    {
+        return $this->carryAttribution($this->resolveCart($create));
+    }
+
+    /** Mobile API only (stateless session): first touch is stored on the cart and restored into the session so checkout attributes the order. */
+    private function carryAttribution(?Cart $cart): ?Cart
+    {
+        if (! $cart || ! app()->bound('request') || ! request()->attributes->get('api_context')) {
+            return $cart;
+        }
+        $sess = session();
+        if ($cart->attribution) {
+            foreach (['growth_attr' => 'attr', 'gift_session_id' => 'gift_session', 'bundle_ab' => 'bundle_ab'] as $key => $field) {
+                $v = $field === 'attr' ? array_diff_key($cart->attribution, ['gift_session' => 1, 'bundle_ab' => 1]) : ($cart->attribution[$field] ?? null);
+                $v && $sess->put($key, $v);
+            }
+        } elseif ($a = $sess->get('growth_attr')) {
+            $cart->update(['attribution' => $a + array_filter(['gift_session' => $sess->get('gift_session_id'), 'bundle_ab' => $sess->get('bundle_ab')])]);
+        }
+
+        return $cart;
+    }
+
+    private function resolveCart(bool $create = true): ?Cart
     {
         $customerId = auth('web')->id();
         $token = session('cart_token');
@@ -73,8 +99,8 @@ class CartService
         }
         $cart = $this->cart();
         // NULL product_id defeats the unique index, so serialise concurrent adds on the cart row (no duplicate bundle rows)
-        \Illuminate\Support\Facades\DB::transaction(function () use ($cart, $bundle, $qty) {
-            \App\Models\Cart::query()->whereKey($cart->id)->lockForUpdate()->first();
+        DB::transaction(function () use ($cart, $bundle, $qty) {
+            Cart::query()->whereKey($cart->id)->lockForUpdate()->first();
             $row = $cart->items()->firstOrNew(['bundle_id' => $bundle->id, 'product_id' => null, 'product_variant_id' => 0]);
             $this->assertBundleStock($cart, $bundle, ($row->quantity ?? 0) + $qty);
             $row->quantity = ($row->quantity ?? 0) + $qty;
@@ -117,13 +143,13 @@ class CartService
     {
         $id = $this->cart(false)?->packaging_option_id;
 
-        return $id && \App\Models\PackagingOption::active()->whereKey($id)->exists() ? (int) $id : null;
+        return $id && PackagingOption::active()->whereKey($id)->exists() ? (int) $id : null;
     }
 
     /** Persist the packaging choice on the cart (null = none). The option must be an active one of this tenant. */
     public function setPackaging(?int $optionId): void
     {
-        if ($optionId && ! \App\Models\PackagingOption::active()->whereKey($optionId)->exists()) {
+        if ($optionId && ! PackagingOption::active()->whereKey($optionId)->exists()) {
             throw ValidationException::withMessages(['packaging_option_id' => __('orders.packaging.unavailable')]);
         }
         $this->cart($optionId !== null)?->update(['packaging_option_id' => $optionId]);

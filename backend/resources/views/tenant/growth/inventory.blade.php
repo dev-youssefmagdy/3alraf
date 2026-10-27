@@ -3,9 +3,10 @@
     <div class="space-y-4">
         <p class="text-sm text-slate-600">{{ $i('hint') }}</p>
         <p class="text-xs text-slate-500">{{ $i('assume', ['u' => config('growth.capital.promo_uplift'), 'b' => config('growth.capital.promo_baseline_sell_through')]) }}</p>
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid gap-3 sm:grid-cols-4">
             <x-card :title="$i('cash_tied')"><p class="text-lg font-bold">{{ number_format($summary['cash_tied'], 2) }}</p></x-card>
             <x-card :title="$i('slow_value')"><p class="text-lg font-bold">{{ number_format($summary['slow_moving_value'], 2) }}</p></x-card>
+            <x-card :title="$i('aged_value', ['days' => $summary['aged_days']])"><p class="text-lg font-bold">{{ number_format($summary['aged_value'], 2) }}</p></x-card>
             <x-card :title="$i('turnover')"><p class="text-lg font-bold">{{ $inv['inventory_turnover']['value'] ?? $i('unknown') }}</p></x-card>
         </div>
         <x-card :title="$i('title')">
@@ -15,7 +16,7 @@
                 @foreach ($rows as $r)
                     <tr class="border-t align-top">
                         <td>{{ $r['name'] }}@if ($r['missing'])<div class="text-amber-600">{{ $i('unknown') }}: {{ collect($r['missing'])->map(fn ($m) => $i('missing.'.$m))->implode(', ') }}</div>@endif</td>
-                        <td>{{ $r['abc'] }}</td><td>{{ $r['days_of_cover'] ?? '-' }}</td><td>{{ $r['velocity'] }}</td><td>{{ $r['age_days'] ?? '-' }}</td><td>{{ $r['margin_percent'] ?? '-' }}</td>
+                        <td>{{ $r['abc'] }}</td><td>{{ $r['days_of_cover'] ?? '-' }}</td><td>{{ $r['velocity'] }}</td><td>{{ $r['age_days'] ?? '-' }}@if ($r['weighted_age_days'] !== null) <span class="text-xs text-slate-500">({{ $r['weighted_age_days'] }})</span>@endif</td><td>{{ $r['margin_percent'] ?? '-' }}</td>
                         <td><b>{{ $i('actions.'.$r['action']) }}</b>@foreach ($r['reasons'] as $why)<div class="text-slate-500">{{ $i('reasons.'.$why) }}</div>@endforeach
                             @if ($r['action'] === 'reorder')<div>{{ $i('qty') }}: {{ $r['scenarios']['reorder']['qty'] }} | {{ $i('cash') }}: {{ $r['scenarios']['reorder']['cash'] }}</div>@endif
                             @if ($r['action'] === 'promo')<div>-{{ $r['scenarios']['promo']['discount_percent'] }}% | {{ $i('cash') }}: {{ $r['scenarios']['promo']['cash_released'] }}</div>@endif</td>

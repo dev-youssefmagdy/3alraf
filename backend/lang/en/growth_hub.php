@@ -90,6 +90,7 @@ return [
         'fields' => ['mode' => 'Mode', 'budgets' => 'Budgets', 'event_id' => 'Event', 'bundle_id' => 'Bundle', 'name' => 'Name', 'description' => 'Description', 'image' => 'Image', 'split_b' => 'Share of visitors for B (%)', 'min_sample' => 'Minimum views per variant'],
     ],
     'seasonal' => [
+        'unconfirmed' => 'Date not confirmed', 'unconfirmed_hint' => 'Computed lunar date: it may be one day off the moon sighting. Confirm it (or edit the dates) once announced.', 'confirm_date' => 'Confirm date', 'confirmed' => 'Date confirmed', 'confirm_task' => 'Confirm the date of :event (computed :date) against the announced moon sighting.',
         'title' => 'Seasonal calendar', 'hint' => 'Hijri dates are computed (tabular calendar, may differ by a day from the moon sighting): edit them when announced.', 'year' => 'Year', 'create_year' => 'Create standard events',
         'closed' => 'This season is closed.', 'not_ended' => 'The season has not ended yet.', 'readiness' => 'Readiness', 'tasks' => 'Checklist', 'propose' => 'Propose bundles', 'save' => 'Save', 'close' => 'Close season and store lessons',
         'memory' => 'Seasonal memory', 'last' => 'Last year', 'none' => 'No events for this year yet.', 'categories' => 'Mapped categories', 'best' => 'Best products', 'bundles_top' => 'Most profitable bundles',

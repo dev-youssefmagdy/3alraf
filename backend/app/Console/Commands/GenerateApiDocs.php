@@ -7,6 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Route as Router;
+use Illuminate\Support\Str;
 use ReflectionMethod;
 
 /** Builds docs/api/openapi.json (OpenAPI 3.0) from the routes named api.v1.* (+ docblocks and FormRequest rules). Run: php artisan api:docs */
@@ -51,6 +52,7 @@ class GenerateApiDocs extends Command
                     'AcceptLanguage' => ['name' => 'Accept-Language', 'in' => 'header', 'required' => false, 'description' => 'ar | en (limited to the store locales)', 'schema' => ['type' => 'string', 'example' => 'ar']],
                     'XCartToken' => ['name' => 'X-Cart-Token', 'in' => 'header', 'required' => false, 'description' => 'Guest cart token, returned in the X-Cart-Token response header', 'schema' => ['type' => 'string']],
                     'XAffiliateRef' => ['name' => 'X-Affiliate-Ref', 'in' => 'header', 'required' => false, 'description' => 'Affiliate ref (uuid) of a shared link, for commission attribution', 'schema' => ['type' => 'string']],
+                    'XAttribution' => ['name' => 'X-Attribution', 'in' => 'header', 'required' => false, 'description' => 'Growth first-touch attribution: base64url(JSON) of {utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session, ab}, max 1024 chars. Stored on the cart (first touch wins) and copied to the order channel at checkout. Malformed values are ignored.', 'schema' => ['type' => 'string', 'maxLength' => 1024]],
                 ],
                 'schemas' => [
                     'Envelope' => ['type' => 'object', 'properties' => ['success' => ['type' => 'boolean'], 'message' => ['type' => 'string', 'nullable' => true], 'data' => ['nullable' => true], 'meta' => ['type' => 'object']]],
@@ -71,7 +73,7 @@ class GenerateApiDocs extends Command
         $uri = $route->uri();
         $short = preg_replace('#^api\.v1\.#', '', $name);
         [$class, $action] = explode('@', $route->getActionName().'@');
-        $summary = \Illuminate\Support\Str::headline(str_replace('.', ' ', $short));
+        $summary = Str::headline(str_replace('.', ' ', $short));
         $request = null;
         if ($class && $action && method_exists($class, $action)) {
             $ref = new ReflectionMethod($class, $action);
@@ -99,6 +101,7 @@ class GenerateApiDocs extends Command
         if (str_contains($middleware, 'api.context')) {
             $params[] = ['$ref' => '#/components/parameters/XCartToken'];
             $params[] = ['$ref' => '#/components/parameters/XAffiliateRef'];
+            $params[] = ['$ref' => '#/components/parameters/XAttribution'];
         }
         preg_match_all('#\{(\w+)\??\}#', $uri, $m);
         foreach ($m[1] as $p) {
@@ -164,6 +167,6 @@ class GenerateApiDocs extends Command
             ."Guests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\n"
             ."Checkout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (re-upload of a rejected wallet transfer proof, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\n"
             ."Offline payment: a wallet / bank-transfer payment method (or the wallet prepay leg of COD) REQUIRES the transfer proof file as the multipart field `proof` (jpg, png, webp or pdf) on POST /checkout and POST /checkout/validate; 422 `proof` when missing, invalid or already used for another order; 429 + Retry-After when the anti-abuse limiter trips. Bundles: add with POST /cart/items {bundle_id, quantity}; special packaging: GET /checkout/packaging then send packaging_option_id.\n"
-            ."Money values are decimal strings in the store currency. Cost, profit and commission fields are never exposed.";
+            .'Money values are decimal strings in the store currency. Cost, profit and commission fields are never exposed.';
     }
 }

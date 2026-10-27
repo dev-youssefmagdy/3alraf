@@ -177,6 +177,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::get('seasonal', [$sc, 'index'])->middleware('growth.feature:seasonal_calendar')->name('seasonal.index');
             Route::post('seasonal/year', [$sc, 'ensure'])->middleware('growth.feature:seasonal_calendar')->name('seasonal.year');
             Route::put('seasonal/{id}', [$sc, 'update'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.update');
+            Route::post('seasonal/{id}/confirm', [$sc, 'confirm'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.confirm');
             Route::post('seasonal/tasks/{id}/toggle', [$sc, 'task'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.task');
             Route::post('seasonal/{id}/bundles', [$sc, 'bundles'])->whereNumber('id')->middleware(['growth.feature:seasonal_calendar', 'growth.feature:bundle_engine'])->name('seasonal.bundles');
             Route::post('seasonal/{id}/close', [$sc, 'close'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.close');

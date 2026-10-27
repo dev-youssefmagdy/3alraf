@@ -3,7 +3,7 @@
 namespace App\Services\Growth;
 
 use App\Models\Bundle;
-use App\Models\OrderItem;
+use App\Models\ImprovementTask;
 use App\Models\SeasonalEvent;
 use App\Models\SeasonalMemory;
 use App\Models\SeasonalTask;
@@ -121,10 +121,41 @@ class SeasonalCalendarService
             throw ValidationException::withMessages(['state' => __('growth_hub.seasonal.closed')]);
         }
         $cats = array_values(array_unique(array_map('intval', array_filter((array) ($d['category_ids'] ?? []), 'is_numeric'))));
-        $e->update(['starts_on' => $d['starts_on'], 'ends_on' => $d['ends_on'], 'lead_time_days' => (int) $d['lead_time_days'], 'notes' => $d['notes'] ?? null, 'category_ids' => $cats ?: null]);
+        $dates = $e->starts_on->toDateString() !== (string) $d['starts_on'] || $e->ends_on->toDateString() !== (string) $d['ends_on'];
+        $e->update(($dates && $e->hijri ? ['date_confirmed' => true, 'confirmed_at' => now(), 'confirmed_by' => $adminId] : []) + ['starts_on' => $d['starts_on'], 'ends_on' => $d['ends_on'], 'lead_time_days' => (int) $d['lead_time_days'], 'notes' => $d['notes'] ?? null, 'category_ids' => $cats ?: null]);
         $this->log->log('seasonal.updated', 'admin', $adminId, null, $e);
 
         return $e;
+    }
+
+    /** Admin confirms the computed lunar date against the announced sighting; clears the warning and stops the reminders. */
+    public function confirmDate(int $id, ?int $adminId): SeasonalEvent
+    {
+        $e = SeasonalEvent::findOrFail($id);
+        $e->update(['date_confirmed' => true, 'confirmed_at' => now(), 'confirmed_by' => $adminId]);
+        $this->log->log('seasonal.date_confirmed', 'admin', $adminId, null, $e);
+
+        return $e;
+    }
+
+    /** Reminder tasks for unconfirmed lunar events: one at 7 days and one at 2 days before the start (idempotent per stage). @return int created */
+    public function remindUnconfirmed(): int
+    {
+        $n = 0;
+        foreach (SeasonalEvent::where('hijri', true)->where('date_confirmed', false)->where('status', '!=', 'closed')->whereDate('starts_on', '>=', now()->toDateString())->whereDate('starts_on', '<=', now()->addDays(7)->toDateString())->get() as $e) {
+            $left = (int) now()->startOfDay()->diffInDays($e->starts_on, false);
+            foreach ([$left <= 2 ? 2 : 7] as $stage) { // the stage reached now (7 days before, then 2 days before)
+                $topic = 'hijri:'.$e->id.':'.$stage;
+                if (ImprovementTask::where('rule', 'hijri_confirm')->where('topic', $topic)->exists()) {
+                    continue;
+                }
+                ImprovementTask::create(['topic' => $topic, 'rule' => 'hijri_confirm', 'title' => mb_substr(__('growth_hub.seasonal.confirm_task', ['event' => $e->name(), 'date' => $e->starts_on->format('Y-m-d')]), 0, 200),
+                    'due_on' => now()->toDateString(), 'status' => 'open', 'evidence' => [['source' => 'seasonal_events', 'metric' => 'days_left', 'value' => $left]]]);
+                $n++;
+            }
+        }
+
+        return $n;
     }
 
     public function toggleTask(int $taskId, ?int $adminId): SeasonalTask

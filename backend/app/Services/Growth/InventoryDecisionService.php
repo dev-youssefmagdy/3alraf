@@ -6,9 +6,9 @@ use App\DTOs\PurchaseOrderData;
 use App\Models\Branch;
 use App\Models\GrowthApproval;
 use App\Models\ImprovementTask;
+use App\Models\Product;
 use App\Models\ProductSupplyTerm;
 use App\Models\SeasonalEvent;
-use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\TenantProduct;
 use App\Services\PurchaseService;
@@ -38,7 +38,9 @@ class InventoryDecisionService
         $maxCover = (float) $this->config->get('max_days_of_cover', 90);
         $cap = (float) $this->config->get('reorder_cash_cap', 0);
         $terms = ProductSupplyTerm::get()->keyBy('product_id');
-        $age = StockMovement::where('type', 'purchase_in')->selectRaw('product_id, MAX(created_at) last_in')->groupBy('product_id')->pluck('last_in', 'product_id');
+        $ages = app(StockAgeService::class)->forProducts($vel->map(fn ($v) => (int) $v['on_hand'])->all()); // FIFO layers, one ledger query
+        $agedDays = (int) $this->cfg('aged_days', 90);
+        $agedValue = 0.0;
         $seasons = SeasonalEvent::whereDate('starts_on', '>=', now()->toDateString())->whereDate('starts_on', '<=', now()->addDays((int) $this->cfg('season_hold_days', 60))->toDateString())->get();
         $rows = [];
         foreach (TenantProduct::with('product.categories')->where('is_active', true)->get() as $tp) {
@@ -57,14 +59,17 @@ class InventoryDecisionService
             $oh = (int) $v['on_hand'];
             $perDay = (float) $v['daily_velocity'];
             $cover = $v['days_of_cover'];
-            $ageDays = isset($age[$tp->product_id]) ? (int) now()->diffInDays($age[$tp->product_id], true) : null;
+            $ageInfo = $ages[$tp->product_id] ?? null;
+            $ageDays = $ageInfo['oldest_age_days'] ?? null; // oldest surviving FIFO layer
+            $agedVal = $ageInfo ? StockAgeService::valueOlderThan($ageInfo['layers'], $agedDays, $cost) : 0.0;
+            $agedValue += $agedVal;
             $cats = $p->categories->pluck('id')->all();
             $season = $seasons->first(fn ($e) => array_intersect((array) $e->category_ids, $cats));
             $expiring = $t?->shelf_life_days && $ageDays !== null && $ageDays >= $t->shelf_life_days * (float) $this->cfg('expiry_urgent_share', 0.7);
             $missing = array_values(array_filter([$cost <= 0 ? 'cost' : null, $price <= 0 ? 'price' : null, ! $t ? 'supply_terms' : null, $ageDays === null ? 'stock_age' : null]));
             $slow = $oh > 0 && ($perDay <= 0 || ($cover !== null && $cover > $maxCover));
             $row = ['product_id' => $tp->product_id, 'name' => $p->getTranslation('name', app()->getLocale(), true), 'on_hand' => $oh, 'sold_30d' => (int) $v['sold'], 'velocity' => $perDay, 'days_of_cover' => $cover,
-                'age_days' => $ageDays, 'lead_time_days' => $lead, 'moq' => $moq, 'unit_cost' => $cost, 'price' => $price, 'margin_percent' => $marginPct === null ? null : round($marginPct, 1), 'contribution_30d' => round($unitMargin * (int) $v['sold'], 2),
+                'age_days' => $ageDays, 'weighted_age_days' => $ageInfo['weighted_age_days'] ?? null, 'aged_value' => $agedVal, 'unknown_age_qty' => $ageInfo['unknown_qty'] ?? $oh, 'lead_time_days' => $lead, 'moq' => $moq, 'unit_cost' => $cost, 'price' => $price, 'margin_percent' => $marginPct === null ? null : round($marginPct, 1), 'contribution_30d' => round($unitMargin * (int) $v['sold'], 2),
                 'cash_tied' => round($oh * $cost, 2), 'seasonal_event' => $season?->key, 'expiring' => (bool) $expiring, 'missing' => $missing, 'supplier_id' => $t?->supplier_id, 'scenarios' => [], 'action' => 'none', 'impact' => 0.0, 'reasons' => []];
 
             // reorder: only with velocity, a known cost and a margin above the floor
@@ -100,7 +105,7 @@ class InventoryDecisionService
         usort($rows, fn ($a, $b) => $b['impact'] <=> $a['impact']);
         $slowValue = array_sum(array_map(fn ($r) => ($r['sold_30d'] === 0 && $r['on_hand'] > 0) ? $r['cash_tied'] : 0, $rows));
 
-        return ['rows' => $rows, 'summary' => ['slow_moving_value' => round($slowValue, 2), 'inventory' => $this->metrics->inventory(now()), 'cash_tied' => round(array_sum(array_column($rows, 'cash_tied')), 2)]];
+        return ['rows' => $rows, 'summary' => ['slow_moving_value' => round($slowValue, 2), 'aged_value' => round($agedValue, 2), 'aged_days' => $agedDays, 'inventory' => $this->metrics->inventory(now()), 'cash_tied' => round(array_sum(array_column($rows, 'cash_tied')), 2)]];
     }
 
     private function decide(array $r, bool $slow, bool $needsReorder, bool $season, bool $expiring): array
@@ -225,7 +230,7 @@ class InventoryDecisionService
             if (ImprovementTask::where('product_id', $r['product_id'])->where('topic', $topic)->whereIn('status', ['open', 'doing'])->exists()) {
                 continue;
             }
-            $name = \App\Models\Product::whereKey($r['product_id'])->first()?->getTranslation('name', app()->getLocale(), true) ?? '#'.$r['product_id'];
+            $name = Product::whereKey($r['product_id'])->first()?->getTranslation('name', app()->getLocale(), true) ?? '#'.$r['product_id'];
             ImprovementTask::create(['product_id' => $r['product_id'], 'topic' => $topic, 'rule' => 'stock_to_story', 'title' => mb_substr(__('growth_capital.story.'.$r['category'], ['product' => $name]), 0, 200), 'due_on' => now()->addDays(14)->toDateString(), 'status' => 'open',
                 'evidence' => [['source' => 'interactions', 'metric' => 'mentions_30d', 'value' => $r['count'], 'period' => '30d', 'topic' => $r['category']], ['source' => 'stock', 'metric' => 'on_hand', 'value' => $v['on_hand'], 'period' => 'now'], ['source' => 'orders', 'metric' => 'units_sold_30d', 'value' => $v['sold'], 'period' => '30d']], 'before_value' => $v['sold']]);
             $n++;

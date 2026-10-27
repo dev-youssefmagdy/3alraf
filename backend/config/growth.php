@@ -24,6 +24,7 @@ return [
         'seasonal_calendar' => ['ar' => 'التقويم الموسمي', 'en' => 'Seasonal calendar', 'group' => 'offers', 'depends_on' => [], 'built' => true],
         'gift_finder' => ['ar' => 'باحث الهدايا', 'en' => 'Gift finder', 'group' => 'offers', 'depends_on' => [], 'built' => true],
         'interactions' => ['ar' => 'المحادثات والتفاعلات', 'en' => 'Interactions', 'group' => 'engagement', 'depends_on' => ['integration_api'], 'built' => true],
+        'ai_classify' => ['ar' => 'تصنيف الرسائل بالذكاء الاصطناعي', 'en' => 'AI message classification (fallback)', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
         'voc' => ['ar' => 'صوت العميل', 'en' => 'Voice of customer', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
         'reputation_radar' => ['ar' => 'رادار السمعة', 'en' => 'Reputation radar', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
         'comment_to_cart' => ['ar' => 'من التعليق للسلة', 'en' => 'Comment to cart', 'group' => 'engagement', 'depends_on' => ['interactions'], 'built' => true],
@@ -91,8 +92,10 @@ return [
     ],
 
     // N6 decision engine / trend radar / CEO challenge. Assumptions are labelled as such in the UI.
+    // Interaction classifier: keyword confidence below `low_confidence` (0-1) lets the optional AI fallback decide. Accuracy targets are checked by growth:eval-classifier.
+    'classifier' => ['low_confidence' => 0.6, 'target_accuracy' => ['category' => 0.70, 'intent' => 0.70, 'sentiment' => 0.70], 'ai_max_chars' => 600],
     'capital' => [
-        'horizon_days' => 30, 'promo_uplift' => 1.5, 'promo_baseline_sell_through' => 0.1, 'abc_a_share' => 80, 'abc_b_share' => 95,
+        'horizon_days' => 30, 'aged_days' => 90, 'promo_uplift' => 1.5, 'promo_baseline_sell_through' => 0.1, 'abc_a_share' => 80, 'abc_b_share' => 95,
         'story_min_questions' => 3, 'story_max_sold_30d' => 3, 'season_hold_days' => 60, 'expiry_urgent_share' => 0.7, 'min_history_days' => 14,
     ],
     'returns' => ['recurring_min' => 3, 'window_days' => 30],

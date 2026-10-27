@@ -5,7 +5,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "smoke": "node tests/Browser/smoke.mjs"
+        "smoke": "node tests/Browser/smoke.mjs",
+    "smoke:growth": "node tests/Browser/smoke-growth.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

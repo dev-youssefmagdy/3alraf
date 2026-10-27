@@ -333,6 +333,7 @@
   },
   "meta": {
     "features": [
+      "ai_classify",
       "integration_api",
       "interactions"
     ],

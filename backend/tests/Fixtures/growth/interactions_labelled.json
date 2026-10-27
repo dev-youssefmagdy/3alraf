@@ -1,0 +1,944 @@
+[
+ {
+  "text": "How much is the rose body lotion?",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "what is the price of the big bundle",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Do you have any discount this week?",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "السعر كام لو سمحت",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "بكام الشنطة دي؟",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "في خصم على الكمية؟",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ده غالي اوي مقارنة بغيره",
+  "category": "price",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "Is there an offer on two items?",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "price please",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "the cost is too high for me",
+  "category": "price",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "كام سعر الشحن والمنتج مع بعض؟",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عرض الجمعة البيضاء بيبدأ امتى؟ وفيه خصم كام",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I want to order two, what is the price for both?",
+  "category": "price",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عايز اطلب قطعتين بكام الاتنين",
+  "category": "price",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "How long does delivery take to Alexandria?",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Where is my order? tracking says nothing",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Do you ship to Upper Egypt?",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "الشحن لاسوان بياخد كام يوم؟",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "الاوردر بتاعي لسه ما وصلش",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "التوصيل بكام للجيزة",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "الشحنة اتأخرت اوي",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "The courier never called me",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "delivery was late again, terrible",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "can I get same day delivery in Cairo?",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ممكن اغير عنوان التوصيل قبل الشحن؟",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "tracking number please",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I want to order, do you deliver to Mansoura?",
+  "category": "shipping",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "اطلب واتوصلي طنطا؟",
+  "category": "shipping",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Is the blue one available?",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "do you have this in stock",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "When will it be back in stock?",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "المنتج ده متاح؟",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "لسه موجود اللون الاسود؟",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "هيتوفر امتى تاني",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "نفذ المقاس ده؟",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Any stock left for the gift set?",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "is it out of stock again?",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "متوفر في الفرع؟",
+  "category": "availability",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I want the gift set if it is available",
+  "category": "availability",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عايز اشتري لو متاح",
+  "category": "availability",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Is this original?",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "how do I know it is authentic",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Are you a scam? I saw bad comments",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "negative"
+ },
+ {
+  "text": "المنتج اصلي ولا تقليد؟",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "هل المحل مضمون؟",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "حد جرب عندكم قبل كده؟ مش عايز اتنصب عليا",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "negative"
+ },
+ {
+  "text": "ده اصلي ولا نسخة؟",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Do you have a guarantee on authenticity?",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I do not trust online shops, prove it is real",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "negative"
+ },
+ {
+  "text": "this looks fake",
+  "category": "trust",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "البضاعة دي تقليد وحرام",
+  "category": "trust",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "is it original? I want to buy today",
+  "category": "trust",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Can you send more photos of the bag?",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "do you have a picture of it on a person",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "real images please not studio",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ممكن صور اكتر للمنتج",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ابعتلي صورة حقيقية",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "الصور مش واضحة",
+  "category": "photos",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "في صور بالمقاس على جسم؟",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "photo of the back side?",
+  "category": "photos",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "the image looks different from what I got",
+  "category": "photos",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "ابعت صورة وانا اطلب على طول",
+  "category": "photos",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "What sizes do you have?",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Is it available in red color?",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "size chart please",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "المقاس لارج بيناسب 80 كيلو؟",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "في لون تاني غير الاسود؟",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "الحجم كبير ولا صغير؟",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "اللون في الصورة هو نفس اللون الحقيقي؟",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "which shade matches medium skin?",
+  "category": "size_color",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "the colour is darker than the picture",
+  "category": "size_color",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "the size was too small, disappointed",
+  "category": "size_color",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "المقاس طلع ضيق وحش",
+  "category": "size_color",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "I want the medium size in green",
+  "category": "size_color",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عايز المقاس M لون اخضر",
+  "category": "size_color",
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "How do I return an item?",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Can I get a refund?",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "what is your exchange policy",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عايز استرجع المنتج",
+  "category": "returns",
+  "intent": "complaint",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ممكن استبدال المقاس؟",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "سياسة الاسترجاع ايه؟",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "رجعتلكم الاوردر ومحدش رجع فلوسي",
+  "category": "returns",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "I returned it two weeks ago and no refund yet",
+  "category": "returns",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "can I exchange for another colour?",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "the item arrived damaged, I want a refund",
+  "category": "returns",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "المنتج وصل تالف عايز ارجعه",
+  "category": "returns",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "how many days do I have to return?",
+  "category": "returns",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "How to use the serum?",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "what are the ingredients",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "how do I wash this fabric?",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "طريقة الاستخدام ايه؟",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ازاي استخدم الكريم ده؟",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "المكونات فيها ايه؟",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ينفع استخدمه كل يوم؟ ازاي",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "how often should I apply it",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "can you explain the usage steps",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "how do i assemble the shelf?",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "مش فاهم طريقة تركيب الرف",
+  "category": "usage",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "It gave me a rash on my face",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "I think I am allergic to it",
+  "category": "safety",
+  "intent": "question",
+  "sentiment": "negative"
+ },
+ {
+  "text": "Is it toxic for kids?",
+  "category": "safety",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عندي حساسية من الكريم ده",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "حصلي حروق من الشاحن",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "المنتج ده فيه خطر على الاطفال؟",
+  "category": "safety",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "my skin got burned after using it",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "the charger burnt my socket, dangerous!",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "التهاب في عيني بعد الاستخدام",
+  "category": "safety",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "unsafe for pregnant women?",
+  "category": "safety",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "Thanks, great product!",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "love it, excellent quality",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "perfect, will order again",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "The packaging was perfect, thanks",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "شكرا ممتاز",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "المنتج تحفة والله",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "رائع جدا شكرا ليكم",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "حلو اوي وسريع",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "Great service, thanks a lot",
+  "category": null,
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "excellent, delivered on time",
+  "category": "shipping",
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "thanks for the quick delivery",
+  "category": "shipping",
+  "intent": "praise",
+  "sentiment": "positive"
+ },
+ {
+  "text": "I want to buy this",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I am interested, how do I order?",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عايز اطلب",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "حابب اشتري واحد",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I want to order 3 pieces",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "اطلب منين؟",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ready to order now",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "عاوز اشتري هدية لمامتي",
+  "category": null,
+  "intent": "purchase_intent",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "This is the worst shop ever",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "I am very angry about this",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "خدمة سيئة جدا",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "مش راضي عن الخدمة",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "disappointed with everything",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "وحش جدا ومش هطلب تاني",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "the product is broken",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "تالف من اول استخدام",
+  "category": null,
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "hello",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "hi there",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "السلام عليكم",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ok",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "مساء الخير",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "good morning",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "can someone call me",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ابعتولي رقم التواصل",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "what are your working hours",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "فين مكانكم",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "do you have a store location?",
+  "category": null,
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "are you hiring",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "اشتغل معاكم ازاي",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "I am a supplier, who do I talk to?",
+  "category": null,
+  "intent": "other",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "price and size please",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "بكام وفي مقاسات ايه",
+  "category": "price",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "is it original and how much?",
+  "category": "trust",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "ازاي استخدمه وهل هو اصلي؟",
+  "category": "usage",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "delivery to Cairo and the price?",
+  "category": "shipping",
+  "intent": "question",
+  "sentiment": "neutral"
+ },
+ {
+  "text": "the colour is nice but delivery was late",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "حلو بس الشحن اتأخر",
+  "category": "shipping",
+  "intent": "complaint",
+  "sentiment": "negative"
+ },
+ {
+  "text": "لون جميل وجودة تحفة",
+  "category": "size_color",
+  "intent": "praise",
+  "sentiment": "positive"
+ }
+]

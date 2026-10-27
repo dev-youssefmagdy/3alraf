@@ -48,6 +48,13 @@ class SeasonalController extends Controller implements HasMiddleware
         return $this->ok(__('admin.saved'), route('tenant.growth.seasonal.index', ['year' => $e->year]));
     }
 
+    public function confirm(int $id): JsonResponse
+    {
+        $e = $this->svc->confirmDate($id, auth('tenant')->id());
+
+        return $this->ok(__('growth_hub.seasonal.confirmed'), route('tenant.growth.seasonal.index', ['year' => $e->year]));
+    }
+
     public function task(int $id): JsonResponse
     {
         $t = $this->svc->toggleTask($id, auth('tenant')->id());

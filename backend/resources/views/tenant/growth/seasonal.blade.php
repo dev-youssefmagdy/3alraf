@@ -8,6 +8,12 @@
         </div>
         @forelse ($events as $e)
             <x-card :title="$e->name().' ('.$e->starts_on->format('Y-m-d').' - '.$e->ends_on->format('Y-m-d').')'">
+                @if ($e->needsConfirmation())
+                    <p class="mb-3 rounded bg-amber-50 p-2 text-sm text-amber-800"><span class="badge badge-warning">{{ $s('unconfirmed') }}</span> {{ $s('unconfirmed_hint') }}
+                        @can('growth.manage')<form data-ajax-form action="{{ route('tenant.growth.seasonal.confirm', $e->id) }}" method="POST" class="mt-2" novalidate>@csrf<x-button type="submit">{{ $s('confirm_date') }}</x-button></form>@endcan</p>
+                @elseif ($e->hijri)
+                    <p class="mb-3 text-xs text-emerald-700">{{ $s('confirmed') }} {{ $e->confirmed_at?->format('Y-m-d') }}</p>
+                @endif
                 <div class="grid gap-4 lg:grid-cols-2">
                     <div>
                         <b class="text-sm">{{ $s('readiness') }}</b>

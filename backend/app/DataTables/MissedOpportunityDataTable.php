@@ -6,7 +6,7 @@ use App\Models\MissedOpportunity;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 
-/** Missed-opportunity list: server-side paging/search; quick status buttons (the owner/due/note edit stays in the update endpoint). */
+/** Missed-opportunity list: server-side paging/search; quick status buttons (owner/due/note edit via the modal on the page). */
 class MissedOpportunityDataTable extends BaseDataTable
 {
     public function query(): Builder
@@ -44,7 +44,7 @@ class MissedOpportunityDataTable extends BaseDataTable
                 if (! $can) {
                     return '';
                 }
-                $h = '';
+                $h = '<button type="button" class="btn-sm btn-primary me-1 mb-1" data-missed-edit data-url="'.e(route('tenant.growth.missed.update', $o->id)).'" data-status="'.e($o->status).'" data-owner="'.e((string) $o->owner).'" data-due="'.e($o->due_on?->toDateString() ?? '').'" data-note="'.e((string) $o->result_note).'">'.e(__('admin.edit')).'</button>';
                 foreach ($m('statuses') as $k => $label) {
                     if ($k !== $o->status) {
                         $h .= '<button type="button" class="btn-sm btn-secondary me-1 mb-1" data-gpost="'.e(route('tenant.growth.missed.status', $o->id).'?status='.$k).'">'.e($label).'</button>';

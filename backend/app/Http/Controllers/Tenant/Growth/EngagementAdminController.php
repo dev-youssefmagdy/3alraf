@@ -13,6 +13,7 @@ use App\Http\Requests\Tenant\TaskUpdateRequest;
 use App\Models\ImprovementTask;
 use App\Models\Interaction;
 use App\Models\ReputationAlert;
+use App\Models\TenantAdmin;
 use App\Models\TrackedLink;
 use App\Services\Growth\InteractionService;
 use App\Services\Growth\MissedOpportunityService;
@@ -116,7 +117,7 @@ class EngagementAdminController extends Controller implements HasMiddleware
 
     public function missed(MissedOpportunityDataTable $table)
     {
-        return view('tenant.growth.missed', ['table' => $table]);
+        return view('tenant.growth.missed', ['table' => $table, 'owners' => TenantAdmin::where('is_active', true)->orderBy('name')->pluck('name')->all()]);
     }
 
     public function missedData(MissedOpportunityDataTable $table)

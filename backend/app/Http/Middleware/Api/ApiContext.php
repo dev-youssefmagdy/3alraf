@@ -4,6 +4,8 @@ namespace App\Http\Middleware\Api;
 
 use App\Http\Middleware\ResolveTenant;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Services\Affiliates\AffiliateTracker;
+use App\Services\Growth\AttributionService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Per-request context of the mobile API: tenant (subdomain host OR `X-Tenant` slug header), locale (Accept-Language limited to the
- * tenant's locales), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie).
+ * tenant's locales), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie) and Growth first-touch (`X-Attribution`).
  */
 class ApiContext
 {
@@ -34,8 +36,14 @@ class ApiContext
         if ($token = $request->header('X-Cart-Token')) {
             session(['cart_token' => (string) $token]);
         }
+        $request->attributes->set('api_context', true);
+        if ($attr = AttributionService::fromHeader((string) $request->header('X-Attribution'))) {
+            session(['growth_attr' => $attr['attr']]);
+            ! empty($attr['gift_session']) && session(['gift_session_id' => $attr['gift_session']]);
+            ! empty($attr['bundle_ab']) && session(['bundle_ab' => $attr['bundle_ab']]);
+        }
         if ($ref = $request->header('X-Affiliate-Ref')) {
-            $request->cookies->set(\App\Services\Affiliates\AffiliateTracker::COOKIE, (string) $ref);
+            $request->cookies->set(AffiliateTracker::COOKIE, (string) $ref);
         }
 
         $response = $next($request);

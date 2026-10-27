@@ -40,6 +40,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -98,6 +101,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -196,6 +202,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "id",
@@ -302,6 +311,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "id",
                         "in": "path",
                         "required": true,
@@ -368,6 +380,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -428,6 +443,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -498,6 +516,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -558,6 +579,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -618,6 +642,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -676,6 +703,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -736,6 +766,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -796,6 +829,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "slug",
@@ -864,6 +900,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -938,6 +977,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -998,6 +1040,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1075,6 +1120,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -1138,6 +1186,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "responses": {
@@ -1183,6 +1234,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -1253,6 +1307,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1313,6 +1370,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1371,6 +1431,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1462,6 +1525,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -1536,6 +1602,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "requestBody": {
@@ -1607,6 +1676,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1658,6 +1730,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1709,6 +1784,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "slug",
@@ -1768,6 +1846,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1819,6 +1900,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -1896,6 +1980,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "item",
@@ -1981,6 +2068,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "item",
                         "in": "path",
                         "required": true,
@@ -2038,6 +2128,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2098,6 +2191,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2108,9 +2204,60 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "type": "object"
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
                             }
                         }
                     }
@@ -2158,6 +2305,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2209,6 +2359,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2260,6 +2413,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2311,6 +2467,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2321,9 +2480,60 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "type": "object"
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
                             }
                         }
                     }
@@ -2371,6 +2581,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2422,6 +2635,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2473,6 +2689,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2524,6 +2743,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2575,6 +2797,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2585,9 +2810,60 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "type": "object"
+                                "type": "object",
+                                "properties": {
+                                    "address_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "city_id": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "shipping_company_id": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string"
+                                    },
+                                    "prepay_method_id": {
+                                        "type": "string"
+                                    },
+                                    "discount_code": {
+                                        "type": "string"
+                                    },
+                                    "packaging_option_id": {
+                                        "type": "integer"
+                                    },
+                                    "proof": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "city_id",
+                                    "address",
+                                    "shipping_company_id",
+                                    "payment_method_id"
+                                ]
                             }
                         }
                     }
@@ -2635,6 +2911,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "responses": {
@@ -2682,12 +2961,160 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "slug",
                         "in": "path",
                         "required": true,
                         "schema": {
                             "type": "string"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gift-finder": {
+            "post": {
+                "summary": "Gift Finder Search",
+                "operationId": "gift-finder_search_post",
+                "tags": [
+                    "gift-finder"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "budget": {
+                                        "type": "number"
+                                    },
+                                    "occasion": {
+                                        "type": "string"
+                                    },
+                                    "recipient": {
+                                        "type": "string"
+                                    },
+                                    "category_id": {
+                                        "type": "integer"
+                                    },
+                                    "restrictions": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "budget"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/gift-finder/{token}/cart": {
+            "post": {
+                "summary": "Gift Finder Cart",
+                "operationId": "gift-finder_cart_post",
+                "tags": [
+                    "gift-finder"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    [],
+                    {
+                        "customerToken": []
                     }
                 ],
                 "responses": {
@@ -2772,6 +3199,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2823,6 +3253,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2874,6 +3307,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -2936,6 +3372,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "token",
                         "in": "path",
                         "required": true,
@@ -2974,6 +3413,77 @@
                 }
             }
         },
+        "/api/v1/orders/{token}/cancel": {
+            "post": {
+                "summary": "Customer cancellation with a structured reason code (feature `return_intel`; 404 when off)",
+                "operationId": "orders_cancel_post",
+                "tags": [
+                    "orders"
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/XTenant"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguage"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XCartToken"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "security": [
+                    {
+                        "customerToken": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success (envelope)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Envelope"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing / wrong-type / other-tenant token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orders/{token}/pay": {
             "post": {
                 "summary": "New gateway link for an unpaid online order",
@@ -2993,6 +3503,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "token",
@@ -3052,6 +3565,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "token",
@@ -3129,6 +3645,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "token",
@@ -3220,6 +3739,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "token",
                         "in": "path",
                         "required": true,
@@ -3277,6 +3799,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "responses": {
@@ -3322,6 +3847,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "slug",
@@ -3375,6 +3903,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "token",
@@ -3436,6 +3967,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "slug",
                         "in": "path",
                         "required": true,
@@ -3495,6 +4029,9 @@
                         "$ref": "#/components/parameters/XAffiliateRef"
                     },
                     {
+                        "$ref": "#/components/parameters/XAttribution"
+                    },
+                    {
                         "name": "slug",
                         "in": "path",
                         "required": true,
@@ -3550,6 +4087,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "slug",
@@ -3638,6 +4178,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "responses": {
@@ -3722,6 +4265,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     }
                 ],
                 "security": [
@@ -3782,6 +4328,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/XAffiliateRef"
+                    },
+                    {
+                        "$ref": "#/components/parameters/XAttribution"
                     },
                     {
                         "name": "product",
@@ -3882,6 +4431,16 @@
                 "description": "Affiliate ref (uuid) of a shared link, for commission attribution",
                 "schema": {
                     "type": "string"
+                }
+            },
+            "XAttribution": {
+                "name": "X-Attribution",
+                "in": "header",
+                "required": false,
+                "description": "Growth first-touch attribution: base64url(JSON) of {utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session, ab}, max 1024 chars. Stored on the cart (first touch wins) and copied to the order channel at checkout. Malformed values are ignored.",
+                "schema": {
+                    "type": "string",
+                    "maxLength": 1024
                 }
             }
         },

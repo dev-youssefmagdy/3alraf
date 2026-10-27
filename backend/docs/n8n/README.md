@@ -54,3 +54,15 @@ Erasure on request: `php artisan growth:prune --tenant=egy --erase-thread=<threa
 
 ## Docs notes
 `docs/CALCULATIONS.md` had no N6 section; the inventory and return-reason rules were added there in N7. Mobile API docs stay in `docs/api/openapi.json`; the integration API is in `docs/api/integration-openapi.json`.
+
+## Offline self-test and real-n8n dry-run checklist (N10)
+**Offline (no n8n needed):** `php artisan growth:n8n-selftest --tenant=egy` runs every "Sign ..." Code node of `docs/n8n/workflows/*.json` through node (`docs/n8n/selftest-runner.cjs`, same JS and HMAC n8n runs), sends each built request through the real routes with a throwaway client (all scopes), once with all features ON and once OFF, and asserts: HMAC accepted (no 401), route exists (no 404-route/405), no 500, ON = authenticated and not forbidden, OFF = 403 `feature_disabled` for feature-gated routes. All changes are rolled back; refuses to run in production. Use a migrated (preferably separate) database. Wrapped by `tests/Feature/GrowthRemainingTest.php`.
+**It does not prove n8n itself.** The checklist below has NOT been run live by the development team; run it once on your n8n:
+1. Set n8n env `GROWTH_API_BASE`, `GROWTH_HMAC_SECRET`, `NODE_FUNCTION_ALLOW_BUILTIN=crypto` and create credential `3alraf Integration Bearer` (Header Auth) from a client created in Admin > Growth > Integrations.
+2. Import `00-error-handler`, then `01-health-monitor`; execute 01 manually: GET /features, /ping and /health must all return 200 (green).
+3. Turn one feature OFF in Guardrails and run its workflow: it must stop at "Feature OFF - stop" (no write calls in the execution log).
+4. Turn it ON and run `11-interactions-ingest` with a test payload through its webhook: expect 201, the item in Admin > Interactions, and a suggested reply fetch.
+5. Re-send the same payload: expect the same stored result (idempotent), not a duplicate.
+6. Break the secret on purpose: expect 401 and the error handler (00) firing.
+7. Activate the schedules one at a time, confirm queue worker + scheduler run, and check the Event log page shows delivered events.
+8. Record the n8n version and date you validated in your runbook.

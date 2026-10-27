@@ -50,6 +50,44 @@ class AttributionService
         return $t ?: null;
     }
 
+    /**
+     * Mobile `X-Attribution`: base64url JSON {utm_source,utm_medium,utm_campaign,utm_content,ref,link,gift_session,ab}. Whitelisted keys, size-capped,
+     * values sanitised like web UTMs; anything malformed is ignored (never blocks the request).
+     *
+     * @return array{attr:array,gift_session?:int,bundle_ab?:string}|null
+     */
+    public static function fromHeader(string $h): ?array
+    {
+        if ($h === '' || strlen($h) > 1024) {
+            return null;
+        }
+        $j = base64_decode(strtr($h, '-_', '+/'), true);
+        $d = $j === false ? null : json_decode($j, true);
+        if (! is_array($d)) {
+            return null;
+        }
+        $t = [];
+        foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'ref', 'link'] as $k) {
+            $v = is_scalar($d[$k] ?? null) ? trim((string) $d[$k]) : '';
+            $v = mb_substr(preg_replace('/[^\w\-\.\s]/u', '', $v), 0, 80);
+            if ($v !== '') {
+                $t[$k] = $v;
+            }
+        }
+        $out = [];
+        if (isset($d['gift_session']) && is_numeric($d['gift_session']) && (int) $d['gift_session'] > 0) {
+            $out['gift_session'] = (int) $d['gift_session'];
+        }
+        if (isset($d['ab']) && is_string($d['ab']) && preg_match('/^[\w\-:\.]{1,40}$/', $d['ab'])) {
+            $out['bundle_ab'] = $d['ab'];
+        }
+        if (! $t && ! $out) {
+            return null;
+        }
+
+        return ['attr' => $t ? $t + ['channel' => self::normalise($t), 'at' => now()->toDateString()] : [], ...$out];
+    }
+
     public static function capture(Request $r): void
     {
         if (! $r->hasSession() || $r->session()->has(self::SESSION_KEY)) {
@@ -66,8 +104,8 @@ class AttributionService
     {
         $a = null;
         $extra = [];
-        if (app()->bound('request') && request()->hasSession()) {
-            $sess = request()->session();
+        if (app()->bound('request')) {
+            $sess = request()->hasSession() ? request()->session() : session(); // the mobile API keeps its per-call session in the session store only
             $a = $sess->get(self::SESSION_KEY);
             // Growth carry-over ids (gift finder session, bundle A/B variant): ids only, no personal data.
             if ($g = $sess->get('gift_session_id')) {
