@@ -58,7 +58,7 @@ beforeEach(function () {
     $this->aff = Affiliate::where('email', 'aff@egy.test')->first();
     // tiers from seeder: 0 -> 5%, 1000 -> 7%, 5000 -> 10%
     $this->place = fn (int $qty = 1, ?int $affId = null, ?Product $p = null, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(
-        ...array_merge(['name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id,
+        ...array_merge(['name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id,
             'paymentMethodId' => $this->cod->id, 'affiliateId' => $affId], $o)),
         [['product_id' => ($p ?? $this->product)->id, 'variant_id' => 0, 'qty' => $qty]])['order'];
     $this->deliver = function (Order $o) {
@@ -147,7 +147,7 @@ it('tracks affiliate clicks with a 30 day cookie and attributes the order to the
     $this->get("{$this->s}/product/{$this->product->slug}?aff={$this->aff->uuid}")->assertOk();               // missing utm_source: no click
     expect(AffiliateClick::count())->toBe(1);
 
-    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '01100000111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 2])->assertOk();
     $res = $this->withCredentials()->withCookie('aff', $this->aff->uuid)->postJson("{$this->s}/checkout", $payload)->assertOk();
     $order = Order::where('number', $res->json('data.number'))->first();
@@ -160,7 +160,7 @@ it('tracks affiliate clicks with a 30 day cookie and attributes the order to the
 });
 
 it('registers affiliates as pending, blocks login until approved, and shows dashboard + product links with QR', function () {
-    $d = ['name' => 'New Aff', 'email' => 'new@egy.test', 'phone' => '010', 'password' => 'secret123', 'password_confirmation' => 'secret123'];
+    $d = ['name' => 'New Aff', 'email' => 'new@egy.test', 'phone' => '01000000010', 'password' => 'secret123', 'password_confirmation' => 'secret123'];
     $this->postJson("{$this->s}/affiliate/register/validate", ['email' => 'aff@egy.test'] + $d)->assertStatus(422)->assertJsonValidationErrors(['email']);
     $this->postJson("{$this->s}/affiliate/register", $d)->assertOk();
     $new = Affiliate::where('email', 'new@egy.test')->first();

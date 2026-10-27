@@ -13,7 +13,7 @@
                     @csrf
                     <x-input name="name" :label="__('store.name')" required autofocus />
                     <x-input name="email" type="email" :label="__('store.email')" required autocomplete="username" />
-                    <x-input name="phone" type="tel" :label="__('store.phone')" />
+                    <x-phone-input name="phone" :label="__('store.phone')" />
                     <x-input name="password" type="password" :label="__('store.password')" required autocomplete="new-password" />
                     <x-input name="password_confirmation" type="password" :label="__('store.password_confirmation')" required autocomplete="new-password" />
                     <button type="submit" class="btn btn-primary w-full">{{ __('store.register') }}</button>

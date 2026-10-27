@@ -59,7 +59,7 @@ beforeEach(function () {
     $this->fawry = PaymentMethod::create(['type' => 'online', 'provider' => 'fawrypay', 'name' => ['ar' => 'فوري'], 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer',
         'credentials' => ['merchant_code' => 'MC1', 'secure_key' => 'fsecret'], 'is_sandbox' => true, 'is_active' => true]);
     $this->place = fn (int $qty, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '01000000100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty]]);
     $this->setUpfront = fn (bool $on) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_collect_shipping_upfront' => $on])]);
@@ -227,7 +227,7 @@ it('does not accept another tenant\'s webhook / method id and stubs unimplemente
     $this->postJson("http://egy.3alraf.test/webhooks/payments/{$foreign->id}", ['x' => 1])->assertNotFound();
     // checkout with a foreign payment method / prepay method id is a validation error, never an order
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->assertOk();
-    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id]);
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '01100000111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id]);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $foreign->id])->assertStatus(422)->assertJsonValidationErrors(['payment_method_id']);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $foreign->id])->assertStatus(422)->assertJsonValidationErrors(['prepay_method_id']);
     // stripe is a clean "not implemented" stub and is never offered
@@ -320,7 +320,7 @@ it('toggles methods independently, keeps COD undeletable but deactivatable, and 
     // a second COD is refused; custom wallets (e& Cash / other) are accepted and always need proof
     $base = ['name' => ['ar' => 'x'], 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer'];
     $this->postJson("{$this->t}/payment-methods/validate", ['type' => 'cod', 'provider' => 'cod'] + $base)->assertStatus(422)->assertJsonValidationErrors(['type']);
-    $this->postJson("{$this->t}/payment-methods", ['type' => 'wallet', 'provider' => 'etisalat_cash', 'account_number' => '0111', 'is_active' => 1] + $base)->assertOk();
+    $this->postJson("{$this->t}/payment-methods", ['type' => 'wallet', 'provider' => 'etisalat_cash', 'account_number' => '01100000111', 'is_active' => 1] + $base)->assertOk();
     expect(PaymentMethod::where('provider', 'etisalat_cash')->first()->requires_proof)->toBeTrue();
     // every new tenant gets a COD method
     expect(PaymentMethod::ensureDefaultCod($this->tenant->id)->id)->toBe($this->cod->id);

@@ -60,7 +60,7 @@ beforeEach(function () {
     // bearer token helper for a customer / affiliate
     $this->tokenFor = fn ($u, string $ability = 'customer') => $u->createToken('t', [$ability])->plainTextToken;
     $this->auth = fn () => ['Authorization' => 'Bearer '.($this->tokenFor)($this->customer)];
-    $this->body = ['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id];
+    $this->body = ['name' => 'Ali', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id];
     $this->sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
 });
 
@@ -115,7 +115,7 @@ it('registers, logs in, returns me, updates the profile and logs out (token revo
     $this->postJson("{$this->api}/auth/register", ['name' => 'Dup', 'email' => 'mona@x.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'])->assertStatus(422)->assertJsonStructure(['errors' => ['email']]);
 
     $this->getJson("{$this->api}/auth/me", $h)->assertOk()->assertJsonPath('data.name', 'Mona')->assertJsonPath('data.email_verified', false);
-    $this->putJson("{$this->api}/auth/me", ['name' => 'Mona S', 'email' => 'mona@x.test', 'phone' => '0111'], $h)->assertOk()->assertJsonPath('data.name', 'Mona S');
+    $this->putJson("{$this->api}/auth/me", ['name' => 'Mona S', 'email' => 'mona@x.test', 'phone' => '01100000111'], $h)->assertOk()->assertJsonPath('data.name', 'Mona S');
 
     $login = $this->postJson("{$this->api}/auth/login", ['email' => 'mona@x.test', 'password' => 'secret123'])->assertOk()->json('data.token');
     $this->postJson("{$this->api}/auth/login", ['email' => 'mona@x.test', 'password' => 'bad'])->assertStatus(422);
@@ -353,12 +353,12 @@ it('lists only the caller own orders, shows by token, and handles returns for de
 
 it('manages addresses, wishlist and reviews for the signed-in customer only', function () {
     $h = ($this->auth)();
-    $a = $this->postJson("{$this->api}/addresses", ['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1'], $h)->assertCreated()->assertJsonPath('data.is_default', true)->json('data.id');
+    $a = $this->postJson("{$this->api}/addresses", ['name' => 'Ali', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 1'], $h)->assertCreated()->assertJsonPath('data.is_default', true)->json('data.id');
     $this->postJson("{$this->api}/addresses", ['name' => 'Ali'], $h)->assertStatus(422);
-    $this->putJson("{$this->api}/addresses/$a", ['name' => 'Ali 2', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 2'], $h)->assertOk()->assertJsonPath('data.address', 'St 2');
+    $this->putJson("{$this->api}/addresses/$a", ['name' => 'Ali 2', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 2'], $h)->assertOk()->assertJsonPath('data.address', 'St 2');
     $this->getJson("{$this->api}/addresses", $h)->assertJsonCount(1, 'data');
     $stranger = Customer::create(['name' => 'S', 'email' => 's@x.test', 'password' => 'password12', 'is_active' => true]);
-    $this->putJson("{$this->api}/addresses/$a", ['name' => 'Hack', 'phone' => '1', 'city_id' => $this->city->id, 'address' => 'x'], ['Authorization' => 'Bearer '.($this->tokenFor)($stranger)])->assertNotFound();
+    $this->putJson("{$this->api}/addresses/$a", ['name' => 'Hack', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'x'], ['Authorization' => 'Bearer '.($this->tokenFor)($stranger)])->assertNotFound();
     // address_id in checkout belongs to the customer
     $cartH = $h + ['X-Cart-Token' => 'x'];
     $this->postJson("{$this->api}/cart/items", ['product_id' => $this->p1->id, 'variant_id' => 0, 'quantity' => 1], $h)->assertOk();

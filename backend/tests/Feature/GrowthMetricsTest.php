@@ -38,7 +38,7 @@ function mkOrder(array $o = [], array $items = [['q' => 2, 'price' => 100, 'cost
     $sub = collect($items)->sum(fn ($i) => $i['q'] * $i['price']);
     $cogs = collect($items)->sum(fn ($i) => $i['q'] * ($i['cost'] ?? 0));
     $order = new Order;
-    $order->forceFill(array_merge(['number' => 'T'.++$seq.uniqid(), 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '0100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid',
+    $order->forceFill(array_merge(['number' => 'T'.++$seq.uniqid(), 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid',
         'subtotal' => $sub, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 10, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => $sub,
         'cogs' => $cogs, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => Carbon::parse('2026-10-20 12:00')], $o))->save();
     foreach ($items as $i) {
@@ -121,7 +121,7 @@ it('builds a daily brief where every recommendation has evidence and no PII', fu
     }
     $w = app(BriefService::class)->weekly($this->day);
     expect($w)->toHaveKeys(['channel_profitability', 'bundle_performance', 'recommendations', 'experiment_results'])->and(count($w['recommendations']))->toBeLessThanOrEqual(3);
-    expect(json_encode($b).json_encode($w))->not->toContain('0100');
+    expect(json_encode($b).json_encode($w))->not->toContain('01000000100');
 });
 
 // ---- API --------------------------------------------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ it('serves the read API with scope, tenant isolation and no PII', function () {
     integrationCall($this, 'GET', 'metrics/summary', null, $tok2, $sec2)->assertStatus(403);
     foreach (['products', 'inventory/velocity', 'orders/summary', 'orders/attribution', 'returns/reasons', 'bundles', 'customers/segments', 'metrics/products', 'metrics/channels', 'brief/daily', 'brief/weekly'] as $p) {
         $r = integrationCall($this, 'GET', $p, null, $token, $secret)->assertOk();
-        expect($r->getContent())->not->toContain('0100')->not->toContain('customer_phone');
+        expect($r->getContent())->not->toContain('01000000100')->not->toContain('customer_phone');
     }
     // another tenant's client sees only its own data
     mkOrder([], [['q' => 5, 'price' => 100, 'cost' => 10]], $this->other);

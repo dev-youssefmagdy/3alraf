@@ -53,7 +53,7 @@ beforeEach(function () {
     $this->wallet = PaymentMethod::where('type', 'wallet')->first();
     $this->lines = fn (int $qty) => [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty]];
     $this->checkout = fn (array $o = []) => new CheckoutData(...array_merge([
-        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'Street 1',
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'Street 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o));
     $this->place = fn (int $qty = 2, array $o = []) => app(OrderPlacementService::class)->place(($this->checkout)($o), ($this->lines)($qty))['order'];
@@ -215,7 +215,7 @@ it('runs the storefront cart -> checkout flow and the admin order pages', functi
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 99])->assertStatus(422);
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 2])->assertOk()->assertJsonPath('data.totals.subtotal', '200.00');
     $this->postJson("{$this->s}/checkout/validate", [])->assertStatus(422)->assertJsonValidationErrors(['name', 'shipping_company_id', 'payment_method_id']);
-    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id, 'discount_code' => 'WELCOME10']);
+    $payload = withSavedAddress(['name' => 'Sara', 'phone' => '01100000111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id, 'discount_code' => 'WELCOME10']);
     $this->postJson("{$this->s}/checkout/validate", $payload)->assertOk();
     $this->postJson("{$this->s}/checkout/validate", ['discount_code' => 'NOPE'] + $payload)->assertStatus(422)->assertJsonValidationErrors(['discount_code']);
     $res = $this->postJson("{$this->s}/checkout", $payload)->assertOk();

@@ -1,10 +1,10 @@
 <x-layouts.admin guard="tenant" :title="$customer->name">
     <div class="grid gap-4 lg:grid-cols-3">
         <x-card :title="__('orders.fields.customer')">
-            <div class="space-y-1 text-sm"><div>{{ $customer->email }}</div><div>{{ $customer->phone }}</div><div>{!! $customer->is_active ? '<span class="badge badge-success">'.e(__('admin.active')).'</span>' : '<span class="badge badge-muted">'.e(__('admin.inactive')).'</span>' !!}</div></div>
+            <div class="space-y-1 text-sm"><div>{{ $customer->email }}</div><div><bdi dir="ltr">{{ $customer->phone_display ?: $customer->phone }}</bdi></div><div>{!! $customer->is_active ? '<span class="badge badge-success">'.e(__('admin.active')).'</span>' : '<span class="badge badge-muted">'.e(__('admin.inactive')).'</span>' !!}</div></div>
             <h3 class="mt-4 text-sm font-semibold">{{ __('orders.addresses') }}</h3>
             @forelse ($customer->addresses as $a)
-                <div class="mt-2 rounded-lg border border-slate-200 p-2 text-sm">{{ $a->name }} - {{ $a->phone }}<br>{{ $a->city?->name }} - {{ $a->address }}@if ($a->is_default) <span class="badge badge-success">{{ __('admin.default') }}</span>@endif</div>
+                <div class="mt-2 rounded-lg border border-slate-200 p-2 text-sm">{{ $a->name }} - <bdi dir="ltr">{{ $a->phone_display ?: $a->phone }}</bdi><br>{{ $a->city?->name }} - {{ $a->address }}@if ($a->is_default) <span class="badge badge-success">{{ __('admin.default') }}</span>@endif</div>
             @empty
                 <p class="mt-2 text-sm text-slate-500">{{ __('admin.no_data') }}</p>
             @endforelse

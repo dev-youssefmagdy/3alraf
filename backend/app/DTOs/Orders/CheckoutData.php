@@ -20,6 +20,7 @@ final readonly class CheckoutData
         public ?int $prepayMethodId = null, // online/wallet method paying the shipping upfront for COD
         public ?\Illuminate\Http\UploadedFile $proof = null, // transfer proof: mandatory when the chosen method (or COD prepay method) is offline
         public ?int $packagingOptionId = null, // special packaging option (one per order)
+        public ?string $phoneCode = null, // dial code snapshot for the phone (server-decided)
     ) {}
 
     public static function fromRequest(\App\Http\Requests\Storefront\CheckoutRequest $r): self
@@ -42,6 +43,7 @@ final readonly class CheckoutData
             $r->filled('prepay_method_id') ? (int) $r->input('prepay_method_id') : null,
             $r->file('proof'),
             $r->exists('packaging_option_id') ? ($r->filled('packaging_option_id') ? (int) $r->input('packaging_option_id') : null) : app(\App\Services\Orders\CartService::class)->packagingOptionId(),
+            $addr ? $addr->phone_country_code : ($r->filled('phone') ? $r->input('phone_country_code') : $customer?->phone_country_code),
         );
     }
 }

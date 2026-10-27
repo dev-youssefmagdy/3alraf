@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerAddress extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, \App\Models\Concerns\HasStorefrontPhone;
 
-    protected $fillable = ['customer_id', 'label', 'name', 'phone', 'city_id', 'address', 'notes', 'is_default'];
+    protected $fillable = ['customer_id', 'label', 'name', 'phone', 'phone_country_code', 'city_id', 'address', 'notes', 'is_default'];
 
     protected function casts(): array
     {

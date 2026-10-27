@@ -45,7 +45,7 @@
         <div class="grid gap-5 md:grid-cols-2">
             <section class="space-y-1 rounded-2xl bg-white p-5 text-sm ring-1 ring-slate-100">
                 <h2 class="mb-2 font-extrabold">{{ __('store.shipping_address') }}</h2>
-                <p><b>{{ $order->customer_name }}</b> - {{ $order->customer_phone }}</p>
+                <p><b>{{ $order->customer_name }}</b> - <bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi></p>
                 <p>{{ $order->city?->name }} - {{ $order->address }}</p>
                 <p class="text-slate-500">{{ $order->shippingCompany?->name }}</p>
                 <h2 class="mb-2 mt-4 font-extrabold">{{ __('store.payment_method') }}</h2>

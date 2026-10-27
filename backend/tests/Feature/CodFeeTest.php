@@ -37,7 +37,7 @@ beforeEach(function () {
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->setFee = fn (array $s) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '15'], $s)]);
     $this->place = fn (int $method, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'proof' => testProof(), 'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $method,
+        'proof' => testProof(), 'name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $method,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
     $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
 });
@@ -140,7 +140,7 @@ it('keeps the fee out of prepaid shipping when shipping is prepaid', function ()
 it('API quote/checkout/order resources expose the fee (parity with web) but no profit fields', function () {
     ($this->setFee)(['cod_extra_fee_label' => ['ar' => 'رسوم COD'], 'cod_collect_shipping_upfront' => false]);
     $h = ['X-Cart-Token' => $this->postJson("{$this->api}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 2])->headers->get('X-Cart-Token')];
-    $b = ['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id];
+    $b = ['name' => 'Ali', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id];
     $this->postJson("{$this->api}/cart/quote", $b + ['payment_method_id' => $this->cod->id], $h)->assertOk()
         ->assertJsonPath('data.totals.cod_fee', '15.00')->assertJsonPath('data.totals.cod_fee_label', 'رسوم COD')->assertJsonPath('data.totals.total', '255.00')->assertJsonPath('data.totals.cod_amount', '255.00');
     $this->postJson("{$this->api}/cart/quote", $b + ['payment_method_id' => $this->wallet->id], $h)->assertOk()->assertJsonPath('data.totals.cod_fee', '0.00');

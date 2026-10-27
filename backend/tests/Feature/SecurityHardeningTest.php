@@ -248,7 +248,7 @@ it('keeps the wrong-code counter across re-issues and applies a per-email issue 
 
 // ---------------------------------------------------------------- (8) audit log
 it('keeps order secrets and customer PII out of the audit log', function () {
-    $o = Order::query()->first() ?? Order::create(['number' => 'T-1', 'public_token' => 'tok-secret', 'customer_name' => 'Ali', 'customer_phone' => '0100', 'customer_email' => 'a@x.test', 'address' => 'St', 'status' => 'pending', 'payment_status' => 'unpaid', 'subtotal' => 1, 'total' => 1, 'currency' => 'EGP']);
+    $o = Order::query()->first() ?? Order::create(['number' => 'T-1', 'public_token' => 'tok-secret', 'customer_name' => 'Ali', 'customer_phone' => '01000000100', 'customer_email' => 'a@x.test', 'address' => 'St', 'status' => 'pending', 'payment_status' => 'unpaid', 'subtotal' => 1, 'total' => 1, 'currency' => 'EGP']);
     $o->update(['customer_name' => 'Changed', 'address' => 'New street', 'payment_proof' => 'proofs/x.jpg', 'notes' => 'n2']);
     $props = Activity::where('subject_type', $o->getMorphClass())->where('subject_id', $o->id)->latest('id')->first()->properties->toArray();
     expect(json_encode($props))->not->toContain('Changed')->not->toContain('New street')->not->toContain('proofs/x.jpg')->not->toContain($o->public_token)->toContain('n2');

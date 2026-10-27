@@ -48,7 +48,7 @@ beforeEach(function () {
     $this->opt = PackagingOption::create(['name' => ['ar' => 'هدية', 'en' => 'Gift box'], 'price' => 25, 'cost' => 8, 'is_active' => true]);
     $this->lines = [['product_id' => $this->p->id, 'variant_id' => 0, 'qty' => 2, 'bundle_id' => 0]];
     $this->place = fn (array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
+        'name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
         'packagingOptionId' => $this->opt->id,
     ], $o)), $this->lines)['order'];
     $this->deliver = function (Order $o) {
@@ -104,7 +104,7 @@ it('serves identical totals through quote, placement, invoice, admin and the mob
     // 200 + 40 + tax (200*14% = 28) + 25 + 3.50 = 296.50 ; shown tax = 28 + 3.50
     $q->assertJsonPath('data.totals.total', '296.50')->assertJsonPath('data.totals.tax', '31.50');
     $this->getJson("{$this->api}/cart", $h)->assertJsonPath('data.totals.packaging_fee', '25.00');   // choice persisted on the cart
-    $placed = $this->postJson("{$this->api}/checkout", ['name' => 'Sara', 'phone' => '0111', 'address' => 'St'] + $body, $h)->assertSuccessful();
+    $placed = $this->postJson("{$this->api}/checkout", ['name' => 'Sara', 'phone' => '01100000111', 'address' => 'St'] + $body, $h)->assertSuccessful();
     $order = Order::where('number', $placed->json('data.number'))->first();
     expect((string) $order->total)->toBe('296.50')->and((string) $order->packaging_tax)->toBe('3.50')->and((string) $order->tax)->toBe('28.00');
     $this->getJson("{$this->api}/orders/{$order->public_token}")->assertOk()->assertJsonPath('data.total', '296.50')->assertJsonPath('data.packaging_fee', '25.00')

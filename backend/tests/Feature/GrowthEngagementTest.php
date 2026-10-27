@@ -264,7 +264,7 @@ it('missed opportunities: orders satisfy the inquiry rule so it is not raised', 
     }
     for ($k = 0; $k < 2; $k++) {
         $o = new Order;
-        $o->forceFill(['number' => 'N4'.$k, 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '0100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 100, 'cogs' => 50, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now()])->save();
+        $o->forceFill(['number' => 'N4'.$k, 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 100, 'cogs' => 50, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now()])->save();
         (new OrderItem)->forceFill(['order_id' => $o->id, 'product_id' => $p->id, 'name' => 'P', 'unit_price' => 100, 'unit_cost' => 50, 'quantity' => 1, 'line_subtotal' => 100, 'line_discount' => 0])->save();
     }
     app(MissedOpportunityService::class)->scan();
@@ -282,7 +282,7 @@ it('tracked link redirects with UTM, counts human clicks only, attributes orders
     $this->call('GET', "{$this->base}/l/{$l->code}", [], [], [], ['HTTP_USER_AGENT' => 'Googlebot/2.1'])->assertRedirect();
     expect($l->fresh()->clicks)->toBe(1);
     $o = new Order;
-    $o->forceFill(['number' => 'TL1', 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '0100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 80, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 80, 'cogs' => 40, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now(), 'channel' => 'social', 'attribution' => ['utm_content' => 'tl'.$l->code]])->save();
+    $o->forceFill(['number' => 'TL1', 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 80, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 80, 'cogs' => 40, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now(), 'channel' => 'social', 'attribution' => ['utm_content' => 'tl'.$l->code]])->save();
     expect($svc->stats($l->fresh()))->toBe(['clicks' => 1, 'orders' => 1, 'revenue' => 80.0]);
     app()->instance('currentTenant', $this->other);
     expect(TrackedLink::count())->toBe(0);

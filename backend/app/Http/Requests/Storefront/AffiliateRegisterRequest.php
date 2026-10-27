@@ -3,10 +3,18 @@
 namespace App\Http\Requests\Storefront;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\Concerns\ValidatesTenantPhone;
 use App\Models\Affiliate;
 
 class AffiliateRegisterRequest extends FormRequest
 {
+    use ValidatesTenantPhone;
+
+    public function after(): array
+    {
+        return [fn ($v) => $this->withPhoneValidator($v)];
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -14,6 +22,7 @@ class AffiliateRegisterRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $this->normalizePhone();
         if ($this->has('email')) {
             $this->merge(['email' => Affiliate::normalizeEmail($this->input('email'))]);
         }
@@ -25,6 +34,7 @@ class AffiliateRegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'email' => Affiliate::emailRules($this->user('affiliate')?->id),
             'phone' => ['nullable', 'string', 'max:30'],
+            ...$this->phoneCodeRule(),
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }

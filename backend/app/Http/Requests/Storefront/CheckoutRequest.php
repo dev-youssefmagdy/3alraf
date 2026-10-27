@@ -5,11 +5,19 @@ namespace App\Http\Requests\Storefront;
 use App\Models\PaymentMethod;
 use App\Services\Orders\OfflineCheckoutThrottle;
 use App\Services\Orders\OrderPaymentService;
+use App\Http\Requests\Concerns\ValidatesTenantPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
+    use ValidatesTenantPhone;
+
+    public function after(): array
+    {
+        return [fn ($v) => $this->isQuote() ? null : $this->withPhoneValidator($v)];
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -31,9 +39,7 @@ class CheckoutRequest extends FormRequest
     /** Order-placing routes only (not the live quote / pre-validate): count the attempt against the offline limiter before anything else. */
     protected function prepareForValidation(): void
     {
-        if (is_string($this->input('phone'))) { // Arabic-Indic digits -> ASCII: one canonical phone for the limiter, the open-order cap and the stored order
-            $this->merge(['phone' => OfflineCheckoutThrottle::asciiDigits($this->input('phone'))]);
-        }
+        $this->normalizePhone(); // national number (Arabic digits folded) + the tenant's dial code: one canonical phone for the limiter, the open-order cap and the stored order
         if (! $this->routeIs('storefront.checkout.store', 'api.v1.checkout.place', 'api.v1.h.checkout.place') || ! $this->isOffline()) {
             return;
         }
@@ -59,6 +65,7 @@ class CheckoutRequest extends FormRequest
             'address_id' => [auth('web')->check() && ! $quote ? 'required' : 'nullable', 'integer', Rule::exists('customer_addresses', 'id')->where('customer_id', auth('web')->id() ?? 0)],
             'name' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:120'],
             'phone' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:30'],
+            ...$this->phoneCodeRule(),
             'email' => ['nullable', 'email', 'max:190'],
             'city_id' => [$loggedIn || $quote ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
             'address' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:255'],

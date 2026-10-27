@@ -54,4 +54,5 @@ return [
         'unverified' => 'Your Google e-mail is not verified, so it cannot be used to sign in.',
         'inactive' => 'This account is not active.', 'other_account' => 'This e-mail is already linked to a different Google account.',
     ],
+    'phone_invalid' => 'Enter a valid phone number without the country code (:code is added automatically).', 'phone_wrong_country' => 'This store only accepts :code phone numbers.', 'phone_code_hint' => 'Country code :code is added automatically.',
 ];

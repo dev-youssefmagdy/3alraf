@@ -59,7 +59,7 @@ class OrderNotification extends Notification
         return (new MailMessage)->subject(NotificationText::title($d))
             ->greeting(__('notifications.admin_mail.greeting', ['name' => $notifiable->name]))
             ->line(NotificationText::title($d))
-            ->line(__('notifications.admin_mail.customer').': '.$this->order->customer_name.' ('.$this->order->customer_phone.')')
+            ->line(__('notifications.admin_mail.customer').': '.$this->order->customer_name.' ('.($this->order->phone_display ?: $this->order->customer_phone).')')
             ->line(__('notifications.admin_mail.total').': '.Money::format((string) $this->order->total, $this->order->currency))
             ->line(__('notifications.admin_mail.payment').': '.($this->order->paymentMethod?->name ?? '-').' / '.$this->order->payment_status->label())
             ->action(__('notifications.admin_mail.view'), $url);

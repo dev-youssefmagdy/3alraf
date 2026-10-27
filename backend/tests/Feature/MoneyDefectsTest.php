@@ -37,7 +37,7 @@ beforeEach(function () {
     $this->tp = TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($this->branch->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->company = ShippingCompany::first();
-    $this->place = fn (array $lines) => app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '0100', cityId: City::first()->id, address: 'St',
+    $this->place = fn (array $lines) => app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '01000000100', cityId: City::first()->id, address: 'St',
         shippingCompanyId: $this->company->id, paymentMethodId: PaymentMethod::where('type', 'cod')->first()->id), $lines)['order'];
     $this->line = fn (int $qty) => ['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty];
     $this->deliver = function (Order $o) {

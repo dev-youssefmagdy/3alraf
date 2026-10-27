@@ -113,7 +113,7 @@ it('a product/variant/branch/method/city/company/code referenced by a retained o
     TenantProduct::create(['product_id' => $product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($branch->id, $product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $order = app(OrderPlacementService::class)->place(new CheckoutData(
-        name: 'Ali', phone: '0100', cityId: $city->id, address: 'St', shippingCompanyId: $company->id, paymentMethodId: $cod->id,
+        name: 'Ali', phone: '01000000100', cityId: $city->id, address: 'St', shippingCompanyId: $company->id, paymentMethodId: $cod->id,
     ), [['product_id' => $product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
     DB::table('orders')->where('id', $order->id)->update(['status' => 'confirmed']);
 
@@ -149,7 +149,7 @@ it('variant referenced by order items is kept, an unreferenced one is purged', f
 });
 
 it('customer with orders is anonymised (order totals untouched), customer without is purged, other tenants and live rows untouched', function () {
-    $withOrder = Customer::create(['name' => 'Real Name', 'email' => 'real@x.test', 'phone' => '0111', 'password' => 'secret123']);
+    $withOrder = Customer::create(['name' => 'Real Name', 'email' => 'real@x.test', 'phone' => '01100000111', 'password' => 'secret123']);
     $plain = Customer::create(['name' => 'Plain', 'email' => 'plain@x.test', 'password' => 'secret123']);
     $live = Customer::create(['name' => 'Live', 'email' => 'live@x.test', 'password' => 'secret123']);
     $withOrder->addresses()->create(['name' => 'Real', 'phone' => '1', 'city_id' => City::first()->id, 'address' => 'a', 'label' => 'home']);
@@ -157,7 +157,7 @@ it('customer with orders is anonymised (order totals untouched), customer withou
     $city = City::first();
     DB::table('orders')->insert([
         'tenant_id' => $this->tenant->id, 'number' => 'RET-1', 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_id' => $withOrder->id,
-        'customer_name' => 'Real Name', 'customer_phone' => '0111', 'address' => 'St', 'city_id' => $city->id, 'branch_id' => Branch::first()->id,
+        'customer_name' => 'Real Name', 'customer_phone' => '01100000111', 'address' => 'St', 'city_id' => $city->id, 'branch_id' => Branch::first()->id,
         'status' => 'delivered', 'subtotal' => 100, 'total' => 100, 'created_at' => now(), 'updated_at' => now(),
     ]);
     $withOrder->delete();
@@ -179,7 +179,7 @@ it('customer with orders is anonymised (order totals untouched), customer withou
 it('soft-deleted order is purged with its proof; one with returns/commission is kept and anonymised (report-safe)', function () {
     $mk = fn (string $n) => DB::table('orders')->insertGetId([
         'tenant_id' => $this->tenant->id, 'number' => $n, 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'Secret '.$n,
-        'customer_phone' => '0100', 'customer_email' => 'x@y.z', 'address' => 'Home', 'payment_proof' => "tenants/{$this->tenant->id}/payment-proofs/$n.jpg",
+        'customer_phone' => '01000000100', 'customer_email' => 'x@y.z', 'address' => 'Home', 'payment_proof' => "tenants/{$this->tenant->id}/payment-proofs/$n.jpg",
         'city_id' => City::first()->id, 'branch_id' => Branch::first()->id, 'status' => 'cancelled', 'subtotal' => 50, 'total' => 50,
         'deleted_at' => now()->subDays(100), 'created_at' => now()->subDays(100), 'updated_at' => now(),
     ]);

@@ -87,7 +87,7 @@
             <x-card :title="__('orders.fields.customer')">
                 <div class="space-y-1 text-sm">
                     <div class="font-semibold">{{ $order->customer_name }}@if ($order->customer) <a class="text-xs text-brand-600" href="{{ route('tenant.customers.show', $order->customer_id) }}">#{{ $order->customer_id }}</a>@endif</div>
-                    <div>{{ $order->customer_phone }}</div><div>{{ $order->customer_email }}</div>
+                    <div><bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi></div><div>{{ $order->customer_email }}</div>
                     <div class="text-slate-600">{{ $order->city?->name }} - {{ $order->address }}</div>
                     @if ($order->notes)<div class="text-slate-500">{{ $order->notes }}</div>@endif
                     <div class="pt-2 text-slate-500">{{ __('ops.fields.branch') }}: {{ $order->branch?->name }} | {{ $order->shippingCompany?->name }}</div>

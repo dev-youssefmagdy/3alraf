@@ -36,7 +36,7 @@ class AffiliateService
     /** New accounts wait for admin approval. */
     public function register(AffiliateRegisterData $d): Affiliate
     {
-        return $this->affiliates->create(['name' => $d->name, 'email' => $d->email, 'phone' => $d->phone, 'password' => $d->password, 'status' => AffiliateStatus::PENDING]);
+        return $this->affiliates->create(['name' => $d->name, 'email' => $d->email, 'phone' => $d->phone, 'phone_country_code' => $d->phoneCode, 'password' => $d->password, 'status' => AffiliateStatus::PENDING]);
     }
 
     public function setStatus(Affiliate $a, AffiliateStatus $status): Affiliate

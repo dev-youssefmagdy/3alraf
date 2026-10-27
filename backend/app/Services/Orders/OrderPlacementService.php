@@ -59,7 +59,7 @@ class OrderPlacementService
                 $branchId = $this->pickBranch($q['lines']);
 
                 $order = $this->orders->create([
-                    'public_token' => (string) Str::uuid(), 'customer_id' => $d->customerId, 'customer_name' => $d->name, 'customer_phone' => $d->phone,
+                    'public_token' => (string) Str::uuid(), 'customer_id' => $d->customerId, 'customer_name' => $d->name, 'customer_phone' => $d->phone, 'phone_country_code' => $d->phoneCode,
                     'customer_email' => $d->email, 'city_id' => $d->cityId, 'address' => $d->address, 'notes' => $d->notes, 'branch_id' => $branchId,
                     'shipping_company_id' => $d->shippingCompanyId, 'payment_method_id' => $d->paymentMethodId, 'prepay_method_id' => ($t->prepaidShipping > 0 && $q['prepay']) ? $q['prepay']->id : null, 'discount_code_id' => $q['discount']?->id, 'affiliate_id' => $q['affiliate']?->id, ...\App\Services\Growth\AttributionService::forOrder($q['affiliate']?->id),
                     'status' => OrderStatus::PENDING, 'payment_status' => $proof ? PaymentStatus::REVIEW : PaymentStatus::UNPAID,

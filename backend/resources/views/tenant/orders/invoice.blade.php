@@ -21,7 +21,7 @@
     <div class="sheet">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div><h1 style="margin:0">{{ $tenant?->name }}</h1><div style="color:#64748b;font-size:14px">{{ __('orders.invoice') }} #{{ $order->number }}<br>{{ $order->placed_at?->format('Y-m-d H:i') }}</div></div>
-            <div style="text-align:end;font-size:14px"><strong>{{ $order->customer_name }}</strong><br>{{ $order->customer_phone }}<br>{{ $order->city?->name }} - {{ $order->address }}</div>
+            <div style="text-align:end;font-size:14px"><strong>{{ $order->customer_name }}</strong><br><bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi><br>{{ $order->city?->name }} - {{ $order->address }}</div>
         </div>
         <table>
             <thead><tr><th>{{ __('ops.fields.item') }}</th><th>{{ __('orders.fields.unit_price') }}</th><th>{{ __('ops.fields.quantity') }}</th><th>{{ __('ops.fields.total') }}</th></tr></thead>

@@ -126,6 +126,9 @@
                                     "phone": {
                                         "type": "string"
                                     },
+                                    "phone_country_code": {
+                                        "type": "string"
+                                    },
                                     "city_id": {
                                         "type": "string"
                                     },
@@ -233,6 +236,9 @@
                                         "type": "string"
                                     },
                                     "phone": {
+                                        "type": "string"
+                                    },
+                                    "phone_country_code": {
                                         "type": "string"
                                     },
                                     "city_id": {
@@ -921,6 +927,9 @@
                                     "phone": {
                                         "type": "string"
                                     },
+                                    "phone_country_code": {
+                                        "type": "string"
+                                    },
                                     "password": {
                                         "type": "string"
                                     }
@@ -1457,6 +1466,9 @@
                                     "phone": {
                                         "type": "string"
                                     },
+                                    "phone_country_code": {
+                                        "type": "string"
+                                    },
                                     "password": {
                                         "type": "string"
                                     },
@@ -1544,6 +1556,9 @@
                                         "format": "email"
                                     },
                                     "phone": {
+                                        "type": "string"
+                                    },
+                                    "phone_country_code": {
                                         "type": "string"
                                     },
                                     "password": {
@@ -2217,6 +2232,9 @@
                                     "phone": {
                                         "type": "string"
                                     },
+                                    "phone_country_code": {
+                                        "type": "string"
+                                    },
                                     "email": {
                                         "type": "string",
                                         "format": "email"
@@ -2491,6 +2509,9 @@
                                         "type": "string"
                                     },
                                     "phone": {
+                                        "type": "string"
+                                    },
+                                    "phone_country_code": {
                                         "type": "string"
                                     },
                                     "email": {
@@ -2821,6 +2842,9 @@
                                         "type": "string"
                                     },
                                     "phone": {
+                                        "type": "string"
+                                    },
+                                    "phone_country_code": {
                                         "type": "string"
                                     },
                                     "email": {

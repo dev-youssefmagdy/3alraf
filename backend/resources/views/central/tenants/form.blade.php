@@ -9,6 +9,7 @@
                 <x-input name="name" :label="__('admin.fields.name')" :value="$tenant->name" required />
                 <x-input name="slug" :label="__('admin.fields.slug')" :value="$tenant->slug" required :hint="'.'.central_domain()" />
                 <x-input name="country" :label="__('admin.fields.country')" :value="$tenant->country" maxlength="2" />
+                @if ($tenant->country && ! config('phone.countries.'.strtoupper($tenant->country)))<p class="text-xs text-amber-600 sm:col-span-2">No phone dial code is configured for this country: storefront phones will not get a country code.</p>@endif
                 <x-input name="timezone" :label="__('admin.fields.timezone')" :value="$tenant->timezone" required />
                 <x-input name="currency_code" :label="__('admin.fields.currency_code')" :value="$tenant->currency_code" required maxlength="3" />
                 <x-input name="currency_symbol" :label="__('admin.fields.currency_symbol')" :value="$tenant->currency_symbol" required />

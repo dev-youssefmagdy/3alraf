@@ -2,11 +2,24 @@
 
 namespace App\Http\Requests\Storefront;
 
+use App\Http\Requests\Concerns\ValidatesTenantPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ProfileRequest extends FormRequest
 {
+    use ValidatesTenantPhone;
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizePhone();
+    }
+
+    public function after(): array
+    {
+        return [fn ($v) => $this->withPhoneValidator($v)];
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -18,6 +31,7 @@ class ProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190', Rule::unique('customers', 'email')->where('tenant_id', current_tenant()->id)->ignore(auth('web')->id())],
             'phone' => ['nullable', 'string', 'max:30'],
+            ...$this->phoneCodeRule(),
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             // re-authenticate before changing the login credentials (stolen session / unlocked device)
             // (Google-only accounts have no password yet: nothing to re-enter)

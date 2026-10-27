@@ -20,7 +20,7 @@
                 <h2 class="mb-3 font-extrabold">{{ __('store.addresses') }}</h2>
                 @foreach ($addresses as $a)
                     <div class="flex items-start justify-between gap-2 border-t border-slate-100 py-3 text-sm">
-                        <span><b>{{ $a->label ?: $a->name }}</b> @if ($a->is_default)<span class="badge badge-success">{{ __('store.default') }}</span>@endif<br>{{ $a->name }} - {{ $a->phone }}<br>{{ $a->city?->name }} - {{ $a->address }}</span>
+                        <span><b>{{ $a->label ?: $a->name }}</b> @if ($a->is_default)<span class="badge badge-success">{{ __('store.default') }}</span>@endif<br>{{ $a->name }} - <bdi dir="ltr">{{ $a->phone_display ?: $a->phone }}</bdi><br>{{ $a->city?->name }} - {{ $a->address }}</span>
                         <button type="button" class="btn-sm btn-danger" data-delete="{{ route('storefront.account.addresses.destroy', $a->id) }}">{{ __('store.delete') }}</button>
                     </div>
                 @endforeach
@@ -28,7 +28,7 @@
                     @csrf
                     <x-input name="label" :label="__('store.label')" />
                     <x-input name="name" :label="__('store.name')" :value="$customer->name" required />
-                    <x-input name="phone" :label="__('store.phone')" :value="$customer->phone" required />
+                    <x-phone-input name="phone" :label="__('store.phone')" :value="$customer->phone" required />
                     <x-select name="city_id" :label="__('store.city')" :options="$cities->mapWithKeys(fn ($c) => [$c->id => $c->name])->all()" :placeholder="__('store.select_city')" required />
                     <x-input name="address" :label="__('store.address')" required class="sm:col-span-2" />
                     <button class="btn btn-primary sm:col-span-2">{{ __('store.add_address') }}</button>
@@ -42,7 +42,7 @@
                 @csrf
                 <x-input name="name" :label="__('store.name')" :value="$customer->name" required />
                 <x-input name="email" type="email" :label="__('store.email')" :value="$customer->email" required />
-                <x-input name="phone" :label="__('store.phone')" :value="$customer->phone" />
+                <x-phone-input name="phone" :label="__('store.phone')" :value="$customer->phone" />
                 <x-input name="password" type="password" :label="__('store.password')" :hint="__('store.password_keep')" />
                 <x-input name="password_confirmation" type="password" :label="__('store.password_confirmation')" />
                 <x-input name="current_password" type="password" :label="__('store.current_password')" :hint="__('store.current_password_hint')" />

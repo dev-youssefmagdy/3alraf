@@ -63,7 +63,7 @@ beforeEach(function () {
         static $n = 0;
         $n++;
         $ord = new Order;
-        $ord->forceFill($o + ['number' => 'L5'.$n.uniqid(), 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '0100', 'address' => 'a', 'status' => $status, 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0,
+        $ord->forceFill($o + ['number' => 'L5'.$n.uniqid(), 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => $status, 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0,
             'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 100, 'cogs' => 40, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now()->subDays(20), 'delivered_at' => $status === 'delivered' ? now()->subDays(20) : null, 'attribution' => $attr])->save();
         (new \App\Models\OrderItem)->forceFill(['order_id' => $ord->id, 'product_id' => 1, 'name' => 'P', 'unit_price' => 100, 'unit_cost' => 40, 'quantity' => 1, 'line_subtotal' => 100, 'line_discount' => 0])->save();
 

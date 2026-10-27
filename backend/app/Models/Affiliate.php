@@ -10,9 +10,9 @@ use Illuminate\Support\Str;
 
 class Affiliate extends Authenticatable
 {
-    use BelongsToTenant, HasApiTokens, \App\Models\Concerns\RevokesSessionsOnLockout;
+    use \App\Models\Concerns\HasStorefrontPhone, BelongsToTenant, HasApiTokens, \App\Models\Concerns\RevokesSessionsOnLockout;
 
-    protected $fillable = ['name', 'email', 'phone', 'password', 'status', 'approved_at'];
+    protected $fillable = ['name', 'email', 'phone', 'phone_country_code', 'password', 'status', 'approved_at'];
 
     protected $hidden = ['password', 'remember_token'];
 

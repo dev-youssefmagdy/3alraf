@@ -230,7 +230,7 @@ it('outbox: emits a signed event, retries with backoff, goes dead, replays; no P
     Http::fake(['n8n.example.com/*' => Http::sequence()->push('err', 500)->push('ok', 200)]);
     [$c, , $secret] = growthClient(webhook: 'https://n8n.example.com/hook');
     Queue::fake();
-    $e = app(GrowthEventService::class)->emit('order.placed', ['order_id' => 5, 'customer_phone' => '0100', 'note' => 'call 01012345678']);
+    $e = app(GrowthEventService::class)->emit('order.placed', ['order_id' => 5, 'customer_phone' => '01000000100', 'note' => 'call 01012345678']);
     expect($e)->not->toBeNull();
     Queue::assertPushed(DispatchGrowthEventJob::class);
     expect($e->payload['data'])->toBe(['order_id' => 5, 'note' => 'call [phone]']);
@@ -274,14 +274,14 @@ it('outbox: no event without a webhook client, unsafe webhooks refused, unknown 
 it('existing flows feed the outbox (order placed / cancelled / returned) and a failing emit never breaks the flow', function () {
     Queue::fake();
     growthClient(['read'], 'https://n8n.example.com/hook');
-    $o = new \App\Models\Order(['number' => 'A-1', 'total' => 120.5, 'currency' => 'EGP', 'customer_phone' => '0100', 'status' => 'cancelled']);
+    $o = new \App\Models\Order(['number' => 'A-1', 'total' => 120.5, 'currency' => 'EGP', 'customer_phone' => '01000000100', 'status' => 'cancelled']);
     $o->tenant_id = $this->tenant->id;
     $o->id = 77;
     event(new \App\Events\OrderPlaced($o, 1));
     event(new \App\Events\OrderStatusChanged($o, \App\Enums\OrderStatus::PENDING, \App\Enums\OrderStatus::CANCELLED, 1));
     event(new \App\Events\OrderStatusChanged($o, \App\Enums\OrderStatus::PENDING, \App\Enums\OrderStatus::CONFIRMED, 1)); // not a growth event
     expect(GrowthEvent::orderBy('id')->pluck('type')->all())->toBe(['order.placed', 'order.cancelled']);
-    expect(json_encode(GrowthEvent::first()->payload))->not->toContain('0100');
+    expect(json_encode(GrowthEvent::first()->payload))->not->toContain('01000000100');
     // outbox failure is swallowed (reported), the business flow continues
     app()->bind(GrowthEventService::class, fn () => throw new RuntimeException('outbox down'));
     event(new \App\Events\OrderPlaced($o, 1));

@@ -14,6 +14,8 @@ function init() {
         return e ? Object.values(e)[0][0] : xhr.responseJSON?.message || window.__t?.error;
     };
     const itemUrl = (id) => sf.routes.cartItems + '/' + id;
+    // phone inputs: digits only (country code is fixed by the store)
+    $(document).on('input', 'input[inputmode=tel][autocomplete=tel-national]', function () { const v = this.value.replace(/[^0-9+\u0660-\u0669\u06F0-\u06F9\s\-()]/g, ''); if (v !== this.value) this.value = v; });
 
     /* ---------- cart state ---------- */
     let cart = { items: [], totals: null };

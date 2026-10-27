@@ -66,7 +66,7 @@ beforeEach(function () {
         return $bundle->load('items');
     };
     $this->checkout = fn (array $o = []) => new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'cityId' => $this->city->id, 'address' => 'Street 1',
+        'name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'Street 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o));
     $this->place = fn (array $lines, array $o = []) => app(OrderPlacementService::class)->place(($this->checkout)($o), $lines)['order'];
@@ -318,7 +318,7 @@ it('serves the same bundle data through the mobile API and shows grouped order l
     $res = $this->postJson("{$this->api}/cart/items", ['bundle_id' => $b->id, 'quantity' => 2])->assertSuccessful()->assertJsonPath('data.items.0.is_bundle', true)->assertJsonPath('data.items.0.bundle_id', $b->id);
     $h = ['X-Cart-Token' => $res->headers->get('X-Cart-Token')];
     $this->getJson("{$this->api}/cart", $h)->assertJsonPath('data.totals.subtotal', '160.00')->assertJsonPath('data.items.0.quantity', 2);
-    $payload = ['name' => 'Sara', 'phone' => '0111', 'city_id' => $this->city->id, 'address' => 'St', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id];
+    $payload = ['name' => 'Sara', 'phone' => '01100000111', 'city_id' => $this->city->id, 'address' => 'St', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id];
     $placed = $this->postJson("{$this->api}/checkout", $payload, $h)->assertSuccessful();
     $order = Order::where('number', $placed->json('data.number'))->first();
     expect((string) $order->subtotal)->toBe('160.00')->and($order->items)->not->toBeEmpty();

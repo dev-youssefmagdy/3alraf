@@ -76,7 +76,7 @@
             <input type="hidden" name="inline" value="1">
             <x-input name="label" :label="__('store.label')" class="sm:col-span-2" />
             <x-input name="name" :label="__('store.name')" :value="$customer->name" required />
-            <x-input name="phone" type="tel" :label="__('store.phone')" :value="$customer->phone" required />
+            <x-phone-input name="phone" :label="__('store.phone')" :value="$customer->phone" required />
             <x-select name="city_id" :label="__('store.city')" :options="$cities->mapWithKeys(fn ($c) => [$c->id => $c->name])->all()" :placeholder="__('store.select_city')" required class="sm:col-span-2" />
             <x-input name="address" :label="__('store.address')" required class="sm:col-span-2" />
             <label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="is_default" value="1" data-bool class="accent-brand-600"> {{ __('store.set_default') }}</label>

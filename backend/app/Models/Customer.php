@@ -17,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class Customer extends Authenticatable
 {
     // Audited MUST boot before RevokesSessionsOnLockout (its `updated` hook re-saves the row, which would hide the change from the audit log) (alphabetical order keeps it so).
-    use Audited, BelongsToTenant, FreesUniqueOnDelete, HasApiTokens, HasRoles, Notifiable, RevokesSessionsOnLockout, SoftDeletes;
+    use Audited, BelongsToTenant, \App\Models\Concerns\HasStorefrontPhone, FreesUniqueOnDelete, HasApiTokens, HasRoles, Notifiable, RevokesSessionsOnLockout, SoftDeletes;
 
     /** Audit: PII shown masked only. */
     protected array $auditMasked = ['name', 'email', 'phone'];
@@ -26,7 +26,7 @@ class Customer extends Authenticatable
 
     protected string $guard_name = 'web';
 
-    protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
+    protected $fillable = ['name', 'email', 'phone', 'phone_country_code', 'password', 'is_active'];
 
     protected $hidden = ['password', 'remember_token', 'google_id'];
 

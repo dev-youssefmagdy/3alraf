@@ -53,11 +53,11 @@ beforeEach(function () {
     $this->wallet = PaymentMethod::where('type', 'wallet')->first();
     config(['checkout.offline.ip_attempts' => 1000, 'checkout.offline.ip_daily' => 1000, 'checkout.offline.contact_attempts' => 1000, 'checkout.offline.open_cap' => 1000]);
     $this->place = fn (array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
+        'name' => 'Ali', 'phone' => '01000000100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->wallet->id, 'proof' => testProof(),
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 1, 'bundle_id' => 0]])['order'];
     $this->payload = fn (array $o = []) => withSavedAddress(array_merge([
-        'name' => 'Ali', 'phone' => '0100'.random_int(1000000, 9999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
+        'name' => 'Ali', 'phone' => '010'.random_int(10000000, 99999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
         'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->wallet->id,
     ], $o));
     $this->post = fn (string $path, array $data) => $this->withHeader('Accept', 'application/json')->post("{$this->s}/$path", $data);
@@ -124,18 +124,18 @@ it('turns a lost proof-hash race into a clean 422 instead of a 500 and removes t
     });
     $same = UploadedFile::fake()->createWithContent('again.png', file_get_contents($bytes->getRealPath()));
     $before = count(Storage::disk('private')->allFiles());
-    expect(fn () => ($this->place)(['proof' => $same, 'phone' => '0111']))->toThrow(ValidationException::class);
+    expect(fn () => ($this->place)(['proof' => $same, 'phone' => '01100000111']))->toThrow(ValidationException::class);
     expect(Order::count())->toBe(1)->and(count(Storage::disk('private')->allFiles()))->toBe($before);
 });
 
 it('shows a warning on the admin order page when its proof hash is shared, and labels WALLET as offline / manual transfer', function () {
     $a = ($this->place)();
     $a->update(['proof_status' => ProofStatus::REJECTED]);
-    $b = ($this->place)(['proof' => UploadedFile::fake()->createWithContent('x.png', file_get_contents(Storage::disk('private')->path($a->payment_proof))), 'phone' => '0111']);
+    $b = ($this->place)(['proof' => UploadedFile::fake()->createWithContent('x.png', file_get_contents(Storage::disk('private')->path($a->payment_proof))), 'phone' => '01100000111']);
     $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
     $this->get("{$this->t}/orders/{$b->id}")->assertOk()->assertSee(__('orders.proof_shared_warning'))->assertSee($a->number);
     $this->get("{$this->t}/orders/{$a->id}")->assertOk()->assertSee(__('orders.proof_shared_warning'))->assertSee($b->number);
-    $c = ($this->place)(['phone' => '0122']);
+    $c = ($this->place)(['phone' => '01200000122']);
     $this->get("{$this->t}/orders/{$c->id}")->assertOk()->assertDontSee(__('orders.proof_shared_warning'));
     foreach (['ar', 'en'] as $l) {
         expect(trans('ops.enums.payment_method_type.wallet', [], $l))->toBe($l === 'en' ? 'Offline / manual transfer' : 'دفع يدوي / تحويل (أوفلاين)');
@@ -196,7 +196,7 @@ it('keeps order net_profit, the net-profit report and the customer totals consis
     }
     $opt = PackagingOption::create(['name' => ['ar' => 'هدية'], 'price' => 22.80, 'cost' => 5, 'is_active' => true]);
     DiscountCode::create(['code' => 'RV7', 'type' => 'percent', 'value' => 7, 'scope' => 'all', 'is_active' => true, 'min_order' => 0]);
-    $o = app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '0100', cityId: $this->city->id, address: 'St', shippingCompanyId: $this->company->id,
+    $o = app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '01000000100', cityId: $this->city->id, address: 'St', shippingCompanyId: $this->company->id,
         paymentMethodId: $this->cod->id, discountCode: 'RV7', packagingOptionId: $opt->id), [['product_id' => 0, 'variant_id' => 0, 'qty' => 3, 'bundle_id' => $bundle->id]])['order'];
     expect((string) $o->subtotal)->toBe('333.33');
     foreach ([OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED] as $to) {

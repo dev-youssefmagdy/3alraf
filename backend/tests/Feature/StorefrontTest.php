@@ -135,7 +135,7 @@ test('cart page, live quote with partial selections, shipping options and checko
     expect($opts)->not->toBeEmpty()->and($opts[0])->toHaveKeys(['id', 'name', 'fee', 'total', 'supports_cod']);
     expect(bccomp($opts[0]['total'], '200.00', 2))->toBeGreaterThanOrEqual(0);
 
-    $payload = withSavedAddress(['name' => 'Ali', 'phone' => '0100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
+    $payload = withSavedAddress(['name' => 'Ali', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id]);
     $res = $this->withCredentials()->postJson("{$this->s}/checkout", $payload)->assertOk();
     $token = $res->json('data.token');
     $this->get("{$this->s}/order/$token")->assertOk()->assertSee($res->json('data.number'))->assertSee('منتج cheap');
@@ -169,4 +169,14 @@ test('web checkout is signed-in only: guests are redirected to login (page) or g
     $this->get("{$this->s}/checkout")->assertRedirect();
     $this->postJson("{$this->s}/checkout", ['name' => 'Ali'])->assertStatus(401);
     $this->postJson("{$this->s}/checkout/validate", [])->assertStatus(401);
+});
+
+test('Phone: checkout snapshots national number + code on the order and renders it concatenated (bdi ltr)', function () {
+    $this->withCredentials()->postJson("{$this->s}/cart/items", ['product_id' => $this->p1->id, 'variant_id' => 0, 'quantity' => 1])->assertOk();
+    $c = Customer::where('email', 'customer@egy.test')->first();
+    $a = $c->addresses()->create(['label' => 'T', 'name' => 'Ali', 'phone' => '01008489183', 'phone_country_code' => '+20', 'city_id' => $this->city->id, 'address' => 'St 1']);
+    $res = $this->withCredentials()->postJson("{$this->s}/checkout", ['address_id' => $a->id, 'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->cod->id])->assertOk();
+    $o = \App\Models\Order::where('public_token', $res->json('data.token'))->first();
+    expect($o->customer_phone)->toBe('01008489183')->and($o->phone_country_code)->toBe('+20')->and($o->phone_full)->toBe('+201008489183');
+    $this->get("{$this->s}/order/{$o->public_token}")->assertOk()->assertSee('<bdi dir="ltr">+20 100 848 9183</bdi>', false);
 });

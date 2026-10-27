@@ -51,13 +51,13 @@ beforeEach(function () {
         return UploadedFile::fake()->image("p{$this->n}.png", 10 + $this->n, 12);
     };
     $this->payload = fn (array $o = []) => withSavedAddress(array_merge([
-        'name' => 'Ali', 'phone' => '0100'.random_int(1000000, 9999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
+        'name' => 'Ali', 'phone' => '010'.random_int(10000000, 99999999), 'email' => 'u'.random_int(1, 9999999).'@x.test', 'city_id' => $this->city->id, 'address' => 'St 1',
         'shipping_company_id' => $this->company->id, 'payment_method_id' => $this->wallet->id,
     ], $o));
     $this->webCart = fn (int $q = 1) => $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => $q])->assertOk();
     $this->webPost = fn (string $path, array $data) => $this->withHeader('Accept', 'application/json')->post("{$this->s}/$path", $data);
     $this->place = fn (array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
+        'name' => 'Ali', 'phone' => '01000000100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->wallet->id,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 1]]);
 });
@@ -137,7 +137,7 @@ it('rejects a reused proof (checkout + re-upload) unless the earlier order was r
     ($this->webPost)('checkout', ($this->payload)() + ['proof' => $same()])->assertStatus(422)->assertJsonValidationErrors(['proof']);
     ($this->webPost)('checkout/validate', ($this->payload)() + ['proof' => $same()])->assertStatus(422)->assertJsonValidationErrors(['proof']);
 
-    $b = ($this->place)(['proof' => ($this->proof)(), 'phone' => '0111'])['order'];
+    $b = ($this->place)(['proof' => ($this->proof)(), 'phone' => '01100000111'])['order'];
     $this->postJson("{$this->s}/order/{$b->public_token}/proof", ['proof' => $same()])->assertStatus(422)->assertJsonValidationErrors(['proof']);
     expect($b->fresh()->payment_proof_hash)->not->toBe($a->payment_proof_hash);
 
@@ -246,7 +246,7 @@ it('limiter keys cannot be dodged through the X-Tenant header and the api answer
 it('the proof re-upload route has its own stricter limiter', function () {
     config(['checkout.reupload.attempts' => 2]);
     $o = ($this->place)(['proof' => ($this->proof)()])['order'];
-    $other = ($this->place)(['proof' => ($this->proof)(), 'phone' => '0122'])['order'];
+    $other = ($this->place)(['proof' => ($this->proof)(), 'phone' => '01200000122'])['order'];
     foreach (range(1, 2) as $i) {
         $this->postJson("{$this->s}/order/{$o->public_token}/proof", [])->assertStatus(422);
     }

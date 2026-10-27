@@ -35,7 +35,7 @@ beforeEach(function () {
     app(StockLedger::class)->record($branch->id, $p->id, 0, T::PURCHASE_IN, 100, '60.00');
     $this->product = $p;
     $this->place = fn (int $qty) => app(OrderPlacementService::class)->place(new CheckoutData(
-        name: 'Ali', phone: '0100', cityId: City::first()->id, address: 'St', shippingCompanyId: ShippingCompany::first()->id,
+        name: 'Ali', phone: '01000000100', cityId: City::first()->id, address: 'St', shippingCompanyId: ShippingCompany::first()->id,
         paymentMethodId: PaymentMethod::where('type', 'cod')->first()->id), [['product_id' => $p->id, 'variant_id' => 0, 'qty' => $qty]])['order'];
     $this->deliver = function (Order $o) {
         foreach ([S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED] as $to) {

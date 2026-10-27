@@ -16,7 +16,7 @@ class OrderDetailResource extends OrderResource
         $payable = $payments->payable($o);
 
         return parent::toArray($request) + [
-            'customer' => ['name' => $o->customer_name, 'phone' => $o->customer_phone, 'email' => $o->customer_email],
+            'customer' => ['name' => $o->customer_name, 'phone' => $o->customer_phone, 'phone_country_code' => $o->phone_country_code, 'phone_full' => $o->phone_full, 'email' => $o->customer_email],
             'city' => $o->city?->name, 'address' => $o->address, 'notes' => $o->notes, 'shipping_company' => $o->shippingCompany?->name,
             'prepay_method' => $o->prepayMethod ? ['id' => $o->prepayMethod->id, 'type' => $o->prepayMethod->type->value, 'name' => $o->prepayMethod->name] : null,
             'has_proof' => (bool) $o->payment_proof, 'pay_now' => $o->payableNow(),

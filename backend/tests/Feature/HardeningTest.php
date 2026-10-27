@@ -76,7 +76,7 @@ it('rejects tenant A credentials on tenant B host (admin and storefront)', funct
 
 it('blocks cross-tenant access to orders, returns, proofs, token routes and reports', function () {
     $sa = ($this->mkTenant)('sa');
-    $order = Order::withoutGlobalScopes()->forceCreate(['tenant_id' => $sa->id, 'number' => 'ORD-SA0001', 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'Zed', 'customer_phone' => '0100',
+    $order = Order::withoutGlobalScopes()->forceCreate(['tenant_id' => $sa->id, 'number' => 'ORD-SA0001', 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'Zed', 'customer_phone' => '01000000100',
         'address' => 'x', 'status' => 'delivered', 'payment_status' => 'unpaid', 'subtotal' => 100, 'total' => 100, 'created_at' => now(), 'updated_at' => now()]);
     $ret = OrderReturn::withoutGlobalScopes()->forceCreate(['tenant_id' => $sa->id, 'order_id' => $order->id, 'number' => 'RET-SA0001', 'status' => 'requested', 'return_value' => 10]);
 
@@ -148,7 +148,7 @@ function hardeningOrderContext(): void
     TenantProduct::create(['product_id' => $t->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($t->branch->id, $t->product->id, 0, T::PURCHASE_IN, 10, '60.00');
     $t->place = fn (array $o = [], ?array $lines = null) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
-        'name' => 'Ali', 'phone' => '0100', 'cityId' => City::first()->id, 'address' => 'St',
+        'name' => 'Ali', 'phone' => '01000000100', 'cityId' => City::first()->id, 'address' => 'St',
         'shippingCompanyId' => ShippingCompany::first()->id, 'paymentMethodId' => PaymentMethod::where('type', 'cod')->first()->id,
     ], $o)), $lines ?? [['product_id' => $t->product->id, 'variant_id' => 0, 'qty' => 1]])['order'];
 }
@@ -159,9 +159,9 @@ it('applies the per-customer coupon limit to guests by e-mail and by phone', fun
 
     ($this->place)(['discountCode' => 'once', 'email' => 'Guest@X.test', 'phone' => '0100-111']);    // first use OK (code lookup is case-insensitive)
     $blocked = fn (array $o) => expect(fn () => ($this->place)($o + ['discountCode' => 'ONCE']))->toThrow(ValidationException::class);
-    $blocked(['email' => 'guest@x.test', 'phone' => '0999']);          // same e-mail, different case
+    $blocked(['email' => 'guest@x.test', 'phone' => '01099900999']);          // same e-mail, different case
     $blocked(['email' => 'other@x.test', 'phone' => '0100111']);       // same phone, different formatting
-    $fresh = ($this->place)(['discountCode' => 'ONCE', 'email' => 'new@x.test', 'phone' => '0222']);
+    $fresh = ($this->place)(['discountCode' => 'ONCE', 'email' => 'new@x.test', 'phone' => '01022200222']);
     expect((string) $fresh->discount)->toBe('10.00');
 });
 
