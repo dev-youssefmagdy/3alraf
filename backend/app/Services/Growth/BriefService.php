@@ -111,6 +111,10 @@ class BriefService
 
     private function rec(string $key, string $kind, array $params, int $impact, int $effort, array $evidence): array
     {
+        if (isset($params['product_id'])) { // readable owner messages: the name travels with the id (display only)
+            $params['product_name'] = $this->productName((int) $params['product_id']);
+        }
+
         return ['key' => $key, 'kind' => $kind, 'params' => $params, 'impact' => $impact, 'effort' => $effort, 'score' => round($impact / $effort, 2), 'evidence' => $evidence];
     }
 
@@ -146,6 +150,13 @@ class BriefService
     }
 
     /** Products whose units on the day beat their trailing 7-day daily average. */
+    private function productName(int $id): ?string
+    {
+        static $names = [];
+
+        return $names[$id] ??= \App\Models\Product::find($id)?->name;
+    }
+
     private function interest(CarbonInterface $day): array
     {
         $rows = GrowthDailyStat::where('scope', 'product')->whereBetween('stat_date', [$day->copy()->subDays(7)->toDateString(), $day->toDateString()])
@@ -155,7 +166,7 @@ class BriefService
             $today = (int) $r->filter(fn ($x) => $x->stat_date->isSameDay($day))->sum('u');
             $avg = $r->filter(fn ($x) => ! $x->stat_date->isSameDay($day))->sum('u') / 7;
             if ($today >= 2 && $today > $avg * 1.5) {
-                $out[] = ['product_id' => (int) $pid, 'units' => $today, 'avg_prev_7d' => round($avg, 2), 'evidence' => [$this->ev('growth_daily_stats', 'units', $today, $day->toDateString()), $this->ev('growth_daily_stats', 'avg_units_prev_7d', round($avg, 2), '7d')]];
+                $out[] = ['product_id' => (int) $pid, 'product_name' => $this->productName((int) $pid), 'units' => $today, 'avg_prev_7d' => round($avg, 2), 'evidence' => [$this->ev('growth_daily_stats', 'units', $today, $day->toDateString()), $this->ev('growth_daily_stats', 'avg_units_prev_7d', round($avg, 2), '7d')]];
             }
         }
 

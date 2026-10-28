@@ -207,7 +207,7 @@
         1540,
         0
       ],
-      "notes": "Sends the message through workflow '3alraf - 99 Notify owner' (set your Telegram credential and chat id there once)."
+      "notes": "Sends the message through workflow '3alraf - 99 Notify owner' (set the SMTP email credential there once)."
     }
   ],
   "connections": {

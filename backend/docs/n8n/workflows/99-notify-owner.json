@@ -15,22 +15,23 @@
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "sendMessage",
-        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
-        "text": "={{ $json.title }}\n\n{{ $json.text }}",
-        "additionalFields": {
+        "fromEmail": "3alraf Alerts <eljoe1717@gmail.com>",
+        "toEmail": "eljoe1717@gmail.com",
+        "subject": "={{ $json.title }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
           "appendAttribution": false
         }
       },
-      "name": "Send Telegram message",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "name": "Send email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
         260,
         0
       ],
-      "notes": "ONE-TIME SETUP: 1) open this node, create a Telegram credential (bot token from @BotFather) and name it '3alraf Owner Alerts'. 2) Replace the chat id. 3) Save. Every workflow reaches you through here; swap this node for Email/WhatsApp if you prefer."
+      "notes": "ONE-TIME SETUP: create an SMTP credential named '3alraf Owner Alerts' (Gmail: host smtp.gmail.com, port 465, SSL on, user eljoe1717@gmail.com, password = a Google APP PASSWORD, never your normal password). Change To/From here if needed. Every 3alraf workflow reaches you through this node."
     }
   ],
   "connections": {
@@ -38,7 +39,7 @@
       "main": [
         [
           {
-            "node": "Send Telegram message",
+            "node": "Send email",
             "type": "main",
             "index": 0
           }
@@ -57,6 +58,6 @@
   ],
   "meta": {
     "features": [],
-    "template": "Shared notifier. Set the Telegram credential and chat id once; all other 3alraf flows call this one."
+    "template": "Shared notifier. Set the SMTP credential once; all other 3alraf flows call this one."
   }
 }

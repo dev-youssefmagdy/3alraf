@@ -34,8 +34,8 @@
         </div>
         <template data-repeater-template>@include('tenant.bundles._row', ['i' => '__INDEX__', 'r' => null, 'opts' => $opts])</template>
     </div>
-</x-resource-form>
-@if ($editing)
+    @if ($editing)
+    <x-slot:after>
     <x-card class="mt-4 max-w-5xl">
         <h3 class="mb-1 font-semibold">{{ __('admin.qr_code') }}</h3>
         <p class="mb-3 text-xs text-slate-500">{{ __('admin.qr_bundle_hint') }}</p>
@@ -46,4 +46,6 @@
             @can('bundles.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('tenant.bundles.qr.regenerate', $model->id) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
         </div>
     </x-card>
-@endif
+    </x-slot:after>
+    @endif
+</x-resource-form>

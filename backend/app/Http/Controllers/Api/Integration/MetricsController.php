@@ -79,7 +79,11 @@ class MetricsController extends Controller
         $page = max(1, (int) $r->query('page', 1));
         $per = (int) $r->query('per_page', 25);
 
-        return $this->out($rows->forPage($page, $per)->values()->all(), ['page' => $page, 'per_page' => $per, 'total' => $rows->count(), 'confidence' => 'estimated']);
+        $slice = $rows->forPage($page, $per)->values();
+        $names = Product::whereIn('id', $slice->pluck('product_id'))->get()->mapWithKeys(fn ($p) => [$p->id => $p->name]); // display only: readable owner messages
+        $slice = $slice->map(fn ($x) => $x + ['product_name' => $names[$x['product_id']] ?? null]);
+
+        return $this->out($slice->all(), ['page' => $page, 'per_page' => $per, 'total' => $rows->count(), 'confidence' => 'estimated']);
     }
 
     public function ordersSummary(Request $r): JsonResponse

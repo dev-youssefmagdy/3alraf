@@ -11,4 +11,5 @@
             <x-form-actions :cancel="$back ?? route($route.'.index')" />
         </form>
     </x-card>
+    {{ $after ?? '' }}
 </x-layouts.admin>
