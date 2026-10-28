@@ -66,3 +66,6 @@ Erasure on request: `php artisan growth:prune --tenant=egy --erase-thread=<threa
 6. Break the secret on purpose: expect 401 and the error handler (00) firing.
 7. Activate the schedules one at a time, confirm queue worker + scheduler run, and check the Event log page shows delivered events.
 8. Record the n8n version and date you validated in your runbook.
+
+## Owner notifications (all flows end here)
+Every flow ends with **Build owner message** (a Code node that summarises the run's API responses, no customer data) followed by **Notify owner**, which calls the shared workflow **3alraf - 99 Notify owner**; the error handler (00) uses it too. **One-time setup:** open workflow 99, click *Send Telegram message*, create the Telegram credential (bot token from @BotFather, named `3alraf Owner Alerts`), replace `REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID`, save. To use Email or WhatsApp instead, replace only that node. Import order is 99, 00, then 01-20: the template carries the placeholder `__NOTIFY_WORKFLOW_ID__` in each *Notify owner* node, which must be set to the id of workflow 99 after import (n8n UI: open the node and pick the workflow from the list).

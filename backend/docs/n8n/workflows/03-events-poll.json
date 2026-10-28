@@ -156,15 +156,17 @@
     },
     {
       "id": "hand-off-to-owner-or-next-step",
-      "name": "Hand off to owner or next step",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "name": "Build owner message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         1320,
         0
       ],
-      "parameters": {},
-      "notes": "Fallback when the webhook receiver was down: reads the event log (scope events:read). Dedupe by event_id."
+      "parameters": {
+        "jsCode": "// Builds a short, customer-data-free summary of this run's API responses and passes it to \"99 Notify owner\". Edit freely.\nconst CALLS = [\"Call events\"];\nconst short = (v) => { const s = typeof v === 'string' ? v : JSON.stringify(v); return s.length > 160 ? s.slice(0, 157) + '...' : s; };\nconst describe = (d) => {\n  if (Array.isArray(d)) return d.length + ' item(s)' + (d.length ? ': ' + d.slice(0, 3).map(short).join(' | ') : '');\n  if (d && typeof d === 'object') return Object.entries(d).slice(0, 10).map(([k, v]) => k + ': ' + (Array.isArray(v) ? v.length + ' item(s)' : short(v))).join('\\n   ');\n  return short(d);\n};\nconst lines = [];\nfor (const n of CALLS) {\n  try {\n    const r = $(n).first().json;\n    lines.push('• ' + n.replace(/^Call /, '') + (r && r.success === false ? ' (FAILED)' : '') + '\\n   ' + describe(r && r.data !== undefined ? r.data : r));\n  } catch (e) { /* that node did not run in this execution */ }\n}\nconst text = lines.join('\\n\\n').slice(0, 3500) || 'No data returned.';\nreturn [{ json: { title: $workflow.name, text } }];\n"
+      },
+      "notes": "Builds the message text. Delivery is done by the 'Notify owner' node after it."
     },
     {
       "id": "feature-off---stop",
@@ -177,6 +179,25 @@
       ],
       "parameters": {},
       "notes": "Feature switched off for this tenant (or master flag off): nothing to do. No retries."
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "__NOTIFY_WORKFLOW_ID__",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        0
+      ],
+      "notes": "Sends the message through workflow '3alraf - 99 Notify owner' (set your Telegram credential and chat id there once)."
     }
   ],
   "connections": {
@@ -246,7 +267,18 @@
       "main": [
         [
           {
-            "node": "Hand off to owner or next step",
+            "node": "Build owner message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build owner message": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
             "type": "main",
             "index": 0
           }

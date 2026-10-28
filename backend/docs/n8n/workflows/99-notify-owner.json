@@ -1,0 +1,62 @@
+{
+  "name": "3alraf - 99 Notify owner",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "name": "Called by other workflows",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.title }}\n\n{{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Send Telegram message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        0
+      ],
+      "notes": "ONE-TIME SETUP: 1) open this node, create a Telegram credential (bot token from @BotFather) and name it '3alraf Owner Alerts'. 2) Replace the chat id. 3) Save. Every workflow reaches you through here; swap this node for Email/WhatsApp if you prefer."
+    }
+  ],
+  "connections": {
+    "Called by other workflows": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "3alraf-growth"
+    }
+  ],
+  "meta": {
+    "features": [],
+    "template": "Shared notifier. Set the Telegram credential and chat id once; all other 3alraf flows call this one."
+  }
+}

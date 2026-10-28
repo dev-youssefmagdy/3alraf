@@ -29,22 +29,35 @@
               "name": "text",
               "type": "string",
               "value": "=Growth workflow failed: {{$json.workflow.name}} at {{$json.execution.lastNodeExecuted}} - {{$json.execution.error.message}}"
+            },
+            {
+              "id": "2",
+              "name": "title",
+              "type": "string",
+              "value": "3alraf - workflow FAILED"
             }
           ]
         }
       }
     },
     {
-      "id": "n",
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "__NOTIFY_WORKFLOW_ID__",
+          "mode": "id"
+        },
+        "options": {}
+      },
       "name": "Notify owner",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         440,
         0
       ],
-      "parameters": {},
-      "notes": "Replace with your Slack / Telegram / Email node using a NAMED credential (e.g. '3alraf Owner Alerts'). No token in this file."
+      "notes": "Sends the message through workflow '3alraf - 99 Notify owner' (set your Telegram credential and chat id there once)."
     }
   ],
   "connections": {
