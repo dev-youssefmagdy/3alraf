@@ -5,6 +5,7 @@ namespace App\Services\Storefront;
 use App\Enums\ReviewStatus;
 use App\Models\FlashSaleItem;
 use App\Models\ProductVariant;
+use App\Models\StockLevel;
 use App\Models\TenantProduct;
 use App\Models\TenantProductVariant;
 use App\Services\Orders\PriceResolver;
@@ -39,17 +40,24 @@ class CardPresenter
         $variantIds = $variableIds ? ProductVariant::query()->whereIn('product_id', $variableIds)->where('is_active', true)->get(['id', 'product_id'])->groupBy('product_id') : collect();
         $overrides = $variableIds ? TenantProductVariant::query()->whereIn('tenant_product_id', $items->pluck('id'))->get()->groupBy('tenant_product_id') : collect();
 
+        $backorder = (bool) (current_tenant()?->settings['allow_backorder'] ?? false);
+        $levels = StockLevel::query()->whereIn('product_id', $ids)->whereHas('branch', fn ($b) => $b->where('is_active', true))
+            ->groupBy('product_id', 'product_variant_id')->selectRaw('product_id, product_variant_id, SUM(on_hand - reserved) a')->get()
+            ->mapWithKeys(fn ($l) => [$l->product_id.':'.$l->product_variant_id => (int) $l->a]);
+
         foreach ($items as $tp) {
             $vids = $tp->product?->isVariable() ? $variantIds->get($tp->product_id, collect())->pluck('id')->all() : [0];
             $tvs = $overrides->get($tp->id, collect())->keyBy('product_variant_id');
             $pf = $flash->get($tp->product_id, collect());
             $best = null;
             $prices = [];
+            $avail = [];
             foreach ($vids ?: [0] as $vid) {
                 $tv = $tvs->get($vid);
                 if ($tv && ! $tv->is_active) {
                     continue;
                 }
+                $avail[] = max(0, (int) ($levels[$tp->product_id.':'.$vid] ?? 0));
                 $src = ($tv && $tv->price !== null) ? $tv : $tp;
                 $regular = (string) $src->price;
                 $final = ($src->sale_price !== null && bccomp((string) $src->sale_price, $regular, 2) < 0) ? (string) $src->sale_price : $regular;
@@ -70,6 +78,8 @@ class CardPresenter
                 'percent' => $has && bccomp($best['regular'], '0', 2) > 0 ? (int) round((1 - (float) $best['final'] / (float) $best['regular']) * 100) : null,
                 'from' => count(array_unique(array_map(fn ($x) => Money::round($x), $prices))) > 1, // variants have different prices: show "from"
                 'flash' => (bool) $fi, 'ends_at' => $fi?->flashSale->ends_at->toIso8601String(),
+                'out' => ! $backorder && max($avail ?: [0]) <= 0, // every sellable variant is empty
+                'low' => ! $backorder && count($avail) === 1 && $avail[0] > 0 && $avail[0] <= ($tp->min_stock_alert ?? 5) ? $avail[0] : null, // simple product close to running out
                 'rating' => isset($ratings[$tp->product_id]) ? round((float) $ratings[$tp->product_id]->a, 1) : null,
                 'reviews' => (int) ($ratings[$tp->product_id]->c ?? 0),
             ];

@@ -58,6 +58,7 @@ return [
         'affiliate_payouts' => ['view', 'edit'],
         'product_lists' => ['view', 'edit'],
         'reviews' => ['view', 'edit', 'delete'],
+        'stock_requests' => ['view', 'edit', 'delete'],
         'custom_pages' => $crud,
         'static_pages' => $crud,
         'blog_posts' => $crud,

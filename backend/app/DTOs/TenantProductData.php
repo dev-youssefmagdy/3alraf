@@ -13,6 +13,7 @@ final readonly class TenantProductData
         public string $cost,
         public bool $isActive,
         public array $variants = [],
+        public ?int $minStockAlert = null,
     ) {}
 
     public static function fromRequest(TenantProductRequest $r): self
@@ -24,6 +25,6 @@ final readonly class TenantProductData
             'cost' => $n($row['cost'] ?? null), 'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOL),
         ])->values()->all();
 
-        return new self((string) $v['price'], $n($v['sale_price'] ?? null), (string) $v['cost'], $r->boolean('is_active'), $variants);
+        return new self((string) $v['price'], $n($v['sale_price'] ?? null), (string) $v['cost'], $r->boolean('is_active'), $variants, $n($v['min_stock_alert'] ?? null) === null ? null : (int) $v['min_stock_alert']);
     }
 }

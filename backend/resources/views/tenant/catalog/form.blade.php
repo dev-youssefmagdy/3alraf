@@ -12,6 +12,7 @@
                 <x-input name="sale_price" type="number" step="0.01" min="0" :label="__('admin.fields.sale_price')" :value="$tp->sale_price" />
                 <x-input name="cost" type="number" step="0.01" min="0" :label="__('admin.fields.cost')" :value="$tp->cost" required />
             </div>
+            <x-input name="min_stock_alert" type="number" min="0" step="1" :label="__('stock_requests.min_alert')" :value="$tp->min_stock_alert" :hint="__('stock_requests.min_alert_hint')" class="max-w-xs" />
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$tp->is_active" />
 
             @if ($tp->variants->isNotEmpty())

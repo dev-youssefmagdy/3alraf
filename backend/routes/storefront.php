@@ -95,6 +95,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
         Route::get('launch/{code}', [SmallBatchPublicController::class, 'show'])->where('code', '[a-z0-9]{6,12}')->name('launch.show');
         Route::post('launch/{code}', [SmallBatchPublicController::class, 'signup'])->where('code', '[a-z0-9]{6,12}')->middleware('throttle:search')->name('launch.signup');
     });
+    Route::post('stock-requests', [\App\Http\Controllers\Storefront\StockRequestController::class, 'store'])->middleware('throttle:stock-requests')->name('stock-requests.store');
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
     Route::get('blog/{slug}', [BlogController::class, 'show'])->name('blog.show');

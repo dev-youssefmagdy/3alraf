@@ -53,11 +53,13 @@
                     </div>
                 </div>
             @endforeach
+            @if ($picker['variable'])<div class="hidden rounded-xl border border-slate-200 bg-white p-3" data-variant-status></div>@endif
             <p class="hidden text-sm text-red-600" data-combo-error>{{ __('store.unavailable_combo') }}</p>
 
             <div class="flex flex-wrap items-end gap-3 pt-2">
                 <label class="text-sm font-semibold">{{ __('store.qty') }}<input type="number" min="1" value="1" class="form-control mt-1 w-24" data-qty></label>
                 <button type="button" class="btn btn-primary !px-8 !py-3" data-add-to-cart-page>{{ __('store.add_to_cart') }}</button>
+                <button type="button" class="btn btn-secondary hidden !px-8 !py-3" data-stock-request-page data-product="{{ $product->id }}" data-name="{{ $product->name }}">{{ __('store.request_now') }}</button>
                 @auth('web')<button type="button" data-wish="{{ route('storefront.wishlist.toggle', $product->id) }}" class="btn btn-secondary !py-3" aria-label="{{ __('store.wishlist') }}">{{ $inWishlist ? '♥' : '♡' }} {{ __('store.wishlist') }}</button>
                 @else<a href="{{ route('storefront.login') }}" class="btn btn-secondary !py-3" title="{{ __('store.wishlist_login') }}">♡ {{ __('store.wishlist') }}</a>@endauth
             </div>

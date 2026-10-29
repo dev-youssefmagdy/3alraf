@@ -377,6 +377,11 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
         Route::delete('reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
+        Route::get('stock-requests/datatable', [\App\Http\Controllers\Tenant\StockRequestController::class, 'datatable'])->name('stock-requests.datatable');
+        Route::get('stock-requests', [\App\Http\Controllers\Tenant\StockRequestController::class, 'index'])->name('stock-requests.index');
+        Route::post('stock-requests/{id}/status/{status}', [\App\Http\Controllers\Tenant\StockRequestController::class, 'status'])->whereNumber('id')->whereIn('status', ['new', 'contacted', 'closed'])->name('stock-requests.status');
+        Route::delete('stock-requests/{id}', [\App\Http\Controllers\Tenant\StockRequestController::class, 'destroy'])->whereNumber('id')->name('stock-requests.destroy');
+
         Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');

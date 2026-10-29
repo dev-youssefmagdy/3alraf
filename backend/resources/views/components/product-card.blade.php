@@ -6,8 +6,9 @@
 @endphp
 <div {{ $attributes->merge(['class' => 'group relative flex flex-col rounded-xl border border-slate-200 bg-white p-3 transition hover:shadow-lg']) }} data-product-card>
     @if ($d['percent'])<span class="absolute start-3 top-3 z-10 rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.off', ['p' => $d['percent']]) }}</span>@endif
+    @if ($d['out'])<span class="absolute end-3 top-3 z-10 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.out_of_stock') }}</span>@endif
     <a href="{{ $url }}" class="block overflow-hidden rounded-lg">
-        @if ($img = $p->primaryImageUrl())<img src="{{ $img }}" alt="{{ $p->name }}" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105">
+        @if ($img = $p->primaryImageUrl())<img src="{{ $img }}" alt="{{ $p->name }}" loading="lazy" class="aspect-square w-full object-cover transition group-hover:scale-105 {{ $d['out'] ? 'opacity-50 grayscale' : '' }}">
         @else<div class="aspect-square w-full bg-slate-100"></div>@endif
     </a>
     <a href="{{ $url }}" class="mt-2 line-clamp-2 min-h-10 text-sm font-semibold text-slate-800 hover:text-brand-600">{{ $p->name }}</a>
@@ -17,8 +18,11 @@
         @if ($d['old'])<span class="text-xs text-slate-400 line-through">{{ number_format((float) $d['old'], 2) }}</span>@endif
     </div>
     @if ($d['flash'] && $d['ends_at'])<p class="mt-1 text-[11px] text-brand-600">{{ __('store.ends_in') }} <span data-countdown="{{ $d['ends_at'] }}" class="font-mono font-bold"></span></p>@endif
+    @if ($d['low'])<p class="mt-1 text-xs font-semibold text-amber-600">{{ __('store.low_stock', ['n' => $d['low']]) }}</p>@endif
     <div class="mt-auto pt-3">
-        @if ($p->isVariable())
+        @if ($d['out'])
+            <button type="button" class="btn btn-secondary w-full !py-1.5" data-stock-request data-product="{{ $p->id }}" data-variant="0" data-name="{{ $p->name }}">{{ __('store.request_now') }}</button>
+        @elseif ($p->isVariable())
             <a href="{{ $url }}" class="btn btn-secondary w-full !py-1.5">{{ __('store.choose_options') }}</a>
         @else
             <button type="button" class="btn btn-primary w-full !py-1.5" data-add-to-cart data-product="{{ $p->id }}" data-variant="0">{{ __('store.add_to_cart') }}</button>

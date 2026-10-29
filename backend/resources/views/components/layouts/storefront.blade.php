@@ -14,14 +14,14 @@
         : url()->current().'?lang='.$code;
     $sfJs = ['symbol' => $tenant->currency_symbol, 'locale' => $locale, 'dir' => ($isRtl ?? false) ? 'rtl' : 'ltr', 'logged' => auth('web')->check(),
         'routes' => ['cart' => route('storefront.cart.show'), 'cartItems' => route('storefront.cart.add'), 'quote' => route('storefront.cart.quote'), 'suggest' => route('storefront.search.suggest'),
-            'checkout' => route('storefront.checkout.create'), 'shipping' => route('storefront.checkout.shipping'), 'login' => route('storefront.login')],
+            'stockRequest' => route('storefront.stock-requests.store'), 'checkout' => route('storefront.checkout.create'), 'shipping' => route('storefront.checkout.shipping'), 'login' => route('storefront.login')],
         'i' => ['d' => __('store.d'), 'h' => __('store.h'), 'm' => __('store.m'), 's' => __('store.s'), 'free' => __('store.free'), 'cart_empty' => __('store.cart_empty'), 'remove' => __('store.remove'),
             'no_results' => __('store.no_results'), 'products' => __('store.suggest_products'), 'categories' => __('store.suggest_categories'), 'in_stock' => __('store.in_stock'),
             'out_of_stock' => __('store.out_of_stock'), 'low_stock' => __('store.low_stock', ['n' => ':n']), 'select_city_hint' => __('store.select_city_hint'), 'no_shipping' => __('store.no_shipping'),
             'eta' => __('store.eta_days', ['d' => ':d']), 'cod_na' => __('store.cod_not_for_shipping'), 'unavailable' => __('store.unavailable_combo'), 'item_unavailable' => __('store.item_unavailable'),
             'wishlist_login' => __('store.wishlist_login'), 'code_applied' => __('store.code_applied'), 'fee_note' => __('store.fee_note', ['fee' => ':fee']),
             'subtotal' => __('store.subtotal'), 'discount' => __('store.discount'), 'shipping' => __('store.shipping'), 'tax' => __('store.tax'), 'packaging' => __('store.packaging'), 'payment_fee' => __('store.payment_fee'), 'cod_fee' => __('store.cod_fee'), 'total' => __('store.total'), 'prepaid_now' => __('store.prepaid_now'), 'cod_balance' => __('store.cod_balance'),
-            'unit' => __('store.unit_price'), 'qty' => __('store.qty')]];
+            'request_now' => __('store.request_now'), 'variants_availability' => __('store.variants_availability'), 'unit' => __('store.unit_price'), 'qty' => __('store.qty')]];
 @endphp
 <x-layouts.base :title="$title ?: $tenant->name" body-class="bg-slate-50" :site-name="$tenant->name">
     <x-slot:head>
@@ -172,6 +172,22 @@
         </div>
         <div class="border-t border-slate-200 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ $tenant->name }}. {{ __('store.rights') }}</div>
     </footer>
+
+    {{-- out-of-stock request modal (opened by [data-stock-request]) --}}
+    <div class="fixed inset-0 z-50 hidden place-items-center bg-black/50 p-4" data-sr-modal>
+        <form class="relative w-full max-w-md space-y-3 rounded-2xl bg-white p-5 shadow-2xl" data-sr-form novalidate>
+            <button type="button" data-sr-close class="absolute end-3 top-3 text-2xl leading-none text-slate-400 hover:text-slate-700" aria-label="{{ __('store.close') }}">&times;</button>
+            <h3 class="text-lg font-extrabold">{{ __('store.request_title') }}</h3>
+            <p class="text-sm font-semibold text-brand-600" data-sr-item></p>
+            <p class="text-sm text-slate-500">{{ __('store.request_intro') }}</p>
+            <input type="hidden" name="product_id"><input type="hidden" name="variant_id">
+            <div><label class="form-label">{{ __('store.your_name') }}</label><input type="text" name="name" maxlength="120" required class="form-control" value="{{ auth('web')->user()?->name }}"></div>
+            <div><label class="form-label">{{ __('store.your_phone') }}</label>
+                <div class="flex items-stretch" dir="ltr">@if ($dial = \App\Support\Phone::tenantCode())<span class="grid place-items-center rounded-s-lg border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600">{{ $dial }}</span>@endif<input type="tel" name="phone" maxlength="30" required class="form-control {{ $dial ? '!rounded-s-none' : '' }}"></div></div>
+            <div><label class="form-label">{{ __('store.your_note') }}</label><textarea name="note" rows="2" maxlength="500" class="form-control"></textarea></div>
+            <button type="submit" class="btn btn-primary w-full">{{ __('store.request_send') }}</button>
+        </form>
+    </div>
 
     @include('storefront._bottom-bar')
 </x-layouts.base>

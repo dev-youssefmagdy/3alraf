@@ -44,6 +44,12 @@ class AppServiceProvider extends ServiceProvider
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.self::tenantKey($r).'|'.$r->ip().'|'.self::routeKey($r)));
         }
 
+        // Out-of-stock requests (public, unauthenticated form): short burst cap plus an hourly cap, per tenant + IP.
+        RateLimiter::for('stock-requests', fn (Request $r) => [
+            Limit::perMinute(3)->by('stock-requests-m|'.self::tenantKey($r).'|'.$r->ip()),
+            Limit::perHour(15)->by('stock-requests-h|'.self::tenantKey($r).'|'.$r->ip()),
+        ]);
+
         // Proof RE-upload (stricter than `upload`): per tenant + order token + IP; config/checkout.php.
         RateLimiter::for('proof-reupload', fn (Request $r) => Limit::perMinutes((int) config('checkout.reupload.window'), (int) config('checkout.reupload.attempts'))
             ->by('proof-reupload|'.self::tenantKey($r).'|'.$r->route('token').'|'.$r->ip()));

@@ -31,6 +31,7 @@
             ['tenant.affiliate-tiers.index', 'growth.tiers', 'M4 20h4v-6H4zM10 20h4V8h-4zM16 20h4V4h-4z', 'affiliate_tiers.view'],
             ['tenant.affiliate-payouts.index', 'growth.payouts', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'affiliate_payouts.view'],
             ['tenant.product-lists.index', 'growth.product_lists', 'M5 3l7 4 7-4v14l-7 4-7-4z', 'product_lists.view'],
+            ['tenant.stock-requests.index', 'stock_requests.title', 'M12 8v4l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'stock_requests.view'],
             ['tenant.reviews.index', 'growth.reviews', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', 'reviews.view'],
             ['tenant.custom-pages.index', 'growth.custom_pages', 'M7 3h8l4 4v14H7zM14 3v5h5', 'custom_pages.view'],
             ['tenant.static-pages.index', 'growth.static_pages', 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h4', 'static_pages.view'],
@@ -82,7 +83,7 @@
                 // tenant sidebar groups: [title key, icon path, [route names]]
                 $groups = $isCentral ? [] : [
                     ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['tenant.orders.index', 'tenant.returns.index', 'tenant.customers.index', 'tenant.discount-codes.index', 'tenant.flash-sales.index', 'tenant.bundles.index', 'tenant.packaging.index']],
-                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock.index', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
+                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock-requests.index', 'tenant.stock.index', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
                     ['admin.nav.marketing', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', ['tenant.affiliates.index', 'tenant.affiliate-tiers.index', 'tenant.affiliate-payouts.index', 'tenant.product-lists.index', 'tenant.reviews.index', 'tenant.banners.index']],
                     ['admin.nav.content', 'M7 3h8l4 4v14H7zM14 3v5h5', ['tenant.custom-pages.index', 'tenant.static-pages.index', 'tenant.blog-posts.index']],
                     ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['tenant.expenses.index', 'tenant.expense-categories.index', 'tenant.cod-fees.edit', 'tenant.payment-methods.index']],

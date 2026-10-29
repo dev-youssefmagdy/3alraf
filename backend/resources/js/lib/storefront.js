@@ -65,6 +65,27 @@ function init() {
         addToCart($b.data('product'), $b.data('variant'), 1).always(() => $b.prop('disabled', false));
     });
 
+    /* ---------- out-of-stock request modal ---------- */
+    (function () {
+        const $m = $('[data-sr-modal]'), $f = $m.find('[data-sr-form]');
+        const close = () => $m.addClass('hidden').removeClass('grid');
+        window.openStockRequest = function (productId, variantId, label) {
+            $f.find('[name=product_id]').val(productId); $f.find('[name=variant_id]').val(variantId || '');
+            $f.find('[data-sr-item]').text(label || '');
+            $m.removeClass('hidden').addClass('grid'); $f.find('[name=name]').trigger('focus');
+        };
+        $(document).on('click', '[data-stock-request]', function () { window.openStockRequest($(this).data('product'), $(this).data('variant'), $(this).data('name')); });
+        $m.on('click', '[data-sr-close]', close).on('click', function (e) { if (e.target === this) close(); });
+        $f.on('submit', function (e) {
+            e.preventDefault();
+            const $b = $f.find('[type=submit]').prop('disabled', true);
+            $.post(sf.routes.stockRequest, $f.serialize())
+                .done((r) => { toastr.success(r.message); $f.find('[name=phone],[name=note]').val(''); close(); })
+                .fail((xhr) => toastr.error(firstError(xhr)))
+                .always(() => $b.prop('disabled', false));
+        });
+    })();
+
     /* ---------- generic UI ---------- */
     $(document).on('click', '[data-drawer-open]', () => $('[data-drawer]').removeClass('hidden'));
     $(document).on('click', '[data-drawer-close]', () => $('[data-drawer]').addClass('hidden'));
@@ -216,10 +237,16 @@ function init() {
             $p.find('[data-sku]').text(v ? v.sku || '' : '');
             $p.find('[data-barcode]').text(v ? v.barcode || '' : '');
             let st = '';
-            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= 5 ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
             $p.find('[data-stock]').html(st);
             if (v && v.image) $p.find('[data-main-image]').attr('src', v.image);
             $btn.prop('disabled', !(v && v.in_stock));
+            $p.find('[data-stock-request-page]').toggleClass('hidden', !(v && !v.in_stock)).data('variant', v ? v.id : 0);
+            $p.find('[data-variant-status]').toggleClass('hidden', !picker.variable).html(picker.variable ? '<p class="mb-2 text-sm font-bold">' + esc(T.variants_availability) + '</p>' + picker.variants.map((x) => {
+                const state = !x.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (x.stock !== null && x.stock <= (picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', x.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+                const req = x.in_stock ? '' : ' <button type="button" class="btn-sm btn-secondary" data-request-variant="' + x.id + '">' + esc(T.request_now) + '</button>';
+                return '<div class="flex items-center justify-between gap-2 border-t border-slate-100 py-1.5 text-sm first-of-type:border-0"><span>' + esc(x.label || '') + '</span><span class="flex items-center gap-2">' + state + req + '</span></div>';
+            }).join('') : '');
             const $q = $p.find('[data-qty]');
             if (v && v.stock !== null) $q.attr('max', v.stock); else $q.removeAttr('max');
             clearInterval(flashTimer);
@@ -242,6 +269,11 @@ function init() {
             const gid = $(this).closest('[data-option-group]').data('option-group'), id = $(this).data('option');
             if (sel[gid] === id) delete sel[gid]; else sel[gid] = id;
             refresh();
+        });
+        $p.on('click', '[data-stock-request-page]', function () { window.openStockRequest(pid, current ? current.id : 0, $(this).data('name') + (current && current.label ? ' - ' + current.label : '')); });
+        $p.on('click', '[data-request-variant]', function () {
+            const x = picker.variants.find((r) => r.id === $(this).data('request-variant'));
+            window.openStockRequest(pid, x.id, $p.find('[data-stock-request-page]').data('name') + (x.label ? ' - ' + x.label : ''));
         });
         $p.on('click', '[data-thumb]', function () {
             $p.find('[data-main-image]').attr('src', $(this).data('thumb'));
