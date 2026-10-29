@@ -1,19 +1,20 @@
-<x-layouts.storefront :title="$tenant->name" :description="__('store.seo_default_desc')" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $tenant->name, 'url' => url('/'.app()->getLocale()),
+<x-layouts.storefront :title="$tenant->name" :description="__('store.seo_default_desc')" :preload-image="$hero->first()?->imageUrl()" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $tenant->name, 'url' => url('/'.app()->getLocale()),
     'potentialAction' => ['@type' => 'SearchAction', 'target' => route('storefront.search').'?q={q}', 'query-input' => 'required name=q']]">
+    <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: $tenant->name }}</h1>
     {{-- hero slider --}}
     @if ($hero->isNotEmpty())
-        <section class="relative cursor-grab select-none overflow-hidden rounded-2xl bg-slate-200 active:cursor-grabbing" data-slider aria-roledescription="carousel">
+        <section class="relative cursor-grab select-none overflow-hidden rounded-2xl bg-slate-200 active:cursor-grabbing" data-slider aria-roledescription="carousel" aria-label="{{ __('store.featured_offers') }}">
             <div class="flex will-change-transform" data-slides>
                 @foreach ($hero as $b)
                     <a href="{{ $b->safeLink() ?: '#' }}" class="block w-full shrink-0" data-slide>
-                        @if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/6] w-full object-cover" @if (! $loop->first) loading="lazy" @endif>@endif
+                        @if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" width="1600" height="600" class="aspect-[16/6] w-full object-cover" @if ($loop->first) fetchpriority="high" decoding="async" @else loading="lazy" @endif>@endif
                     </a>
                 @endforeach
             </div>
             @if ($hero->count() > 1)
-                <button type="button" data-slide-prev class="absolute start-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="prev">&#8249;</button>
-                <button type="button" data-slide-next class="absolute end-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="next">&#8250;</button>
-                <div class="absolute inset-x-0 bottom-3 flex justify-center gap-1.5" data-dots>@foreach ($hero as $b)<span class="size-2 cursor-pointer rounded-full bg-white/60 transition-all"></span>@endforeach</div>
+                <button type="button" data-slide-prev class="absolute start-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="{{ __('store.prev') }}">&#8249;</button>
+                <button type="button" data-slide-next class="absolute end-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 px-3 py-1 text-xl shadow md:block" aria-label="{{ __('store.next') }}">&#8250;</button>
+                <div class="absolute inset-x-0 bottom-3 flex justify-center gap-1.5" data-dots aria-hidden="true">@foreach ($hero as $b)<span class="size-2 cursor-pointer rounded-full bg-white/60 transition-all"></span>@endforeach</div>
             @endif
         </section>
     @endif
@@ -38,7 +39,7 @@
     @if ($strips->isNotEmpty() || $tiles->isNotEmpty())
         <section class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-{{ min(4, max(2, $strips->count() + $tiles->count())) }}">
             @foreach ($strips->concat($tiles) as $b)
-                <a href="{{ $b->safeLink() ?: '#' }}" class="block overflow-hidden rounded-xl bg-slate-100">@if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" class="aspect-[16/7] w-full object-cover transition hover:scale-105" loading="lazy">@endif</a>
+                <a href="{{ $b->safeLink() ?: '#' }}" class="block overflow-hidden rounded-xl bg-slate-100">@if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" width="800" height="350" class="aspect-[16/7] w-full object-cover transition hover:scale-105" @if ($loop->index < 2) fetchpriority="high" @else loading="lazy" @endif decoding="async">@endif</a>
             @endforeach
         </section>
     @endif

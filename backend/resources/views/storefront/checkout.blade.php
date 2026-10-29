@@ -86,4 +86,7 @@
             </div>
         </form>
     </x-modal>
+    <script>
+        document.addEventListener('cart:begin', function (e) { var c = e.detail || {}; window.sfTrack && sfTrack('begin_checkout', {value: Number(c.totals ? c.totals.subtotal : 0), items: (c.items || []).map(function (i) { return {id: String(i.product_id || i.id), name: i.name, price: Number(i.unit_price), qty: i.qty}; })}); });
+    </script>
 </x-layouts.storefront>

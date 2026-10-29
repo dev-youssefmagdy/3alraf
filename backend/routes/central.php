@@ -25,6 +25,7 @@ use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('central.landing');
+Route::get('robots.txt', \App\Http\Controllers\Central\RobotsController::class)->name('central.robots');
 Route::get('choose/{slug}', [LandingController::class, 'choose'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('central.choose');
 
 Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('central.google.callback');

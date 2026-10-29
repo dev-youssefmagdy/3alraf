@@ -1,5 +1,5 @@
 @php($c = $stats['commissions'])
-<x-layouts.storefront :title="__('growth.dashboard')">
+<x-layouts.storefront :title="__('growth.dashboard')" :noindex="true">
     @include('storefront.affiliate._nav')
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <x-stat-card :label="__('growth.clicks')" :value="$stats['clicks']" />

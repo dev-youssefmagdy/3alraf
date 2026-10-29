@@ -5,12 +5,16 @@
     $desc = \Illuminate\Support\Str::limit(strip_tags((string) ($product->meta_description ?: $product->description)), 160, '');
     $ld = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->name, 'description' => $desc, 'sku' => $product->sku,
         'image' => $product->images->map->url->values()->all(), 'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
-        'offers' => ['@type' => 'Offer', 'priceCurrency' => current_tenant()->currency_code, 'price' => $first['price'] ?? (string) $tp->effectivePrice(),
-            'availability' => ($first['in_stock'] ?? false) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', 'url' => url()->current()]];
+        'url' => url()->current(), 'mpn' => $product->sku,
+        'offers' => ['@type' => 'Offer', 'priceCurrency' => current_tenant()->currency_code, 'price' => number_format((float) ($first['price'] ?? $tp->effectivePrice()), 2, '.', ''),
+            'priceValidUntil' => now()->addYear()->toDateString(), 'itemCondition' => 'https://schema.org/NewCondition',
+            'availability' => ($first['in_stock'] ?? false) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', 'url' => url()->current(),
+            'seller' => ['@type' => 'Organization', 'name' => current_tenant()->name]]];
+    $bc = array_merge([[__('store.breadcrumb_home'), route('storefront.home')]], collect($crumbs)->map(fn ($c) => [$c->name, route('storefront.category.show', $c->slug)])->all(), [[$product->name, url()->current()]]);
     if ($summary['count']) { $ld['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $summary['avg'], 'reviewCount' => $summary['count']]; }
     $ld = array_filter($ld, fn ($v) => $v !== null);
 @endphp
-<x-layouts.storefront :title="$product->meta_title ?: $product->name" :description="$desc" :image="$img" type="product" :jsonld="$ld">
+<x-layouts.storefront :title="$product->meta_title ?: $product->name" :description="$desc" :image="$img" :preload-image="$img" :breadcrumbs="$bc" type="product" :jsonld="$ld">
     <nav class="mb-4 flex flex-wrap items-center gap-1 text-sm text-slate-500" aria-label="breadcrumb">
         <a href="{{ route('storefront.home') }}" class="hover:text-brand-600">{{ __('store.breadcrumb_home') }}</a>
         @foreach ($crumbs as $c)<span>/</span><a href="{{ route('storefront.category.show', $c->slug) }}" class="hover:text-brand-600">{{ $c->name }}</a>@endforeach
@@ -20,11 +24,11 @@
     <div class="grid gap-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100 lg:grid-cols-2" data-product-page data-product-id="{{ $product->id }}" data-picker="{{ json_encode($picker, JSON_UNESCAPED_UNICODE | JSON_HEX_QUOT | JSON_HEX_APOS) }}">
         <div>
             <div class="overflow-hidden rounded-xl bg-slate-50">
-                @if ($img)<img src="{{ $img }}" alt="{{ $product->name }}" class="aspect-square w-full object-contain" data-main-image>@else<div class="aspect-square bg-slate-100"></div>@endif
+                @if ($img)<img src="{{ $img }}" alt="{{ $product->name }}" width="800" height="800" fetchpriority="high" decoding="async" class="aspect-square w-full object-contain" data-main-image>@else<div class="aspect-square bg-slate-100"></div>@endif
             </div>
             @if ($product->images->count() > 1)
                 <div data-scroll-row class="mt-3 flex gap-2 overflow-x-auto">
-                    @foreach ($product->images as $im)<button type="button" data-thumb="{{ $im->url }}" class="size-16 shrink-0 overflow-hidden rounded-lg border-2 {{ $loop->first ? 'border-brand-600' : 'border-transparent' }}"><img src="{{ $im->thumb_url }}" alt="" class="size-full object-cover"></button>@endforeach
+                    @foreach ($product->images as $im)<button type="button" data-thumb="{{ $im->url }}" aria-label="{{ $product->name }} {{ $loop->iteration }}" class="size-16 shrink-0 overflow-hidden rounded-lg border-2 {{ $loop->first ? 'border-brand-600' : 'border-transparent' }}"><img src="{{ $im->thumb_url }}" alt="" class="size-full object-cover"></button>@endforeach
                 </div>
             @endif
         </div>
@@ -91,4 +95,5 @@
     </section>
 
     <x-rail :title="__('growth.related')" :items="$related" />
+    <script>window.sfTrack && sfTrack('view_item', {value: {{ (float) ($first['price'] ?? $tp->effectivePrice()) }}, items: [{id: @js((string) $product->id), name: @js($product->name), price: {{ (float) ($first['price'] ?? $tp->effectivePrice()) }}, brand: @js($product->brand?->name)}]});</script>
 </x-layouts.storefront>

@@ -1,0 +1,68 @@
+@theme {
+    --font-sans: 'Cairo', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* 3alraf palette: primary rose, plum text, warm white background, soft gold accent */
+    --color-brand-50: #fbeaf0;
+    --color-brand-100: #f6d6e1;
+    --color-brand-200: #f0bfd0;
+    --color-brand-300: #ecaec4;
+    --color-brand-400: #e9a0b5;
+    --color-brand-500: #c96f91;
+    --color-brand-600: #a8456c; /* AA contrast (5.6:1) with white text; brand-500 stays the soft decorative rose */
+    --color-brand-700: #8f3a5c;
+    --color-brand-800: #78304c;
+    --color-brand-900: #5f263c;
+
+    --color-accent: #d7b987;
+    --color-accent-light: #f4e8d5;
+
+    /* neutrals re-tinted to plum (replaces cool slate) */
+    --color-slate-50: #fff9f7;
+    --color-slate-100: #f7ecef;
+    --color-slate-200: #f0dde4;
+    --color-slate-300: #dfc3cf;
+    --color-slate-400: #7a6672;
+    --color-slate-500: #756069;
+    --color-slate-600: #6a5560;
+    --color-slate-700: #5a4551;
+    --color-slate-800: #4d3944;
+    --color-slate-900: #45313b;
+    --color-slate-950: #2f2129;
+
+    --color-red-500: #c8384f;
+    --color-red-600: #c8384f;
+    --color-emerald-600: #2f806a;
+    --color-emerald-700: #25705c;
+    --color-amber-500: #d99a36;
+}
+
+@layer components {
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer; }
+    .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; }
+    .btn-secondary { @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50; }
+    .btn-danger { @apply bg-red-50 text-red-700 border border-red-200 hover:bg-red-100; }
+    .btn-sm { @apply inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium cursor-pointer; }
+    .form-label { @apply mb-1 block text-sm font-medium text-slate-700; }
+    .form-control { @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20; }
+    .form-control.is-invalid { @apply border-red-500 ring-2 ring-red-500/10; }
+    .field-error { @apply mt-1 text-xs text-red-600; }
+    .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+    .badge-success { @apply bg-emerald-50 text-emerald-700; }
+    .badge-muted { @apply bg-slate-100 text-slate-600; }
+    .badge-danger { @apply bg-red-50 text-red-700; }
+    .badge-warn { @apply bg-amber-50 text-amber-700; }
+    .side-link { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/10 hover:text-white; }
+    .side-link.active { @apply bg-brand-600 text-white; }
+}
+
+/* storefront horizontal rows: slim scrollbar themed by the tenant brand colours */
+[data-scroll-row] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-brand-500) var(--color-brand-100);
+    padding-bottom: 0.75rem;
+}
+[data-scroll-row]::-webkit-scrollbar { height: 6px; }
+[data-scroll-row]::-webkit-scrollbar-track { background: var(--color-brand-100); border-radius: 9999px; margin-inline: 0.5rem; }
+[data-scroll-row]::-webkit-scrollbar-thumb { background: var(--color-brand-500); border-radius: 9999px; transition: background .2s; }
+[data-scroll-row]::-webkit-scrollbar-thumb:hover { background: var(--color-brand-700); }
+[data-scroll-row]::-webkit-scrollbar-button { display: none; width: 0; height: 0; }

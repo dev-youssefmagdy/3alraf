@@ -122,4 +122,14 @@
             </section>
         @endif
     </div>
+    @if ($order->placed_at && $order->placed_at->gt(now()->subHours(2)))
+        <script>
+            (function () {
+                if (!window.sfTrack) return;
+                var k = 'sf_purchase_' + @js($order->number);
+                try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) {}
+                sfTrack('purchase', {transaction_id: @js($order->number), value: {{ (float) $order->total }}, items: @js($order->items->map(fn ($i) => ['id' => (string) $i->product_id, 'name' => $i->name, 'price' => (float) $i->unit_price, 'qty' => (int) $i->quantity])->values())});
+            })();
+        </script>
+    @endif
 </x-layouts.storefront>

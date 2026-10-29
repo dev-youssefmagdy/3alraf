@@ -1,4 +1,4 @@
-<x-layouts.storefront :title="__('growth_hub.amb.title')">
+<x-layouts.storefront :title="__('growth_hub.amb.title')" :noindex="true">
     @include('storefront.affiliate._nav')
     @php $a = fn ($k, $r = []) => __('growth_hub.amb.'.$k, $r); $inp = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm'; @endphp
     <div class="space-y-6">

@@ -109,6 +109,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
 
         Route::get('notification-settings', [NotificationSettingsController::class, 'edit'])->name('notification-settings.edit');
         Route::put('notification-settings', [NotificationSettingsController::class, 'update'])->name('notification-settings.update');
+        Route::get('seo', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'edit'])->name('seo.edit');
+        Route::put('seo', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'update'])->name('seo.update');
+        Route::post('seo/validate', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'validateForm'])->name('seo.validate');
         Route::get('cod-fees', [CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');

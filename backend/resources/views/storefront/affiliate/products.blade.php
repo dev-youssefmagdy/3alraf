@@ -1,4 +1,4 @@
-<x-layouts.storefront :title="__('growth.my_links')">
+<x-layouts.storefront :title="__('growth.my_links')" :noindex="true">
     @include('storefront.affiliate._nav')
     <p class="mb-4 text-sm text-slate-500">{{ __('growth.links_intro') }}</p>
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

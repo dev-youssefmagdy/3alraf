@@ -1,9 +1,9 @@
-<x-layouts.base :title="__('store.register')">
+<x-layouts.base :title="__('store.register')" :lite="true">
     <div class="grid min-h-screen place-items-center px-4 py-8">
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
                 <a href="{{ route('storefront.home') }}" class="inline-block" aria-label="{{ current_tenant()?->name ?? config('app.name') }}">
-                    <img src="{{ asset('logo.png') }}" alt="{{ current_tenant()?->name ?? config('app.name') }}" class="mx-auto mb-2 h-14 w-auto object-contain">
+                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ current_tenant()?->name ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
                 </a>
                 <h1 class="text-lg font-bold">{{ current_tenant()?->name ?? config('app.name') }}</h1>
                 <p class="text-sm text-slate-500">{{ __('store.register') }}</p>

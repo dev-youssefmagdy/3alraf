@@ -1,0 +1,14 @@
+@import 'tailwindcss' source(none);
+@import 'toastr/build/toastr.min.css';
+
+/* storefront-only build: scan just the views/scripts the public site uses (keeps the CSS small) */
+@source '../views/storefront';
+@source '../views/components';
+@source '../js/lib/storefront.js';
+@source '../js/lib/ajax-form.js';
+@source '../js/lib/ui.js';
+@source '../../app/Support';
+@source '../../app/Services/Storefront';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@import './theme.css';

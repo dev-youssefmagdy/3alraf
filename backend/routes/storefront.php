@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'root'])->name('storefront.root');
 Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
+Route::get('robots.txt', \App\Http\Controllers\Storefront\RobotsController::class)->name('storefront.robots');
 Route::get('l/{code}', TrackedLinkController::class)->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
 
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)

@@ -5,8 +5,9 @@
     $action = $listing ? $listing['action'] : ($isSearch ? route('storefront.search') : route('storefront.category.show', $category->slug));
     $selectedValues = $filter->values;
     $activeCount = count($filter->brands) + count($filter->tags) + count($filter->values) + ($filter->priceMin !== null ? 1 : 0) + ($filter->priceMax !== null ? 1 : 0);
+    $bc = array_merge([[__('store.breadcrumb_home'), route('storefront.home')]], collect($crumbs ?? [])->map(fn ($c) => [$c->name, route('storefront.category.show', $c->slug)])->all(), ($isSearch || $listing) ? [[$pageTitle, url()->current()]] : []);
 @endphp
-<x-layouts.storefront :title="$category ? ($category->name) : $pageTitle" :description="$category?->description ?? ($listing['description'] ?? null)" :image="$category?->image_url ?? ($listing['image'] ?? null)" :noindex="$isSearch">
+<x-layouts.storefront :title="$category ? ($category->name) : $pageTitle" :description="$category?->description ?? ($listing['description'] ?? null)" :image="$category?->image_url ?? ($listing['image'] ?? null)" :noindex="$isSearch" :breadcrumbs="$bc">
     <nav class="mb-4 flex flex-wrap items-center gap-1 text-sm text-slate-500" aria-label="breadcrumb">
         <a href="{{ route('storefront.home') }}" class="hover:text-brand-600">{{ __('store.breadcrumb_home') }}</a>
         @foreach ($crumbs as $c)<span>/</span>@if ($loop->last)<span class="font-semibold text-slate-800">{{ $c->name }}</span>@else<a href="{{ route('storefront.category.show', $c->slug) }}" class="hover:text-brand-600">{{ $c->name }}</a>@endif @endforeach
@@ -76,4 +77,5 @@
             <div class="mt-6" data-pagination>{{ $items->links('storefront._pagination') }}</div>
         </section>
     </div>
+    @if ($isSearch && $filter->q)<script>window.sfTrack && sfTrack('search', {search_term: @js($filter->q), items: []});</script>@endif
 </x-layouts.storefront>

@@ -1,4 +1,4 @@
-<x-layouts.storefront :title="__('growth.join_program')">
+<x-layouts.storefront :title="__('growth.join_program')" :noindex="true">
     <div class="mx-auto max-w-md">
         <x-card :title="__('growth.join_program')">
             <p class="mb-4 text-sm text-slate-500">{{ __('growth.register_intro') }}</p>

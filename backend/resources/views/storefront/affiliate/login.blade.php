@@ -1,4 +1,4 @@
-<x-layouts.storefront :title="__('growth.affiliate_login')">
+<x-layouts.storefront :title="__('growth.affiliate_login')" :noindex="true">
     <div class="mx-auto max-w-sm">
         <x-card :title="__('growth.affiliate_login')">
             <form data-ajax-form data-validate-url="{{ route('storefront.affiliate.login.validate') }}" action="{{ route('storefront.affiliate.login.submit') }}" method="POST" class="space-y-4" novalidate>

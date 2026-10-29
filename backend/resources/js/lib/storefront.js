@@ -29,7 +29,11 @@ function init() {
     }
     function addToCart(productId, variantId, qty) {
         return $.post(sf.routes.cartItems, { product_id: productId, variant_id: variantId || 0, quantity: qty || 1 })
-            .done((res) => { toastr.success(res.message); cart = res.data || cart; $(document).trigger('cart:updated', [cart]); })
+            .done((res) => {
+                toastr.success(res.message); cart = res.data || cart; $(document).trigger('cart:updated', [cart]);
+                const line = (cart.items || []).find((i) => String(i.product_id) === String(productId)) || {};
+                window.sfTrack?.('add_to_cart', { value: Number(line.unit_price || 0) * (qty || 1), items: [{ id: productId, name: line.name, price: Number(line.unit_price || 0), qty: qty || 1 }] });
+            })
             .fail((xhr) => toastr.error(firstError(xhr)));
     }
     function addBundle(bundleId, qty) {
@@ -43,7 +47,9 @@ function init() {
     });
     const count = (c) => (c.items || []).reduce((n, i) => n + i.qty, 0);
 
+    let beganCheckout = false;
     $(document).on('cart:updated', (_e, c) => {
+        if (!beganCheckout && /\/checkout\/?$/.test(location.pathname) && c.items?.length) { beganCheckout = true; document.dispatchEvent(new CustomEvent('cart:begin', { detail: c })); }
         $('[data-cart-count]').text(count(c));
         renderMini(c);
     });
