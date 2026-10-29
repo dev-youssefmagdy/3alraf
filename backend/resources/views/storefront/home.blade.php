@@ -70,7 +70,7 @@
     {{-- brand strip --}}
     @if ($brands->isNotEmpty())
         <section class="mt-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-            <h2 class="mb-3 text-lg font-extrabold">{{ __('store.brands') }}</h2>
+            <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-extrabold">{{ __('store.brands') }}</h2><a href="{{ route('storefront.brands.index') }}" class="text-sm font-semibold text-brand-600">{{ __('store.view_all') }}</a></div>
             <div class="flex flex-wrap items-center gap-4">
                 @foreach ($brands as $br)
                     <a href="{{ route('storefront.brand.show', $br->slug) }}" class="grid h-16 w-32 place-items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:border-brand-500">

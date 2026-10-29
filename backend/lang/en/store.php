@@ -12,7 +12,7 @@ return [
     'all_categories' => 'All categories', 'categories' => 'Categories', 'my_account' => 'My account', 'login' => 'Log in', 'register' => 'Create account', 'logout' => 'Log out',
     'cart' => 'Cart', 'home' => 'Home', 'language' => 'Language', 'menu' => 'Menu', 'close' => 'Close',
     'shop_now' => 'Shop now', 'view_all' => 'View all', 'flash_sale' => 'Flash sale', 'ends_in' => 'Ends in', 'd' => 'd', 'h' => 'h', 'm' => 'm', 's' => 's',
-    'recommended' => 'Recommended for you', 'most_sold' => 'Most sold', 'most_reviewed' => 'Most reviewed', 'brands' => 'Shop by brand', 'top_categories' => 'Shop by category',
+    'recommended' => 'Recommended for you', 'most_sold' => 'Most sold', 'most_reviewed' => 'Most reviewed', 'brands' => 'Shop by brand', 'all_brands' => 'All brands', 'brand_products' => 'products', 'brands_empty' => 'No brands available yet.', 'top_categories' => 'Shop by category',
     'filters' => 'Filters', 'brand' => 'Brand', 'price' => 'Price', 'price_from' => 'From', 'price_to' => 'To', 'apply' => 'Apply', 'reset' => 'Clear filters', 'sort' => 'Sort by',
     'sorts' => ['newest' => 'Newest', 'price_asc' => 'Price: low to high', 'price_desc' => 'Price: high to low', 'best_selling' => 'Best selling', 'top_rated' => 'Top rated'],
     'results_count' => ':n products', 'no_results' => 'No matching products.', 'sub_categories' => 'Sub-categories',

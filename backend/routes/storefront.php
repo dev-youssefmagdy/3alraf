@@ -76,6 +76,7 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
 
     // Phase 7: catalog
     Route::get('category/{slug}', [CatalogController::class, 'category'])->name('category.show');
+    Route::get('brands', [CatalogController::class, 'brands'])->name('brands.index');
     Route::get('brand/{slug}', [CatalogController::class, 'brand'])->name('brand.show');
     Route::get('tag/{slug}', [CatalogController::class, 'tag'])->name('tag.show');
     Route::get('search', [CatalogController::class, 'results'])->middleware('throttle:search')->name('search');

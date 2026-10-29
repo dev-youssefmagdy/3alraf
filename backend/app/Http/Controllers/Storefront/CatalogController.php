@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Models\TenantProduct;
 use App\Services\Storefront\CatalogSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,18 @@ class CatalogController extends Controller
         $category = Category::where('slug', $slug)->where('is_active', true)->firstOrFail();
 
         return $this->render($request, $category, null);
+    }
+
+    /** All brands that have at least one sellable product. */
+    public function brands()
+    {
+        $sellable = fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+        $brands = Brand::query()->where('is_active', true)
+            ->withCount(['products as sellable_count' => $sellable])
+            ->whereHas('products', $sellable)
+            ->orderBy('sort_order')->orderBy('name')->get();
+
+        return view('storefront.brands', compact('brands'));
     }
 
     /** Brand landing page: the brand's sellable products with the usual filters. */
