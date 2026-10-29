@@ -76,7 +76,7 @@
         <div class="space-y-5">
             <x-card :title="__('admin.organization')">
                 <div class="space-y-4">
-                    <x-select name="type" :label="__('admin.fields.type')" :options="$types" :value="$product->type?->value" required id="product-type" />
+                    <x-select name="type" :label="__('admin.fields.type')" :options="$types" :value="$product->type?->value" required />
                     <x-select name="brand_id" :label="__('admin.brand')" :options="$brands" :value="$product->brand_id" :placeholder="__('admin.no_brand')" />
                     <div data-field>
                         <div class="form-label">{{ __('admin.categories') }}<span class="text-red-500">*</span></div>

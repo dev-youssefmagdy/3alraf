@@ -9,7 +9,7 @@ const hashOf = (ids) => [...ids].map(Number).sort((a, b) => a - b).join('-');
 const esc = (s) => $('<div>').text(s ?? '').html();
 
 function toggleType() {
-    const variable = $('#product-type').val() === 'variable';
+    const variable = $('#f-type').val() === 'variable';
     $('#variant-section').toggle(variable).find('input,select').prop('disabled', !variable);
     $('[data-simple-section]').toggle(!variable);
 }
@@ -71,7 +71,7 @@ $(() => {
     buildPickers($('#variant-generator'));
     toggleType();
     refreshEmpty();
-    $(document).on('change', '#product-type', toggleType);
+    $(document).on('change', '#f-type', toggleType);
     $(document).on('click', '#variant-generator [data-generate]', generate);
     $(document).on('repeater:changed', '#variant-repeater', refreshEmpty);
 });
