@@ -71,6 +71,17 @@ function init() {
         addToCart($b.data('product'), $b.data('variant'), 1).always(() => $b.prop('disabled', false));
     });
 
+    $(document).on('click', '[data-card-wish]', function () {
+        const $b = $(this), url = $b.data('card-wish');
+        if (!url) { location.href = $b.data('login'); return; }
+        $b.prop('disabled', true);
+        $.post(url).done((r) => {
+            const on = !!(r.data ? r.data.in_wishlist : r.in_wishlist);
+            $b.attr('aria-pressed', on).toggleClass('text-red-500', on).toggleClass('text-slate-400', !on).find('svg').attr('fill', on ? 'currentColor' : 'none');
+            toastr.success(r.message);
+        }).always(() => $b.prop('disabled', false));
+    });
+
     /* ---------- out-of-stock request modal ---------- */
     (function () {
         const $m = $('[data-sr-modal]'), $f = $m.find('[data-sr-form]');

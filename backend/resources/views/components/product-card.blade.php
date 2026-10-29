@@ -3,10 +3,17 @@
     $p = $tp->product;
     $d = $tp->display ?? app(\App\Services\Storefront\CardPresenter::class)->decorate(collect([$tp]))->first()->display;
     $url = route('storefront.product.show', ['locale' => app()->getLocale(), 'slug' => $p->slug]);
+    static $wished = null;
+    $customer = auth('web')->user();
+    $wished ??= $customer ? \App\Models\WishlistItem::where('customer_id', $customer->id)->pluck('product_id')->all() : [];
+    $fav = in_array($p->id, $wished, true);
 @endphp
 <div {{ $attributes->merge(['class' => 'group relative flex flex-col rounded-xl border border-slate-200 bg-white p-3 transition hover:shadow-lg']) }} data-product-card>
-    @if ($d['percent'])<span class="absolute start-3 top-3 z-10 rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.off', ['p' => $d['percent']]) }}</span>@endif
-    @if ($d['out'])<span class="absolute end-3 top-3 z-10 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.out_of_stock') }}</span>@endif
+    @if ($d['percent'])<span class="absolute right-5 top-5 z-10 rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.off', ['p' => $d['percent']]) }}</span>@endif
+    @if ($d['out'])<span class="absolute right-5 top-12 z-10 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-white">{{ __('store.out_of_stock') }}</span>@endif
+    <button type="button" data-card-wish="{{ $customer ? route('storefront.wishlist.toggle', ['locale' => app()->getLocale(), 'product' => $p->id]) : '' }}" data-login="{{ route('storefront.login', ['locale' => app()->getLocale()]) }}" aria-pressed="{{ $fav ? 'true' : 'false' }}" aria-label="{{ __('store.wishlist') }}" class="group/fav absolute left-5 top-5 z-10 grid size-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 transition hover:scale-110 {{ $fav ? 'text-red-500' : 'text-slate-400' }}">
+        <svg viewBox="0 0 24 24" class="size-4" fill="{{ $fav ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9.1C1.2 8.8 3 5 6.6 5c2 0 3.4 1.1 4.2 2.4h.4C12 6.1 13.4 5 15.4 5 19 5 20.8 8.8 21.3 11.9 19 16.400 12 21 12 21z"/></svg>
+    </button>
     <a href="{{ $url }}" class="block overflow-hidden rounded-lg">
         @if ($img = $p->primaryImageUrl())<x-media-img :src="$img" :alt="$p->name" width="400" height="400" :eager="(bool) $eager" class="aspect-square w-full object-cover transition group-hover:scale-105 {{ $d['out'] ? 'opacity-50 grayscale' : '' }}" />
         @else<div class="aspect-square w-full bg-slate-100"></div>@endif
