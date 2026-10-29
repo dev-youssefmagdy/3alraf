@@ -3,6 +3,7 @@ import $ from 'jquery';
 import toastr from 'toastr';
 import './lib/ajax-form';
 import './lib/storefront';
+import './lib/gift-finder';
 import './lib/ui';
 
 window.$ = window.jQuery = $;

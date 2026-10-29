@@ -19,6 +19,6 @@ class GiftFinderController extends ApiController
 
     public function cart(Request $r, string $token): JsonResponse
     {
-        return $this->respond($this->svc->prepareCart($token, (array) $r->input('product_ids', [])));
+        return $this->respond($this->svc->prepareCart($token, (array) $r->input('product_ids', []), (array) $r->input('variants', [])));
     }
 }

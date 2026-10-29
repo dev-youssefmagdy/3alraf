@@ -187,6 +187,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::post('seasonal/{id}/bundles', [$sc, 'bundles'])->whereNumber('id')->middleware(['growth.feature:seasonal_calendar', 'growth.feature:bundle_engine'])->name('seasonal.bundles');
             Route::post('seasonal/{id}/close', [$sc, 'close'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.close');
             Route::get('gift-finder', [GiftFinderAdminController::class, 'index'])->middleware('growth.feature:gift_finder')->name('gift-finder.index');
+            Route::get('gift-finder/tags', [GiftFinderAdminController::class, 'tags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags');
+            Route::post('gift-finder/tags', [GiftFinderAdminController::class, 'saveTags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags.save');
+            Route::post('gift-finder/tags/suggest', [GiftFinderAdminController::class, 'suggestTags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags.suggest');
             $lb = LabController::class;
             Route::get('lab', [$lb, 'index'])->middleware('growth.feature:experiment_lab')->name('lab.index');
             Route::post('lab', [$lb, 'store'])->middleware('growth.feature:experiment_lab')->name('lab.store');

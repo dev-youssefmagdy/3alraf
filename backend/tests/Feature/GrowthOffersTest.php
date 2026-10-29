@@ -260,3 +260,116 @@ it('gift finder web + API endpoints, prepared cart, stats, and the switch', func
     $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertStatus(403)->assertJson(['error' => 'feature_disabled']);
     $this->postJson('http://egy.3alraf.test/api/v1/gift-finder', ['budget' => 150])->assertStatus(403);
 });
+
+it('gift finder: tuning comes from config, restriction words are normalised, and internal ranking fields never leak', function () {
+    $c = ($this->cat)('Skin');
+    ($this->product)('fit', '100', '40', 20, [$c]);
+    ($this->product)('edge', '150', '40', 20, [$c]);       // 150 = budget x 1.5
+    $words = app(\App\Services\Growth\GiftFinder\GiftScorer::class)->restrictionWords(" Foo ,x\nبار، , baz ");
+    expect($words)->toBe(['foo', 'بار', 'baz']);            // trimmed, lower-cased, single chars dropped, Arabic comma + newline split
+
+    $r = app(GiftFinderService::class)->search(['budget' => 100]);
+    expect($r['results'][0])->not->toHaveKeys(['margin', 'bucket', 'names'])->and($r['near_budget'])->toBe([]);   // 150 is outside the default 1.25 factor
+
+    config(['gift_finder.near_budget_factor' => 1.6, 'gift_finder.max_results' => 1]);
+    $r = app(GiftFinderService::class)->search(['budget' => 100]);
+    expect($r['results'])->toHaveCount(1)->and(collect($r['near_budget'])->pluck('slug')->all())->toBe(['edge']);
+});
+
+it('gift finder: the prepared cart only adds products from that search session', function () {
+    $c = ($this->cat)('Skin');
+    $a = ($this->product)('a', '100', '40', 20, [$c]);
+    $outside = ($this->product)('outside', '900', '40', 20, [$c]);
+    $j = $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
+    $res = $this->postJson('http://egy.3alraf.test/en/gift-finder/'.$j['token'].'/cart', ['product_ids' => [$a->id, $outside->id]])->assertOk()->json('data');
+    expect($res['added'])->toBe([$a->id])->and($res['added'])->not->toContain($outside->id);
+});
+
+it('gift finder tags: untagged products stay visible until tagging starts; then only gifts for that recipient are offered', function () {
+    $c = ($this->cat)('Skin');
+    $womens = ($this->product)('womens', '100', '40', 20, [$c]);
+    $mens = ($this->product)('mens', '100', '40', 20, [$c]);
+    $car = ($this->product)('car', '100', '40', 20, [$c]);
+    $svc = app(GiftFinderService::class);
+    expect(collect($svc->search(['budget' => 150, 'recipient' => 'mother'])['results'])->pluck('slug')->sort()->values()->all())->toBe(['car', 'mens', 'womens']); // legacy: no tags yet
+
+    TenantProduct::where('product_id', $womens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['mother', 'sister'], 'gift_occasions' => ['mothers_day']]);
+    TenantProduct::where('product_id', $mens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['partner']]);
+    $r = $svc->search(['budget' => 150, 'recipient' => 'mother', 'occasion' => 'mothers_day']);
+    expect(collect($r['results'])->pluck('slug')->all())->toBe(['womens'])                // men's item filtered for mother, car item never tagged as a gift
+        ->and($r['results'][0]['recipient_match'])->toBeTrue()->and($r['results'][0]['occasion_match'])->toBeTrue()
+        ->and($r['results'][0]['explanation'])->toContain('Mother')->and($r['results'][0]['explanation'])->toContain("Mother's Day");
+    // no recipient chosen: every gift-tagged product is fair game, the untagged car item still is not
+    expect(collect($svc->search(['budget' => 150])['results'])->pluck('slug')->sort()->values()->all())->toBe(['mens', 'womens']);
+});
+
+it('gift finder: a budget keeps out products far too cheap to be "the gift", unless too few remain', function () {
+    foreach ([['a', '900'], ['b', '800'], ['c', '700'], ['cheap', '50']] as [$s, $p]) {
+        ($this->product)($s, $p, '10', 20);
+    }
+    $slugs = fn (array $in) => collect(app(GiftFinderService::class)->search($in)['results'])->pluck('slug')->all();
+    expect($slugs(['budget' => 1000]))->not->toContain('cheap');     // 50 < 20% of 1000 and 3 worthy products exist
+    ($this->product)('only', '900', '10', 20);
+    config(['gift_finder.min_preferred_results' => 10]);
+    expect($slugs(['budget' => 1000]))->toContain('cheap');          // too few worthy products: cheaper ones fill in
+});
+
+it('gift finder: the tag suggester skips non-gifts and test products, narrows by name, and never overwrites human tags', function () {
+    $big = ($this->cat)('Furniture');
+    $beauty = ($this->cat)('Beauty');
+    $sofa = ($this->product)('sofa', '5000', '1', 5, [$big]);
+    $perfume = ($this->product)('perfume', '300', '1', 5, [$beauty]);
+    $mens = Product::create(['type' => 'simple', 'name' => ['en' => "Men's Perfume", 'ar' => 'عطر رجالي'], 'description' => ['en' => 'x'], 'slug' => 'mp', 'sku' => 'MP']);
+    TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $mens->id, 'price' => 300, 'cost' => 1, 'is_active' => true]);
+    $mens->categories()->attach($beauty->id);
+    $test = ($this->product)('x', '10', '1', 5);
+    $test->setTranslations('name', ['en' => 'Test', 'ar' => 'تجربة'])->save();
+    $kept = ($this->product)('kept', '300', '1', 5, [$beauty]);
+    TenantProduct::where('product_id', $kept->id)->update(['gift_recipients' => ['child']]);   // human-tagged (suitable stays false on purpose)
+
+    expect(app(\App\Services\Growth\GiftFinder\GiftTagSuggester::class)->applyToUntagged())->toBeGreaterThanOrEqual(2);
+    $tp = fn ($p) => TenantProduct::where('product_id', $p->id)->first();
+    expect($tp($sofa)->gift_suitable)->toBeFalse('sofa')->and($tp($test)->gift_suitable)->toBeFalse('test product')
+        ->and($tp($perfume)->gift_suitable)->toBeTrue()->and($tp($perfume)->gift_recipients)->toContain('mother')
+        ->and($tp($mens)->gift_recipients)->not->toContain('mother')->and($tp($mens)->gift_recipients)->toContain('partner')
+        ->and($tp($kept)->gift_recipients)->toBe(['child']);
+});
+
+it('gift finder: variable products come with their variants, and the cart needs a valid chosen variant', function () {
+    $attr = \App\Models\Attribute::create(['name' => ['ar' => 'اللون', 'en' => 'Color'], 'code' => 'color', 'type' => 'text']);
+    $red = \App\Models\AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Red']);
+    $blue = \App\Models\AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Blue']);
+    $p = ($this->product)('shirt', '100', '40', 0);
+    $p->update(['type' => 'variable']);
+    $vs = [];
+    foreach ([[$red, 20], [$blue, 0]] as [$val, $stock]) {
+        $v = \App\Models\ProductVariant::create(['product_id' => $p->id, 'combination_hash' => (string) $val->id, 'sku' => 'S-'.$val->value, 'barcode' => '20000000'.$val->id.'0000', 'is_active' => true]);
+        $v->values()->attach($val->id);
+        if ($stock) {
+            app(StockLedger::class)->record(Branch::first()->id, $p->id, $v->id, T::PURCHASE_IN, $stock, '40');
+        }
+        $vs[$val->value] = $v;
+    }
+    $j = $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
+    $row = collect($j['results'])->firstWhere('slug', 'shirt');
+    expect($row['simple'])->toBeFalse()->and($row['picker']['variants'])->toHaveCount(1)->and($row['picker']['variants'][0]['id'])->toBe($vs['Red']->id)   // out-of-stock Blue is not offered
+        ->and($row['picker']['options'][0]['name'])->toBe('Color');
+    $cart = fn (array $body) => $this->postJson('http://egy.3alraf.test/en/gift-finder/'.$j['token'].'/cart', $body)->assertOk()->json('data');
+    expect($cart(['product_ids' => [$p->id]])['skipped'])->toBe([$p->id]);                                              // no variant chosen
+    expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => $vs['Blue']->id]])['skipped'])->toBe([$p->id]);   // out of stock
+    expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => 999999]])['skipped'])->toBe([$p->id]);            // not this product's variant
+    expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => $vs['Red']->id]])['added'])->toBe([$p->id]);
+    expect(\App\Models\CartItem::withoutGlobalScopes()->where('product_id', $p->id)->value('product_variant_id'))->toBe($vs['Red']->id);
+});
+
+it('gift finder admin: tags page saves per-product tags for this store only', function () {
+    $a = ($this->product)('a', '100', '40', 20);
+    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/gift-finder/tags')->assertOk()->assertSee($a->name);
+    $tpId = TenantProduct::where('product_id', $a->id)->value('id');
+    ($this->owner)()->post('http://egy.3alraf.test/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['mother'], 'occasions' => ['ramadan']]]])->assertRedirect();
+    $tp = TenantProduct::find($tpId);
+    expect($tp->gift_suitable)->toBeTrue()->and($tp->gift_recipients)->toBe(['mother'])->and($tp->gift_occasions)->toBe(['ramadan']);
+    ($this->owner)()->post('http://egy.3alraf.test/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['bogus']]]])->assertSessionHasErrors();
+    ($this->off)('gift_finder');
+    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/gift-finder/tags')->assertNotFound();
+});

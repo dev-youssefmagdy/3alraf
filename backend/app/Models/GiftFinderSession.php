@@ -11,10 +11,10 @@ class GiftFinderSession extends Model
 
     protected $table = 'gift_finder_sessions';
 
-    protected $fillable = ['token', 'occasion', 'recipient', 'budget', 'category_id', 'restrictions', 'result_ids', 'results_count', 'cart_at'];
+    protected $fillable = ['token', 'occasion', 'recipient', 'budget', 'category_id', 'restrictions', 'result_ids', 'results_count', 'cart_ids', 'cart_at'];
 
     protected function casts(): array
     {
-        return ['result_ids' => 'array', 'budget' => 'decimal:2', 'cart_at' => 'datetime'];
+        return ['result_ids' => 'array', 'cart_ids' => 'array', 'budget' => 'decimal:2', 'cart_at' => 'datetime'];
     }
 }

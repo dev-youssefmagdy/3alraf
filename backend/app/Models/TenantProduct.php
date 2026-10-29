@@ -12,11 +12,11 @@ class TenantProduct extends Model
 {
     use Audited, BelongsToTenant;
 
-    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'min_stock_alert_qty', 'is_active', 'content'];
+    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'min_stock_alert_qty', 'is_active', 'content', 'gift_suitable', 'gift_recipients', 'gift_occasions'];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'is_active' => 'bool', 'content' => 'array'];
+        return ['price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'is_active' => 'bool', 'content' => 'array', 'gift_suitable' => 'bool', 'gift_recipients' => 'array', 'gift_occasions' => 'array'];
     }
 
     public function product(): BelongsTo

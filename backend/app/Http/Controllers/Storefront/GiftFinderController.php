@@ -25,7 +25,7 @@ class GiftFinderController extends Controller
 
     public function cart(Request $r, string $locale, string $token): JsonResponse
     {
-        $res = $this->svc->prepareCart($token, (array) $r->input('product_ids', []));
+        $res = $this->svc->prepareCart($token, (array) $r->input('product_ids', []), (array) $r->input('variants', []));
 
         return $this->ok(__('orders.added_to_cart'), route('storefront.cart.show', ['locale' => $locale]), $res);
     }
