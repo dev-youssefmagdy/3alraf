@@ -21,7 +21,7 @@
     {{-- category icon row --}}
     @if (count($categories))
         <section class="mt-6">
-            <div class="flex gap-4 overflow-x-auto pb-2">
+            <div data-scroll-row class="flex gap-4 overflow-x-auto pb-2">
                 @foreach ($categories as $c)
                     <a href="{{ route('storefront.category.show', $c['slug']) }}" class="group w-24 shrink-0 text-center">
                         <span class="mx-auto grid size-20 place-items-center overflow-hidden rounded-full bg-white ring-1 ring-slate-200 transition group-hover:ring-brand-500">

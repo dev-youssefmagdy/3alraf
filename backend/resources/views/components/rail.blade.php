@@ -8,7 +8,7 @@
         </div>
         @if ($href)<a href="{{ $href }}" class="text-sm font-semibold text-brand-600 hover:underline">{{ __('store.view_all') }}</a>@endif
     </div>
-    <div class="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+    <div data-scroll-row class="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
         @foreach ($items as $tp)<div class="w-44 shrink-0 snap-start sm:w-52"><x-product-card :tp="$tp" class="h-full" /></div>@endforeach
     </div>
 </section>

@@ -23,7 +23,7 @@
                 @if ($img)<img src="{{ $img }}" alt="{{ $product->name }}" class="aspect-square w-full object-contain" data-main-image>@else<div class="aspect-square bg-slate-100"></div>@endif
             </div>
             @if ($product->images->count() > 1)
-                <div class="mt-3 flex gap-2 overflow-x-auto">
+                <div data-scroll-row class="mt-3 flex gap-2 overflow-x-auto">
                     @foreach ($product->images as $im)<button type="button" data-thumb="{{ $im->url }}" class="size-16 shrink-0 overflow-hidden rounded-lg border-2 {{ $loop->first ? 'border-brand-600' : 'border-transparent' }}"><img src="{{ $im->thumb_url }}" alt="" class="size-full object-cover"></button>@endforeach
                 </div>
             @endif

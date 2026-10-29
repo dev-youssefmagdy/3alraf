@@ -466,3 +466,40 @@ function init() {
 
     loadCart();
 }
+
+// Horizontal rows: [data-scroll-row] gets a left and a right arrow (physical sides, works in RTL), hidden at the ends.
+const initScrollRows = () => {
+    document.querySelectorAll('[data-scroll-row]:not([data-scroll-ready])').forEach((row) => {
+        row.dataset.scrollReady = '1';
+        const wrap = document.createElement('div');
+        wrap.className = 'relative';
+        row.parentNode.insertBefore(wrap, row);
+        wrap.appendChild(row);
+        const mk = (dir) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.dir = 'ltr';
+            b.setAttribute('aria-label', dir < 0 ? 'Scroll left' : 'Scroll right');
+            b.className = `absolute top-1/2 z-10 hidden size-9 -translate-y-1/2 place-items-center rounded-full bg-white text-lg text-slate-700 shadow ring-1 ring-slate-200 hover:text-brand-600 sm:grid ${dir < 0 ? 'left-1' : 'right-1'}`;
+            b.textContent = dir < 0 ? '‹' : '›';
+            b.addEventListener('click', () => row.scrollBy({ left: dir * row.clientWidth * 0.8, behavior: 'smooth' }));
+            wrap.appendChild(b);
+            return b;
+        };
+        const l = mk(-1), r = mk(1);
+        const sync = () => {
+            const max = row.scrollWidth - row.clientWidth;
+            const x = Math.abs(row.scrollLeft);
+            const rtl = getComputedStyle(row).direction === 'rtl';
+            const atLeft = rtl ? x >= max - 2 : x <= 2;
+            const atRight = rtl ? x <= 2 : x >= max - 2;
+            l.style.visibility = max > 2 && !atLeft ? '' : 'hidden';
+            r.style.visibility = max > 2 && !atRight ? '' : 'hidden';
+        };
+        row.addEventListener('scroll', sync, { passive: true });
+        window.addEventListener('resize', sync);
+        sync();
+        setTimeout(sync, 400);
+    });
+};
+document.addEventListener('DOMContentLoaded', initScrollRows);
