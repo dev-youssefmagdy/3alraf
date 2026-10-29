@@ -69,12 +69,21 @@
 
     {{-- brand strip --}}
     @if ($brands->isNotEmpty())
-        <section class="mt-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-            <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-extrabold">{{ __('store.brands') }}</h2><a href="{{ route('storefront.brands.index') }}" class="text-sm font-semibold text-brand-600">{{ __('store.view_all') }}</a></div>
-            <div class="flex flex-wrap items-center gap-4">
+        <section class="mt-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100 sm:p-5">
+            <div class="mb-4 flex items-center justify-between gap-2">
+                <h2 class="text-lg font-extrabold text-slate-900">{{ __('store.brands') }}</h2>
+                <a href="{{ route('storefront.brands.index') }}" class="text-sm font-semibold text-brand-600 hover:underline">{{ __('store.view_all') }}</a>
+            </div>
+            <div data-scroll-row class="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 sm:gap-4">
                 @foreach ($brands as $br)
-                    <a href="{{ route('storefront.brand.show', $br->slug) }}" class="grid h-16 w-32 place-items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:border-brand-500">
-                        @if ($br->logo_url ?? null)<img src="{{ $br->logo_url }}" alt="{{ $br->name }}" class="max-h-12 object-contain" loading="lazy">@else{{ $br->name }}@endif
+                    <a href="{{ route('storefront.brand.show', $br->slug) }}" class="group w-36 shrink-0 snap-start overflow-hidden rounded-xl bg-white ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-brand-500 sm:w-44">
+                        <span class="grid h-24 place-items-center bg-slate-50 p-4 sm:h-28">
+                            @if ($br->logo_url)<img src="{{ $br->logo_url }}" alt="{{ $br->name }}" class="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105" loading="lazy">@else<span class="grid size-14 place-items-center rounded-full bg-brand-50 text-2xl font-extrabold text-brand-600">{{ mb_strtoupper(mb_substr($br->name, 0, 1)) }}</span>@endif
+                        </span>
+                        <span class="block border-t border-slate-100 px-2 py-2.5 text-center">
+                            <span class="block truncate text-sm font-bold text-slate-800 group-hover:text-brand-600">{{ $br->name }}</span>
+                            <span class="block text-xs text-slate-500">{{ $br->sellable_count }} {{ __('store.brand_products') }}</span>
+                        </span>
                     </a>
                 @endforeach
             </div>

@@ -64,9 +64,18 @@ class StorefrontData
                 'most_reviewed' => $dec($this->lists->resolve(ProductListType::MOST_REVIEWED)),
             ],
             'categoryRails' => $this->categoryRails(),
-            'brands' => Brand::query()->where('is_active', true)->whereHas('products', fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id')))
-                ->orderBy('sort_order')->limit(12)->get(),
+            'brands' => $this->brands(),
         ];
+    }
+
+    /** Active brands with sellable products, newest-first by sort order, with a product count for the home strip. */
+    private function brands()
+    {
+        $sellable = fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+
+        return Brand::query()->where('is_active', true)->whereHas('products', $sellable)
+            ->withCount(['products as sellable_count' => $sellable])
+            ->orderBy('sort_order')->orderBy('name')->limit(24)->get();
     }
 
     /** Running flash sale (earliest ending) with its sellable products. */
