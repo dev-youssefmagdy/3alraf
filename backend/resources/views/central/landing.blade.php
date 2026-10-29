@@ -2,8 +2,7 @@
     <main class="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-10">
         <header class="mb-10 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <img src="{{ asset('logo.png') }}" alt="" class="size-10 object-contain">
-                <span class="text-lg font-bold">{{ config('app.name') }}</span>
+                <img src="{{ asset('logo-sm.webp') }}" alt="{{ config('app.name') }}" class="h-12 w-auto object-contain">
             </div>
             <a class="text-sm font-semibold text-brand-600" href="{{ route('central.landing', ['lang' => $lang === 'ar' ? 'en' : 'ar']) }}">{{ __('admin.site.switch_lang') }}</a>
         </header>

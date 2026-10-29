@@ -76,8 +76,7 @@
     <div class="flex min-h-screen">
         <aside id="sidebar" class="fixed inset-y-0 start-0 z-40 hidden w-64 shrink-0 flex-col bg-slate-900 p-4 md:sticky md:top-0 md:h-screen md:flex">
             <a href="{{ route($isCentral ? 'central.dashboard' : 'tenant.dashboard') }}" class="mb-6 flex items-center gap-2 px-2 text-lg font-bold text-white">
-                <img src="{{ asset('logo.png') }}" alt="" class="size-8 rounded-lg object-contain">
-                <span>{{ $isCentral ? config('app.name') : ($tenant?->name ?? config('app.name')) }}</span>
+                <img src="{{ asset('logo-sm.webp') }}" alt="{{ $isCentral ? config('app.name') : ($tenant?->name ?? config('app.name')) }}" class="h-10 w-auto max-w-full object-contain">
             </a>
             @php
                 $label = fn ($i) => str_contains($i[1], '.') ? __($i[1]) : __('admin.'.$i[1]);
