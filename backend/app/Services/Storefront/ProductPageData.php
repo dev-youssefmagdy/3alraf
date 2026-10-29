@@ -45,7 +45,7 @@ class ProductPageData
                 'id' => $vid, 'values' => $v ? $v->values->pluck('id')->all() : [], 'price' => Money::round($final),
                 'old' => bccomp($final, $regular, 2) < 0 ? Money::round($regular) : null, 'flash_ends' => $flashEnds,
                 'stock' => $available === PHP_INT_MAX ? null : $available, 'in_stock' => $available > 0,
-                'label' => $v?->label(), 'barcode' => $v?->barcode ?? $product->barcode, 'sku' => $v?->sku ?? $product->sku,
+                'label' => $v?->label(), 'alert' => $tv?->min_stock_alert_qty ?? $tp->min_stock_alert_qty ?? 5, 'barcode' => $v?->barcode ?? $product->barcode, 'sku' => $v?->sku ?? $product->sku,
                 'image' => $v?->images->first()?->url ?? $productImage,
             ];
         }
@@ -58,6 +58,6 @@ class ProductPageData
             }
         }
 
-        return ['options' => $options, 'variants' => $rows, 'variable' => $product->isVariable(), 'alert' => $tp->min_stock_alert ?? 5];
+        return ['options' => $options, 'variants' => $rows, 'variable' => $product->isVariable(), 'alert' => $tp->min_stock_alert_qty ?? 5];
     }
 }

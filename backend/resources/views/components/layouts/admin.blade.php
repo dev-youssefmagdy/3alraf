@@ -47,6 +47,7 @@
             ['tenant.expense-categories.index', 'ops.expense_categories', 'M4 6h16M4 12h16M4 18h16', 'expense_categories.view'],
             ['tenant.expenses.index', 'ops.expenses', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'expenses.view'],
             ['tenant.stock.index', 'ops.stock', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', 'stock.view', 'tenant.stock.index'],
+            ['tenant.stock.low', 'stock_requests.low_stock', 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z', 'stock.view', 'tenant.stock.low'],
             ['tenant.stock.movements', 'ops.stock_movements', 'M4 6h16M4 12h16M4 18h16', 'stock.view', 'tenant.stock.movements*'],
             ['tenant.purchases.index', 'ops.purchases', 'M3 4h2l2 12h10l2-9H6', 'purchases.view'],
             ['tenant.stock-transfers.index', 'ops.stock_transfers', 'M7 7h12l-3-3m3 13H7l3 3', 'stock_transfers.view'],
@@ -83,7 +84,7 @@
                 // tenant sidebar groups: [title key, icon path, [route names]]
                 $groups = $isCentral ? [] : [
                     ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['tenant.orders.index', 'tenant.returns.index', 'tenant.customers.index', 'tenant.discount-codes.index', 'tenant.flash-sales.index', 'tenant.bundles.index', 'tenant.packaging.index']],
-                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock-requests.index', 'tenant.stock.index', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
+                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock-requests.index', 'tenant.stock.index', 'tenant.stock.low', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
                     ['admin.nav.marketing', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', ['tenant.affiliates.index', 'tenant.affiliate-tiers.index', 'tenant.affiliate-payouts.index', 'tenant.product-lists.index', 'tenant.reviews.index', 'tenant.banners.index']],
                     ['admin.nav.content', 'M7 3h8l4 4v14H7zM14 3v5h5', ['tenant.custom-pages.index', 'tenant.static-pages.index', 'tenant.blog-posts.index']],
                     ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['tenant.expenses.index', 'tenant.expense-categories.index', 'tenant.cod-fees.edit', 'tenant.payment-methods.index']],
@@ -91,6 +92,8 @@
                     ['admin.nav.team_access', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', ['tenant.admins.index', 'tenant.roles.index', 'tenant.audit.index']],
                     ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['tenant.reports.index', 'tenant.notification-settings.edit']],
                 ];
+                $badges = $isCentral || ! $user ? [] : app(\App\Services\Admin\NavBadges::class)->for($user);
+                $badge = fn ($n) => $n > 0 ? '<span class="ms-auto min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">'.($n > 99 ? '99+' : $n).'</span>' : '';
                 $grouped = collect($groups)->flatMap(fn ($g) => $g[2])->all();
                 $aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3]));
                 $growthVisible = collect($growthMenu)->filter(fn ($i) => $user?->can($i[3]) && (empty($i[5]) || app(\App\Services\Growth\GrowthFeatures::class)->active($i[5], $tenant)));
@@ -109,6 +112,7 @@
                     <a href="{{ route($item[0]) }}" class="side-link {{ $isActive($item) ? 'active' : '' }}">
                         <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $item[2] }}"/></svg>
                         {{ $label($item) }}
+                        {!! $badge($badges[$item[0]] ?? 0) !!}
                     </a>
                 @endforeach
 
@@ -128,11 +132,11 @@
                                 <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $g[1] }}"/></svg>
                                 {{ __($g[0]) }}
                             </span>
-                            {!! $chev !!}
+                            <span class="flex items-center gap-2">{!! $badge($items->sum(fn ($i) => $badges[$i[0]] ?? 0)) !!}{!! $chev !!}</span>
                         </summary>
                         <div class="ms-5 mt-1 space-y-0.5 border-s border-white/10 ps-2">
                             @foreach ($items as $item)
-                                <a href="{{ route($item[0]) }}" class="side-link !py-1.5 !text-[13px] {{ $isActive($item) ? 'active' : '' }}">{{ $label($item) }}</a>
+                                <a href="{{ route($item[0]) }}" class="side-link !py-1.5 !text-[13px] {{ $isActive($item) ? 'active' : '' }}">{{ $label($item) }} {!! $badge($badges[$item[0]] ?? 0) !!}</a>
                             @endforeach
                         </div>
                     </details>

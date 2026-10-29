@@ -40,11 +40,11 @@ class TenantCatalogService
     {
         return DB::transaction(function () use ($tp, $dto) {
             $tp = $this->listings->update($tp, [
-                'price' => $dto->price, 'sale_price' => $dto->salePrice, 'cost' => $dto->cost, 'is_active' => $dto->isActive, 'min_stock_alert' => $dto->minStockAlert,
+                'price' => $dto->price, 'sale_price' => $dto->salePrice, 'cost' => $dto->cost, 'is_active' => $dto->isActive, 'min_stock_alert_qty' => $dto->minStockAlert,
             ]);
             foreach ($dto->variants as $row) {
                 $tp->variants()->whereKey($row['id'])->update([
-                    'price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'is_active' => $row['is_active'],
+                    'price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'min_stock_alert_qty' => $row['min_stock_alert_qty'], 'is_active' => $row['is_active'],
                 ]);
             }
 

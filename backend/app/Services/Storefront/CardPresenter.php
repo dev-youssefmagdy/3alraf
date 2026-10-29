@@ -58,6 +58,7 @@ class CardPresenter
                     continue;
                 }
                 $avail[] = max(0, (int) ($levels[$tp->product_id.':'.$vid] ?? 0));
+                $alert = $tv?->min_stock_alert_qty ?? $tp->min_stock_alert_qty ?? 5;
                 $src = ($tv && $tv->price !== null) ? $tv : $tp;
                 $regular = (string) $src->price;
                 $final = ($src->sale_price !== null && bccomp((string) $src->sale_price, $regular, 2) < 0) ? (string) $src->sale_price : $regular;
@@ -79,7 +80,7 @@ class CardPresenter
                 'from' => count(array_unique(array_map(fn ($x) => Money::round($x), $prices))) > 1, // variants have different prices: show "from"
                 'flash' => (bool) $fi, 'ends_at' => $fi?->flashSale->ends_at->toIso8601String(),
                 'out' => ! $backorder && max($avail ?: [0]) <= 0, // every sellable variant is empty
-                'low' => ! $backorder && count($avail) === 1 && $avail[0] > 0 && $avail[0] <= ($tp->min_stock_alert ?? 5) ? $avail[0] : null, // simple product close to running out
+                'low' => ! $backorder && count($avail) === 1 && $avail[0] > 0 && $avail[0] <= $alert ? $avail[0] : null, // simple product close to running out
                 'rating' => isset($ratings[$tp->product_id]) ? round((float) $ratings[$tp->product_id]->a, 1) : null,
                 'reviews' => (int) ($ratings[$tp->product_id]->c ?? 0),
             ];

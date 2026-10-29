@@ -12,7 +12,7 @@
                 <x-input name="sale_price" type="number" step="0.01" min="0" :label="__('admin.fields.sale_price')" :value="$tp->sale_price" />
                 <x-input name="cost" type="number" step="0.01" min="0" :label="__('admin.fields.cost')" :value="$tp->cost" required />
             </div>
-            <x-input name="min_stock_alert" type="number" min="0" step="1" :label="__('stock_requests.min_alert')" :value="$tp->min_stock_alert" :hint="__('stock_requests.min_alert_hint')" class="max-w-xs" />
+            <x-input name="min_stock_alert_qty" type="number" min="0" step="1" :label="__('stock_requests.min_alert')" :value="$tp->min_stock_alert_qty" :hint="__('stock_requests.min_alert_hint')" class="max-w-xs" />
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$tp->is_active" />
 
             @if ($tp->variants->isNotEmpty())
@@ -21,7 +21,7 @@
                     <p class="mb-2 text-xs text-slate-500">{{ __('admin.variant_override_hint') }}</p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead><tr class="text-xs uppercase text-slate-500"><th class="text-start">{{ __('admin.variant') }}</th><th class="text-start">{{ __('admin.fields.price') }}</th><th class="text-start">{{ __('admin.fields.sale_price') }}</th><th class="text-start">{{ __('admin.fields.cost') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th></tr></thead>
+                            <thead><tr class="text-xs uppercase text-slate-500"><th class="text-start">{{ __('admin.variant') }}</th><th class="text-start">{{ __('admin.fields.price') }}</th><th class="text-start">{{ __('admin.fields.sale_price') }}</th><th class="text-start">{{ __('admin.fields.cost') }}</th><th class="text-start">{{ __('stock_requests.min_alert') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th></tr></thead>
                             <tbody>
                             @foreach ($tp->variants->filter(fn ($tv) => $tv->variant && ! $tv->variant->trashed())->values() as $i => $tv)
                                 <tr class="border-t border-slate-100">
@@ -32,6 +32,7 @@
                                     <td data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][price]" value="{{ $tv->price }}" placeholder="{{ $tp->price }}" class="form-control !w-28"></td>
                                     <td data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][sale_price]" value="{{ $tv->sale_price }}" class="form-control !w-28"></td>
                                     <td data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][cost]" value="{{ $tv->cost }}" placeholder="{{ $tp->cost }}" class="form-control !w-28"></td>
+                                    <td data-field><input type="number" step="1" min="0" name="variants[{{ $i }}][min_stock_alert_qty]" value="{{ $tv->min_stock_alert_qty }}" placeholder="{{ $tp->min_stock_alert_qty }}" class="form-control !w-24"></td>
                                     <td><input type="hidden" name="variants[{{ $i }}][is_active]" value="0"><input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" @checked($tv->is_active) class="size-4 rounded border-slate-300 text-brand-600"></td>
                                 </tr>
                             @endforeach

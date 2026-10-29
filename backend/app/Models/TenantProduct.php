@@ -12,7 +12,7 @@ class TenantProduct extends Model
 {
     use Audited, BelongsToTenant;
 
-    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'min_stock_alert', 'is_active', 'content'];
+    protected $fillable = ['product_id', 'price', 'sale_price', 'cost', 'min_stock_alert_qty', 'is_active', 'content'];
 
     protected function casts(): array
     {

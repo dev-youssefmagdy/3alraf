@@ -309,6 +309,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('reports/{report}/export', [ReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
 
         // Stock (read-only views)
+        Route::get('stock/low', [\App\Http\Controllers\Tenant\LowStockController::class, 'index'])->name('stock.low');
         Route::get('stock', [StockController::class, 'index'])->name('stock.index');
         Route::get('stock/datatable', [StockController::class, 'levels'])->name('stock.datatable');
         Route::get('stock/movements', [StockController::class, 'movements'])->name('stock.movements');

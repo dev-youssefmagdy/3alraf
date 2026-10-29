@@ -22,9 +22,9 @@ final readonly class TenantProductData
         $n = fn ($x) => ($x === null || $x === '') ? null : (string) $x;
         $variants = collect($v['variants'] ?? [])->map(fn ($row) => [
             'id' => (int) $row['id'], 'price' => $n($row['price'] ?? null), 'sale_price' => $n($row['sale_price'] ?? null),
-            'cost' => $n($row['cost'] ?? null), 'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOL),
+            'cost' => $n($row['cost'] ?? null), 'min_stock_alert_qty' => $n($row['min_stock_alert_qty'] ?? null) === null ? null : (int) $row['min_stock_alert_qty'], 'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOL),
         ])->values()->all();
 
-        return new self((string) $v['price'], $n($v['sale_price'] ?? null), (string) $v['cost'], $r->boolean('is_active'), $variants, $n($v['min_stock_alert'] ?? null) === null ? null : (int) $v['min_stock_alert']);
+        return new self((string) $v['price'], $n($v['sale_price'] ?? null), (string) $v['cost'], $r->boolean('is_active'), $variants, $n($v['min_stock_alert_qty'] ?? null) === null ? null : (int) $v['min_stock_alert_qty']);
     }
 }

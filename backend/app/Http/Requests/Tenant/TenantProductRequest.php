@@ -20,13 +20,14 @@ class TenantProductRequest extends FormRequest
             'price' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
             'cost' => ['required', 'numeric', 'min:0', 'max:999999999999'],
-            'min_stock_alert' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'is_active' => ['nullable', 'boolean'],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['required', 'integer', $own()],
             'variants.*.price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.cost' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'variants.*.is_active' => ['nullable', 'boolean'],
         ];
     }

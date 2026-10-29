@@ -237,13 +237,13 @@ function init() {
             $p.find('[data-sku]').text(v ? v.sku || '' : '');
             $p.find('[data-barcode]').text(v ? v.barcode || '' : '');
             let st = '';
-            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (v.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
             $p.find('[data-stock]').html(st);
             if (v && v.image) $p.find('[data-main-image]').attr('src', v.image);
             $btn.prop('disabled', !(v && v.in_stock));
             $p.find('[data-stock-request-page]').toggleClass('hidden', !(v && !v.in_stock)).data('variant', v ? v.id : 0);
             $p.find('[data-variant-status]').toggleClass('hidden', !picker.variable).html(picker.variable ? '<p class="mb-2 text-sm font-bold">' + esc(T.variants_availability) + '</p>' + picker.variants.map((x) => {
-                const state = !x.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (x.stock !== null && x.stock <= (picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', x.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+                const state = !x.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (x.stock !== null && x.stock <= (x.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', x.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
                 const req = x.in_stock ? '' : ' <button type="button" class="btn-sm btn-secondary" data-request-variant="' + x.id + '">' + esc(T.request_now) + '</button>';
                 return '<div class="flex items-center justify-between gap-2 border-t border-slate-100 py-1.5 text-sm first-of-type:border-0"><span>' + esc(x.label || '') + '</span><span class="flex items-center gap-2">' + state + req + '</span></div>';
             }).join('') : '');
