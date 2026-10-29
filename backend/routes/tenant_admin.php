@@ -50,6 +50,7 @@ use App\Http\Controllers\Tenant\NotificationSettingsController;
 use App\Http\Controllers\Tenant\OrderController;
 use App\Http\Controllers\Tenant\PackagingOptionController;
 use App\Http\Controllers\Tenant\PaymentMethodController;
+use App\Http\Controllers\Tenant\PosController;
 use App\Http\Controllers\Tenant\PrivateFileController;
 use App\Http\Controllers\Tenant\ProductListController;
 use App\Http\Controllers\Tenant\PurchaseController;
@@ -335,6 +336,13 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('files/{path}', [PrivateFileController::class, 'show'])->where('path', '.*')->middleware('signed')->name('files.private');
 
         // Phase 4: orders, returns, customers, notifications
+        Route::get('pos', [PosController::class, 'index'])->name('pos.index');
+        Route::get('pos/products', [PosController::class, 'products'])->name('pos.products');
+        Route::get('pos/customers', [PosController::class, 'customers'])->name('pos.customers');
+        Route::post('pos/customers', [PosController::class, 'storeCustomer'])->name('pos.customers.store');
+        Route::post('pos/shipping', [PosController::class, 'shipping'])->name('pos.shipping');
+        Route::post('pos/quote', [PosController::class, 'quote'])->name('pos.quote');
+        Route::post('pos/orders', [PosController::class, 'store'])->name('pos.store');
         Route::get('orders/datatable', [OrderController::class, 'datatable'])->name('orders.datatable');
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{id}', [OrderController::class, 'show'])->whereNumber('id')->name('orders.show');

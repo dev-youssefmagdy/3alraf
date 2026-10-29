@@ -12,6 +12,7 @@ import './lib/reports';
 import './lib/access-form';
 import './lib/storefront';
 import './lib/search-select';
+import './lib/pos';
 
 window.$ = window.jQuery = $;
 window.toastr = toastr;

@@ -46,6 +46,7 @@ return [
         'stock_adjustments' => ['view', 'create'],
         // Phase 4 orders
         'orders' => ['view', 'edit', 'payments', 'email_notifications'],
+        'pos' => ['use'],
         'returns' => ['view', 'create', 'approve', 'refund'],
         'customers' => ['view'],
         'discount_codes' => $crud,
