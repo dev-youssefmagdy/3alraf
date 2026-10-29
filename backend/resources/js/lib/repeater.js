@@ -11,6 +11,7 @@ $(document).on('click', '[data-repeater-add]', function () {
     const html = $r.find('[data-repeater-template]').first().html().replaceAll('__INDEX__', 'n' + counter++);
     const $item = $(html);
     $r.find('[data-repeater-list]').first().append($item);
+    window.initSearchSelect?.($item[0]);
     $item.trigger('repeater:added');
     $r.trigger('repeater:changed');
 });

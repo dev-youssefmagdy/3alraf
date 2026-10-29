@@ -36,7 +36,7 @@
             @can('growth.manage')
                 <form data-ajax-form action="{{ route('tenant.growth.claims.store') }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-4" novalidate>
                     @csrf
-                    <label class="text-sm text-slate-600">{{ $b('fields.product_id') }}<select name="product_id" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
+                    <label class="text-sm text-slate-600">{{ $b('fields.product_id') }}<select data-search name="product_id" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
                     <label class="text-sm text-slate-600">{{ $b('fields.type') }}<select name="type" class="{{ $inp }}">@foreach ($claimTypes as $t)<option value="{{ $t }}">{{ __('growth_hub.brand.claim_types.'.$t) }}</option>@endforeach</select></label>
                     <x-input name="claim" class="sm:col-span-2" :label="$b('fields.claim')" maxlength="300" />
                     <div><x-button type="submit">{{ __('admin.save') }}</x-button></div>

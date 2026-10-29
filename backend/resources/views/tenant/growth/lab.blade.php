@@ -6,7 +6,7 @@
             <x-card :title="$l('new')">
                 <form data-ajax-form action="{{ route('tenant.growth.lab.store') }}" method="POST" class="grid gap-3 sm:grid-cols-3" novalidate>@csrf
                     <x-input name="name" :label="__('growth_hub.fields.name')" required class="sm:col-span-2" />
-                    <x-select name="product_id" :label="$l('product')" :options="$opts" />
+                    <x-select search name="product_id" :label="$l('product')" :options="$opts" />
                     <x-textarea name="hypothesis" :label="$l('hypothesis')" class="sm:col-span-3" />
                     <x-input name="audience" :label="$l('audience')" required /><x-input name="platform" :label="$l('platform')" /><x-input name="budget_cap" type="number" step="0.01" min="0" :label="$l('budget')" required />
                     <x-textarea name="angle" :label="$l('angle')" class="sm:col-span-3" />

@@ -18,9 +18,9 @@
                 <h3 class="font-semibold text-slate-800">{{ $s('step_subject') }}</h3>
                 <p class="text-xs text-slate-500">{{ $s('subject_hint') }}</p>
                 <label class="{{ $lbl }}">{{ $s('fields.product_ids') }}
-                    <select name="product_ids[]" multiple size="5" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}" @selected(in_array((string) $id, array_map('strval', (array) request('product_ids')), true))>{{ $n }}</option>@endforeach</select></label>
+                    <select data-search name="product_ids[]" multiple class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}" @selected(in_array((string) $id, array_map('strval', (array) request('product_ids')), true))>{{ $n }}</option>@endforeach</select></label>
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <label class="{{ $lbl }}">{{ $s('fields.bundle_id') }}<select name="bundle_id" class="{{ $inp }}"><option value="">-</option>@foreach ($bundles as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
+                    <label class="{{ $lbl }}">{{ $s('fields.bundle_id') }}<select data-search name="bundle_id" class="{{ $inp }}"><option value="">-</option>@foreach ($bundles as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
                     <label class="{{ $lbl }}">{{ $s('fields.flash_sale_id') }}<select name="flash_sale_id" class="{{ $inp }}"><option value="">-</option>@foreach ($sales as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
                 </div>
                 <label class="{{ $lbl }}">{{ $s('fields.brief') }} ({{ $s('optional') }})<textarea name="brief" rows="3" maxlength="1500" class="{{ $inp }}"></textarea></label>

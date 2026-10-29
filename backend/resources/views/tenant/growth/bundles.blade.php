@@ -34,7 +34,7 @@
                 @can('growth.manage')
                     <form data-ajax-form action="{{ route('tenant.growth.bundles.ab.start') }}" method="POST" enctype="multipart/form-data" class="mb-4 grid gap-3 sm:grid-cols-3" novalidate>
                         @csrf
-                        <label class="text-sm text-slate-600">{{ $b('fields.bundle_id') }}<select name="bundle_id" class="{{ $inp }}">@foreach ($bundles as $bd)<option value="{{ $bd->id }}">{{ $bd->name }}</option>@endforeach</select></label>
+                        <label class="text-sm text-slate-600">{{ $b('fields.bundle_id') }}<select data-search name="bundle_id" class="{{ $inp }}">@foreach ($bundles as $bd)<option value="{{ $bd->id }}">{{ $bd->name }}</option>@endforeach</select></label>
                         @foreach ((array) current_tenant()->locales as $l)
                             <label class="text-sm text-slate-600">{{ $b('fields.name') }} ({{ $l }})<input name="name[{{ $l }}]" class="{{ $inp }}"></label>
                             <label class="text-sm text-slate-600 sm:col-span-2">{{ $b('fields.description') }} ({{ $l }})<input name="description[{{ $l }}]" class="{{ $inp }}"></label>

@@ -30,7 +30,7 @@
         <h3 class="text-sm font-semibold text-slate-700">{{ __('growth.pinned_products') }}</h3>
         <p class="text-xs text-slate-500">{{ __('growth.pinned_hint') }}</p>
         <div class="flex gap-2">
-            <select data-pin-select class="form-control"><option value="">{{ __('admin.select') }}</option>@foreach ($products as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach</select>
+            <select data-pin-select data-search class="form-control"><option value="">{{ __('admin.select') }}</option>@foreach ($products as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach</select>
             <button type="button" data-pin-add class="btn btn-secondary">{{ __('growth.pin') }}</button>
         </div>
         <ul data-pin-items class="space-y-1">

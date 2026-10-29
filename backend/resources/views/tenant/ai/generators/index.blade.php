@@ -16,7 +16,7 @@
             </div>
             <label class="{{ $lbl }}">{{ $s('fields.goal') }}<input name="goal" maxlength="300" required class="{{ $inp }}"></label>
             <label class="{{ $lbl }}">{{ $s('fields.product_ids') }} ({{ $s('optional') }})
-                <select name="product_ids[]" multiple size="4" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
+                <select data-search name="product_ids[]" multiple class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
             <div class="grid gap-3 sm:grid-cols-3">
                 <label class="{{ $lbl }}" data-not="static_page custom_page blog_post content_package">{{ $s('fields.starts_at') }} ({{ $s('optional') }})<input type="datetime-local" name="starts_at" class="{{ $inp }}"></label>
                 <label class="{{ $lbl }}" data-not="static_page custom_page blog_post content_package">{{ $s('fields.ends_at') }} ({{ $s('optional') }})<input type="datetime-local" name="ends_at" class="{{ $inp }}"></label>

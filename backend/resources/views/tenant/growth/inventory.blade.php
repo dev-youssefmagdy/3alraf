@@ -34,7 +34,7 @@
         @can('growth.manage')
             <x-card :title="$i('terms')">
                 <form data-ajax-form action="{{ route('tenant.growth.inventory.terms') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
-                    <select name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }} ({{ $r['lead_time_days'] }}d / {{ $r['moq'] }})</option>@endforeach</select>
+                    <select data-search name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }} ({{ $r['lead_time_days'] }}d / {{ $r['moq'] }})</option>@endforeach</select>
                     <select name="supplier_id" class="{{ $inp }}"><option value="">{{ $i('supplier') }}</option>@foreach ($suppliers as $sid => $sn)<option value="{{ $sid }}">{{ $sn }}</option>@endforeach</select>
                     <input name="lead_time_days" type="number" min="0" value="14" class="{{ $inp }}" placeholder="{{ $i('lead') }}"><input name="moq" type="number" min="1" value="1" class="{{ $inp }}" placeholder="{{ $i('moq') }}">
                     <input name="shelf_life_days" type="number" min="1" class="{{ $inp }}" placeholder="{{ $i('shelf') }}"><x-button type="submit">{{ __('admin.save') }}</x-button>
@@ -42,7 +42,7 @@
             </x-card>
             <x-card :title="$i('prices')">
                 <form data-ajax-form action="{{ route('tenant.growth.inventory.prices.save') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
-                    <select name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }}</option>@endforeach</select>
+                    <select data-search name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }}</option>@endforeach</select>
                     <select name="supplier_id" class="{{ $inp }}">@foreach ($suppliers as $sid => $sn)<option value="{{ $sid }}">{{ $sn }}</option>@endforeach</select>
                     <input name="unit_cost" type="number" step="0.01" min="0.01" class="{{ $inp }}" placeholder="{{ $i('unit_cost') }}"><input name="moq" type="number" min="1" value="1" class="{{ $inp }}" placeholder="{{ $i('moq') }}">
                     <input name="lead_time_days" type="number" min="0" class="{{ $inp }}" placeholder="{{ $i('lead') }}"><input name="valid_to" type="date" class="{{ $inp }}" title="{{ $i('valid_to') }}">

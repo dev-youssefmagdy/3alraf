@@ -5,7 +5,7 @@
         @can('growth.manage')
             <x-card :title="$b('new')">
                 <form data-ajax-form action="{{ route('tenant.growth.batch.store') }}" method="POST" class="grid gap-3 sm:grid-cols-3" novalidate>@csrf
-                    <x-input name="name" :label="$b('name')" required /><x-select name="mode" :label="$b('mode')" :options="__('growth_hub.batch.modes')" /><x-select name="product_id" :label="__('growth_hub.lab.product')" :options="$opts" :placeholder="'—'" />
+                    <x-input name="name" :label="$b('name')" required /><x-select name="mode" :label="$b('mode')" :options="__('growth_hub.batch.modes')" /><x-select search name="product_id" :label="__('growth_hub.lab.product')" :options="$opts" :placeholder="'—'" />
                     <x-textarea name="description" :label="$b('description')" class="sm:col-span-3" /><x-input name="survey_question" :label="$b('question')" class="sm:col-span-3" />
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="preorder" value="1"> {{ $b('preorder') }}</label>
                     <x-textarea name="preorder_terms" :label="$b('terms')" class="sm:col-span-3" />

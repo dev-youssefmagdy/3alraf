@@ -20,7 +20,7 @@
         <x-select name="scope" :label="__('orders.fields.scope')" :options="DiscountScope::options()" :value="$model->scope?->value ?? $model->scope" data-scope-select />
         <div data-scope-pane="products" data-field>
             <label class="form-label" for="f-product_ids">{{ __('orders.fields.products') }}</label>
-            <select id="f-product_ids" name="product_ids[]" multiple size="8" class="form-control">
+            <select data-search id="f-product_ids" name="product_ids[]" multiple class="form-control">
                 @foreach ($products as $id => $name)<option value="{{ $id }}" @selected(in_array($id, $model->product_ids ?? []))>{{ $name }}</option>@endforeach
             </select>
         </div>

@@ -8,7 +8,7 @@
                     @csrf
                     <div data-pin-list class="space-y-2">
                         <div class="flex flex-wrap gap-2">
-                            <select data-pin-select class="form-control max-w-md"><option value="">{{ __('admin.select') }}</option>@foreach ($options as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach</select>
+                            <select data-pin-select data-search class="form-control max-w-md"><option value="">{{ __('admin.select') }}</option>@foreach ($options as $id => $label)<option value="{{ $id }}">{{ $label }}</option>@endforeach</select>
                             <button type="button" data-pin-add class="btn btn-secondary">{{ __('growth.pin') }}</button>
                         </div>
                         <ul data-pin-items class="space-y-1">

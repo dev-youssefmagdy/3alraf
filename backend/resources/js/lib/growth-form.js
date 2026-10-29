@@ -12,7 +12,7 @@ $(document).on('click', '[data-pin-add]', function () {
     $li.append($('<input type="hidden" name="product_ids[]">').val(id), $('<span class="flex-1"></span>').text($sel.find('option:selected').text()),
         '<button type="button" data-pin-up class="btn-sm btn-secondary">↑</button><button type="button" data-pin-down class="btn-sm btn-secondary">↓</button><button type="button" data-pin-remove class="btn-sm btn-danger">&times;</button>');
     $w.find('[data-pin-items]').append($li);
-    $sel.val('');
+    if ($sel[0].tomselect) $sel[0].tomselect.clear(); else $sel.val('');
 });
 $(document).on('click', '[data-pin-remove]', function () { $(this).closest('[data-pin-item]').remove(); });
 $(document).on('click', '[data-pin-up]', function () { const $i = $(this).closest('[data-pin-item]'); $i.prev().before($i); });
