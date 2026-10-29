@@ -245,7 +245,7 @@ function init() {
             let st = '';
             if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (v.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
             $p.find('[data-stock]').html(st);
-            if (v && v.image) $p.find('[data-main-image]').attr('src', v.image);
+            if (v && v.image) setMainImage($p, v.image);
             $btn.prop('disabled', !(v && v.in_stock));
             $p.find('[data-stock-request-page]').toggleClass('hidden', !(v && !v.in_stock)).data('variant', v ? v.id : 0);
             $p.find('[data-variant-status]').toggleClass('hidden', !picker.variable).html(picker.variable ? '<p class="mb-2 text-sm font-bold">' + esc(T.variants_availability) + '</p>' + picker.variants.map((x) => {
@@ -282,7 +282,7 @@ function init() {
             window.openStockRequest(pid, x.id, $p.find('[data-stock-request-page]').data('name') + (x.label ? ' - ' + x.label : ''));
         });
         $p.on('click', '[data-thumb]', function () {
-            $p.find('[data-main-image]').attr('src', $(this).data('thumb'));
+            setMainImage($p, $(this).data('thumb'));
             $p.find('[data-thumb]').removeClass('border-brand-600').addClass('border-transparent'); $(this).addClass('border-brand-600').removeClass('border-transparent');
         });
         $btn.on('click', function () {
@@ -509,3 +509,12 @@ const initScrollRows = () => {
     });
 };
 document.addEventListener('DOMContentLoaded', initScrollRows);
+
+
+/** Swap the main product image; keeps a <picture>'s AVIF <source> and WebP fallback <img> in step (a stale <source> would win otherwise). */
+function setMainImage($p, url) {
+    const $img = $p.find('[data-main-image]');
+    const isAvif = /\.avif(\?|$)/.test(url);
+    $img.closest('picture').find('source').attr('srcset', isAvif ? url : '');
+    $img.attr('src', isAvif ? url.replace(/\.avif/, '.webp') : url);
+}

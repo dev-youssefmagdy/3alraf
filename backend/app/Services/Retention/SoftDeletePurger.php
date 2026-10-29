@@ -88,7 +88,7 @@ class SoftDeletePurger
             : DB::transaction(fn () => $this->{'purge'.Str::studly($key)}($row));
         if (! $this->dry) {
             if ($this->mediaFiles) {
-                ImageUploadService::disk()->delete(array_values(array_unique($this->mediaFiles)));
+                ImageUploadService::disk()->delete(array_values(array_unique(array_merge(...array_map(\App\Support\MediaPaths::family(...), array_filter($this->mediaFiles))))));
             }
             if ($this->privateFiles) {
                 Storage::disk(config('media.private_disk'))->delete(array_values(array_unique($this->privateFiles)));

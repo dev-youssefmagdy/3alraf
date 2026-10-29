@@ -1,0 +1,3 @@
+sudo -u www-data php artisan images:optimize-existing --retry-failed   # the 2 permission failures
+php artisan images:optimize-existing --apply                           # repoint references; back up the tables listed in docs/IMAGES.md first
+php artisan images:optimize-existing --rollback                        # undo

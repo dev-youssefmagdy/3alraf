@@ -7,7 +7,7 @@
             <div class="flex will-change-transform" data-slides>
                 @foreach ($hero as $b)
                     <a href="{{ $b->safeLink() ?: '#' }}" class="block w-full shrink-0" data-slide>
-                        @if ($b->imageUrl())<img src="{{ $b->imageUrl() }}" alt="{{ $b->title }}" width="1600" height="600" class="aspect-[16/6] w-full object-cover" @if ($loop->first) fetchpriority="high" decoding="async" @else loading="lazy" @endif>@endif
+                        @if ($b->imageUrl())<x-media-img :src="$b->imageUrl()" :alt="$b->title" width="1600" height="600" :eager="$loop->first" class="aspect-[16/6] w-full object-cover" />@endif
                     </a>
                 @endforeach
             </div>

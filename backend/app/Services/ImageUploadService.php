@@ -7,18 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Drivers\Gd\Driver;
+use App\Services\Images\ImageOptimizer;
+use App\Services\Images\InvalidImageException;
+use App\Support\MediaPaths;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Intervention\Image\Format;
-use Intervention\Image\ImageManager;
 
-/** Stores uploads on the `media` (CDN) disk as webp (max 1600px) + 400px thumbnail, names = content hash + random suffix (unique per upload => immutable for CDN caching and never shared between two owners, so deleting one owner's file cannot break another), namespaced tenants/{id}/ or catalog/. */
+/** Stores uploads on the `media` (CDN) disk as AVIF (profile-sized, <= the profile byte limit) + 400px AVIF thumbnail, plus a WebP fallback sibling for browsers without AVIF. Names = content hash + random suffix (unique per upload => immutable for CDN caching and never shared between two owners, so deleting one owner's file cannot break another), namespaced tenants/{id}/ or catalog/. All encoding lives in Images\ImageOptimizer. */
 class ImageUploadService
 {
-    private ImageManager $manager;
-
-    public function __construct()
+    public function __construct(private ?ImageOptimizer $optimizer = null)
     {
-        $this->manager = new ImageManager(new Driver);
+        $this->optimizer ??= new ImageOptimizer;
     }
 
     public static function disk(): \Illuminate\Contracts\Filesystem\Filesystem
@@ -34,19 +35,47 @@ class ImageUploadService
         return $t ? "tenants/{$t->id}/" : 'catalog/';
     }
 
-    /** @return array{path:string,thumb_path:string} */
+    /**
+     * @return array{path:string,thumb_path:string}
+     *
+     * @throws ValidationException when the file is not a safe, supported static image
+     */
     public function store(UploadedFile $file, string $dir): array
     {
+        $profile = config("images.dirs.$dir", 'default');
+        try {
+            $main = $this->optimizer->optimize($file->getRealPath(), $profile);
+            $thumb = $this->optimizer->optimize($file->getRealPath(), 'thumb');
+            $fallback = config('images.webp_fallback') ? [
+                $this->optimizer->optimize($file->getRealPath(), $profile, Format::WEBP),
+                $this->optimizer->optimize($file->getRealPath(), 'thumb', Format::WEBP),
+            ] : [];
+        } catch (InvalidImageException $e) {
+            throw ValidationException::withMessages(['image' => $e->getMessage()]);
+        }
+        foreach ([$main, $thumb] as $r) {
+            $r->withinLimit() || Log::warning('image.over_limit', ['dir' => $dir, 'bytes' => $r->size(), 'limit' => $r->limit, 'quality' => $r->quality, 'scale' => $r->scale]);
+        }
+
         $dir = $this->namespace().trim($dir, '/').'/'.date('Y/m');
+        $name = substr(hash('sha256', $main->bytes), 0, 32).'-'.Str::lower(Str::random(8)); // unique per upload: safe for `immutable` caching, never shared between owners
+        $files = ["$dir/$name.avif" => $main->bytes, "$dir/{$name}_thumb.avif" => $thumb->bytes];
+        if ($fallback) {
+            $files["$dir/$name.webp"] = $fallback[0]->bytes;
+            $files["$dir/{$name}_thumb.webp"] = $fallback[1]->bytes;
+        }
+
         $disk = self::disk();
+        try {
+            foreach ($files as $path => $bytes) {
+                $disk->put($path, $bytes) || throw new \RuntimeException("Could not write $path");
+            }
+        } catch (\Throwable $e) {
+            $disk->delete(array_keys($files)); // never leave half a family behind
+            throw $e;
+        }
 
-        $img = $this->manager->decodePath($file->getRealPath());
-        $main = (string) (clone $img)->scaleDown(1600, 1600)->encodeUsingFormat(Format::WEBP, quality: 85);
-        $name = substr(hash('sha256', $main), 0, 32).'-'.Str::lower(Str::random(8)); // unique per upload: safe for `immutable` caching, never shared between owners
-        $disk->put("$dir/$name.webp", $main);
-        $disk->put("$dir/{$name}_thumb.webp", (string) (clone $img)->cover(400, 400)->encodeUsingFormat(Format::WEBP, quality: 80));
-
-        return ['path' => "$dir/$name.webp", 'thumb_path' => "$dir/{$name}_thumb.webp"];
+        return ['path' => "$dir/$name.avif", 'thumb_path' => "$dir/{$name}_thumb.avif"];
     }
 
     /** Store a single file for a plain column (logo/category image); returns path. */
@@ -83,7 +112,7 @@ class ImageUploadService
     public function deletePath(?string $path): void
     {
         if ($path) {
-            self::disk()->delete([$path, str_replace('.webp', '_thumb.webp', $path)]);
+            self::disk()->delete(MediaPaths::family($path));
         }
     }
 }

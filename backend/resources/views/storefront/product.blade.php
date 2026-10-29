@@ -24,7 +24,7 @@
     <div class="grid gap-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100 lg:grid-cols-2" data-product-page data-product-id="{{ $product->id }}" data-picker="{{ json_encode($picker, JSON_UNESCAPED_UNICODE | JSON_HEX_QUOT | JSON_HEX_APOS) }}">
         <div>
             <div class="overflow-hidden rounded-xl bg-slate-50">
-                @if ($img)<img src="{{ $img }}" alt="{{ $product->name }}" width="800" height="800" fetchpriority="high" decoding="async" class="aspect-square w-full object-contain" data-main-image>@else<div class="aspect-square bg-slate-100"></div>@endif
+                @if ($img)<x-media-img :src="$img" :alt="$product->name" width="800" height="800" :eager="true" class="aspect-square w-full object-contain" data-main-image />@else<div class="aspect-square bg-slate-100"></div>@endif
             </div>
             @if ($product->images->count() > 1)
                 <div data-scroll-row class="mt-3 flex gap-2 overflow-x-auto">

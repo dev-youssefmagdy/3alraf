@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\ImageUploadService;
+use App\Support\MediaPaths;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -15,14 +16,13 @@ class PruneOrphanMedia extends Command
     public function handle(): int
     {
         $disk = ImageUploadService::disk();
-        $used = array_flip($this->referenced());
+        $used = array_flip(array_map(MediaPaths::stem(...), $this->referenced())); // a family (avif + webp, main + thumb) lives or dies together
         $cut = now()->subHours((int) $this->option('min-age'))->getTimestamp();
         $n = 0;
         $bytes = 0;
         foreach (['tenants', 'catalog'] as $root) {
             foreach ($disk->allFiles($root) as $file) {
-                $base = preg_replace('/_thumb(\.webp)$/', '$1', $file);
-                if (isset($used[$file]) || isset($used[$base]) || $disk->lastModified($file) > $cut) {
+                if (isset($used[MediaPaths::stem($file)]) || $disk->lastModified($file) > $cut) {
                     continue;
                 }
                 $n++;

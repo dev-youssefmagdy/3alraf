@@ -33,19 +33,19 @@ it('brand logo: replace deletes original + thumb, remove deletes, delete removes
     $this->post("{$this->c}/brands", ['name' => ['ar' => 'ب', 'en' => 'B'], 'is_active' => 1, 'logo' => ($this->img)()], $h)->assertOk();
     $b = Brand::first();
     $first = $b->logo;
-    $this->media->assertExists([$first, str_replace('.webp', '_thumb.webp', $first)]);
+    $this->media->assertExists([$first, \App\Support\MediaPaths::thumbOf($first)]);
 
     $this->post("{$this->c}/brands/{$b->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ب'], 'is_active' => 1, 'logo' => ($this->img)('b.jpg', 300)], $h)->assertOk();
     $second = $b->fresh()->logo;
     expect($second)->not->toBe($first);
-    $this->media->assertMissing([$first, str_replace('.webp', '_thumb.webp', $first)]);
-    expect(($this->files)())->toHaveCount(2); // new original + thumb only
+    $this->media->assertMissing([$first, \App\Support\MediaPaths::thumbOf($first)]);
+    expect(($this->files)())->toHaveCount(4); // new original + thumb only
 
     $this->post("{$this->c}/brands/{$b->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ب'], 'is_active' => 1, 'remove_logo' => 1], $h)->assertOk();
     expect($b->fresh()->logo)->toBeNull()->and(($this->files)())->toBe([]);
 
     $this->post("{$this->c}/brands/{$b->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ب'], 'is_active' => 1, 'logo' => ($this->img)()], $h)->assertOk();
-    expect(($this->files)())->toHaveCount(2);
+    expect(($this->files)())->toHaveCount(4);
     $this->deleteJson("{$this->c}/brands/{$b->id}")->assertOk();
     expect(($this->files)())->toBe([])->and(Brand::withTrashed()->find($b->id)->logo)->toBeNull();
 });
@@ -58,7 +58,7 @@ it('category image: replace / remove / delete leave no files behind', function (
     $first = $cat->image;
     $this->post("{$this->c}/categories/{$cat->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ق'], 'image' => ($this->img)('x.jpg', 500)], $h)->assertOk();
     $this->media->assertMissing($first);
-    expect(($this->files)())->toHaveCount(2);
+    expect(($this->files)())->toHaveCount(4);
     $this->post("{$this->c}/categories/{$cat->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ق'], 'remove_image' => 1], $h)->assertOk();
     expect(($this->files)())->toBe([]);
     $this->post("{$this->c}/categories/{$cat->id}", ['_method' => 'PUT', 'name' => ['ar' => 'ق'], 'image' => ($this->img)()], $h)->assertOk();
@@ -73,7 +73,7 @@ it('product images: remove ids deletes rows + files, variant image replacement d
     $base = ['type' => 'simple', 'name' => ['ar' => 'س'], 'sku' => 'HG-1', 'category_ids' => [$cat->id], 'is_active' => 1];
     $this->post("{$this->c}/products", $base + ['images' => [($this->img)('a.jpg', 300), ($this->img)('b.jpg', 301)]], $h)->assertOk();
     $p = Product::with('images')->first();
-    expect($p->images)->toHaveCount(2)->and(($this->files)())->toHaveCount(4);
+    expect($p->images)->toHaveCount(2)->and(($this->files)())->toHaveCount(8);
     $gone = $p->images[0];
     $keep = $p->images[1];
     $this->post("{$this->c}/products/{$p->id}", $base + ['_method' => 'PUT', 'remove_images' => [$gone->id]], $h)->assertOk();
@@ -128,16 +128,16 @@ it('banner images per locale: replace, remove one locale, delete all', function 
     $b = Banner::first();
     $ar = $b->images['ar'];
     $en = $b->images['en'];
-    expect(($this->files)())->toHaveCount(4);
+    expect(($this->files)())->toHaveCount(8);
 
     $this->post("{$this->t}/banners/{$b->id}", $base + ['_method' => 'PUT', 'images' => ['ar' => ($this->img)('3.jpg', 320)]], $h)->assertOk();
     $b->refresh();
-    $this->media->assertMissing([$ar, str_replace('.webp', '_thumb.webp', $ar)]);
-    expect($b->images['ar'])->not->toBe($ar)->and($b->images['en'])->toBe($en)->and(($this->files)())->toHaveCount(4);
+    $this->media->assertMissing([$ar, \App\Support\MediaPaths::thumbOf($ar)]);
+    expect($b->images['ar'])->not->toBe($ar)->and($b->images['en'])->toBe($en)->and(($this->files)())->toHaveCount(8);
 
     $this->post("{$this->t}/banners/{$b->id}", $base + ['_method' => 'PUT', 'remove_images' => ['en' => 1]], $h)->assertOk();
-    $this->media->assertMissing([$en, str_replace('.webp', '_thumb.webp', $en)]);
-    expect(array_keys($b->fresh()->images))->toBe(['ar'])->and(($this->files)())->toHaveCount(2);
+    $this->media->assertMissing([$en, \App\Support\MediaPaths::thumbOf($en)]);
+    expect(array_keys($b->fresh()->images))->toBe(['ar'])->and(($this->files)())->toHaveCount(4);
 
     $this->deleteJson("{$this->t}/banners/{$b->id}")->assertOk();
     expect(($this->files)())->toBe([]);
