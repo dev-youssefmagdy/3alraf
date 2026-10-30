@@ -30,7 +30,11 @@
                 <label class="form-label">{{ __('access.roles') }}</label>
                 <div class="flex flex-wrap gap-x-5 gap-y-1">
                     @foreach ($roles as $id => $name)
-                        <label class="inline-flex items-center gap-1.5 text-sm text-slate-700"><input type="checkbox" name="roles[]" value="{{ $id }}" @checked(in_array($id, $assigned)) class="size-4 rounded border-slate-300 text-brand-600"> {{ $name }}</label>
+                        @php($locked = $editing && $admin->getKey() === auth($guard)->id() && in_array($id, $assigned) && $admin->roles->firstWhere('id', $id)?->name === \App\Services\Access\AccessService::SYSTEM[$guard])
+                        <label class="inline-flex items-center gap-1.5 text-sm text-slate-700" @if ($locked) title="{{ __('access.cannot_remove_own_system_role') }}" @endif>
+                            @if ($locked)<input type="hidden" name="roles[]" value="{{ $id }}">@endif
+                            <input type="checkbox" @if (! $locked) name="roles[]" @endif value="{{ $id }}" @checked(in_array($id, $assigned)) @disabled($locked) class="size-4 rounded border-slate-300 text-brand-600"> {{ $name }}
+                        </label>
                     @endforeach
                 </div>
             </div>
