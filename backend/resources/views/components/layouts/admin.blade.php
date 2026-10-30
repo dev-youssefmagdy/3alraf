@@ -13,6 +13,7 @@
             ['central.categories.index', 'categories', 'M4 6h16M4 12h10M4 18h6', 'categories.view'],
             ['central.brands.index', 'brands', 'M7 7h.01M3 11V5a2 2 0 012-2h6l9 9-8 8-9-9z', 'brands.view'],
             ['central.audit.index', 'access.audit_log', 'M9 12h6M9 16h6M7 3h8l4 4v14H7z', 'audit.view'],
+            ['central.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view'],
             ['central.tags.index', 'tags', 'M7 7h.01M3 11V5a2 2 0 012-2h6l9 9-8 8-9-9z', 'tags.view'],
             ['central.attributes.index', 'attributes', 'M4 6h16M4 12h16M4 18h7', 'attributes.view']]
         : [['tenant.dashboard', 'dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'], ['tenant.reports.index', 'reports.reports', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'reports.view'],
@@ -43,6 +44,7 @@
             ['tenant.shipping-companies.index', 'ops.shipping_companies', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'shipping.view'],
             ['tenant.payment-methods.index', 'ops.payment_methods', 'M3 7h18v10H3zM3 11h18', 'payment_methods.view'],
             ['tenant.notification-settings.edit', 'notifications.settings.title', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0', 'settings.view'],
+            ['tenant.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view'],
             ['tenant.seo.edit', 'seo.title', 'M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14zM8 11l2 2 4-4', 'settings.view'],
             ['tenant.cod-fees.edit', 'ops.cod_fees', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'settings.view'],
             ['tenant.banners.index', 'ops.banners', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5', 'banners.view'],
@@ -91,7 +93,7 @@
                     ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['tenant.expenses.index', 'tenant.expense-categories.index', 'tenant.cod-fees.edit', 'tenant.payment-methods.index']],
                     ['admin.nav.logistics', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', ['tenant.shipping-companies.index', 'tenant.cities.index', 'tenant.branches.index']],
                     ['admin.nav.team_access', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', ['tenant.admins.index', 'tenant.roles.index', 'tenant.audit.index']],
-                    ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['tenant.reports.index', 'tenant.notification-settings.edit', 'tenant.seo.edit']],
+                    ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['tenant.reports.index', 'tenant.notification-settings.edit', 'tenant.whatsapp.index', 'tenant.seo.edit']],
                 ];
                 $badges = $isCentral || ! $user ? [] : app(\App\Services\Admin\NavBadges::class)->for($user);
                 $badge = fn ($n) => $n > 0 ? '<span class="ms-auto min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">'.($n > 99 ? '99+' : $n).'</span>' : '';

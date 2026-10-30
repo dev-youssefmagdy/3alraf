@@ -44,4 +44,12 @@ return [
         'mobile_client_ids' => array_filter(array_map('trim', explode(',', (string) env('GOOGLE_MOBILE_CLIENT_IDS', '')))),
     ],
 
+
+    // Node WhatsApp gateway: infrastructure secrets only (URL + shared tokens). Business settings live in the database (auth_settings).
+    'whatsapp' => [
+        'url' => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3100'),
+        'token' => env('WHATSAPP_SERVICE_TOKEN'),
+        'callback_secret' => env('WHATSAPP_CALLBACK_SECRET'),
+    ],
+
 ];

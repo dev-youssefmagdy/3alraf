@@ -32,13 +32,16 @@ Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->m
 
 Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(function () {
     Route::middleware('guest:central')->group(function () {
-        Route::get('login', [LoginController::class, 'show'])->name('login');
-        Route::post('login/validate', [LoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
-        Route::post('login', [LoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
+        Route::get('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'show'])->name('login');
+        Route::post('login/validate', [\App\Http\Controllers\Auth\AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
+        Route::post('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
+        Route::get('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'otpForm'])->name('login.otp');
+        Route::post('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'verifyOtp'])->middleware('throttle:auth')->name('login.otp.verify');
+        Route::post('login/otp/resend', [\App\Http\Controllers\Auth\AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
     });
 
     Route::middleware('auth:central')->group(function () {
-        Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+        Route::post('logout', [\App\Http\Controllers\Auth\AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::post('switch-tenant', [DashboardController::class, 'switchTenant'])->name('switch-tenant');
         Route::get('locale/{code}', function (string $code) {
@@ -57,6 +60,16 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
         Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
+
+        Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
+            $c = \App\Http\Controllers\Whatsapp\ConnectionController::class;
+            Route::get('/', [$c, 'index'])->name('index');
+            Route::get('status', [$c, 'status'])->name('status');
+            Route::post('connect', [$c, 'connect'])->middleware('throttle:10,1')->name('connect');
+            Route::post('reconnect', [$c, 'reconnect'])->middleware('throttle:10,1')->name('reconnect');
+            Route::post('disconnect', [$c, 'disconnect'])->middleware('throttle:10,1')->name('disconnect');
+            Route::put('settings', [$c, 'updateSettings'])->name('settings');
+        });
 
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
         Route::get('audit/datatable', [AuditLogController::class, 'datatable'])->name('audit.datatable');

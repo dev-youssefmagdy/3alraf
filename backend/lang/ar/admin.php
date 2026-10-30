@@ -80,7 +80,7 @@ return [
         'is_active' => 'نشط', 'is_default' => 'اللغة الافتراضية', 'slug' => 'النطاق الفرعي', 'country' => 'الدولة (ISO-2)',
         'currency_code' => 'كود العملة', 'currency_symbol' => 'رمز العملة', 'currency_rate' => 'السعر مقابل العملة الأساسية',
         'currency' => 'العملة', 'default_locale' => 'اللغة الافتراضية', 'locales' => 'اللغات', 'timezone' => 'المنطقة الزمنية',
-        'admin_name' => 'اسم المالك', 'admin_email' => 'بريد المالك', 'admin_password' => 'كلمة مرور المالك',
+        'admin_name' => 'اسم المالك', 'admin_phone' => 'هاتف المالك', 'admin_email' => 'بريد المالك', 'admin_password' => 'كلمة مرور المالك',
         'email' => 'البريد الإلكتروني', 'password' => 'كلمة المرور',
         'type' => 'النوع',
         'slug_short' => 'الرابط المختصر',

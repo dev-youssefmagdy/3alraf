@@ -24,14 +24,8 @@ class TenantService
             $tenant = $this->tenants->create($dto->toArray());
             PaymentMethod::ensureDefaultCod($tenant->id);
             $this->provisionDefaults($tenant);
-            if ($dto->adminEmail && $dto->adminPassword) {
-                $admin = TenantAdmin::withoutGlobalScopes()->create([
-                    'tenant_id' => $tenant->id, 'name' => $dto->adminName ?: $dto->name,
-                    'email' => $dto->adminEmail, 'password' => $dto->adminPassword, 'is_active' => true,
-                ]);
-                if ($role = Role::where(['name' => 'tenant-owner', 'guard_name' => 'tenant'])->first()) {
-                    $admin->assignRole($role);
-                }
+            if ($dto->adminPhone && $dto->adminPassword) {
+                app(\App\Services\Auth\SuperAdminProvisioner::class)->provision($tenant->id, $dto->adminName ?: $dto->name, $dto->adminPhone, $dto->adminPassword);
             }
 
             DB::afterCommit(fn () => $this->notifyCentral($tenant, 'tenant_created'));

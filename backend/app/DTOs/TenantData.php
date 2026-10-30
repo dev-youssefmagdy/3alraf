@@ -18,7 +18,7 @@ final readonly class TenantData
         public string $timezone,
         public bool $isActive,
         public ?string $adminName = null,
-        public ?string $adminEmail = null,
+        public ?string $adminPhone = null,
         public ?string $adminPassword = null,
     ) {}
 
@@ -29,7 +29,7 @@ final readonly class TenantData
 
         return new self(strtolower($v['slug']), $v['name'], $v['country'] ?? null, strtoupper($v['currency_code']),
             $v['currency_symbol'], (string) $v['currency_rate'], $v['default_locale'], $locales, $v['timezone'],
-            $r->boolean('is_active'), $v['admin_name'] ?? null, $v['admin_email'] ?? null, $v['admin_password'] ?? null);
+            $r->boolean('is_active'), $v['admin_name'] ?? null, \App\Support\AdminPhone::digits($v['admin_country'] ?? 'EG', $v['admin_phone'] ?? '') , $v['admin_password'] ?? null);
     }
 
     public function toArray(): array

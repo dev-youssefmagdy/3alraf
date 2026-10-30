@@ -66,12 +66,14 @@ it('shows the Arabic store-unavailable page for unknown and inactive tenants and
 // ---------------------------------------------------------------- tenant isolation
 it('rejects tenant A credentials on tenant B host (admin and storefront)', function () {
     $sa = ($this->mkTenant)('sa');
-    TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => 'SA Owner', 'email' => 'owner@sa.test', 'password' => 'password', 'is_active' => true]);
+    TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => 'SA Owner', 'phone' => '201000000555', 'email' => 'owner@sa.test', 'password' => 'password', 'is_active' => true]);
     Customer::withoutGlobalScopes()->create(['tenant_id' => $this->egy->id, 'name' => 'E', 'email' => 'cust@egy.test', 'password' => 'password', 'is_active' => true]);
 
-    $this->postJson('http://sa.3alraf.test/admin/login', ['email' => 'owner@egy.test', 'password' => 'password'])->assertStatus(422);
+    $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@egy.test'))->assertStatus(422);
     $this->postJson('http://sa.3alraf.test/ar/login', ['email' => 'cust@egy.test', 'password' => 'password'])->assertStatus(422);
-    $this->postJson('http://sa.3alraf.test/admin/login', ['email' => 'owner@sa.test', 'password' => 'password'])->assertOk();   // positive control
+    $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@sa.test'))->assertStatus(422); // regular admin: OTP step (WhatsApp not connected)
+    TenantAdmin::withoutGlobalScopes()->where('email', 'owner@sa.test')->update(['is_super_admin' => true]);
+    $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@sa.test'))->assertOk();   // positive control
 });
 
 it('blocks cross-tenant access to orders, returns, proofs, token routes and reports', function () {
@@ -108,11 +110,11 @@ it('stops a customer from requesting a return on somebody elses order', function
 // ---------------------------------------------------------------- auth hardening
 it('locks an e-mail out after repeated failed logins even when the password is then correct', function () {
     foreach (range(1, 5) as $i) {
-        $this->postJson("{$this->t}/login", ['email' => 'owner@egy.test', 'password' => 'wrong'])->assertStatus(422);
+        $this->postJson("{$this->t}/login", [...adminCreds('owner@egy.test'), 'password' => 'wrong'])->assertStatus(422);
     }
-    $this->postJson("{$this->t}/login", ['email' => 'owner@egy.test', 'password' => 'password'])->assertStatus(422)->assertJsonValidationErrors('email');
+    $this->postJson("{$this->t}/login", adminCreds('owner@egy.test'))->assertStatus(422)->assertJsonValidationErrors('phone');
     // a different e-mail is unaffected by that lockout
-    $this->postJson("{$this->t}/login", ['email' => 'nobody@egy.test', 'password' => 'x'])->assertStatus(422);
+    $this->postJson("{$this->t}/login", ['country' => 'EG', 'phone' => '01099999999', 'password' => 'x'])->assertStatus(422);
 });
 
 it('invalidates the whole session on logout when no other guard remains, keeps it when one does', function () {
@@ -128,9 +130,9 @@ it('invalidates the whole session on logout when no other guard remains, keeps i
 
 it('throttles login/validate, cart quote and uploads', function () {
     foreach (range(1, 30) as $i) {
-        $this->postJson("{$this->t}/login/validate", ['email' => 'a@b.test', 'password' => 'x'])->assertOk();
+        $this->postJson("{$this->t}/login/validate", ['country' => 'EG', 'phone' => '01012345678', 'password' => 'x'])->assertOk();
     }
-    $this->postJson("{$this->t}/login/validate", ['email' => 'a@b.test', 'password' => 'x'])->assertStatus(429);
+    $this->postJson("{$this->t}/login/validate", ['country' => 'EG', 'phone' => '01012345678', 'password' => 'x'])->assertStatus(429);
 
     foreach (range(1, 60) as $i) {
         $this->postJson("{$this->s}/cart/quote", []);

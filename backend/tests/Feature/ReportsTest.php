@@ -165,12 +165,12 @@ it('manages roles and staff per tenant without leaking across tenants', function
     $this->get("{$this->t}/roles/{$ownerRole->id}/edit")->assertForbidden();                          // system role is read-only
     $this->deleteJson("{$this->t}/roles/{$ownerRole->id}")->assertForbidden();
 
-    $this->postJson("{$this->t}/admins", ['name' => 'Sam', 'email' => 'sam@egy.test', 'password' => 'secret123', 'is_active' => 1, 'roles' => [$role->id]])->assertOk();
+    $this->postJson("{$this->t}/admins", [...staffPhone('sam'), 'name' => 'Sam', 'email' => 'sam@egy.test', 'password' => 'secret123', 'is_active' => 1, 'roles' => [$role->id]])->assertOk();
     $sam = TenantAdmin::where('email', 'sam@egy.test')->first();
     expect($sam->hasRole($role->name))->toBeTrue();
     $this->deleteJson("{$this->t}/roles/{$role->id}")->assertStatus(422);                              // in use
     $this->get("{$this->t}/admins")->assertOk()->assertSee('sam@egy.test');
-    $this->putJson("{$this->t}/admins/{$sam->id}", ['name' => 'Sam2', 'email' => 'sam@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
+    $this->putJson("{$this->t}/admins/{$sam->id}", [...staffPhone('sam'), 'name' => 'Sam2', 'email' => 'sam@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
     expect($sam->fresh()->name)->toBe('Sam2')->and($sam->fresh()->roles)->toHaveCount(0);
     $this->deleteJson("{$this->t}/admins/{$this->admin->id}")->assertStatus(422);                     // not yourself
 

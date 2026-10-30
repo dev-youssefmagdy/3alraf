@@ -14,8 +14,8 @@ beforeEach(function () {
 
 it('redirects guests to central login and logs in via json', function () {
     $this->get("{$this->central}/admin")->assertRedirect("{$this->central}/admin/login");
-    $this->postJson("{$this->central}/admin/login/validate", [])->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
-    $this->postJson("{$this->central}/admin/login", ['email' => 'admin@3alraf.test', 'password' => 'password'])
+    $this->postJson("{$this->central}/admin/login/validate", [])->assertStatus(422)->assertJsonValidationErrors(['phone', 'password']);
+    $this->postJson("{$this->central}/admin/login", ['country' => 'EG', 'phone' => '01000000001', 'password' => 'password'])
         ->assertOk()->assertJson(['success' => true]);
     $this->get("{$this->central}/admin")->assertOk();
 });
@@ -35,11 +35,11 @@ it('redirects tenant root to default locale and rejects unknown locales', functi
 });
 
 it('keeps guards isolated: tenant admin cannot enter central and vice versa', function () {
-    $this->postJson("{$this->egy}/admin/login", ['email' => 'owner@egy.test', 'password' => 'password'])->assertOk();
+    $this->postJson("{$this->egy}/admin/login", ['country' => 'EG', 'phone' => '0'.substr(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('phone'), 2), 'password' => 'password'])->assertOk();
     $this->get("{$this->egy}/admin")->assertOk();
     $this->get("{$this->central}/admin")->assertRedirect("{$this->central}/admin/login");
     $this->post("{$this->egy}/admin/logout");
-    $this->postJson("{$this->egy}/admin/login", ['email' => 'admin@3alraf.test', 'password' => 'password'])->assertStatus(422);
+    $this->postJson("{$this->egy}/admin/login", ['country' => 'EG', 'phone' => '01000000001', 'password' => 'password'])->assertStatus(422);
 });
 
 it('scopes tenant models to the current tenant', function () {
@@ -73,12 +73,12 @@ it('runs the tenant CRUD and creates an owner admin', function () {
     $base = "{$this->central}/admin/tenants";
     $p = ['slug' => 'ksa', 'name' => 'KSA', 'country' => 'sa', 'currency_code' => 'sar', 'currency_symbol' => 'SAR', 'currency_rate' => 1.1,
         'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => 1,
-        'admin_email' => 'o@ksa.test', 'admin_password' => 'secret123'];
+        'admin_country' => 'EG', 'admin_phone' => '01012345678', 'admin_password' => 'secret123'];
     $this->postJson("$base/validate", [...$p, 'slug' => 'www'])->assertStatus(422)->assertJsonValidationErrors('slug');
     $this->postJson($base, $p)->assertOk();
     $t = Tenant::where('slug', 'ksa')->first();
     expect($t->currency_code)->toBe('SAR')->and(TenantAdmin::withoutGlobalScopes()->where('tenant_id', $t->id)->first()->hasRole('tenant-owner'))->toBeTrue();
-    $this->putJson("$base/{$t->id}", [...$p, 'name' => 'KSA 2', 'admin_email' => null, 'admin_password' => null])->assertOk();
+    $this->putJson("$base/{$t->id}", [...$p, 'name' => 'KSA 2', 'admin_phone' => null, 'admin_password' => null])->assertOk();
     expect($t->fresh()->name)->toBe('KSA 2');
     $this->get("$base/datatable?draw=1&start=0&length=10")->assertOk();
     $this->get("$base/create")->assertOk();

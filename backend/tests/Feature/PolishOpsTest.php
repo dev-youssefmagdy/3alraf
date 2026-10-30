@@ -252,12 +252,12 @@ it('marks delivered COD orders of a carrier as settled and moves them out of the
 });
 
 it('creates a store from the command with owner, COD method, default branch and affiliate tiers', function () {
-    $this->artisan('tenants:create', ['slug' => 'newshop', 'name' => 'New Shop', '--owner-email' => 'boss@newshop.test', '--country' => 'EG', '--timezone' => 'Africa/Cairo'])
+    $this->artisan('tenants:create', ['slug' => 'newshop', 'name' => 'New Shop', '--owner-phone' => '01055566677', '--country' => 'EG', '--timezone' => 'Africa/Cairo'])
         ->expectsOutputToContain('Tenant newshop created')->assertSuccessful();
     $t = Tenant::where('slug', 'newshop')->first();
     expect($t->default_locale)->toBe('ar')->and($t->is_active)->toBeTrue();
     $admin = TenantAdmin::withoutGlobalScopes()->where('tenant_id', $t->id)->first();
-    expect($admin->email)->toBe('boss@newshop.test')->and($admin->hasRole('tenant-owner'))->toBeTrue();
+    expect($admin->phone)->toBe('201055566677')->and($admin->is_super_admin)->toBeTrue()->and($admin->hasRole('tenant-owner'))->toBeTrue();
     expect(PaymentMethod::withoutGlobalScopes()->where('tenant_id', $t->id)->where('type', 'cod')->count())->toBe(1)
         ->and(Branch::withoutGlobalScopes()->where('tenant_id', $t->id)->where('is_default', true)->count())->toBe(1)
         ->and(\App\Models\AffiliateTier::withoutGlobalScopes()->where('tenant_id', $t->id)->orderBy('min_sales')->pluck('percent')->map(fn ($x) => (int) $x)->all())->toBe([5, 7, 10]);

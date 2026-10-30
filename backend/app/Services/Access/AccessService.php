@@ -162,7 +162,8 @@ class AccessService
 
     public function saveAdmin(string $guard, AdminUserData $d, CentralAdmin|TenantAdmin|null $admin = null): CentralAdmin|TenantAdmin
     {
-        $attrs = ['name' => $d->name, 'email' => $d->email, 'is_active' => $d->isActive];
+        $attrs = ['name' => $d->name, 'email' => $d->email, 'phone' => $d->phone, 'is_active' => $d->isActive];
+        abort_if($admin && $admin->isSuperAdmin() && ! $d->isActive, 422, 'The super admin cannot be deactivated.');
         if ($d->password) {
             $attrs['password'] = $d->password;
         }
@@ -201,6 +202,7 @@ class AccessService
         if ($admin->getKey() === auth($guard)->id()) {
             throw ValidationException::withMessages(['email' => __('access.cannot_delete_self')]);
         }
+        abort_if($admin->isSuperAdmin(), 403, 'The super admin cannot be deleted.');
         abort_if($admin->hasRole(self::SYSTEM[$guard]) && ! $this->actorIsSystem($guard), 403);
         $this->audit($guard, $admin, 'admin.deleted');
         $admin->delete();

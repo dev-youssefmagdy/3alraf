@@ -73,7 +73,7 @@ it('stops a non-owner from assigning or touching the system role and from granti
     $ownerRole = Role::findByName('tenant-owner', 'tenant');
     $staff = ($this->mkStaff)('mgr@egy.test', $manager);
     $this->actingAs($staff, 'tenant');
-    $form = fn (array $roles, string $email = 'new@egy.test') => ['name' => 'N', 'email' => $email, 'password' => 'secret123', 'is_active' => 1, 'roles' => $roles];
+    $form = fn (array $roles, string $email = 'new@egy.test') => [...staffPhone($email), 'name' => 'N', 'email' => $email, 'password' => 'secret123', 'is_active' => 1, 'roles' => $roles];
 
     $this->postJson("{$this->t}/admins", $form([$ownerRole->id]))->assertStatus(422)->assertJsonValidationErrors('roles');
     $this->postJson("{$this->t}/admins", $form([$big->id]))->assertStatus(422)->assertJsonValidationErrors('roles');   // orders.view not held
@@ -100,7 +100,7 @@ it('lets a non-owner keep a role the account already holds while editing it', fu
     $big = ($this->mkRole)('big', ['orders.view']);
     $other = ($this->mkStaff)('o@egy.test', $big);
     $this->actingAs(($this->mkStaff)('mgr@egy.test', $manager), 'tenant');
-    $this->putJson("{$this->t}/admins/{$other->id}", ['name' => 'Renamed', 'email' => 'o@egy.test', 'is_active' => 1, 'roles' => [$big->id]])->assertOk();
+    $this->putJson("{$this->t}/admins/{$other->id}", [...staffPhone('o@egy.test'), 'name' => 'Renamed', 'email' => 'o@egy.test', 'is_active' => 1, 'roles' => [$big->id]])->assertOk();
     expect($other->fresh()->name)->toBe('Renamed')->and($other->fresh()->hasRole($big))->toBeTrue();
 });
 
@@ -159,7 +159,7 @@ it('rotates the remember token and deletes DB sessions on deactivation, suspensi
 it('deactivating a staff account through the admin UI revokes it', function () {
     $staff = ($this->mkStaff)('s@egy.test', null);
     $staff->forceFill(['remember_token' => 'tok'])->saveQuietly();
-    $this->actingAs($this->owner, 'tenant')->putJson("{$this->t}/admins/{$staff->id}", ['name' => 'S', 'email' => 's@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
+    $this->actingAs($this->owner, 'tenant')->putJson("{$this->t}/admins/{$staff->id}", [...staffPhone('s@egy.test'), 'name' => 'S', 'email' => 's@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
     expect($staff->fresh()->is_active)->toBeFalse()->and($staff->fresh()->remember_token)->not->toBe('tok');
 });
 

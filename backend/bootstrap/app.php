@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api', 'api.context'])->domain('{tenant}.'.$central)->prefix('api/v1')->name('api.v1.')->group(base_path('routes/api_v1.php'));
             Route::middleware(['api', 'api.context'])->domain($central)->prefix('api/v1')->name('api.v1.h.')->group(base_path('routes/api_v1.php'));
             Route::middleware('api')->domain($central)->prefix('api/v1')->group(base_path('routes/api.php'));
+            // Node WhatsApp gateway -> Laravel session events (HMAC-signed, central host only; the payload names the owning session).
+            Route::middleware('api')->domain($central)->post('internal/whatsapp/events', \App\Http\Controllers\Webhook\WhatsappEventController::class)->name('internal.whatsapp.events');
             // n8n integration API (bearer + HMAC, tenant resolved from the token, any host).
             Route::middleware(['api', 'integration.ip', 'throttle:integration-ip'])->prefix('api/integration/v1')->name('integration.')->group(base_path('routes/api_integration.php'));
             Route::middleware(['web', CentralContext::class, 'auth.active'])->domain($central)->group(base_path('routes/central.php'));

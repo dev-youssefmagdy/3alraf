@@ -13,6 +13,7 @@ import './lib/access-form';
 import './lib/storefront';
 import './lib/search-select';
 import './lib/pos';
+import './lib/whatsapp';
 
 window.$ = window.jQuery = $;
 window.toastr = toastr;

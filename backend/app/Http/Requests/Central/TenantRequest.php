@@ -33,8 +33,13 @@ class TenantRequest extends FormRequest
             'timezone' => ['required', 'timezone:all'],
             'is_active' => ['nullable', 'boolean'],
             'admin_name' => ['nullable', 'string', 'max:150'],
-            'admin_email' => $tenant ? ['nullable'] : ['nullable', 'email', 'max:190', 'required_with:admin_password'],
-            'admin_password' => $tenant ? ['nullable'] : ['nullable', 'string', 'min:8', 'required_with:admin_email'],
+            'admin_country' => $tenant ? ['nullable'] : ['nullable', Rule::in(array_keys(\App\Support\AdminPhone::countries()))],
+            'admin_phone' => $tenant ? ['nullable'] : ['nullable', 'string', 'max:30', 'required_with:admin_password', function ($a, $v, $fail) {
+                if ($v && ! \App\Support\AdminPhone::digits($this->input('admin_country', 'EG'), $v)) {
+                    $fail(__('validation.regex', ['attribute' => __('admin.fields.admin_phone')]));
+                }
+            }],
+            'admin_password' => $tenant ? ['nullable'] : ['nullable', 'string', 'min:8', 'required_with:admin_phone'],
         ];
     }
 

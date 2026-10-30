@@ -32,7 +32,13 @@
                     <p class="mb-3 text-xs text-slate-500">{{ __('admin.owner_account_hint') }}</p>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <x-input name="admin_name" :label="__('admin.fields.admin_name')" />
-                        <x-input name="admin_email" type="email" :label="__('admin.fields.admin_email')" autocomplete="off" />
+                        <div data-field class="sm:col-span-1">
+                            <label for="f-admin_phone" class="form-label">{{ __('admin.fields.admin_phone') }}</label>
+                            <div class="flex" dir="ltr">
+                                <select name="admin_country" class="form-control w-28 shrink-0 rounded-e-none">@foreach (\App\Support\AdminPhone::countries() as $iso => $dial)<option value="{{ $iso }}" @selected($iso === 'EG')>{{ $iso }} {{ $dial }}</option>@endforeach</select>
+                                <input id="f-admin_phone" type="tel" name="admin_phone" class="form-control min-w-0 flex-1 rounded-s-none" autocomplete="off">
+                            </div>
+                        </div>
                         <x-input name="admin_password" type="password" :label="__('admin.fields.admin_password')" autocomplete="new-password" />
                     </div>
                 </div>

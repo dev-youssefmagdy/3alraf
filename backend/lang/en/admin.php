@@ -80,7 +80,7 @@ return [
         'is_active' => 'Active', 'is_default' => 'Default language', 'slug' => 'Subdomain', 'country' => 'Country (ISO-2)',
         'currency_code' => 'Currency code', 'currency_symbol' => 'Currency symbol', 'currency_rate' => 'Rate to base currency',
         'currency' => 'Currency', 'default_locale' => 'Default language', 'locales' => 'Languages', 'timezone' => 'Timezone',
-        'admin_name' => 'Owner name', 'admin_email' => 'Owner email', 'admin_password' => 'Owner password',
+        'admin_name' => 'Owner name', 'admin_phone' => 'Owner phone', 'admin_email' => 'Owner email', 'admin_password' => 'Owner password',
         'email' => 'Email', 'password' => 'Password',
         'type' => 'Type',
         'slug_short' => 'Slug',

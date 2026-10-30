@@ -13,13 +13,19 @@ class TenantAdmin extends Authenticatable
 
     protected string $guard_name = 'tenant';
 
-    protected $fillable = ['name', 'email', 'password', 'is_active'];
+    // is_super_admin is deliberately NOT fillable: it is only set by the provisioning command / tenant creation (forceFill)
+    protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
 
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
-        return ['password' => 'hashed', 'is_active' => 'bool'];
+        return ['password' => 'hashed', 'is_active' => 'bool', 'is_super_admin' => 'bool'];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 
     /** Must not stay logged in anywhere (RevokesSessionsOnLockout + EnsureAccountActive). */

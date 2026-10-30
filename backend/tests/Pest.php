@@ -41,3 +41,17 @@ function withSavedAddress(array $payload, string $email = 'customer@egy.test'): 
 
     return $payload + ['address_id' => $a->id];
 }
+
+/** Admins sign in by phone: stable, unique Egyptian test numbers derived from a label (e.g. an e-mail). */
+function staffPhone(string $label): array
+{
+    return ['country' => 'EG', 'phone' => '010'.str_pad((string) (crc32($label) % 100000000), 8, '0', STR_PAD_LEFT)];
+}
+
+/** Login payload (country + phone + password) for an existing admin looked up by e-mail, central or tenant. */
+function adminCreds(string $email, string $password = 'password'): array
+{
+    $a = App\Models\TenantAdmin::withoutGlobalScopes()->where('email', $email)->first() ?? App\Models\CentralAdmin::where('email', $email)->first();
+
+    return ['country' => 'EG', 'phone' => '0'.substr($a->phone, 2), 'password' => $password];
+}

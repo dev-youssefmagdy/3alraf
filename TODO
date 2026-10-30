@@ -1,3 +1,11 @@
 sudo -u www-data php artisan images:optimize-existing --retry-failed   # the 2 permission failures
 php artisan images:optimize-existing --apply                           # repoint references; back up the tables listed in docs/IMAGES.md first
 php artisan images:optimize-existing --rollback                        # undo
+
+
+Decisions I made
+Tenancy: this app uses one shared database with a tenant_id column, not a database per tenant, so isolation is by tenant_id and session ID.
+Reverb: I installed it with -W as you approved. That downgraded Guzzle to 7 and patch-upgraded the framework.
+Table names: your dev database has leftover tables from an earlier WhatsApp attempt, including a whatsapp_connections table with a different schema. I named mine whatsapp_sessions and whatsapp_session_logs and dropped nothing. Those tables may be worth cleaning up.
+Login is breaking for existing admins: they have no phone numbers yet, so they can't log in until you give them one. Run php artisan admin:provision-super --phone=… --country=EG for the central super admin, and with --tenant=<slug> for each tenant.
+Email: it is now optional on admin accounts, and the tenants:create command takes --owner-phone instead of --owner-email.

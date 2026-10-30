@@ -23,12 +23,14 @@ return [
         'ai_models' => $crud,
         'ai_tenants' => ['view', 'edit'],
         'ai_usage' => ['view'],
+        'whatsapp' => ['view', 'manage'],
     ],
     'tenant' => [
         'admins' => $crud,
         'roles' => $crud,
         'catalog' => ['view', 'create', 'edit', 'delete'],
         'settings' => ['view', 'edit'],
+        'whatsapp' => ['view', 'manage'],
         'audit' => ['view'],
         'reports' => ['view', 'export'],
         // Phase 3 operations

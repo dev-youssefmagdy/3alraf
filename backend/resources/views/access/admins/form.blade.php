@@ -1,4 +1,14 @@
-@php $editing = $admin->exists; @endphp
+@php
+    $editing = $admin->exists;
+    $countries = \App\Support\AdminPhone::countries();
+    $selIso = $guard === 'tenant' ? (current_tenant()?->country ?? 'EG') : 'EG';
+    $national = '';
+    if ($admin->phone) { // split stored E.164 digits back into country + national number (longest dial code wins)
+        foreach (collect($countries)->sortByDesc(fn ($d) => strlen($d)) as $iso => $dial) {
+            if (str_starts_with($admin->phone, ltrim($dial, '+'))) { $selIso = $iso; $national = substr($admin->phone, strlen(ltrim($dial, '+'))); break; }
+        }
+    }
+@endphp
 <x-layouts.admin :guard="$guard" :title="$editing ? __('admin.edit') : __('admin.add_new')">
     <x-card class="max-w-2xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route($guard.'.admins.validate', $editing ? [$admin->id] : []) }}"
@@ -6,7 +16,14 @@
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-input name="name" :label="__('access.fields.name')" :value="$admin->name" required />
-                <x-input name="email" type="email" :label="__('access.fields.email')" :value="$admin->email" required />
+                <x-input name="email" type="email" :label="__('access.fields.email')" :value="$admin->email" />
+                <div data-field>
+                    <label for="f-phone" class="form-label">{{ __('whatsapp.fields.phone') }}<span class="text-red-500">*</span></label>
+                    <div class="flex" dir="ltr">
+                        <select name="country" class="form-control w-28 shrink-0 rounded-e-none">@foreach ($countries as $iso => $dial)<option value="{{ $iso }}" @selected($iso === $selIso)>{{ $iso }} {{ $dial }}</option>@endforeach</select>
+                        <input id="f-phone" type="tel" name="phone" value="{{ $national }}" class="form-control min-w-0 flex-1 rounded-s-none" required>
+                    </div>
+                </div>
                 <x-input name="password" type="password" autocomplete="new-password" :label="__('access.fields.password')" :required="! $editing" :hint="$editing ? __('access.password_hint') : null" />
             </div>
             <div data-field>
