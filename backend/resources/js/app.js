@@ -14,6 +14,7 @@ import './lib/storefront';
 import './lib/search-select';
 import './lib/pos';
 import './lib/whatsapp';
+import './lib/phone-input';
 
 window.$ = window.jQuery = $;
 window.toastr = toastr;

@@ -12,13 +12,9 @@
                     @csrf
                     <div data-field>
                         <label for="f-phone" class="form-label">{{ __('whatsapp.fields.phone') }}<span class="text-red-500">*</span></label>
-                        <div class="flex items-stretch" dir="ltr">
-                            <select name="country" aria-label="{{ __('whatsapp.fields.country') }}" class="form-control w-32 shrink-0 rounded-e-none">
-                                @foreach ($countries as $iso => $dial)
-                                    <option value="{{ $iso }}" @selected($iso === $defaultCountry)>{{ $iso }} {{ $dial }}</option>
-                                @endforeach
-                            </select>
-                            <input id="f-phone" type="tel" name="phone" inputmode="tel" autocomplete="tel-national" autofocus required class="form-control min-w-0 flex-1 rounded-s-none">
+                        <div class="" dir="ltr">
+                            <input type="hidden" name="country" value="{{ $defaultCountry }}">
+                            <input id="f-phone" type="tel" data-intl-phone="country" name="phone" inputmode="tel" autocomplete="tel-national" autofocus required class="form-control w-full">
                         </div>
                     </div>
                     <x-input name="password" type="password" :label="__('whatsapp.fields.password')" required autocomplete="current-password" />

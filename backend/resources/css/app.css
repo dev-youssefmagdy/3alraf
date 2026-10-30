@@ -22,3 +22,6 @@ table.dataTable td { @apply align-middle; }
 [dir='rtl'] .ts-wrapper.single .ts-control { padding-inline-end: 2rem; }
 [dir='rtl'] .ts-wrapper.single .ts-control::after { right: auto; left: 15px; }
 
+
+.iti{width:100%}
+.iti__country-name,.iti__dial-code{unicode-bidi:plaintext}

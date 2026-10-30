@@ -19,9 +19,9 @@
                 <x-input name="email" type="email" :label="__('access.fields.email')" :value="$admin->email" />
                 <div data-field>
                     <label for="f-phone" class="form-label">{{ __('whatsapp.fields.phone') }}<span class="text-red-500">*</span></label>
-                    <div class="flex" dir="ltr">
-                        <select name="country" class="form-control w-28 shrink-0 rounded-e-none">@foreach ($countries as $iso => $dial)<option value="{{ $iso }}" @selected($iso === $selIso)>{{ $iso }} {{ $dial }}</option>@endforeach</select>
-                        <input id="f-phone" type="tel" name="phone" value="{{ $national }}" class="form-control min-w-0 flex-1 rounded-s-none" required>
+                    <div dir="ltr">
+                        <input type="hidden" name="country" value="{{ $selIso }}">
+                        <input id="f-phone" type="tel" data-intl-phone="country" name="phone" value="{{ $national }}" class="form-control w-full" required>
                     </div>
                 </div>
                 <x-input name="password" type="password" autocomplete="new-password" :label="__('access.fields.password')" :required="! $editing" :hint="$editing ? __('access.password_hint') : null" />

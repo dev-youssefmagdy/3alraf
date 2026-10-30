@@ -32,4 +32,13 @@ return [
     'otp_invalid' => 'The code is incorrect.', 'otp_expired' => 'The code expired. Please sign in again.', 'otp_locked' => 'Too many wrong attempts. Please sign in again later.',
     'otp_wait' => 'Please wait :seconds seconds before requesting another code.', 'otp_limit' => 'Too many codes requested. Try again in :seconds seconds.',
     'otp_undeliverable' => 'We could not send the verification code through WhatsApp. Please try again later or contact your administrator.',
+    'connected_title' => 'WhatsApp is connected',
+    'connected_help' => 'This account is linked and ready to send login codes and notifications.',
+    'settings_intro' => 'Control how fast messages are sent, how login verification codes (OTP) behave, and when accounts get locked after failed logins.',
+    'sec_sending' => 'Sending limits',
+    'sec_sending_help' => 'Throttle outgoing messages to keep the number safe from WhatsApp bans.',
+    'sec_otp' => 'Verification code (OTP)',
+    'sec_otp_help' => 'Admins receive a one-time code on WhatsApp after entering their password.',
+    'sec_login' => 'Login protection',
+    'sec_login_help' => 'Temporarily block sign-in after repeated wrong passwords.',
 ];

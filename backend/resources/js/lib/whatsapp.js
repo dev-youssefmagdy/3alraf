@@ -6,14 +6,22 @@ if (panel) {
     const d = panel.dataset;
     const labels = JSON.parse(d.labels);
     const show = (s) => {
-        $('#wa-status').text(labels[s.status] || s.status);
+        const ok = s.status === 'connected';
+        const bad = ['error', 'logged_out'].includes(s.status);
+        $('#wa-status-text').text(labels[s.status] || s.status);
+        $('#wa-status').removeClass('bg-emerald-50 text-emerald-700 bg-red-50 text-red-700 bg-amber-50 text-amber-700')
+            .addClass(ok ? 'bg-emerald-50 text-emerald-700' : bad ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700');
+        $('#wa-phone-big').text(s.phone ? '+' + s.phone : '');
+        $('#wa-connected').toggleClass('hidden', !ok);
+        $('#wa-scan').toggleClass('hidden', ok);
+        $('#wa-connect').toggleClass('hidden', ok);
         $('#wa-phone').text(s.phone ? '+' + s.phone : '—');
         $('#wa-error').text(s.error || '—');
         if (s.last_connected_at) $('#wa-last').text(s.last_connected_at);
         const qr = s.status === 'qr' && s.qr;
         $('#wa-qr').toggleClass('hidden', !qr);
         if (qr) $('#wa-qr').attr('src', s.qr);
-        $('#wa-qr-hint').toggleClass('hidden', s.status === 'connected' ? true : false);
+        $('#wa-qr-hint').toggleClass('hidden', !!qr);
     };
     const poll = () => $.getJSON(d.statusUrl).done(show);
     let timer = setInterval(poll, 3000); // safety net; relaxed once the socket is up

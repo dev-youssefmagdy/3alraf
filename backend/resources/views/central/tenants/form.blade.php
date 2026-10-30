@@ -34,9 +34,9 @@
                         <x-input name="admin_name" :label="__('admin.fields.admin_name')" />
                         <div data-field class="sm:col-span-1">
                             <label for="f-admin_phone" class="form-label">{{ __('admin.fields.admin_phone') }}</label>
-                            <div class="flex" dir="ltr">
-                                <select name="admin_country" class="form-control w-28 shrink-0 rounded-e-none">@foreach (\App\Support\AdminPhone::countries() as $iso => $dial)<option value="{{ $iso }}" @selected($iso === 'EG')>{{ $iso }} {{ $dial }}</option>@endforeach</select>
-                                <input id="f-admin_phone" type="tel" name="admin_phone" class="form-control min-w-0 flex-1 rounded-s-none" autocomplete="off">
+                            <div dir="ltr">
+                                <input type="hidden" name="admin_country" value="EG">
+                                <input id="f-admin_phone" type="tel" data-intl-phone="admin_country" name="admin_phone" class="form-control w-full" autocomplete="off">
                             </div>
                         </div>
                         <x-input name="admin_password" type="password" :label="__('admin.fields.admin_password')" autocomplete="new-password" />
