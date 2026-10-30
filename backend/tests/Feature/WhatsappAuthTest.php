@@ -99,8 +99,14 @@ it('sends tenant OTPs only through that tenant\'s own WhatsApp session, never th
     $this->get("{$this->egy}/admin")->assertOk();
 });
 
-it('does not deliver a tenant OTP when only the central account is connected', function () {
+it('falls back to the central WhatsApp account when the tenant\'s own is not connected', function () {
     waConnected(null);
+    regularTenant($this->tenant);
+    loginAs($this->egy, '01000000003')->assertOk()->assertJsonPath('redirect', "{$this->egy}/admin/login/otp");
+    expect(sentMessages())->toHaveCount(1)->and(sentMessages()[0]->url())->toContain('/sessions/central/messages');
+});
+
+it('fails when neither the tenant nor the central WhatsApp is connected', function () {
     regularTenant($this->tenant);
     loginAs($this->egy, '01000000003')->assertStatus(422)->assertJsonValidationErrors('phone');
     expect(sentMessages())->toBeEmpty();

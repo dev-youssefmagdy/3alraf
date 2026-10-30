@@ -68,7 +68,16 @@ class OtpService
         $ttl = (int) $set->get('otp.ttl_seconds');
         $text = strtr((string) $set->get('otp.message'), ['{code}' => $code, '{minutes}' => (string) max(1, (int) ceil($ttl / 60))]);
 
-        $this->wa->sendText($tenantId, $admin->phone, $text); // fail before persisting: a failed delivery burns nothing
+        // fail before persisting: a failed delivery burns nothing. $admin->phone is E.164 digits (country code included).
+        // A tenant whose own WhatsApp is not connected (e.g. a new owner who must log in to connect it) falls back to the central session.
+        try {
+            $this->wa->sendText($tenantId, $admin->phone, $text);
+        } catch (WhatsappUnavailable $e) {
+            if ($tenantId === null) {
+                throw $e;
+            }
+            $this->wa->sendText(null, $admin->phone, $text);
+        }
 
         $fields = ['code_hash' => Hash::make($code), 'expires_at' => now()->addSeconds($ttl), 'last_sent_at' => now(), 'ip' => $ip];
         $otp
