@@ -76,11 +76,12 @@ it('requires an OTP from the central WhatsApp account for regular central admins
     $this->get("{$this->central}/admin")->assertOk();
 });
 
-it('logs the tenant super admin in without OTP', function () {
+it('requires the OTP for the tenant super admin too', function () {
+    waConnected($this->tenant->id);
     $phone = TenantAdmin::withoutGlobalScopes()->where('is_super_admin', true)->value('phone');
-    loginAs($this->egy, '0'.substr($phone, 2))->assertOk();
+    loginAs($this->egy, '0'.substr($phone, 2))->assertOk()->assertJsonPath('redirect', "{$this->egy}/admin/login/otp");
+    $this->postJson("{$this->egy}/admin/login/otp", ['code' => lastOtp()])->assertOk();
     $this->get("{$this->egy}/admin")->assertOk();
-    expect(sentMessages())->toBeEmpty();
 });
 
 it('sends tenant OTPs only through that tenant\'s own WhatsApp session, never the central one', function () {

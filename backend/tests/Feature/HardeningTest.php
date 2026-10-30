@@ -73,7 +73,7 @@ it('rejects tenant A credentials on tenant B host (admin and storefront)', funct
     $this->postJson('http://sa.3alraf.test/ar/login', ['email' => 'cust@egy.test', 'password' => 'password'])->assertStatus(422);
     $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@sa.test'))->assertStatus(422); // regular admin: OTP step (WhatsApp not connected)
     TenantAdmin::withoutGlobalScopes()->where('email', 'owner@sa.test')->update(['is_super_admin' => true]);
-    $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@sa.test'))->assertOk();   // positive control
+    $this->postJson('http://sa.3alraf.test/admin/login', adminCreds('owner@sa.test'))->assertStatus(422); // tenant owners need the OTP too (WhatsApp not connected here)
 });
 
 it('blocks cross-tenant access to orders, returns, proofs, token routes and reports', function () {

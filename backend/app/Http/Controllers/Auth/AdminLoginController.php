@@ -80,8 +80,8 @@ class AdminLoginController extends Controller
         }
         $this->clearLoginFailures($guard, $digits);
 
-        if ($admin->isSuperAdmin()) {
-            return $this->finish($request, $guard, $admin, $request->boolean('remember'), 'login.success');
+        if ($guard === 'central' && $admin->isSuperAdmin()) { // tenant owners are NOT exempt: OTP applies on the tenant panel too
+            return $this->finish($request, $guard, $admin, true, 'login.success');
         }
 
         try {
@@ -97,7 +97,7 @@ class AdminLoginController extends Controller
         }
 
         $request->session()->regenerate();
-        $request->session()->put('admin_otp', ['guard' => $guard, 'id' => $admin->getKey(), 'tenant' => $tenantId, 'remember' => $request->boolean('remember')]);
+        $request->session()->put('admin_otp', ['guard' => $guard, 'id' => $admin->getKey(), 'tenant' => $tenantId, 'remember' => true]);
         $this->audit($guard, 'otp.sent', $admin, $digits);
 
         return $this->ok(null, $this->route($guard, 'login.otp'));
@@ -170,7 +170,7 @@ class AdminLoginController extends Controller
 
     private function finish(Request $request, string $guard, CentralAdmin|TenantAdmin $admin, bool $remember, string $event): JsonResponse
     {
-        Auth::guard($guard)->login($admin, $remember);
+        Auth::guard($guard)->login($admin, true); // admin logins never expire (until logout / deactivation)
         $request->session()->regenerate();
         $this->audit($guard, $event, $admin, $admin->phone);
 
