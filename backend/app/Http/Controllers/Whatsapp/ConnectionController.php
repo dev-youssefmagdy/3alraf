@@ -6,6 +6,7 @@ use App\Events\Whatsapp\SessionUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsappSession;
 use App\Services\Auth\AuthSettings;
+use App\Support\AdminPhone;
 use App\Services\Whatsapp\WhatsappService;
 use App\Services\Whatsapp\WhatsappUnavailable;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +43,7 @@ class ConnectionController extends Controller implements HasMiddleware
     private function payload(WhatsappSession $s): array
     {
         return [
-            'status' => $s->status, 'phone' => $s->phone, 'error' => $s->last_error, 'enabled' => $s->is_enabled,
+            'status' => $s->status, 'qr' => $this->wa->qr($s), 'phone' => $s->phone, 'error' => $s->last_error, 'enabled' => $s->is_enabled,
             'last_connected_at' => $s->last_connected_at?->toDayDateTimeString(), 'last_event_at' => $s->last_event_at?->diffForHumans(),
         ];
     }
@@ -54,8 +55,9 @@ class ConnectionController extends Controller implements HasMiddleware
         $s = $this->wa->refresh($owner);
 
         return view('whatsapp.connection', [
-            'guard' => $guard, 'session' => $s, 'logs' => $s->logs()->latest('id')->limit(30)->get(),
-            'settings' => AuthSettings::for($owner)->all(), 'channel' => SessionUpdated::channelName($owner),
+            'guard' => $guard, 'session' => $s,
+            'settings' => AuthSettings::for($owner)->all(),
+            'sentToday' => $this->wa->sent($s, 'daily'), 'sentHour' => $this->wa->sent($s, 'hourly'), 'channel' => SessionUpdated::channelName($owner),
         ]);
     }
 
@@ -79,10 +81,29 @@ class ConnectionController extends Controller implements HasMiddleware
         return $this->run($request, fn ($o) => $this->wa->disconnect($o), 'whatsapp.disconnected');
     }
 
+    public function sendTest(Request $request): JsonResponse
+    {
+        $v = $request->validate(['country' => ['required', 'string', 'size:2'], 'phone' => ['required', 'string', 'max:30']], [], trans('whatsapp.fields'));
+        $digits = AdminPhone::digits($v['country'], $v['phone']);
+        if (! $digits) {
+            return response()->json(['success' => false, 'message' => __('whatsapp.invalid_phone')], 422);
+        }
+
+        return $this->run($request, function ($owner) use ($digits) {
+            $this->wa->sendText($owner, $digits, __('whatsapp.test_message'), throttled: true);
+
+            return $this->wa->session($owner);
+        }, 'whatsapp.test_sent');
+    }
+
     public function updateSettings(Request $request): JsonResponse
     {
         $v = $request->validate([
             'whatsapp_enabled' => ['boolean'],
+            'daily_limit' => ['required', 'integer', 'between:0,100000'],
+            'hourly_limit' => ['required', 'integer', 'between:0,10000'],
+            'min_gap' => ['required', 'integer', 'between:0,60'],
+            'max_gap' => ['required', 'integer', 'between:0,120', 'gte:min_gap'],
             'otp_length' => ['required', 'integer', 'between:4,10'],
             'otp_ttl_seconds' => ['required', 'integer', 'between:60,1800'],
             'otp_resend_cooldown_seconds' => ['required', 'integer', 'between:10,600'],
@@ -95,7 +116,8 @@ class ConnectionController extends Controller implements HasMiddleware
 
         $s = AuthSettings::for($this->owner($request));
         foreach ([
-            'whatsapp.enabled' => (bool) ($v['whatsapp_enabled'] ?? false), 'otp.length' => (int) $v['otp_length'], 'otp.ttl_seconds' => (int) $v['otp_ttl_seconds'],
+            'whatsapp.enabled' => (bool) ($v['whatsapp_enabled'] ?? false), 'whatsapp.daily_limit' => (int) $v['daily_limit'],
+            'whatsapp.hourly_limit' => (int) $v['hourly_limit'], 'whatsapp.min_gap' => (int) $v['min_gap'], 'whatsapp.max_gap' => (int) $v['max_gap'], 'otp.length' => (int) $v['otp_length'], 'otp.ttl_seconds' => (int) $v['otp_ttl_seconds'],
             'otp.resend_cooldown_seconds' => (int) $v['otp_resend_cooldown_seconds'], 'otp.max_attempts' => (int) $v['otp_max_attempts'],
             'otp.max_resends' => (int) $v['otp_max_resends'], 'otp.message' => $v['otp_message'],
             'login.max_failures' => (int) $v['login_max_failures'], 'login.lockout_seconds' => (int) $v['login_lockout_seconds'],

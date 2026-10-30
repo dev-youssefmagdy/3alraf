@@ -27,6 +27,7 @@ class Session {
     this.timer = null;
     this.starting = false;
     this.wantRun = false;
+    this.sendChain = Promise.resolve(); // outbound messages go out one at a time per session
   }
   dir() {
     return path.join(cfg.authRoot, this.id);
@@ -137,16 +138,33 @@ async function stop(id, { logout }) {
   return s;
 }
 
-async function send(id, to, text) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const rand = (min, max) => Math.floor(min + Math.random() * (max - min + 1));
+
+/**
+ * Messages are sent one at a time per session. In `humanize` mode (notifications) each one is preceded by a typing pause and
+ * followed by a random gap (anti-ban); instant mode (login codes) skips both so OTPs are never delayed.
+ */
+function send(id, to, text, { humanize = false, minGapMs = 0, maxGapMs = 0 } = {}) {
   const s = get(id);
-  if (s.status !== 'connected' || !s.sock) throw Object.assign(new Error('session not connected'), { code: 409 });
-  const digits = String(to).replace(/\D/g, '');
-  if (digits.length < 8 || digits.length > 15) throw Object.assign(new Error('invalid recipient'), { code: 422 });
-  const jid = `${digits}@s.whatsapp.net`;
-  const [exists] = await s.sock.onWhatsApp(jid);
-  if (!exists?.exists) throw Object.assign(new Error('number is not on WhatsApp'), { code: 422 });
-  const res = await s.sock.sendMessage(exists.jid, { text });
-  return { message_id: res?.key?.id || null };
+  const job = s.sendChain.then(async () => {
+    if (s.status !== 'connected' || !s.sock) throw Object.assign(new Error('session not connected'), { code: 409 });
+    const digits = String(to).replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 15) throw Object.assign(new Error('invalid recipient'), { code: 422 });
+    const [exists] = await s.sock.onWhatsApp(`${digits}@s.whatsapp.net`);
+    if (!exists?.exists) throw Object.assign(new Error('number is not on WhatsApp'), { code: 422 });
+    if (humanize) {
+      await s.sock.presenceSubscribe(exists.jid);
+      await s.sock.sendPresenceUpdate('composing', exists.jid);
+      await sleep(Math.min(6000, 800 + text.length * 25));
+      await s.sock.sendPresenceUpdate('paused', exists.jid);
+    }
+    const res = await s.sock.sendMessage(exists.jid, { text });
+    if (humanize) await sleep(rand(minGapMs, Math.max(minGapMs, maxGapMs)));
+    return { message_id: res?.key?.id || null };
+  });
+  s.sendChain = job.catch(() => {});
+  return job;
 }
 
 /** Restore every session that has persisted credentials (service restart: no new QR scan). */

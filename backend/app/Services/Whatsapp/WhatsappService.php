@@ -52,6 +52,11 @@ class WhatsappService
         return $s->refresh();
     }
 
+    public function qr(WhatsappSession $s): ?string
+    {
+        return $s->status === 'qr' ? Cache::get("wa-qr:{$s->session_id}") : null;
+    }
+
     private function command(?int $tenantId, string $action): WhatsappSession
     {
         $s = $this->session($tenantId);
@@ -64,7 +69,6 @@ class WhatsappService
         try {
             $snap = $this->node->{$action}($s->session_id);
             $this->apply($s, $snap);
-            $this->log($s, 'info', $action);
         } catch (WhatsappUnavailable $e) {
             $this->fail($s, $e->getMessage());
             throw $e;
@@ -75,8 +79,12 @@ class WhatsappService
         return $s->refresh();
     }
 
-    /** Send via the owner's own account. Throws WhatsappUnavailable; the caller decides how to surface it. */
-    public function sendText(?int $tenantId, string $phoneDigits, string $text): void
+    /**
+     * Send via the owner's own account. Throws WhatsappUnavailable; the caller decides how to surface it.
+     * $throttled = notification traffic: hourly/daily limits are enforced and the gateway paces it with typing + random gaps.
+     * Login codes stay instant and unlimited so an admin can never be locked out by the quota.
+     */
+    public function sendText(?int $tenantId, string $phoneDigits, string $text, bool $throttled = false): void
     {
         $s = $this->session($tenantId);
         if (! AuthSettings::for($tenantId)->get('whatsapp.enabled') || ! $s->is_enabled) {
@@ -85,12 +93,35 @@ class WhatsappService
         if (! $s->isConnected()) {
             throw new WhatsappUnavailable('WhatsApp is not connected');
         }
-        try {
-            $this->node->sendText($s->session_id, $phoneDigits, $text);
-        } catch (WhatsappUnavailable $e) {
-            $this->log($s, 'error', 'send_failed', $e->getMessage()); // never the message body
-            throw $e;
+        $set = AuthSettings::for($tenantId);
+        if ($throttled) {
+            foreach (['daily' => $this->sent($s, 'daily'), 'hourly' => $this->sent($s, 'hourly')] as $window => $sent) {
+                $limit = (int) $set->get("whatsapp.{$window}_limit");
+                if ($limit > 0 && $sent >= $limit) {
+                    throw new WhatsappUnavailable("WhatsApp $window sending limit reached");
+                }
+            }
         }
+        $min = max(0, (int) $set->get('whatsapp.min_gap'));
+        $this->node->sendText($s->session_id, $phoneDigits, $text, $throttled
+            ? ['humanize' => true, 'min_gap_ms' => $min * 1000, 'max_gap_ms' => max($min, (int) $set->get('whatsapp.max_gap')) * 1000]
+            : []);
+        foreach (['daily', 'hourly'] as $w) {
+            $key = $this->counterKey($s, $w);
+            Cache::add($key, 0, $w === 'daily' ? 86400 : 3600);
+            Cache::increment($key);
+        }
+    }
+
+    /** Messages sent in the current calendar day / clock hour (cache counters; no message data is stored). */
+    public function sent(WhatsappSession $s, string $window): int
+    {
+        return (int) Cache::get($this->counterKey($s, $window), 0);
+    }
+
+    private function counterKey(WhatsappSession $s, string $window): string
+    {
+        return "wa-sent:{$s->session_id}:".now()->format($window === 'daily' ? 'Ymd' : 'YmdH');
     }
 
     /** Event pushed by Node (already HMAC-verified). Unknown owners are ignored. */
@@ -120,9 +151,8 @@ class WhatsappService
             $s->last_connected_at = $was === 'connected' ? $s->last_connected_at : now();
         }
         $s->save();
-        if ($status !== 'qr' && $was !== $status) {
-            $this->log($s, in_array($status, ['error', 'logged_out'], true) ? 'error' : 'info', $status, $s->last_error);
-        }
+        // The QR is a short-lived pairing secret: cached briefly (never in the DB) so the polling endpoint works without a websocket.
+        $status === 'qr' && ! empty($d['qr']) ? Cache::put("wa-qr:{$s->session_id}", $d['qr'], 120) : Cache::forget("wa-qr:{$s->session_id}");
         if ($broadcast) {
             SessionUpdated::dispatch($s, $d['qr'] ?? null);
         }
@@ -131,11 +161,5 @@ class WhatsappService
     private function fail(WhatsappSession $s, string $message): void
     {
         $s->update(['status' => 'error', 'last_error' => mb_substr($message, 0, 500), 'last_event_at' => now()]);
-        $this->log($s, 'error', 'service_unreachable', $message);
-    }
-
-    private function log(WhatsappSession $s, string $level, string $event, ?string $message = null): void
-    {
-        $s->logs()->create(['level' => $level, 'event' => $event, 'message' => $message ? mb_substr($message, 0, 500) : null]);
     }
 }

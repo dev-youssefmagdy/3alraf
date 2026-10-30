@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** One WhatsApp account per owner: tenant_id NULL = the central platform. Credentials live only in the Node service's encrypted storage. */
 class WhatsappSession extends Model
@@ -30,10 +29,5 @@ class WhatsappSession extends Model
     public function isConnected(): bool
     {
         return $this->status === 'connected';
-    }
-
-    public function logs(): HasMany
-    {
-        return $this->hasMany(WhatsappSessionLog::class);
     }
 }

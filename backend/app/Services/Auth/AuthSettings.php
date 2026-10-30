@@ -12,6 +12,10 @@ final class AuthSettings
 {
     public const DEFAULTS = [
         'whatsapp.enabled' => true,
+        'whatsapp.daily_limit' => 200, // 0 = unlimited; applies to throttled (non-OTP) sends
+        'whatsapp.hourly_limit' => 40,
+        'whatsapp.min_gap' => 4, // seconds between throttled messages
+        'whatsapp.max_gap' => 10,
         'otp.length' => 6,
         'otp.ttl_seconds' => 300,
         'otp.resend_cooldown_seconds' => 60,

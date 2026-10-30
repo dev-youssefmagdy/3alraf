@@ -316,6 +316,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::post('connect', [$c, 'connect'])->middleware('throttle:10,1')->name('connect');
             Route::post('reconnect', [$c, 'reconnect'])->middleware('throttle:10,1')->name('reconnect');
             Route::post('disconnect', [$c, 'disconnect'])->middleware('throttle:10,1')->name('disconnect');
+            Route::post('test', [$c, 'sendTest'])->middleware('throttle:10,1')->name('test');
             Route::put('settings', [$c, 'updateSettings'])->name('settings');
         });
 

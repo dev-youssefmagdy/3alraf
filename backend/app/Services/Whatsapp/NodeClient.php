@@ -20,10 +20,10 @@ class NodeClient
     }
 
     /** @return array<string,mixed> */
-    private function call(string $method, string $path, array $body = []): array
+    private function call(string $method, string $path, array $body = [], int $timeout = 15): array
     {
         try {
-            $r = $this->http()->send($method, $path, $body ? ['json' => $body] : []);
+            $r = $this->http()->timeout($timeout)->send($method, $path, $body ? ['json' => $body] : []);
         } catch (ConnectionException) {
             throw new WhatsappUnavailable('WhatsApp service is unreachable');
         }
@@ -54,8 +54,9 @@ class NodeClient
         return $this->call('POST', "/sessions/$id/disconnect");
     }
 
-    public function sendText(string $id, string $to, string $text): array
+    /** @param array{humanize?:bool,min_gap_ms?:int,max_gap_ms?:int} $opts */
+    public function sendText(string $id, string $to, string $text, array $opts = []): array
     {
-        return $this->call('POST', "/sessions/$id/messages", ['to' => $to, 'text' => $text]);
+        return $this->call('POST', "/sessions/$id/messages", ['to' => $to, 'text' => $text] + $opts, timeout: 90);
     }
 }

@@ -262,3 +262,17 @@ it('authorises broadcast channels per owner', function () {
     expect($chan('x')->all())->toContain('whatsapp.central', 'whatsapp.tenant.{tenantId}');
     expect($a->can('whatsapp.view'))->toBeTrue();
 });
+
+it('paces throttled sends and enforces the hourly limit, while login codes stay unlimited', function () {
+    waConnected(null);
+    AuthSettings::for(null)->set('whatsapp.hourly_limit', 1);
+    AuthSettings::for(null)->set('whatsapp.min_gap', 2);
+    $wa = app(WhatsappService::class);
+
+    $wa->sendText(null, '201111111111', 'hello', throttled: true);
+    expect(sentMessages()[0]->data())->toMatchArray(['humanize' => true, 'min_gap_ms' => 2000]);
+    expect(fn () => $wa->sendText(null, '201111111111', 'again', throttled: true))->toThrow(App\Services\Whatsapp\WhatsappUnavailable::class);
+
+    $wa->sendText(null, '201111111111', 'otp'); // instant path ignores the quota
+    expect(sentMessages()[1]->data())->not->toHaveKey('humanize');
+});

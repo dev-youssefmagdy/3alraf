@@ -9,7 +9,6 @@ return [
     'connecting' => 'Starting the connection…', 'disconnected' => 'WhatsApp disconnected.',
     'scan_title' => 'Scan with WhatsApp', 'scan_help' => 'On your phone open WhatsApp → Settings → Linked devices → Link a device, then scan this code.',
     'qr_waiting' => 'Generating QR code…',
-    'logs' => 'Connection log', 'no_logs' => 'No events yet.',
     'troubleshooting' => 'Troubleshooting',
     'tips' => [
         'The QR code refreshes automatically; if it expires, press Reconnect.',
@@ -17,10 +16,13 @@ return [
         'Logging out from the phone (Linked devices) disconnects this account; scan a new QR code to link it again.',
         'Login codes are only sent while the status is Connected.',
     ],
-    'settings' => 'Login and OTP settings', 'save' => 'Save settings', 'message_needs_code' => 'The message must contain {code}.',
+    'sent_today' => 'Sent today', 'sent_hour' => 'Sent last hour', 'unlimited' => 'unlimited',
+    'test_title' => 'Send a test message', 'test_send' => 'Send test', 'test_sent' => 'Test message sent.', 'test_message' => '3alraf WhatsApp test ✅',
+    'invalid_phone' => 'Enter a valid phone number for the selected country.',
+    'settings' => 'Sending, login and OTP settings', 'save' => 'Save settings', 'message_needs_code' => 'The message must contain {code}.',
     'fields' => [
         'country' => 'Country', 'phone' => 'Phone number', 'password' => 'Password', 'code' => 'Verification code',
-        'whatsapp_enabled' => 'WhatsApp enabled', 'otp_length' => 'Code length', 'otp_ttl_seconds' => 'Code lifetime (seconds)',
+        'whatsapp_enabled' => 'WhatsApp enabled', 'daily_limit' => 'Daily send limit (0 = unlimited)', 'hourly_limit' => 'Hourly send limit (0 = unlimited)', 'min_gap' => 'Minimum gap between messages (s)', 'max_gap' => 'Maximum gap between messages (s)', 'otp_length' => 'Code length', 'otp_ttl_seconds' => 'Code lifetime (seconds)',
         'otp_resend_cooldown_seconds' => 'Resend cooldown (seconds)', 'otp_max_attempts' => 'Maximum verification attempts', 'otp_max_resends' => 'Maximum resends',
         'otp_message' => 'Message ({code} and {minutes} are replaced)', 'login_max_failures' => 'Failed logins before lockout', 'login_lockout_seconds' => 'Lockout (seconds)',
     ],

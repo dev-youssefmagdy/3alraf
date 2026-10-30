@@ -15,6 +15,8 @@
                     <div class="flex justify-between"><dt class="text-slate-500">{{ __('admin.status') }}</dt><dd id="wa-status" class="font-semibold">{{ __('whatsapp.status.'.$session->status) }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">{{ __('whatsapp.connected_number') }}</dt><dd id="wa-phone" dir="ltr">{{ $session->phone ? '+'.$session->phone : '—' }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">{{ __('whatsapp.last_connected') }}</dt><dd id="wa-last">{{ $session->last_connected_at?->toDayDateTimeString() ?? __('whatsapp.never') }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-500">{{ __('whatsapp.sent_today') }}</dt><dd>{{ $sentToday }} / {{ $settings['whatsapp.daily_limit'] ?: __('whatsapp.unlimited') }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-500">{{ __('whatsapp.sent_hour') }}</dt><dd>{{ $sentHour }} / {{ $settings['whatsapp.hourly_limit'] ?: __('whatsapp.unlimited') }}</dd></div>
                     <div class="flex justify-between gap-4"><dt class="text-slate-500">{{ __('whatsapp.last_error') }}</dt><dd id="wa-error" class="text-end text-red-600">{{ $session->last_error ?: '—' }}</dd></div>
                 </dl>
                 @if ($can)
@@ -37,6 +39,10 @@
                 <form data-ajax-form data-method="PUT" action="{{ route("$guard.whatsapp.settings") }}" method="POST" class="grid gap-4 p-5 md:grid-cols-3" novalidate>
                     @csrf
                     <x-checkbox name="whatsapp_enabled" :label="__('whatsapp.fields.whatsapp_enabled')" :bool="(bool) $settings['whatsapp.enabled']" />
+                    <x-input name="daily_limit" type="number" :label="__('whatsapp.fields.daily_limit')" :value="$settings['whatsapp.daily_limit']" />
+                    <x-input name="hourly_limit" type="number" :label="__('whatsapp.fields.hourly_limit')" :value="$settings['whatsapp.hourly_limit']" />
+                    <x-input name="min_gap" type="number" :label="__('whatsapp.fields.min_gap')" :value="$settings['whatsapp.min_gap']" />
+                    <x-input name="max_gap" type="number" :label="__('whatsapp.fields.max_gap')" :value="$settings['whatsapp.max_gap']" />
                     <x-input name="otp_length" type="number" :label="__('whatsapp.fields.otp_length')" :value="$settings['otp.length']" />
                     <x-input name="otp_ttl_seconds" type="number" :label="__('whatsapp.fields.otp_ttl_seconds')" :value="$settings['otp.ttl_seconds']" />
                     <x-input name="otp_resend_cooldown_seconds" type="number" :label="__('whatsapp.fields.otp_resend_cooldown_seconds')" :value="$settings['otp.resend_cooldown_seconds']" />
@@ -48,20 +54,19 @@
                     <div class="md:col-span-3"><button type="submit" class="btn btn-primary">{{ __('whatsapp.save') }}</button></div>
                 </form>
             </x-card>
+            <x-card :title="__('whatsapp.test_title')">
+                <form data-ajax-form action="{{ route("$guard.whatsapp.test") }}" method="POST" class="flex flex-wrap items-end gap-3 p-5" novalidate>
+                    @csrf
+                    <select name="country" aria-label="{{ __('whatsapp.fields.country') }}" class="form-control w-32 shrink-0">
+                        @foreach (\App\Support\AdminPhone::countries() as $iso => $dial)<option value="{{ $iso }}">{{ $iso }} +{{ $dial }}</option>@endforeach
+                    </select>
+                    <x-input name="phone" :label="__('whatsapp.fields.phone')" />
+                    <button type="submit" class="btn btn-primary">{{ __('whatsapp.test_send') }}</button>
+                </form>
+            </x-card>
         @endif
-        <div class="grid gap-6 lg:grid-cols-2">
-            <x-card :title="__('whatsapp.logs')">
-                <ul class="divide-y divide-slate-100 text-sm">
-                    @forelse ($logs as $l)
-                        <li class="flex justify-between gap-3 px-5 py-2"><span><b>{{ $l->event }}</b> {{ $l->message }}</span><time class="shrink-0 text-xs text-slate-400">{{ $l->created_at?->diffForHumans() }}</time></li>
-                    @empty
-                        <li class="px-5 py-3 text-slate-500">{{ __('whatsapp.no_logs') }}</li>
-                    @endforelse
-                </ul>
-            </x-card>
-            <x-card :title="__('whatsapp.troubleshooting')">
-                <ul class="list-disc space-y-1 p-5 ps-8 text-sm text-slate-600">@foreach (__('whatsapp.tips') as $tip)<li>{{ $tip }}</li>@endforeach</ul>
-            </x-card>
-        </div>
+        <x-card :title="__('whatsapp.troubleshooting')">
+            <ul class="list-disc space-y-1 p-5 ps-8 text-sm text-slate-600">@foreach (__('whatsapp.tips') as $tip)<li>{{ $tip }}</li>@endforeach</ul>
+        </x-card>
     </div>
 </x-layouts.admin>

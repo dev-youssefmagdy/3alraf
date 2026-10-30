@@ -46,16 +46,6 @@ return new class extends Migration
             $t->unique('owner_key');
         });
 
-        Schema::create('whatsapp_session_logs', function (Blueprint $t) {
-            $t->id();
-            $t->foreignId('whatsapp_session_id')->constrained()->cascadeOnDelete();
-            $t->string('level', 10)->default('info');
-            $t->string('event', 40);
-            $t->string('message', 500)->nullable();
-            $t->timestamp('created_at')->useCurrent();
-            $t->index(['whatsapp_session_id', 'id']);
-        });
-
         // Key/value runtime settings per owner (OTP length, expiry, cooldown, attempts, ...). Defaults are persisted on first read.
         Schema::create('auth_settings', function (Blueprint $t) {
             $t->id();
@@ -96,7 +86,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('admin_otps');
         Schema::dropIfExists('auth_settings');
-        Schema::dropIfExists('whatsapp_session_logs');
         Schema::dropIfExists('whatsapp_sessions');
         DB::statement('ALTER TABLE tenant_admins DROP INDEX tenant_admins_one_super, DROP COLUMN super_admin_slot');
         Schema::table('tenant_admins', function (Blueprint $t) {

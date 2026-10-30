@@ -54,7 +54,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && action === 'messages') {
       const b = await readBody(req);
       if (typeof b.to !== 'string' || typeof b.text !== 'string' || !b.text || b.text.length > 4096) return json(res, 422, { error: 'invalid payload' });
-      return json(res, 200, await sm.send(id, b.to, b.text));
+      const gap = (v) => Math.min(60_000, Math.max(0, Number.isFinite(b[v]) ? b[v] : 0));
+      return json(res, 200, await sm.send(id, b.to, b.text, { humanize: b.humanize === true, minGapMs: gap('min_gap_ms'), maxGapMs: gap('max_gap_ms') }));
     }
     return json(res, 405, { error: 'method not allowed' });
   } catch (e) {
