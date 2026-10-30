@@ -13,7 +13,7 @@ class CentralAdmin extends Authenticatable
     protected string $guard_name = 'central';
 
     // is_super_admin is deliberately NOT fillable: it is only set by the provisioning command / tenant creation (forceFill)
-    protected $fillable = ['name', 'email', 'phone', 'password', 'is_active'];
+    protected $fillable = ['name', 'email', 'phone', 'password', 'is_active', 'otp_exempt'];
 
     protected $hidden = ['password', 'remember_token'];
 

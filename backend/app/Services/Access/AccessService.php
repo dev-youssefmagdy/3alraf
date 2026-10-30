@@ -164,6 +164,10 @@ class AccessService
     {
         $attrs = ['name' => $d->name, 'email' => $d->email, 'phone' => $d->phone, 'is_active' => $d->isActive];
         abort_if($admin && $admin->isSuperAdmin() && ! $d->isActive, 422, 'The super admin cannot be deactivated.');
+        // only a system-role holder (owner / super admin) may grant or revoke the OTP exemption; anyone else leaves it untouched
+        if ($d->otpExempt !== null && $this->actorIsSystem($guard)) {
+            $attrs['otp_exempt'] = $d->otpExempt;
+        }
         if ($d->password) {
             $attrs['password'] = $d->password;
         }
@@ -191,7 +195,7 @@ class AccessService
                 $roles->push(Role::findByName(self::SYSTEM[$guard], $guard));
             }
             $admin->syncRoles($roles);
-            $this->audit($guard, $admin, 'admin.saved', ['roles' => $roles->pluck('name')->all(), 'active' => (bool) $admin->is_active]);
+            $this->audit($guard, $admin, 'admin.saved', ['roles' => $roles->pluck('name')->all(), 'active' => (bool) $admin->is_active, 'otp_exempt' => (bool) $admin->otp_exempt]);
 
             return $admin;
         });

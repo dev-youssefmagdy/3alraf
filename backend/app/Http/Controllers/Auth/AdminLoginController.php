@@ -80,7 +80,7 @@ class AdminLoginController extends Controller
         }
         $this->clearLoginFailures($guard, $digits);
 
-        if ($guard === 'central' && $admin->isSuperAdmin()) { // tenant owners are NOT exempt: OTP applies on the tenant panel too
+        if (($guard === 'central' && $admin->isSuperAdmin()) || $admin->otp_exempt) { // tenant owners are NOT exempt by default; otp_exempt is set per admin
             return $this->finish($request, $guard, $admin, true, 'login.success');
         }
 

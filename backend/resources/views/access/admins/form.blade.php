@@ -39,6 +39,10 @@
                 </div>
             </div>
             <x-checkbox name="is_active" :label="__('admin.active')" :checked="$editing ? $admin->is_active : true" />
+            @if (app(\App\Services\Access\AccessService::class)->actorIsSystem($guard))
+                <div><x-checkbox name="otp_exempt" :label="__('access.otp_exempt')" :checked="$editing && $admin->otp_exempt" />
+                    <p class="mt-1 text-xs text-slate-500">{{ __('access.otp_exempt_hint') }}</p></div>
+            @endif
             <x-form-actions :cancel="route($guard.'.admins.index')" />
         </form>
     </x-card>

@@ -19,4 +19,6 @@ return [
     'actions' => ['view' => 'عرض', 'create' => 'إنشاء', 'edit' => 'تعديل', 'delete' => 'حذف', 'receive' => 'استلام', 'send' => 'إرسال', 'approve' => 'اعتماد', 'refund' => 'استرداد', 'payments' => 'المدفوعات', 'email_notifications' => 'إشعارات البريد'],
     'audit_when' => 'التاريخ', 'audit_who' => 'بواسطة', 'audit_area' => 'القسم', 'audit_event' => 'الحدث', 'audit_subject' => 'العنصر', 'audit_changes' => 'التغييرات',
     'cannot_remove_own_system_role' => 'لا يمكنك إزالة دور المالك من حسابك.',
+    'otp_exempt' => 'تسجيل الدخول بدون رمز تحقق (كلمة المرور فقط)',
+    'otp_exempt_hint' => 'أقل أمانًا: لن يُطلب من هذا المسؤول رمز واتساب.',
 ];

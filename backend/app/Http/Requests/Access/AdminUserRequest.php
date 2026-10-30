@@ -36,6 +36,7 @@ class AdminUserRequest extends FormRequest
             }],
             'password' => [$id ? 'nullable' : 'required', 'string', 'min:8'],
             'is_active' => ['boolean'],
+            'otp_exempt' => ['sometimes', 'boolean'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['integer'],
         ];

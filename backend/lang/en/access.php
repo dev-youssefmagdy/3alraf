@@ -19,4 +19,6 @@ return [
     'actions' => ['view' => 'View', 'create' => 'Create', 'edit' => 'Edit', 'delete' => 'Delete', 'receive' => 'Receive', 'send' => 'Send', 'approve' => 'Approve', 'refund' => 'Refund', 'payments' => 'Payments', 'email_notifications' => 'E-mail notifications', 'use' => 'Use'],
     'audit_when' => 'When', 'audit_who' => 'Who', 'audit_area' => 'Area', 'audit_event' => 'Event', 'audit_subject' => 'Subject', 'audit_changes' => 'Changes',
     'cannot_remove_own_system_role' => 'You cannot remove your own owner role.',
+    'otp_exempt' => 'Log in without OTP (password only)',
+    'otp_exempt_hint' => 'Less secure: this admin will not be asked for a WhatsApp code.',
 ];
