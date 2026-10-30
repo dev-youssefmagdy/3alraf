@@ -3,9 +3,13 @@
 use App\Http\Controllers\Access\AdminUserController;
 use App\Http\Controllers\Access\AuditLogController;
 use App\Http\Controllers\Access\RoleController;
+use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\Central\Ai\ModelController as AiModelController;
+use App\Http\Controllers\Central\Ai\ProviderController as AiProviderController;
+use App\Http\Controllers\Central\Ai\TenantAiController;
+use App\Http\Controllers\Central\Ai\UsageController as AiUsageController;
 use App\Http\Controllers\Central\AttributeController;
 use App\Http\Controllers\Central\BrandController;
 use App\Http\Controllers\Central\CategoryController;
@@ -14,34 +18,36 @@ use App\Http\Controllers\Central\LandingController;
 use App\Http\Controllers\Central\LanguageController;
 use App\Http\Controllers\Central\ProductController;
 use App\Http\Controllers\Central\ReportController;
+use App\Http\Controllers\Central\RobotsController;
 use App\Http\Controllers\Central\TagController;
 use App\Http\Controllers\Central\TenantController;
 use App\Http\Controllers\Tenant\NotificationController;
-use App\Http\Controllers\Central\Ai\ModelController as AiModelController;
-use App\Http\Controllers\Central\Ai\ProviderController as AiProviderController;
-use App\Http\Controllers\Central\Ai\TenantAiController;
-use App\Http\Controllers\Central\Ai\UsageController as AiUsageController;
+use App\Http\Controllers\Whatsapp\ChatConversationController;
+use App\Http\Controllers\Whatsapp\ChatMediaController;
+use App\Http\Controllers\Whatsapp\ChatMessageController;
+use App\Http\Controllers\Whatsapp\ChatPageController;
+use App\Http\Controllers\Whatsapp\ConnectionController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('central.landing');
-Route::get('robots.txt', \App\Http\Controllers\Central\RobotsController::class)->name('central.robots');
+Route::get('robots.txt', RobotsController::class)->name('central.robots');
 Route::get('choose/{slug}', [LandingController::class, 'choose'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('central.choose');
 
 Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('central.google.callback');
 
 Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(function () {
     Route::middleware('guest:central')->group(function () {
-        Route::get('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'show'])->name('login');
-        Route::post('login/validate', [\App\Http\Controllers\Auth\AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
-        Route::post('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
-        Route::get('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'otpForm'])->name('login.otp');
-        Route::post('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'verifyOtp'])->middleware('throttle:auth')->name('login.otp.verify');
-        Route::post('login/otp/resend', [\App\Http\Controllers\Auth\AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
+        Route::get('login', [AdminLoginController::class, 'show'])->name('login');
+        Route::post('login/validate', [AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
+        Route::post('login', [AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
+        Route::get('login/otp', [AdminLoginController::class, 'otpForm'])->name('login.otp');
+        Route::post('login/otp', [AdminLoginController::class, 'verifyOtp'])->middleware('throttle:auth')->name('login.otp.verify');
+        Route::post('login/otp/resend', [AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
     });
 
     Route::middleware('auth:central')->group(function () {
-        Route::post('logout', [\App\Http\Controllers\Auth\AdminLoginController::class, 'logout'])->name('logout');
+        Route::post('logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::post('switch-tenant', [DashboardController::class, 'switchTenant'])->name('switch-tenant');
         Route::get('locale/{code}', function (string $code) {
@@ -62,7 +68,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
         Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
 
         Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
-            $c = \App\Http\Controllers\Whatsapp\ConnectionController::class;
+            $c = ConnectionController::class;
             Route::get('/', [$c, 'index'])->name('index');
             Route::get('status', [$c, 'status'])->name('status');
             Route::post('connect', [$c, 'connect'])->middleware('throttle:10,1')->name('connect');
@@ -70,6 +76,29 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
             Route::post('disconnect', [$c, 'disconnect'])->middleware('throttle:10,1')->name('disconnect');
             Route::post('test', [$c, 'sendTest'])->middleware('throttle:10,1')->name('test');
             Route::put('settings', [$c, 'updateSettings'])->name('settings');
+        });
+
+        Route::prefix('whatsapp/chat')->name('whatsapp.chat.')->group(function () {
+            $conv = ChatConversationController::class;
+            $msg = ChatMessageController::class;
+            $media = ChatMediaController::class;
+            Route::get('/', [ChatPageController::class, 'index'])->name('index');
+            Route::get('limits', [$conv, 'limits'])->middleware('throttle:120,1')->name('limits');
+            Route::get('conversations', [$conv, 'index'])->middleware('throttle:120,1')->name('conversations.index');
+            Route::post('conversations', [$conv, 'store'])->middleware('throttle:30,1')->name('conversations.store');
+            Route::get('conversations/{id}', [$conv, 'show'])->whereNumber('id')->middleware('throttle:120,1')->name('conversations.show');
+            Route::patch('conversations/{id}', [$conv, 'update'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.update');
+            Route::delete('conversations/{id}', [$conv, 'destroy'])->whereNumber('id')->middleware('throttle:30,1')->name('conversations.destroy');
+            Route::put('conversations/{id}/assign', [$conv, 'assign'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.assign');
+            Route::post('conversations/{id}/read', [$conv, 'read'])->whereNumber('id')->middleware('throttle:120,1')->name('conversations.read');
+            Route::post('conversations/{id}/presence', [$conv, 'presence'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.presence');
+            Route::get('conversations/{conversation}/messages', [$msg, 'index'])->whereNumber('conversation')->middleware('throttle:120,1')->name('messages.index');
+            Route::post('conversations/{conversation}/messages', [$msg, 'store'])->whereNumber('conversation')->middleware('throttle:60,1')->name('messages.store');
+            Route::post('messages/{id}/resend', [$msg, 'resend'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.resend');
+            Route::post('messages/{id}/react', [$msg, 'react'])->whereNumber('id')->middleware('throttle:60,1')->name('messages.react');
+            Route::put('messages/{id}', [$msg, 'update'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.update');
+            Route::delete('messages/{id}', [$msg, 'destroy'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.destroy');
+            Route::get('media/{id}', [$media, 'show'])->whereNumber('id')->middleware('throttle:240,1')->name('media.show');
         });
 
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');

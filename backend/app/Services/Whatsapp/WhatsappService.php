@@ -124,8 +124,8 @@ class WhatsappService
         return "wa-sent:{$s->session_id}:".now()->format($window === 'daily' ? 'Ymd' : 'YmdH');
     }
 
-    /** Event pushed by Node (already HMAC-verified). Unknown owners are ignored. */
-    public function applyEvent(string $sessionId, array $data): ?WhatsappSession
+    /** Owner of a Node session id: ['tenant' => ?int] (null = central), or null for an unknown/forged id. Never read from payload fields. */
+    public function ownerOf(string $sessionId): ?array
     {
         if (! preg_match('/^(central|tenant-([1-9][0-9]{0,9}))$/', $sessionId, $m)) {
             return null;
@@ -134,9 +134,19 @@ class WhatsappService
         if ($tenantId && ! Tenant::whereKey($tenantId)->exists()) {
             return null;
         }
-        $this->apply($this->session($tenantId), $data);
 
-        return $this->session($tenantId);
+        return ['tenant' => $tenantId];
+    }
+
+    /** Status/qr event pushed by Node (already HMAC-verified). Unknown owners are ignored. */
+    public function applyEvent(string $sessionId, array $data): ?WhatsappSession
+    {
+        if (! $owner = $this->ownerOf($sessionId)) {
+            return null;
+        }
+        $this->apply($this->session($owner['tenant']), $data);
+
+        return $this->session($owner['tenant']);
     }
 
     private function apply(WhatsappSession $s, array $d, bool $broadcast = true): void

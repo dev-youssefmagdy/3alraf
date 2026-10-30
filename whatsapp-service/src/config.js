@@ -15,5 +15,11 @@ module.exports = {
   callbackSecret: need('WA_CALLBACK_SECRET'), // HMAC key for Node -> Laravel events
   authRoot: need('WA_AUTH_DIR'), // persistent dir, NOT /tmp
   encryptionKey: Buffer.from(need('WA_ENCRYPTION_KEY'), 'base64'), // 32 bytes, base64
+  spoolDir: process.env.WA_SPOOL_DIR || require('path').join(require('os').tmpdir(), '3alraf-wa-spool'), // transient media hand-off (private, TTL-swept)
+  mediaTtlMs: Number(process.env.WA_MEDIA_TTL_MS || 15 * 60_000),
+  maxInboundMediaBytes: Number(process.env.WA_MAX_INBOUND_MEDIA || 100 * 1024 * 1024),
+  maxUploadBytes: Number(process.env.WA_MAX_UPLOAD || 100 * 1024 * 1024),
+  // per-type outbound caps (bytes); Laravel enforces the same limits first
+  caps: { image: 16 << 20, video: 64 << 20, audio: 16 << 20, ptt: 16 << 20, sticker: 2 << 20, document: 100 << 20 },
   logLevel: process.env.WA_LOG_LEVEL || 'info',
 };

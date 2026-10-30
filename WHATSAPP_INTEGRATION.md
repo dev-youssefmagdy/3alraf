@@ -347,3 +347,11 @@ I expect a complete working implementation, including:
 **Important:** This is a real authentication system, not just a WhatsApp QR display feature. The QR connection, session persistence, phone-based authentication, OTP delivery, tenant isolation, and Super Admin exceptions must all work together as one coherent production-ready architecture.
 
 Start by analyzing the existing codebase, then implement the complete solution. At the end, provide a summary of changed files, database changes, implemented features, test results, and exact deployment steps.
+
+---
+
+## WhatsApp Chat (two-way inbox)
+
+Besides OTP delivery, both panels (central and tenant) have a WhatsApp inbox at `/admin/whatsapp/chat` (sidebar item "WhatsApp Inbox", permission `whatsapp.chat.view`). It reuses the same Node session as OTP: central = `central`, tenant = `tenant-{id}`. Inbound messages arrive through the existing HMAC-signed callback, are stored per owner (`owner_key`), and are pushed to the browser over private Reverb channels `whatsapp-chat.central` / `whatsapp-chat.tenant.{id}`. Sends are queued (`SendWhatsappMessage`), inbound media is pulled by Laravel from Node (`PullWhatsappMedia`) onto the private disk and served only through the authorized `media.show` route.
+
+Permissions: `whatsapp.chat.view|send|manage|media`. Requires a queue worker, Reverb (polling fallback every 15 s without it) and the Node service. Retention: `whatsapp:chat-prune` (daily). Full runbook, config keys, troubleshooting and known limitations: `docs/whatsapp-chat/OPERATIONS.md`; design and phase notes: `docs/whatsapp-chat/PLAN.md`.

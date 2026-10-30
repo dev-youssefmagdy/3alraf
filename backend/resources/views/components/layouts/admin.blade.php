@@ -13,7 +13,8 @@
             ['central.categories.index', 'categories', 'M4 6h16M4 12h10M4 18h6', 'categories.view'],
             ['central.brands.index', 'brands', 'M7 7h.01M3 11V5a2 2 0 012-2h6l9 9-8 8-9-9z', 'brands.view'],
             ['central.audit.index', 'access.audit_log', 'M9 12h6M9 16h6M7 3h8l4 4v14H7z', 'audit.view'],
-            ['central.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view'],
+            ['central.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view', 'central.whatsapp.index'],
+            ['central.whatsapp.chat.index', 'whatsapp.chat.title', 'M8 10h8M8 14h5M4 5h16v11H9l-5 4z', 'whatsapp.chat.view', 'central.whatsapp.chat.*'],
             ['central.tags.index', 'tags', 'M7 7h.01M3 11V5a2 2 0 012-2h6l9 9-8 8-9-9z', 'tags.view'],
             ['central.attributes.index', 'attributes', 'M4 6h16M4 12h16M4 18h7', 'attributes.view']]
         : [['tenant.dashboard', 'dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'], ['tenant.reports.index', 'reports.reports', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'reports.view'],
@@ -44,7 +45,8 @@
             ['tenant.shipping-companies.index', 'ops.shipping_companies', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'shipping.view'],
             ['tenant.payment-methods.index', 'ops.payment_methods', 'M3 7h18v10H3zM3 11h18', 'payment_methods.view'],
             ['tenant.notification-settings.edit', 'notifications.settings.title', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0', 'settings.view'],
-            ['tenant.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view'],
+            ['tenant.whatsapp.index', 'whatsapp.title', 'M3 21l1.7-5A8.5 8.5 0 1112 20.5a8.4 8.4 0 01-4-1z', 'whatsapp.view', 'tenant.whatsapp.index'],
+            ['tenant.whatsapp.chat.index', 'whatsapp.chat.title', 'M8 10h8M8 14h5M4 5h16v11H9l-5 4z', 'whatsapp.chat.view', 'tenant.whatsapp.chat.*'],
             ['tenant.seo.edit', 'seo.title', 'M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14zM8 11l2 2 4-4', 'settings.view'],
             ['tenant.cod-fees.edit', 'ops.cod_fees', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'settings.view'],
             ['tenant.banners.index', 'ops.banners', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5', 'banners.view'],
@@ -86,7 +88,7 @@
                 $visible = collect($menu)->filter(fn ($i) => ! isset($i[3]) || $user?->can($i[3]))->keyBy(fn ($i) => $i[0]);
                 // tenant sidebar groups: [title key, icon path, [route names]]
                 $groups = $isCentral ? [] : [
-                    ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['tenant.pos.index', 'tenant.orders.index', 'tenant.returns.index', 'tenant.customers.index', 'tenant.discount-codes.index', 'tenant.flash-sales.index', 'tenant.bundles.index', 'tenant.packaging.index']],
+                    ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['tenant.pos.index', 'tenant.orders.index', 'tenant.returns.index', 'tenant.customers.index', 'tenant.whatsapp.chat.index', 'tenant.discount-codes.index', 'tenant.flash-sales.index', 'tenant.bundles.index', 'tenant.packaging.index']],
                     ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['tenant.catalog.index', 'tenant.stock-requests.index', 'tenant.stock.index', 'tenant.stock.low', 'tenant.stock.movements', 'tenant.purchases.index', 'tenant.stock-transfers.index', 'tenant.stock-adjustments.index', 'tenant.suppliers.index']],
                     ['admin.nav.marketing', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', ['tenant.affiliates.index', 'tenant.affiliate-tiers.index', 'tenant.affiliate-payouts.index', 'tenant.product-lists.index', 'tenant.reviews.index', 'tenant.banners.index']],
                     ['admin.nav.content', 'M7 3h8l4 4v14H7zM14 3v5h5', ['tenant.custom-pages.index', 'tenant.static-pages.index', 'tenant.blog-posts.index']],

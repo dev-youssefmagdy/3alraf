@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Illuminate\Support\Facades\Schedule::command('affiliates:approve-commissions')->dailyAt('03:00');
+Schedule::command('affiliates:approve-commissions')->dailyAt('03:00');
 
 // Ops: nightly backup (database + private files), retention clean-up, health monitor, housekeeping.
 Schedule::command('backup:clean')->dailyAt('01:30');
@@ -34,3 +34,6 @@ Schedule::command('growth:maintain')->dailyAt('02:45');
 Schedule::command('growth:prune')->dailyAt('03:10');
 Schedule::command('growth:engage')->hourly()->withoutOverlapping();
 Schedule::command('growth:operate')->dailyAt('06:30')->withoutOverlapping();
+
+// WhatsApp chat retention (config whatsapp_chat.retention_days, 0 = keep forever).
+Schedule::command('whatsapp:chat-prune')->dailyAt('04:20')->withoutOverlapping()->onOneServer();

@@ -35,6 +35,7 @@ it('redirects tenant root to default locale and rejects unknown locales', functi
 });
 
 it('keeps guards isolated: tenant admin cannot enter central and vice versa', function () {
+    TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->update(['otp_exempt' => true]); // this test is about guards, not the OTP step
     $this->postJson("{$this->egy}/admin/login", ['country' => 'EG', 'phone' => '0'.substr(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('phone'), 2), 'password' => 'password'])->assertOk();
     $this->get("{$this->egy}/admin")->assertOk();
     $this->get("{$this->central}/admin")->assertRedirect("{$this->central}/admin/login");

@@ -16,7 +16,7 @@
                         @foreach ($matrix as $module => $actions)
                             <tr class="border-b border-slate-100 last:border-0">
                                 <td class="w-56 bg-slate-50 px-3 py-2 font-medium text-slate-700">
-                                    <label class="inline-flex items-center gap-2"><input type="checkbox" data-perm-row class="size-4 rounded border-slate-300"> {{ \Illuminate\Support\Facades\Lang::has("access.modules.$module") ? __("access.modules.$module") : \Illuminate\Support\Str::headline($module) }}</label>
+                                    <label class="inline-flex items-center gap-2"><input type="checkbox" data-perm-row class="size-4 rounded border-slate-300"> {{ \Illuminate\Support\Facades\Lang::has("access.modules.".str_replace('.', '_', $module)) ? __("access.modules.".str_replace('.', '_', $module)) : \Illuminate\Support\Str::headline($module) }}</label>
                                 </td>
                                 <td class="px-3 py-2">
                                     <div class="flex flex-wrap gap-x-5 gap-y-1">

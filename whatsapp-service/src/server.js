@@ -3,6 +3,8 @@ const http = require('http');
 const crypto = require('crypto');
 const cfg = require('./config');
 const sm = require('./session-manager');
+const media = require('./media');
+const fs = require('fs');
 
 function authorized(req) {
   const given = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''));
@@ -15,13 +17,13 @@ const json = (res, code, body) => {
   res.end(JSON.stringify(body));
 };
 
-const readBody = (req) =>
+const readBody = (req, limit = 64 * 1024) =>
   new Promise((resolve, reject) => {
     let n = 0;
     const chunks = [];
     req.on('data', (c) => {
       n += c.length;
-      if (n > 64 * 1024) return reject(Object.assign(new Error('body too large'), { code: 413 }));
+      if (n > limit) return reject(Object.assign(new Error('body too large'), { code: 413 }));
       chunks.push(c);
     });
     req.on('end', () => {
@@ -39,7 +41,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/health') return json(res, 200, { ok: true, sessions: sm.sessions.size });
     if (!authorized(req)) return json(res, 401, { error: 'unauthorized' });
 
-    const m = url.pathname.match(/^\/sessions\/([^/]+)(?:\/(connect|reconnect|disconnect|logout|messages))?$/);
+    const m = url.pathname.match(/^\/sessions\/([^/]+)(?:\/(connect|reconnect|disconnect|logout|messages|read|presence|uploads|media\/[a-f0-9]{32}))?$/);
     if (!m) return json(res, 404, { error: 'not found' });
     const [, id, action] = m;
     const s = sm.get(id);
@@ -53,10 +55,36 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && action === 'disconnect') return json(res, 200, (await sm.stop(id, { logout: true })).snapshot());
     if (req.method === 'POST' && action === 'messages') {
       const b = await readBody(req);
+      if (b.type !== undefined) return json(res, 200, await sm.sendTyped(id, b)); // typed chat payload; legacy {to,text} below is untouched
       if (typeof b.to !== 'string' || typeof b.text !== 'string' || !b.text || b.text.length > 4096) return json(res, 422, { error: 'invalid payload' });
       const gap = (v) => Math.min(60_000, Math.max(0, Number.isFinite(b[v]) ? b[v] : 0));
       return json(res, 200, await sm.send(id, b.to, b.text, { humanize: b.humanize === true, minGapMs: gap('min_gap_ms'), maxGapMs: gap('max_gap_ms') }));
     }
+    if (req.method === 'POST' && action === 'read') {
+      const b = await readBody(req);
+      return json(res, 200, await sm.markRead(id, b.jid, b.keys));
+    }
+    if (req.method === 'POST' && action === 'presence') {
+      const b = await readBody(req);
+      return json(res, 200, await sm.setPresence(id, b.jid, b.state));
+    }
+    if (req.method === 'POST' && action === 'uploads') {
+      sm.get(id);
+      const mime = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+      if (!/^[\w.+-]+\/[\w.+-]+$/.test(mime)) return json(res, 422, { error: 'invalid content-type' });
+      const name = url.searchParams.get('name');
+      const uploadId = await media.putStream(id, req, { mime, name: name ? name.slice(0, 200) : null });
+      const e = media.lookup(id, uploadId);
+      return json(res, 201, { upload_id: uploadId, size: e.size, sha256: e.sha256, mime });
+    }
+    const mm = action && action.match(/^media\/([a-f0-9]{32})$/);
+    if (mm && req.method === 'GET') {
+      const e = media.lookup(id, mm[1]);
+      if (!e) return json(res, 404, { error: 'not found' });
+      res.writeHead(200, { 'content-type': e.mime, 'content-length': e.size, 'x-content-sha256': e.sha256, 'x-content-type-options': 'nosniff' });
+      return fs.createReadStream(e.file).pipe(res);
+    }
+    if (mm && req.method === 'DELETE') return json(res, 200, { deleted: media.lookup(id, mm[1]) ? media.drop(mm[1]) : false });
     return json(res, 405, { error: 'method not allowed' });
   } catch (e) {
     return json(res, e.code && Number.isInteger(e.code) ? e.code : 500, { error: e.message });

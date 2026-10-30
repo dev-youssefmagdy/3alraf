@@ -11,3 +11,7 @@ Broadcast::channel('App.Models.CentralAdmin.{id}', fn (CentralAdmin $a, int $id)
 // WhatsApp connection channels: central admins -> whatsapp.central; a tenant admin -> ONLY their own tenant's channel.
 Broadcast::channel('whatsapp.central', fn (CentralAdmin $a) => $a->is_active && $a->can('whatsapp.view'), ['guards' => ['central']]);
 Broadcast::channel('whatsapp.tenant.{tenantId}', fn (TenantAdmin $a, int $tenantId) => $a->is_active && (int) $a->tenant_id === $tenantId && $a->can('whatsapp.view'), ['guards' => ['tenant']]);
+
+// WhatsApp chat (inbox) channels: same owner rules, gated by whatsapp.chat.view. A tenant admin can only ever join their own tenant's channel.
+Broadcast::channel('whatsapp-chat.central', fn (CentralAdmin $a) => $a->is_active && $a->can('whatsapp.chat.view'), ['guards' => ['central']]);
+Broadcast::channel('whatsapp-chat.tenant.{tenantId}', fn (TenantAdmin $a, int $tenantId) => $a->is_active && (int) $a->tenant_id === $tenantId && $a->can('whatsapp.chat.view'), ['guards' => ['tenant']]);

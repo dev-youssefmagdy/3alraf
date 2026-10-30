@@ -2,10 +2,21 @@
 
 namespace App\Providers;
 
+use App\Listeners\EmitGrowthEvents;
 use App\Listeners\NotifyCustomerOfOrder;
 use App\Models\Tenant;
+use App\Services\Ai\AiAccess;
+use App\Services\Growth\ApprovalService;
+use App\Services\Growth\BundleProposalService;
+use App\Services\Growth\ExperimentLabService;
+use App\Services\Growth\GrowthFeatures;
+use App\Services\Growth\InventoryDecisionService;
+use App\Services\Growth\SmallBatchService;
+use App\Services\Whatsapp\Chat\MediaScanner;
+use App\Services\Whatsapp\Chat\NullMediaScanner;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -18,12 +29,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->scoped(\App\Services\Ai\AiAccess::class);
-        $this->app->singleton(\App\Services\Growth\ApprovalService::class); // module handlers register on it
-        $this->app->resolving(\App\Services\Growth\ApprovalService::class, fn ($a) => $a->register('experiment_budget', fn ($ap) => app(\App\Services\Growth\ExperimentLabService::class)->materializeBudget($ap)));
-        $this->app->resolving(\App\Services\Growth\ApprovalService::class, fn ($a) => $a->register('batch_reorder', fn ($ap) => app(\App\Services\Growth\SmallBatchService::class)->materializeDecision($ap)));
-        $this->app->resolving(\App\Services\Growth\ApprovalService::class, fn ($a) => $a->register('inventory_reorder', fn ($ap) => app(\App\Services\Growth\InventoryDecisionService::class)->materialize($ap)));
-        $this->app->resolving(\App\Services\Growth\ApprovalService::class, fn ($a) => $a->register('bundle_draft', fn ($ap) => app(\App\Services\Growth\BundleProposalService::class)->materialize($ap)));
+        $this->app->bind(MediaScanner::class, NullMediaScanner::class);
+        $this->app->scoped(AiAccess::class);
+        $this->app->singleton(ApprovalService::class); // module handlers register on it
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('experiment_budget', fn ($ap) => app(ExperimentLabService::class)->materializeBudget($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('batch_reorder', fn ($ap) => app(SmallBatchService::class)->materializeDecision($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('inventory_reorder', fn ($ap) => app(InventoryDecisionService::class)->materialize($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('bundle_draft', fn ($ap) => app(BundleProposalService::class)->materialize($ap)));
     }
 
     /**
@@ -31,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Blade::if('growthFeature', fn (string $key) => app(\App\Services\Growth\GrowthFeatures::class)->active($key, current_tenant()));
+        Blade::if('growthFeature', fn (string $key) => app(GrowthFeatures::class)->active($key, current_tenant()));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
         // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).
         foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
@@ -63,8 +75,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::subscribe(NotifyCustomerOfOrder::class);
-        Event::subscribe(\App\Listeners\EmitGrowthEvents::class);
-        \App\Listeners\EmitGrowthEvents::hookModels();
+        Event::subscribe(EmitGrowthEvents::class);
+        EmitGrowthEvents::hookModels();
         RateLimiter::for('integration-ip', fn (Request $r) => Limit::perMinute(300)->by('integration-ip|'.$r->ip()));
         require base_path('routes/channels.php');
 

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Access\AdminUserController;
 use App\Http\Controllers\Access\AuditLogController;
 use App\Http\Controllers\Access\RoleController;
-use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\Tenant\AffiliateController;
 use App\Http\Controllers\Tenant\AffiliatePayoutController;
@@ -45,6 +45,7 @@ use App\Http\Controllers\Tenant\Growth\LabController;
 use App\Http\Controllers\Tenant\Growth\SeasonalController;
 use App\Http\Controllers\Tenant\Growth\SettingsController;
 use App\Http\Controllers\Tenant\Growth\SmallBatchController;
+use App\Http\Controllers\Tenant\LowStockController;
 use App\Http\Controllers\Tenant\NotificationController;
 use App\Http\Controllers\Tenant\NotificationSettingsController;
 use App\Http\Controllers\Tenant\OrderController;
@@ -57,27 +58,34 @@ use App\Http\Controllers\Tenant\PurchaseController;
 use App\Http\Controllers\Tenant\ReportController;
 use App\Http\Controllers\Tenant\ReturnController;
 use App\Http\Controllers\Tenant\ReviewController;
+use App\Http\Controllers\Tenant\SeoSettingsController;
 use App\Http\Controllers\Tenant\ShippingCompanyController;
 use App\Http\Controllers\Tenant\StaticPageController;
 use App\Http\Controllers\Tenant\StockAdjustmentController;
 use App\Http\Controllers\Tenant\StockController;
+use App\Http\Controllers\Tenant\StockRequestController;
 use App\Http\Controllers\Tenant\StockTransferController;
 use App\Http\Controllers\Tenant\SupplierController;
+use App\Http\Controllers\Whatsapp\ChatConversationController;
+use App\Http\Controllers\Whatsapp\ChatMediaController;
+use App\Http\Controllers\Whatsapp\ChatMessageController;
+use App\Http\Controllers\Whatsapp\ChatPageController;
+use App\Http\Controllers\Whatsapp\ConnectionController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(function () {
     Route::middleware('guest:tenant')->group(function () {
-        Route::get('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'show'])->name('login');
-        Route::post('login/validate', [\App\Http\Controllers\Auth\AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
-        Route::post('login', [\App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
-        Route::get('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'otpForm'])->name('login.otp');
-        Route::post('login/otp', [\App\Http\Controllers\Auth\AdminLoginController::class, 'verifyOtp'])->middleware('throttle:auth')->name('login.otp.verify');
-        Route::post('login/otp/resend', [\App\Http\Controllers\Auth\AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
+        Route::get('login', [AdminLoginController::class, 'show'])->name('login');
+        Route::post('login/validate', [AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
+        Route::post('login', [AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
+        Route::get('login/otp', [AdminLoginController::class, 'otpForm'])->name('login.otp');
+        Route::post('login/otp', [AdminLoginController::class, 'verifyOtp'])->middleware('throttle:auth')->name('login.otp.verify');
+        Route::post('login/otp/resend', [AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
     });
 
     Route::middleware('auth:tenant')->group(function () {
-        Route::post('logout', [\App\Http\Controllers\Auth\AdminLoginController::class, 'logout'])->name('logout');
+        Route::post('logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('locale/{code}', function (string $code) {
             session()->put('admin_locale', $code);
@@ -113,9 +121,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
 
         Route::get('notification-settings', [NotificationSettingsController::class, 'edit'])->name('notification-settings.edit');
         Route::put('notification-settings', [NotificationSettingsController::class, 'update'])->name('notification-settings.update');
-        Route::get('seo', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'edit'])->name('seo.edit');
-        Route::put('seo', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'update'])->name('seo.update');
-        Route::post('seo/validate', [\App\Http\Controllers\Tenant\SeoSettingsController::class, 'validateForm'])->name('seo.validate');
+        Route::get('seo', [SeoSettingsController::class, 'edit'])->name('seo.edit');
+        Route::put('seo', [SeoSettingsController::class, 'update'])->name('seo.update');
+        Route::post('seo/validate', [SeoSettingsController::class, 'validateForm'])->name('seo.validate');
         Route::get('cod-fees', [CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
@@ -310,7 +318,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         }
 
         Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
-            $c = \App\Http\Controllers\Whatsapp\ConnectionController::class;
+            $c = ConnectionController::class;
             Route::get('/', [$c, 'index'])->name('index');
             Route::get('status', [$c, 'status'])->name('status');
             Route::post('connect', [$c, 'connect'])->middleware('throttle:10,1')->name('connect');
@@ -318,6 +326,29 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::post('disconnect', [$c, 'disconnect'])->middleware('throttle:10,1')->name('disconnect');
             Route::post('test', [$c, 'sendTest'])->middleware('throttle:10,1')->name('test');
             Route::put('settings', [$c, 'updateSettings'])->name('settings');
+        });
+
+        Route::prefix('whatsapp/chat')->name('whatsapp.chat.')->group(function () {
+            $conv = ChatConversationController::class;
+            $msg = ChatMessageController::class;
+            $media = ChatMediaController::class;
+            Route::get('/', [ChatPageController::class, 'index'])->name('index');
+            Route::get('limits', [$conv, 'limits'])->middleware('throttle:120,1')->name('limits');
+            Route::get('conversations', [$conv, 'index'])->middleware('throttle:120,1')->name('conversations.index');
+            Route::post('conversations', [$conv, 'store'])->middleware('throttle:30,1')->name('conversations.store');
+            Route::get('conversations/{id}', [$conv, 'show'])->whereNumber('id')->middleware('throttle:120,1')->name('conversations.show');
+            Route::patch('conversations/{id}', [$conv, 'update'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.update');
+            Route::delete('conversations/{id}', [$conv, 'destroy'])->whereNumber('id')->middleware('throttle:30,1')->name('conversations.destroy');
+            Route::put('conversations/{id}/assign', [$conv, 'assign'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.assign');
+            Route::post('conversations/{id}/read', [$conv, 'read'])->whereNumber('id')->middleware('throttle:120,1')->name('conversations.read');
+            Route::post('conversations/{id}/presence', [$conv, 'presence'])->whereNumber('id')->middleware('throttle:60,1')->name('conversations.presence');
+            Route::get('conversations/{conversation}/messages', [$msg, 'index'])->whereNumber('conversation')->middleware('throttle:120,1')->name('messages.index');
+            Route::post('conversations/{conversation}/messages', [$msg, 'store'])->whereNumber('conversation')->middleware('throttle:60,1')->name('messages.store');
+            Route::post('messages/{id}/resend', [$msg, 'resend'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.resend');
+            Route::post('messages/{id}/react', [$msg, 'react'])->whereNumber('id')->middleware('throttle:60,1')->name('messages.react');
+            Route::put('messages/{id}', [$msg, 'update'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.update');
+            Route::delete('messages/{id}', [$msg, 'destroy'])->whereNumber('id')->middleware('throttle:30,1')->name('messages.destroy');
+            Route::get('media/{id}', [$media, 'show'])->whereNumber('id')->middleware('throttle:240,1')->name('media.show');
         });
 
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
@@ -330,7 +361,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::get('reports/{report}/export', [ReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
 
         // Stock (read-only views)
-        Route::get('stock/low', [\App\Http\Controllers\Tenant\LowStockController::class, 'index'])->name('stock.low');
+        Route::get('stock/low', [LowStockController::class, 'index'])->name('stock.low');
         Route::get('stock', [StockController::class, 'index'])->name('stock.index');
         Route::get('stock/datatable', [StockController::class, 'levels'])->name('stock.datatable');
         Route::get('stock/movements', [StockController::class, 'movements'])->name('stock.movements');
@@ -406,10 +437,10 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
         Route::delete('reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
-        Route::get('stock-requests/datatable', [\App\Http\Controllers\Tenant\StockRequestController::class, 'datatable'])->name('stock-requests.datatable');
-        Route::get('stock-requests', [\App\Http\Controllers\Tenant\StockRequestController::class, 'index'])->name('stock-requests.index');
-        Route::post('stock-requests/{id}/status/{status}', [\App\Http\Controllers\Tenant\StockRequestController::class, 'status'])->whereNumber('id')->whereIn('status', ['new', 'contacted', 'closed'])->name('stock-requests.status');
-        Route::delete('stock-requests/{id}', [\App\Http\Controllers\Tenant\StockRequestController::class, 'destroy'])->whereNumber('id')->name('stock-requests.destroy');
+        Route::get('stock-requests/datatable', [StockRequestController::class, 'datatable'])->name('stock-requests.datatable');
+        Route::get('stock-requests', [StockRequestController::class, 'index'])->name('stock-requests.index');
+        Route::post('stock-requests/{id}/status/{status}', [StockRequestController::class, 'status'])->whereNumber('id')->whereIn('status', ['new', 'contacted', 'closed'])->name('stock-requests.status');
+        Route::delete('stock-requests/{id}', [StockRequestController::class, 'destroy'])->whereNumber('id')->name('stock-requests.destroy');
 
         Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])->name('broadcasting.auth');
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

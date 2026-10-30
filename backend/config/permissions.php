@@ -24,6 +24,7 @@ return [
         'ai_tenants' => ['view', 'edit'],
         'ai_usage' => ['view'],
         'whatsapp' => ['view', 'manage'],
+        'whatsapp.chat' => ['view', 'send', 'manage', 'media'],
     ],
     'tenant' => [
         'admins' => $crud,
@@ -31,6 +32,7 @@ return [
         'catalog' => ['view', 'create', 'edit', 'delete'],
         'settings' => ['view', 'edit'],
         'whatsapp' => ['view', 'manage'],
+        'whatsapp.chat' => ['view', 'send', 'manage', 'media'],
         'audit' => ['view'],
         'reports' => ['view', 'export'],
         // Phase 3 operations

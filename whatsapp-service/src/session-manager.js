@@ -8,6 +8,9 @@ const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, Brow
 const cfg = require('./config');
 const { encryptedAuthState } = require('./crypto-store');
 const events = require('./events');
+const inbound = require('./inbound');
+const media = require('./media');
+const outbound = require('./outbound');
 
 const log = pino({ level: cfg.logLevel, redact: ['creds', 'authState', '*.password', '*.text'] }); // message bodies (OTPs) never logged
 
@@ -71,6 +74,7 @@ async function start(id) {
     });
     s.sock = sock;
     sock.ev.on('creds.update', saveCreds);
+    inbound.bind(sock, id);
     sock.ev.on('connection.update', async (u) => {
       if (s.sock !== sock) return; // stale socket
       if (u.qr) {
@@ -167,6 +171,61 @@ function send(id, to, text, { humanize = false, minGapMs = 0, maxGapMs = 0 } = {
   return job;
 }
 
+/**
+ * Typed send (chat). Same per-session chain as `send`. A jid recipient is used as-is (existing conversation, no extra round-trip);
+ * a phone number goes through onWhatsApp. Returns {message_id, to_jid, timestamp}.
+ */
+function sendTyped(id, b) {
+  const s = get(id);
+  const to = outbound.parseRecipient(b.to);
+  const job = s.sendChain.then(async () => {
+    if (s.status !== 'connected' || !s.sock) throw Object.assign(new Error('session not connected'), { code: 409 });
+    let jid = to.jid;
+    if (!jid) {
+      const [exists] = await s.sock.onWhatsApp(`${to.digits}@s.whatsapp.net`);
+      if (!exists?.exists) throw Object.assign(new Error('number is not on WhatsApp'), { code: 422 });
+      jid = exists.jid;
+    }
+    const { content, opts, upload } = outbound.build(b, jid, { session: id });
+    if (b.humanize === true) {
+      await s.sock.sendPresenceUpdate('composing', jid);
+      await sleep(Math.min(3000, 500 + String(content.text || '').length * 20));
+      await s.sock.sendPresenceUpdate('paused', jid);
+    }
+    const res = await s.sock.sendMessage(jid, content, opts);
+    if (upload) media.drop(upload);
+    return { message_id: res?.key?.id || null, to_jid: jid, timestamp: Number(res?.messageTimestamp?.toNumber?.() ?? res?.messageTimestamp) || Math.floor(Date.now() / 1000) };
+  });
+  s.sendChain = job.catch(() => {});
+  return job;
+}
+
+function live(id) {
+  const s = get(id);
+  if (s.status !== 'connected' || !s.sock) throw Object.assign(new Error('session not connected'), { code: 409 });
+  return s.sock;
+}
+
+/** Send read receipts for the given incoming message ids of one chat. keys: [{id, participant?}] */
+async function markRead(id, jid, keys) {
+  if (!outbound.JID_RE.test(jid) || !Array.isArray(keys) || !keys.length || keys.length > 200) throw Object.assign(new Error('invalid payload'), { code: 422 });
+  const list = keys.map((k) => {
+    if (!k || !/^[A-Za-z0-9_-]{6,64}$/.test(k.id || '')) throw Object.assign(new Error('invalid payload'), { code: 422 });
+    return { remoteJid: jid, id: k.id, fromMe: false, ...(k.participant && outbound.JID_RE.test(k.participant) ? { participant: k.participant } : {}) };
+  });
+  await live(id).readMessages(list);
+  return { ok: true };
+}
+
+const PRESENCE = new Set(['composing', 'recording', 'paused', 'available', 'unavailable']);
+async function setPresence(id, jid, state) {
+  if (!outbound.JID_RE.test(jid) || !PRESENCE.has(state)) throw Object.assign(new Error('invalid payload'), { code: 422 });
+  const sock = live(id);
+  if (state === 'composing' || state === 'recording' || state === 'paused') await sock.sendPresenceUpdate(state, jid);
+  else await sock.sendPresenceUpdate(state);
+  return { ok: true };
+}
+
 /** Restore every session that has persisted credentials (service restart: no new QR scan). */
 async function restoreAll() {
   fs.mkdirSync(cfg.authRoot, { recursive: true, mode: 0o700 });
@@ -188,4 +247,4 @@ async function shutdown() {
   }
 }
 
-module.exports = { get, start, stop, send, restoreAll, shutdown, ID_RE, sessions };
+module.exports = { get, start, stop, send, sendTyped, markRead, setPresence, restoreAll, shutdown, ID_RE, sessions };
