@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Resources\Api\BrandDetailResource;
 use App\Http\Resources\Api\BrandResource;
+use App\Http\Resources\Api\CategoryDetailResource;
+use App\Http\Resources\Api\TagResource;
 use App\Http\Resources\Api\CustomPageResource;
 use App\Http\Resources\Api\FacetsResource;
 use App\Http\Resources\Api\HomeResource;
@@ -16,6 +19,7 @@ use App\Http\Resources\Api\SuggestResource;
 use App\DTOs\Storefront\CatalogFilter;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Tag;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
 use App\Models\TenantProduct;
@@ -47,7 +51,7 @@ class StoreController extends ApiController
         return $this->list(MenuNodeResource::collection($this->data->menu()));
     }
 
-    /** Category page / search: ?category=slug &q= &brands[]= &values[]= &price_min= &price_max= &sort= &per_page= &page= */
+    /** Category / brand / tag page or search: ?category=slug &brand=slug &tag=slug &q= &brands[]= &values[]= &price_min= &price_max= &sort= &per_page= &page= */
     public function catalog(Request $request): JsonResponse
     {
         [$scope, $filter] = $this->scope($request);
@@ -92,8 +96,28 @@ class StoreController extends ApiController
     public function brands(): JsonResponse
     {
         return $this->list(BrandResource::collection(Brand::query()->where('is_active', true)
-            ->whereHas('products', fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id')))
+            ->whereHas('products', $this->sellable())
             ->orderBy('sort_order')->get()));
+    }
+
+    /** Brand page header (name/logo/product count); its products: GET catalog?brand={slug}. */
+    public function brand(string $slug): JsonResponse
+    {
+        $brand = Brand::where('slug', $slug)->where('is_active', true)->withCount(['products as sellable_count' => $this->sellable()])->firstOrFail();
+
+        return $this->respond(new BrandDetailResource($brand));
+    }
+
+    /** Category page header (name/image/description/breadcrumbs/children); its products: GET catalog?category={slug}. */
+    public function category(string $slug): JsonResponse
+    {
+        return $this->respond(new CategoryDetailResource(Category::where('slug', $slug)->where('is_active', true)->firstOrFail()));
+    }
+
+    /** Tag page header; its products: GET catalog?tag={slug}. */
+    public function tag(string $slug): JsonResponse
+    {
+        return $this->respond(new TagResource(Tag::where('slug', $slug)->where('is_active', true)->firstOrFail()));
     }
 
     public function pages(): JsonResponse
@@ -135,7 +159,21 @@ class StoreController extends ApiController
     {
         $filter = CatalogFilter::fromRequest($request);
         $category = $request->filled('category') ? Category::where('slug', (string) $request->query('category'))->where('is_active', true)->firstOrFail() : null;
+        $scope = $this->search->scope($category, $filter->q);
+        if ($request->filled('brand')) {
+            $brand = Brand::where('slug', (string) $request->query('brand'))->where('is_active', true)->firstOrFail();
+            $scope->whereHas('product', fn ($p) => $p->where('brand_id', $brand->id));
+        }
+        if ($request->filled('tag')) {
+            $tag = Tag::where('slug', (string) $request->query('tag'))->where('is_active', true)->firstOrFail();
+            $scope->whereHas('product', fn ($p) => $p->whereHas('tags', fn ($t) => $t->where('tags.id', $tag->id)));
+        }
 
-        return [$this->search->scope($category, $filter->q), $filter];
+        return [$scope, $filter];
+    }
+
+    private function sellable(): \Closure
+    {
+        return fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
     }
 }

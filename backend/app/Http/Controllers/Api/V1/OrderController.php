@@ -9,6 +9,7 @@ use App\Http\Resources\Api\OrderResource;
 use App\Http\Resources\Api\ReturnResource;
 use App\Services\Api\ApiOrderService;
 use App\Services\Growth\CustomerCancellationService;
+use App\Services\Orders\InvoicePdf;
 use App\Services\Orders\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,20 @@ class OrderController extends ApiController
         $this->payments->uploadProof($order = $this->orders->byToken($token), $r->file('proof'));
 
         return $this->respond(new OrderDetailResource($this->orders->byToken($order->public_token)), __('orders.proof_uploaded'));
+    }
+
+    /** GET orders/{token}/invoice: the invoice as a PDF download (same document as the web page). */
+    public function invoice(string $token, InvoicePdf $pdf)
+    {
+        $order = $this->orders->byToken($token);
+
+        return $pdf->render($order)->download($pdf->filename($order));
+    }
+
+    /** GET orders/{token}/proof: the uploaded transfer proof (private disk, 404 when none). Upload is POST on the same path. */
+    public function proofFile(string $token)
+    {
+        return $this->payments->proofResponse($this->orders->byToken($token));
     }
 
     /** New gateway link for an unpaid online order. */

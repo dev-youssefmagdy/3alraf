@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal links. Enable by setting CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements
+	     for the Runner target (needs a paid team + apple-app-site-association on each host). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:3alraf.com</string>
+		<string>applinks:egy.3alraf.com</string>
+		<string>applinks:sa.3alraf.com</string>
+	</array>
+</dict>
+</plist>

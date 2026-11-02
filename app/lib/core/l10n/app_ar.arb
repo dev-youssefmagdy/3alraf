@@ -1,0 +1,673 @@
+{
+  "@@locale": "ar",
+  "appName": "عالرف",
+  "@appName": {
+    "description": "Application display name"
+  },
+  "retry": "إعادة المحاولة",
+  "loading": "جارٍ التحميل…",
+  "errorGeneric": "حدث خطأ ما. حاول مرة أخرى.",
+  "errorNetwork": "تعذّر الاتصال بالإنترنت. تحقق من الشبكة وحاول مرة أخرى.",
+  "errorTimeout": "انتهت مهلة الاتصال. حاول مرة أخرى.",
+  "errorServer": "حدث خطأ في الخادم. حاول لاحقًا.",
+  "errorRateLimited": "محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.",
+  "errorNotFound": "غير موجود.",
+  "errorUnauthorized": "انتهت الجلسة. سجّل الدخول مرة أخرى.",
+  "emptyTitle": "لا يوجد شيء هنا بعد",
+  "navHome": "الرئيسية",
+  "navCategories": "الأقسام",
+  "navCart": "السلة",
+  "navWishlist": "المفضلة",
+  "navAccount": "حسابي",
+  "comingSoon": "قريبًا",
+  "addToCart": "أضف إلى السلة",
+  "outOfStock": "غير متوفر",
+  "currencyAmount": "{amount} {currency}",
+  "@currencyAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "discountBadge": "خصم {percent}٪",
+  "@discountBadge": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "ratingSemantics": "التقييم {rating} من 5",
+  "@ratingSemantics": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityIncrease": "زيادة الكمية",
+  "quantityDecrease": "تقليل الكمية",
+  "quantityLabel": "الكمية {count}",
+  "@quantityLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewAll": "عرض الكل",
+  "cancel": "إلغاء",
+  "confirm": "تأكيد",
+  "close": "إغلاق",
+  "menu": "القائمة",
+  "startupErrorTitle": "تعذّر تشغيل التطبيق",
+  "selectCountryTitle": "اختر بلدك",
+  "selectCountrySubtitle": "اختر المتجر الذي تريد التسوّق منه.",
+  "searchCountry": "ابحث عن بلد أو متجر",
+  "noStoresFound": "لا توجد متاجر مطابقة",
+  "noStoresAvailable": "لا توجد متاجر متاحة حاليًا.",
+  "continueAction": "متابعة",
+  "confirmCountryTitle": "التسوّق من {store}؟",
+  "@confirmCountryTitle": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmCountryMessage": "يمكنك تغيير البلد لاحقًا من القائمة الجانبية.",
+  "countryInactiveNotice": "متجرك السابق لم يعد متاحًا. اختر بلدًا آخر للمتابعة.",
+  "currentStore": "الحالي",
+  "storeCurrency": "العملة: {currency}",
+  "@storeCurrency": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "storeLanguages": "اللغات: {languages}",
+  "@storeLanguages": {
+    "placeholders": {
+      "languages": {
+        "type": "String"
+      }
+    }
+  },
+  "switchCountry": "تغيير البلد",
+  "switchCountryWarnTitle": "تغيير المتجر؟",
+  "switchCountryWarnBody": "السلة والمفضلة تخصّ المتجر الحالي. سيتم تسجيل خروجك ومسح بيانات السلة على هذا الجهاز عند التغيير إلى {store}.",
+  "@switchCountryWarnBody": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "switchConfirm": "تغيير",
+  "switchedTo": "تتسوّق الآن من {store}",
+  "@switchedTo": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineBanner": "أنت غير متصل. نعرض بيانات محفوظة.",
+  "updateRequiredTitle": "يلزم تحديث التطبيق",
+  "updateRequiredBody": "يرجى تحديث التطبيق إلى أحدث إصدار للمتابعة.",
+  "updateNow": "تحديث الآن",
+  "maintenanceTitle": "المتجر تحت الصيانة",
+  "maintenanceDefault": "نعمل على تحسين الخدمة وسنعود قريبًا.",
+  "onboarding1Title": "تسوّق مستحضرات التجميل بسهولة",
+  "onboarding1Body": "آلاف المنتجات الأصلية من أفضل العلامات في مكان واحد.",
+  "onboarding2Title": "عروض وهدايا مميزة",
+  "onboarding2Body": "تابع العروض اليومية واعثر على الهدية المناسبة.",
+  "onboarding3Title": "توصيل سريع ودفع مرن",
+  "onboarding3Body": "اختر طريقة الشحن والدفع التي تناسبك.",
+  "skip": "تخطي",
+  "next": "التالي",
+  "getStarted": "ابدأ الآن",
+  "language": "اللغة",
+  "contactWhatsapp": "تواصل عبر واتساب",
+  "appVersion": "الإصدار {version}",
+  "@appVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "currentStoreLabel": "المتجر الحالي: {store}",
+  "@currentStoreLabel": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "login": "تسجيل الدخول",
+  "register": "إنشاء حساب",
+  "logout": "تسجيل الخروج",
+  "loginSubtitle": "أهلًا بعودتك! سجّل الدخول لمتابعة التسوّق.",
+  "registerSubtitle": "أنشئ حسابك للاحتفاظ بطلباتك وعناوينك.",
+  "sessionExpiredNotice": "انتهت جلستك. سجّل الدخول مرة أخرى.",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "fullName": "الاسم الكامل",
+  "phoneOptional": "رقم الهاتف (اختياري)",
+  "forgotPasswordLink": "نسيت كلمة المرور؟",
+  "signInWithGoogle": "المتابعة باستخدام Google",
+  "orDivider": "أو",
+  "noAccountPrompt": "ليس لديك حساب؟",
+  "haveAccountPrompt": "لديك حساب بالفعل؟",
+  "continueAsGuest": "المتابعة كزائر",
+  "forgotTitle": "استعادة كلمة المرور",
+  "forgotBody": "أدخل بريدك الإلكتروني وسنرسل لك رمزًا من 6 أرقام.",
+  "sendCode": "إرسال الرمز",
+  "resetTitle": "كلمة مرور جديدة",
+  "resetBody": "أدخل الرمز الذي وصلك وكلمة المرور الجديدة.",
+  "codeLabel": "الرمز (6 أرقام)",
+  "newPassword": "كلمة المرور الجديدة",
+  "resetAction": "تغيير كلمة المرور",
+  "resetDone": "تم تغيير كلمة المرور. سجّل الدخول الآن.",
+  "verifyTitle": "تأكيد البريد الإلكتروني",
+  "verifyBody": "أرسلنا رمزًا إلى بريدك. أدخله لتأكيد الحساب.",
+  "verifyAction": "تأكيد",
+  "resendCode": "إعادة إرسال الرمز",
+  "codeSent": "تم إرسال الرمز إلى بريدك.",
+  "emailVerified": "تم تأكيد بريدك الإلكتروني.",
+  "skipForNow": "لاحقًا",
+  "fieldRequired": "هذا الحقل مطلوب",
+  "invalidEmail": "بريد إلكتروني غير صالح",
+  "passwordTooShort": "8 أحرف على الأقل",
+  "passwordMismatch": "كلمتا المرور غير متطابقتين",
+  "invalidCode": "أدخل 6 أرقام",
+  "accountGuestTitle": "أهلًا بك في عالرف",
+  "accountGuestBody": "سجّل الدخول لمتابعة طلباتك وحفظ مفضلتك.",
+  "signedInAs": "مسجّل باسم {name}",
+  "@signedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishlistSignInBody": "سجّل الدخول لعرض مفضلتك.",
+  "googleFailed": "تعذّر تسجيل الدخول عبر Google.",
+  "emailNotVerified": "البريد غير مؤكد",
+  "searchHint": "ابحث عن المنتجات",
+  "homeEmptyTitle": "لا يوجد محتوى بعد",
+  "homeEmptyBody": "المتجر قيد التجهيز. اسحب للأسفل للتحديث.",
+  "flashSale": "عروض خاطفة",
+  "flashEndsIn": "ينتهي خلال",
+  "railRecommended": "مقترح لك",
+  "railMostSold": "الأكثر مبيعاً",
+  "railMostReviewed": "الأكثر تقييماً",
+  "brands": "الماركات",
+  "brandsEmpty": "لا توجد ماركات بعد",
+  "bundles": "العروض المجمّعة",
+  "bundle": "عرض مجمّع",
+  "bundlesEmpty": "لا توجد عروض مجمّعة حالياً.",
+  "bundleContains": "يتضمن هذا العرض",
+  "bundleUnavailable": "غير متاح حالياً",
+  "bundleSave": "وفّر {amount}",
+  "@bundleSave": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "giftCtaTitle": "اعثر على الهدية المثالية",
+  "giftCtaBody": "أخبرنا بميزانيتك والمناسبة",
+  "categoriesEmpty": "لا توجد أقسام بعد",
+  "allInCategory": "كل {name}",
+  "@allInCategory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "products": "المنتجات",
+  "productsCount": "{count} منتج",
+  "@productsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchResultsFor": "نتائج \"{q}\"",
+  "@searchResultsFor": {
+    "placeholders": {
+      "q": {
+        "type": "String"
+      }
+    }
+  },
+  "noProducts": "لا توجد منتجات",
+  "noProductsFiltered": "جرّب إزالة بعض عوامل التصفية.",
+  "resetFilters": "إعادة ضبط التصفية",
+  "reset": "إعادة ضبط",
+  "filters": "تصفية",
+  "applyFilters": "عرض النتائج",
+  "sortBy": "ترتيب حسب",
+  "sortNewest": "الأحدث",
+  "sortPriceAsc": "السعر: من الأقل للأعلى",
+  "sortPriceDesc": "السعر: من الأعلى للأقل",
+  "sortBestSelling": "الأكثر مبيعاً",
+  "sortTopRated": "الأعلى تقييماً",
+  "price": "السعر",
+  "priceFrom": "من",
+  "priceTo": "إلى",
+  "clear": "مسح",
+  "recentSearches": "عمليات البحث الأخيرة",
+  "searchEmptyTitle": "ابحث في المتجر",
+  "searchEmptyBody": "اكتب اسم منتج أو ماركة أو قسم.",
+  "searchFor": "بحث عن \"{term}\"",
+  "@searchFor": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "noSuggestions": "لا توجد اقتراحات",
+  "addedToCart": "تمت الإضافة إلى السلة.",
+  "viewCart": "عرض السلة",
+  "chooseOptions": "اختر الخيارات",
+  "unavailableCombo": "هذه التشكيلة غير متاحة.",
+  "quantity": "الكمية",
+  "description": "الوصف",
+  "sku": "رمز المنتج",
+  "inStock": "متوفر",
+  "lowStock": "متبقي {count} فقط",
+  "@lowStock": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "relatedProducts": "قد يعجبك أيضاً",
+  "share": "مشاركة",
+  "wishlistAdd": "أضف إلى المفضلة",
+  "wishlistRemove": "إزالة من المفضلة",
+  "wishlistAdded": "تمت الإضافة إلى المفضلة.",
+  "wishlistRemoved": "تمت الإزالة من المفضلة.",
+  "wishlistEmptyTitle": "قائمة المفضلة فارغة",
+  "wishlistEmptyBody": "اضغط على القلب في أي منتج لحفظه هنا.",
+  "startShopping": "ابدأ التسوق",
+  "reviewsTitle": "التقييمات",
+  "noReviews": "لا توجد تقييمات بعد.",
+  "writeReview": "اكتب تقييماً",
+  "reviewBody": "تقييمك (اختياري)",
+  "reviewPickRating": "يرجى اختيار عدد النجوم.",
+  "submitReview": "إرسال التقييم",
+  "reviewThanks": "شكراً! سيظهر تقييمك بعد المراجعة.",
+  "notifyMe": "أعلمني عند التوفر",
+  "notifyMeBody": "هذا المنتج غير متوفر. اترك بياناتك وسنتواصل معك عند توفره.",
+  "notifyMeSend": "إرسال الطلب",
+  "notifyMeSent": "تم إرسال طلبك وسنتواصل معك قريباً.",
+  "phone": "رقم الهاتف",
+  "noteOptional": "ملاحظة (اختياري)",
+  "back": "رجوع",
+  "featureUnavailable": "هذه الخدمة غير متاحة في متجرك.",
+  "giftFinder": "مرشد الهدايا",
+  "giftStartOver": "ابدأ من جديد",
+  "giftStepBudget": "ما هي ميزانيتك؟",
+  "giftBudget": "الميزانية",
+  "giftBudgetRequired": "أدخل ميزانية أكبر من الصفر.",
+  "giftStepOccasion": "ما هي المناسبة؟",
+  "giftStepRecipient": "لمن الهدية؟",
+  "giftStepExtras": "أي تفاصيل أخرى؟",
+  "giftRestrictions": "أشياء تتجنبها (اختياري)",
+  "giftRestrictionsHint": "مثال: عطور",
+  "giftFind": "ابحث عن هدايا",
+  "giftNoResults": "لم نجد هدايا",
+  "giftNoResultsBody": "جرّب ميزانية أعلى أو قيوداً أقل.",
+  "giftSuggestions": "اقتراحات لك",
+  "giftNearBudget": "أعلى قليلاً من ميزانيتك",
+  "giftChooseVariant": "اختر خياراً",
+  "giftAddSelected": "أضف المحدد ({count})",
+  "@giftAddSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "giftAdded": "تمت إضافة {count} هدايا إلى السلة.",
+  "@giftAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "occBirthday": "عيد ميلاد",
+  "occMothersDay": "عيد الأم",
+  "occValentine": "عيد الحب",
+  "occWedding": "زفاف",
+  "occEidFitr": "عيد الفطر",
+  "occEidAdha": "عيد الأضحى",
+  "occRamadan": "رمضان",
+  "occGraduation": "تخرّج",
+  "occThanks": "شكر",
+  "occSelf": "مكافأة لنفسي",
+  "recMother": "الأم",
+  "recPartner": "الشريك/ة",
+  "recFriend": "صديق/ة",
+  "recSister": "الأخت",
+  "recColleague": "زميل/ة",
+  "recChild": "طفل",
+  "recSelf": "نفسي",
+  "recOther": "شخص آخر",
+  "cartTitle": "السلة",
+  "cartEmptyTitle": "سلتك فارغة",
+  "cartEmptyBody": "أضف منتجات لتبدأ التسوّق.",
+  "cartSubtotal": "المجموع الفرعي",
+  "cartDiscount": "الخصم",
+  "cartShipping": "الشحن",
+  "cartShippingAtCheckout": "يُحسب عند إتمام الطلب",
+  "cartTax": "الضريبة",
+  "cartPaymentFee": "رسوم الدفع",
+  "cartPackagingFee": "رسوم التغليف",
+  "cartCodFee": "رسوم الدفع عند الاستلام",
+  "cartTotal": "الإجمالي",
+  "cartCheckout": "إتمام الطلب",
+  "cartRemove": "حذف من السلة",
+  "cartRemoved": "تمت إزالة المنتج من السلة.",
+  "cartUnavailable": "غير متوفر",
+  "cartUnavailableNotice": "أزل المنتجات غير المتوفرة للمتابعة",
+  "cartComponent": "{name} × {count}",
+  "@cartComponent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discountCode": "كود الخصم",
+  "discountApply": "تطبيق",
+  "discountApplied": "تم تطبيق الكود {code}",
+  "@discountApplied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "discountRemove": "إزالة",
+  "delete": "حذف",
+  "edit": "تعديل",
+  "save": "حفظ",
+  "copy": "نسخ",
+  "copied": "تم النسخ",
+  "checkoutTitle": "إتمام الطلب",
+  "stepAddress": "العنوان",
+  "stepShipping": "الشحن",
+  "stepPackaging": "التغليف",
+  "stepPayment": "الدفع",
+  "stepReview": "المراجعة",
+  "addressNone": "لا توجد عناوين محفوظة. أضف عنوانًا للمتابعة.",
+  "shippingNoOptions": "لا تتوفر شركات شحن لهذه المدينة.",
+  "shippingFree": "شحن مجاني",
+  "shippingEta": "التوصيل خلال {days} يوم",
+  "@shippingEta": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "packagingNone": "بدون تغليف خاص",
+  "paymentNoMethods": "لا تتوفر طرق دفع حاليًا.",
+  "paymentPrepayTitle": "ادفع الشحن مقدمًا",
+  "paymentPrepayBody": "اختر طريقة تحويل لدفع مصاريف الشحن الآن، والباقي عند الاستلام.",
+  "proofRequired": "ارفع صورة إيصال التحويل لإتمام الطلب.",
+  "proofChoose": "اختر صورة الإيصال",
+  "proofChange": "تغيير",
+  "proofRemove": "إزالة الصورة",
+  "proofAttached": "تم إرفاق الإيصال",
+  "proofGallery": "من المعرض",
+  "proofCamera": "التقاط صورة",
+  "reviewAddress": "عنوان التوصيل",
+  "reviewShipping": "شركة الشحن",
+  "reviewPayment": "طريقة الدفع",
+  "reviewNotes": "ملاحظات للطلب",
+  "reviewNotesHint": "اختياري",
+  "placeOrder": "تأكيد الطلب",
+  "checkoutFixErrors": "راجع البيانات المحددة ثم حاول مجددًا.",
+  "orderPlacedTitle": "تم استلام طلبك",
+  "orderPlacedBody": "شكرًا لك! رقم طلبك {number}",
+  "@orderPlacedBody": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedAwaiting": "سنراجع طلبك ونؤكده قريبًا.",
+  "orderPlacedAt": "تاريخ الطلب",
+  "orderViewOrder": "عرض الطلب",
+  "ordersTitle": "طلباتي",
+  "ordersEmptyTitle": "لا توجد طلبات بعد",
+  "ordersEmptyBody": "ستظهر طلباتك هنا بعد أول عملية شراء.",
+  "orderItemsCount": "{count} منتج",
+  "@orderItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderDetailTitle": "تفاصيل الطلب",
+  "orderItems": "المنتجات",
+  "orderTimeline": "تتبع الطلب",
+  "orderReturns": "المرتجعات",
+  "orderPayNow": "ادفع الآن",
+  "orderPayNowAmount": "ادفع الآن ({amount})",
+  "@orderPayNowAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "orderUploadProof": "رفع إيصال التحويل",
+  "orderProofUploaded": "تم رفع الإيصال، سنراجعه قريبًا.",
+  "orderInvoice": "الفاتورة",
+  "orderInvoiceSubject": "فاتورة الطلب {number}",
+  "@orderInvoiceSubject": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderCancel": "إلغاء الطلب",
+  "orderCancelTitle": "إلغاء الطلب",
+  "orderCancelReason": "ما سبب الإلغاء؟",
+  "orderCancelled": "تم إلغاء الطلب.",
+  "orderReturn": "طلب إرجاع",
+  "orderReturnTitle": "طلب إرجاع",
+  "orderReturnItems": "اختر المنتجات والكميات المراد إرجاعها",
+  "orderReturnReason": "سبب الإرجاع (اختياري)",
+  "orderReturnSent": "تم إرسال طلب الإرجاع.",
+  "payUnpaid": "غير مدفوع",
+  "payPaid": "مدفوع",
+  "payPartial": "مدفوع جزئيًا",
+  "payRefunded": "تم الاسترداد",
+  "proofPending": "الإيصال قيد المراجعة",
+  "proofApproved": "تم قبول الإيصال",
+  "proofRejected": "تم رفض الإيصال",
+  "paymentWebTitle": "الدفع الإلكتروني",
+  "paymentConfirming": "جارٍ تأكيد الدفع...",
+  "paymentSuccess": "تم الدفع بنجاح",
+  "paymentPendingTitle": "ننتظر تأكيد الدفع",
+  "paymentPendingBody": "سيتم تحديث حالة الطلب فور تأكيد بوابة الدفع.",
+  "reasonColorDiffers": "اللون مختلف عن الصورة",
+  "reasonSizeUnclear": "المقاس غير واضح",
+  "reasonDamagedPackaging": "عبوة تالفة",
+  "reasonDeliveryDelay": "تأخر التوصيل",
+  "reasonDescriptionInaccurate": "الوصف غير دقيق",
+  "reasonQuality": "الجودة",
+  "reasonWrongItem": "منتج خاطئ",
+  "reasonChangedMind": "غيرت رأيي",
+  "reasonOther": "سبب آخر",
+  "accountOrders": "طلباتي",
+  "accountAddresses": "عناويني",
+  "addressesTitle": "عناويني",
+  "addressesEmpty": "لا توجد عناوين",
+  "addressesEmptyBody": "أضف عنوانًا لتسريع إتمام الطلبات.",
+  "addressAdd": "إضافة عنوان",
+  "addressEdit": "تعديل العنوان",
+  "addressLabel": "اسم العنوان (مثال: المنزل)",
+  "addressCity": "المدينة",
+  "addressCityPick": "اختر المدينة",
+  "addressCitySearch": "ابحث عن مدينة",
+  "addressLine": "العنوان بالتفصيل",
+  "addressDefault": "الافتراضي",
+  "addressSetDefault": "تعيين كعنوان افتراضي",
+  "addressSaved": "تم حفظ العنوان.",
+  "addressDeleted": "تم حذف العنوان.",
+  "addressDeleteTitle": "حذف العنوان",
+  "addressDeleteBody": "هل تريد حذف هذا العنوان؟",
+  "profileTitle": "تعديل الملف الشخصي",
+  "profileSaved": "تم تحديث الملف الشخصي.",
+  "profileEmailChangeHint": "لتغيير البريد الإلكتروني أكد كلمة المرور الحالية.",
+  "currentPassword": "كلمة المرور الحالية",
+  "changePasswordTitle": "تغيير كلمة المرور",
+  "passwordChanged": "تم تغيير كلمة المرور. تم تسجيل الخروج من الأجهزة الأخرى.",
+  "deleteAccountTitle": "حذف الحساب",
+  "deleteAccountWarning": "حذف الحساب نهائي. سيتم مسح بياناتك الشخصية وعناوينك ومفضلتك وتسجيل خروجك من كل الأجهزة. تبقى الطلبات السابقة بدون بياناتك لأغراض المحاسبة.",
+  "deleteAccountNoPassword": "حسابي يستخدم تسجيل الدخول بجوجل (بدون كلمة مرور)",
+  "deleteAccountConfirmTitle": "حذف حسابك؟",
+  "deleteAccountConfirmBody": "لا يمكن التراجع عن هذا الإجراء.",
+  "deleteAccountAction": "احذف حسابي",
+  "deleteAccountDone": "تم حذف حسابك.",
+  "themeTitle": "المظهر",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "themeSystem": "حسب النظام",
+  "aboutTitle": "حول التطبيق",
+  "rateApp": "قيّم التطبيق",
+  "rateAppUnavailable": "صفحة التطبيق في المتجر غير متاحة بعد.",
+  "contactTitle": "تواصل معنا",
+  "contactPhone": "الهاتف",
+  "contactEmpty": "لا توجد بيانات تواصل متاحة.",
+  "blogTitle": "المدونة",
+  "blogEmpty": "لا توجد مقالات بعد.",
+  "drawerCollections": "المجموعات والعروض",
+  "drawerInfoPages": "معلومات",
+  "trackOrder": "تتبع طلب",
+  "trackOrderHint": "رابط الطلب أو رمزه",
+  "trackOrderInvalid": "هذا ليس رابط أو رمز طلب صالح.",
+  "launchTitle": "إطلاق محدود",
+  "launchContact": "الهاتف أو البريد الإلكتروني",
+  "launchQuantity": "الكمية",
+  "launchConsent": "أوافق على التواصل معي بخصوص هذا الإطلاق.",
+  "launchConsentRequired": "الموافقة مطلوبة.",
+  "launchAcceptTerms": "أوافق على شروط الطلب المسبق.",
+  "launchTermsRequired": "وافق على الشروط للمتابعة.",
+  "launchJoin": "انضم",
+  "launchThanks": "شكرا لك، تم تسجيل اهتمامك.",
+  "launchClosed": "هذا الإطلاق مغلق.",
+  "linkCopied": "تم نسخ الرابط.",
+  "copyLink": "نسخ الرابط",
+  "affiliateTitle": "برنامج التسويق بالعمولة",
+  "affiliateIntro": "شارك المنتجات واربح عمولة على كل طلب.",
+  "affiliateApply": "قدّم كمسوّق",
+  "affiliateApplied": "تم إرسال الطلب",
+  "affiliateAppliedBody": "حسابك بانتظار الموافقة. يمكنك تسجيل الدخول بعد الموافقة عليه.",
+  "affiliateWelcome": "أهلا، {name}",
+  "@affiliateWelcome": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateClicks": "النقرات",
+  "affiliateOrders": "الطلبات",
+  "affiliateConversion": "التحويل",
+  "affiliateSales": "إجمالي المبيعات",
+  "affiliateTier": "المستوى {name} - عمولة {percent}%",
+  "@affiliateTier": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateNextTier": "التالي: {name} عند {amount}",
+  "@affiliateNextTier": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateCommissions": "العمولات",
+  "affiliateRecentCommissions": "آخر العمولات",
+  "commissionPending": "قيد المراجعة",
+  "commissionApproved": "معتمدة",
+  "commissionPaid": "مدفوعة",
+  "commissionAvailable": "متاحة للسحب",
+  "affiliateProducts": "المنتجات والروابط",
+  "affiliateQr": "رمز QR",
+  "affiliatePayouts": "المدفوعات",
+  "payoutAvailable": "المتاح: {amount}",
+  "@payoutAvailable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutRequest": "اطلب سحب الرصيد",
+  "payoutRequested": "تم طلب السحب.",
+  "payoutsEmpty": "لا توجد مدفوعات بعد.",
+  "ambassadorTitle": "برنامج السفراء",
+  "ambassadorUnavailable": "برنامج السفراء غير متاح في هذا المتجر.",
+  "ambassadorIntro": "أنشئ روابط متتبعة لكل قناة وتابع أداء محتواك.",
+  "ambassadorDisclosure": "الإفصاح الذي يظهر مع منشوراتك",
+  "ambassadorTerms": "أوافق على شروط برنامج السفراء.",
+  "ambassadorJoin": "انضم للبرنامج",
+  "ambassadorReport": "آخر {days} يوم",
+  "@ambassadorReport": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ambassadorValid": "صالحة",
+  "ambassadorPending": "معلقة",
+  "ambassadorExcluded": "مستبعدة",
+  "ambassadorNewLink": "رابط متتبع جديد",
+  "ambassadorProduct": "المنتج",
+  "ambassadorCreateLink": "أنشئ الرابط",
+  "ambassadorLinks": "روابطي",
+  "ambassadorNoLinks": "لا توجد روابط بعد.",
+  "ambassadorIdeas": "أفكار للمحتوى",
+  "showPassword": "إظهار كلمة المرور",
+  "hidePassword": "إخفاء كلمة المرور"
+}

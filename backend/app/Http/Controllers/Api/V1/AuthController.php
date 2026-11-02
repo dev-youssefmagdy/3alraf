@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Requests\Api\DeleteAccountRequest;
 use App\Http\Requests\Api\ForgotPasswordRequest;
 use App\Http\Requests\Api\ResetPasswordRequest;
 use App\Http\Requests\Api\VerifyEmailRequest;
@@ -55,9 +56,18 @@ class AuthController extends ApiController
         return $this->respond(new CustomerResource($r->user()));
     }
 
+    /** PUT auth/me: profile + in-app password change (send `password`, `password_confirmation` and `current_password`; name and email are required). */
     public function update(ProfileRequest $r, CustomerAccountService $accounts): JsonResponse
     {
         return $this->respond(new CustomerResource($accounts->updateProfile($r->user(), $r->safe()->except(['password_confirmation', 'current_password']))), __('admin.saved'));
+    }
+
+    /** DELETE auth/me {password} (or {confirm:true} for Google-only accounts): anonymises the account, revokes every token. Irreversible. */
+    public function destroy(DeleteAccountRequest $r, CustomerAccountService $accounts): JsonResponse
+    {
+        $accounts->deleteAccount($r->user());
+
+        return $this->respond(null, __('store.api.account_deleted'));
     }
 
     public function forgotPassword(ForgotPasswordRequest $r): JsonResponse

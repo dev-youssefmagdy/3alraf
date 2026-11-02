@@ -12,10 +12,11 @@ class TenantController extends Controller
     public function index(TenantDirectory $directory): JsonResponse
     {
         $data = array_map(fn ($t) => [
-            'slug' => $t['slug'], 'name' => $t['name'], 'country' => $t['country'], 'currency' => $t['currency'],
-            'default_locale' => $t['default_locale'], 'locales' => $t['locales'], 'base_url' => $t['base_url'],
+            'slug' => $t['slug'], 'name' => $t['name'], 'country' => $t['country'], 'flag' => $t['flag'], 'currency' => $t['currency'],
+            'default_locale' => $t['default_locale'], 'locales' => $t['locales'], 'languages' => $t['languages'],
+            'logo_url' => $t['logo_url'], 'base_url' => $t['base_url'],
         ], $directory->active());
 
-        return response()->json(['data' => $data]);
+        return response()->json(['success' => true, 'message' => null, 'data' => $data, 'meta' => (object) []]);
     }
 }

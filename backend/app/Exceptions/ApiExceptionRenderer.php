@@ -33,7 +33,8 @@ class ApiExceptionRenderer
             [$status, $message] = [429, __('store.api.too_many')];
         } elseif ($e instanceof HttpExceptionInterface) {
             $status = $e->getStatusCode();
-            $message = $e->getMessage() ?: ($status === 404 ? __('store.api.not_found') : __('store.api.server_error'));
+            // Laravel turns firstOrFail() into a 404 HttpException whose message names the model class: never expose it
+            $message = $status === 404 && $e->getPrevious() instanceof ModelNotFoundException ? __('store.api.not_found') : ($e->getMessage() ?: ($status === 404 ? __('store.api.not_found') : __('store.api.server_error')));
         } elseif (config('app.debug')) {
             return null; // let Laravel show the debug payload
         } else {

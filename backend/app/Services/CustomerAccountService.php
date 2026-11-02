@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Customer;
 use App\Services\Auth\SessionRevoker;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class CustomerAccountService
@@ -41,5 +43,26 @@ class CustomerAccountService
         }
 
         return $c;
+    }
+
+    /**
+     * Account deletion (App Store / Play requirement): personal data on the account is anonymised, saved addresses, wishlist and push tokens are
+     * removed, every API token and web session is revoked, then the row is soft-deleted (its e-mail / google id are freed by FreesUniqueOnDelete).
+     * Orders stay attached to the (now anonymous) customer: their snapshots are kept for accounting.
+     */
+    public function deleteAccount(Customer $c): void
+    {
+        DB::transaction(function () use ($c) {
+            $c->tokens()->delete();
+            $c->addresses()->delete();
+            \App\Models\WishlistItem::where('customer_id', $c->id)->delete();
+            \App\Models\Device::where('customer_id', $c->id)->delete();
+            $c->forceFill([
+                'name' => 'Deleted customer', 'email' => 'deleted-'.$c->id.'@deleted.invalid', 'phone' => null, 'phone_country_code' => null,
+                'google_id' => null, 'avatar' => null, 'password' => Str::random(40), 'is_active' => false, 'email_verified_at' => null,
+            ])->save();
+            $this->sessions->revoke($c);
+            $c->delete();
+        });
     }
 }

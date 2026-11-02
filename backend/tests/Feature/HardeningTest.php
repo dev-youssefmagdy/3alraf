@@ -42,7 +42,7 @@ it('lists only ACTIVE tenants on the central landing page and exposes them as JS
     $json = $this->getJson($this->central.'/api/v1/tenants')->assertOk()->json('data');
     expect(collect($json)->pluck('slug')->all())->toEqualCanonicalizing(['egy', 'sa']);
     $egy = collect($json)->firstWhere('slug', 'egy');
-    expect(array_keys($egy))->toEqualCanonicalizing(['slug', 'name', 'country', 'currency', 'default_locale', 'locales', 'base_url'])
+    expect(array_keys($egy))->toEqualCanonicalizing(['slug', 'name', 'country', 'flag', 'currency', 'default_locale', 'locales', 'languages', 'logo_url', 'base_url'])
         ->and($egy['currency'])->toBe('EGP')->and($egy['base_url'])->toBe('http://egy.3alraf.test/');
 });
 

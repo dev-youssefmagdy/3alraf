@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MediaScanner::class, NullMediaScanner::class);
+        $this->app->bind(\App\Services\Push\PushDispatcher::class, \App\Services\Push\LogPushDispatcher::class);
         $this->app->scoped(AiAccess::class);
         $this->app->singleton(ApprovalService::class); // module handlers register on it
         $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('experiment_budget', fn ($ap) => app(ExperimentLabService::class)->materializeBudget($ap)));
@@ -46,7 +47,7 @@ class AppServiceProvider extends ServiceProvider
         Blade::if('growthFeature', fn (string $key) => app(GrowthFeatures::class)->active($key, current_tenant()));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
         // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).
-        foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
+        foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'devices' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.self::tenantKey($r).'|'.$r->ip()));
         }
 

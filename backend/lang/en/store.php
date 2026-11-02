@@ -59,4 +59,13 @@ return [
         'inactive' => 'This account is not active.', 'other_account' => 'This e-mail is already linked to a different Google account.',
     ],
     'phone_invalid' => 'Enter a valid phone number without the country code (:code is added automatically).', 'phone_wrong_country' => 'This store only accepts :code phone numbers.', 'phone_code_hint' => 'Country code :code is added automatically.',
+    'api' => [
+        'logged_out' => 'Logged out.', 'reset_sent' => 'If the e-mail exists, a reset code has been sent.', 'password_reset' => 'Your password has been reset.',
+        'verification_sent' => 'A verification code has been sent to your e-mail.', 'verified' => 'Your e-mail is verified.', 'already_verified' => 'This e-mail is already verified.',
+        'invalid_code' => 'The code is invalid or has expired.', 'too_many' => 'Too many attempts. Please try again later.', 'account_deleted' => 'Your account has been deleted.',
+        'unauthenticated' => 'Unauthenticated.', 'forbidden' => 'This action is not allowed.', 'not_found' => 'Not found.', 'server_error' => 'Something went wrong. Please try again.',
+        'tenant_not_found' => 'Store not found.', 'mail_expires' => 'This code expires in :minutes minutes.',
+        'mail_verify_subject' => 'Verify your e-mail - :store', 'mail_verify_line' => 'Your e-mail verification code is:',
+        'mail_reset_subject' => 'Reset your password - :store', 'mail_reset_line' => 'Your password reset code is:',
+    ],
 ];

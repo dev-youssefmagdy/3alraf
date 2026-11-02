@@ -1,0 +1,4817 @@
+openapi: 3.1.0
+info:
+  title: 3alraf Mobile API
+  version: 1.1.0
+  description: 'JSON API for the 3alraf customer mobile app. Full narrative contract (headers, envelope, pagination, errors, rate limits, flows):
+    docs/MOBILE_API.md.
+
+
+    Tenant: call the central host with `X-Tenant: <slug>` (or the tenant subdomain). Central-only: /tenants, /app-config, /health.
+
+    Envelope: {success, message, data, meta}; errors {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429. Money is
+    a decimal string.
+
+    Auth: Sanctum bearer tokens; customer (ability `customer`) and affiliate (ability `affiliate`) tokens are not interchangeable and are tenant-scoped.
+
+    Guests: persist the `X-Cart-Token` response header and send it on cart/checkout calls.
+
+    '
+servers:
+- url: https://example.com/api/v1
+  description: 'Central host. Send `X-Tenant: <slug>` (the mobile app always uses this one base URL).'
+- url: https://{tenant}.example.com/api/v1
+  description: Tenant host (alternative; the tenant comes from the subdomain).
+  variables:
+    tenant:
+      default: egy
+paths:
+  /addresses:
+    get:
+      summary: Saved addresses (default first)
+      operationId: addresses_index_get
+      tags:
+      - addresses
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  label: Home
+                  name: Ali
+                  phone: '01000000100'
+                  phone_country_code: '+20'
+                  phone_full: '+201000000100'
+                  city_id: 1
+                  city: Cairo
+                  address: St 1
+                  notes: null
+                  is_default: true
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Saved addresses (default first).
+    post:
+      summary: Create an address (the first one becomes default)
+      operationId: addresses_store_post
+      tags:
+      - addresses
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                city_id:
+                  type: string
+                address:
+                  type: string
+                notes:
+                  type: string
+                is_default:
+                  type: boolean
+              required:
+              - name
+              - phone
+              - city_id
+              - address
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Saved successfully.
+                data:
+                  id: 1
+                  label: Home
+                  name: Ali
+                  phone: '01000000100'
+                  phone_country_code: '+20'
+                  phone_full: '+201000000100'
+                  city_id: 1
+                  city: Cairo
+                  address: St 1
+                  notes: null
+                  is_default: true
+                meta: {}
+      description: 'Create an address (the first one becomes default).
+
+
+        Body (`*` required): `name`*, `phone`*, `phone_country_code`, `city_id`*, `address`*, `label`, `notes`, `is_default`
+
+
+        Rate limit 30/min.'
+  /addresses/{id}:
+    put:
+      summary: Update an address (another customer's id = 404)
+      operationId: addresses_update_put
+      tags:
+      - addresses
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                city_id:
+                  type: string
+                address:
+                  type: string
+                notes:
+                  type: string
+                is_default:
+                  type: boolean
+              required:
+              - name
+              - phone
+              - city_id
+              - address
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Update an address (another customer''s id = 404).
+
+
+        Body (`*` required): Same as create'
+    delete:
+      summary: Delete an address
+      operationId: addresses_destroy_delete
+      tags:
+      - addresses
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Delete an address.
+  /affiliate/ambassador:
+    get:
+      summary: 'Ambassador portal (feature `ambassadors`, else 403):'
+      operationId: affiliate_ambassador_show_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  enrolled: true
+                  ambassador:
+                    status: active
+                    disclosure: I am a paid brand partner
+                    terms_accepted_at: '2026-11-01T23:51:45+02:00'
+                  channels:
+                  - instagram
+                  ideas: []
+                  links:
+                  - id: 1
+                    channel: instagram
+                    product_id: 1
+                    clicks: 0
+                    url: http://egy.3alraf.test/l/0kcv8vr0
+                  report:
+                    valid_orders: 0
+                    pending_orders: 0
+                    excluded_orders: 0
+                    new_customer_share: null
+                    window_days: 14
+                    referral_cac: null
+                    by_channel:
+                      instagram:
+                        clicks: 0
+                        orders: 0
+                    disclosure: I am a paid brand partner
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `channels`, idea library, own tracked links
+        and a 30-day report (valid/pending/excluded orders, new-customer share, CAC; no margins).'
+  /affiliate/ambassador/join:
+    post:
+      summary: Opt in as an ambassador (disclosure + terms)
+      operationId: affiliate_ambassador_join_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                disclosure:
+                  type: string
+                terms_accepted:
+                  type: string
+              required:
+              - disclosure
+              - terms_accepted
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Welcome, you are now an ambassador.
+                data:
+                  status: active
+                  disclosure: I am a paid brand partner
+                  terms_accepted_at: '2026-11-01T23:51:45+02:00'
+                meta: {}
+      description: 'Opt in as an ambassador (disclosure + terms). Idempotent re-join updates the disclosure.
+
+
+        Body (`*` required): `disclosure`* (max 300; texts that reward fake reviews are refused with 422), `terms_accepted`* (true)'
+  /affiliate/ambassador/links:
+    post:
+      summary: Create a per-channel tracked link for a product (404 when not enrolled)
+      operationId: affiliate_ambassador_links_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: integer
+                channel:
+                  type: string
+              required:
+              - product_id
+              - channel
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Saved successfully.
+                data:
+                  id: 1
+                  channel: instagram
+                  product_id: 1
+                  clicks: 0
+                  url: http://egy.3alraf.test/l/0kcv8vr0
+                meta: {}
+      description: 'Create a per-channel tracked link for a product (404 when not enrolled). `url` is a short link on the store domain.
+
+
+        Body (`*` required): `product_id`*, `channel`* (one of `channels`, anything else is stored as `other`)'
+  /affiliate/dashboard:
+    get:
+      summary: Stats, tier, commissions, payouts
+      operationId: affiliate_dashboard_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  affiliate:
+                    id: 1
+                    name: Demo Affiliate
+                    email: aff@egy.test
+                    phone: null
+                    phone_country_code: null
+                    phone_full: null
+                    status: approved
+                    ref: b898c8e1-9c85-4582-87da-cff21b70fb32
+                  stats:
+                    clicks: 0
+                    orders: 0
+                    conversion_percent: 0
+                    lifetime_sales: '0.00'
+                    tier:
+                      name: Starter
+                      percent: '5.00'
+                      min_sales: '0.00'
+                    next_tier:
+                      name: Silver
+                      percent: '7.00'
+                      min_sales: '1000.00'
+                    commissions:
+                      pending: '0.00'
+                      approved: '0.00'
+                      paid: '0.00'
+                      available: '0.00'
+                  payouts: []
+                  recent_commissions: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Stats, tier, commissions, payouts.
+  /affiliate/login:
+    post:
+      summary: Sign in (approved affiliates only)
+      operationId: affiliate_login_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                remember:
+                  type: boolean
+              required:
+              - email
+              - password
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Welcome back!
+                data:
+                  token: 12|AbCdEf...
+                  token_type: Bearer
+                  abilities:
+                  - affiliate
+                  affiliate:
+                    id: 1
+                    name: Demo Affiliate
+                    email: aff@egy.test
+                    phone: null
+                    phone_country_code: null
+                    phone_full: null
+                    status: approved
+                    ref: b898c8e1-9c85-4582-87da-cff21b70fb32
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Sign in (approved affiliates only).
+
+
+        Body (`*` required): `email`*, `password`*'
+  /affiliate/logout:
+    post:
+      summary: Revoke the token
+      operationId: affiliate_logout_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Revoke the token.
+  /affiliate/me:
+    get:
+      summary: Profile; `ref` is the uuid used in share links / `X-Affiliate-Ref`
+      operationId: affiliate_me_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 1
+                  name: Demo Affiliate
+                  email: aff@egy.test
+                  phone: null
+                  phone_country_code: null
+                  phone_full: null
+                  status: approved
+                  ref: b898c8e1-9c85-4582-87da-cff21b70fb32
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Profile; `ref` is the uuid used in share links / `X-Affiliate-Ref`.
+  /affiliate/payouts:
+    get:
+      summary: Payout history
+      operationId: affiliate_payouts_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Payout history.
+    post:
+      summary: Request a payout of the approved balance
+      operationId: affiliate_payouts_request_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                message: No approved commission available for payout.
+                errors:
+                  amount:
+                  - No approved commission available for payout.
+                data: null
+                meta: {}
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Request a payout of the approved balance. 422 when nothing is available.
+
+
+        Rate limit 5/min.'
+  /affiliate/products:
+    get:
+      summary: Sellable products with the affiliate share `link` and `qr_url`
+      operationId: affiliate_products_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 2
+                  slug: mid
+                  name: P mid
+                  image: null
+                  price: '250.00'
+                  link: http://egy.3alraf.test/en/product/mid?utm_source=affiliate&aff=b898c8e1-9c85-4582-87da-cff21b70fb32
+                  qr_url: http://egy.3alraf.test/api/v1/affiliate/products/mid/qr
+                  variants: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Sellable products with the affiliate share `link` and `qr_url`.
+  /affiliate/products/{slug}/qr:
+    get:
+      summary: PNG QR of the share link (binary)
+      operationId: affiliate_qr_get
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - affiliateToken: []
+      responses:
+        '200':
+          description: PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'PNG QR of the share link (binary).
+
+
+        Binary response (`image/png`).'
+  /affiliate/register:
+    post:
+      summary: Apply as an affiliate
+      operationId: affiliate_register_post
+      tags:
+      - affiliate
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                password:
+                  type: string
+              required:
+              - name
+              - email
+              - password
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Registered. Your account is awaiting approval.
+                data:
+                  id: 2
+                  name: New
+                  email: newaff@x.test
+                  phone: null
+                  phone_country_code: null
+                  phone_full: null
+                  status: pending
+                  ref: b898c8e1-9c85-4582-87da-cff21b70fb32
+                meta: {}
+      description: 'Apply as an affiliate. No token until an admin approves.
+
+
+        Body (`*` required): `name`*, `email`*, `password`*, `password_confirmation`*, `phone`, `phone_country_code`'
+  /app-config:
+    get:
+      summary: Force-update and maintenance switches (config/mobile.php + env)
+      operationId: app-config_get
+      tags:
+      - app-config
+      parameters:
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - name: version
+        in: query
+        required: false
+        schema:
+          type: string
+          example: 1.0.0
+        description: App version; fills update_required/update_available
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                meta: {}
+                data:
+                  min_version: 1.0.0
+                  latest_version: 1.0.0
+                  store_urls:
+                    ios: null
+                    android: null
+                  maintenance: false
+                  maintenance_message: null
+                  update_required: true
+                  update_available: true
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Force-update and maintenance switches (config/mobile.php + env). `Accept-Language` selects the maintenance message (`ar`/`en`).
+
+
+        Query/params: `version` (optional): the app version, e.g. `1.2.0`. When given, `update_required` (version < min_version) and `update_available`
+        (version < latest_version) are filled, otherwise `null`.
+
+
+        `min_version` / `latest_version` are `x.y.z`. Env: `MOBILE_MIN_VERSION`, `MOBILE_LATEST_VERSION`, `MOBILE_STORE_URL_IOS|ANDROID`, `MOBILE_MAINTENANCE`,
+        `MOBILE_MAINTENANCE_MESSAGE_AR|EN`. Rate limit 120/min/IP. Never blocked by maintenance itself.'
+      servers:
+      - url: https://example.com/api/v1
+        description: Central host only
+  /auth/email/verification-notification:
+    post:
+      summary: Send the e-mail verification code
+      operationId: auth_verification_send_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: A verification code has been sent to your e-mail.
+                data: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Send the e-mail verification code. 422 when already verified.
+
+
+        Rate limit 5/min.'
+  /auth/email/verify:
+    post:
+      summary: Verify the e-mail with the code
+      operationId: auth_verification_verify_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required:
+              - code
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Verify the e-mail with the code. Returns the customer.
+
+
+        Body (`*` required): `code`*'
+  /auth/forgot-password:
+    post:
+      summary: Send a 6-digit reset code by e-mail
+      operationId: auth_forgot_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+              - email
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: If the e-mail exists, a reset code has been sent.
+                data: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Send a 6-digit reset code by e-mail. Always 200 (does not reveal whether the e-mail exists).
+
+
+        Body (`*` required): `email`*
+
+
+        Rate limit 5/min.'
+  /auth/google:
+    post:
+      summary: Google sign-in with an ID token from the Google SDK (verified server side)
+      operationId: auth_google_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Google sign-in with an ID token from the Google SDK (verified server side).
+
+
+        Body (`*` required): `id_token`*, `device_name`'
+  /auth/login:
+    post:
+      summary: E-mail + password sign in
+      operationId: auth_login_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                remember:
+                  type: boolean
+              required:
+              - email
+              - password
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Welcome back!
+                data:
+                  token: 12|AbCdEf...
+                  token_type: Bearer
+                  abilities:
+                  - customer
+                  customer:
+                    id: 1
+                    name: Demo Customer
+                    email: customer@egy.test
+                    phone: '01000000001'
+                    phone_country_code: null
+                    phone_full: '01000000001'
+                    email_verified: false
+                    created_at: '2026-11-01T21:51:44+02:00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'E-mail + password sign in. 5 failures lock the e-mail for a while (422). Adopts the guest cart.
+
+
+        Body (`*` required): `email`*, `password`*, `device_name`
+
+
+        Rate limit 10/min.'
+  /auth/logout:
+    post:
+      summary: Revoke the current token
+      operationId: auth_logout_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Logged out.
+                data: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Revoke the current token.
+  /auth/me:
+    get:
+      summary: Current customer
+      operationId: auth_me_get
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 1
+                  name: Demo Customer
+                  email: customer@egy.test
+                  phone: '01000000001'
+                  phone_country_code: null
+                  phone_full: '01000000001'
+                  email_verified: false
+                  created_at: '2026-11-01T21:51:44+02:00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Current customer.
+    put:
+      summary: Update profile and change password in-app
+      operationId: auth_update_put
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                password:
+                  type: string
+                current_password:
+                  type: string
+              required:
+              - name
+              - email
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Saved successfully.
+                data:
+                  id: 1
+                  name: Cust
+                  email: customer@egy.test
+                  phone: '01100000111'
+                  phone_country_code: '+20'
+                  phone_full: '+201100000111'
+                  email_verified: false
+                  created_at: '2026-11-01T21:51:44+02:00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Update profile and change password in-app. `name` and `email` are always required. To change the password send `password`
+        + `password_confirmation` + `current_password`; changing the e-mail also needs `current_password` (and resets verification). All other
+        tokens of the customer are revoked on a credential change; the calling token stays valid.
+
+
+        Body (`*` required): `name`*, `email`*, `phone`, `phone_country_code`, `password`, `password_confirmation`, `current_password` (required
+        when changing e-mail/password)'
+    delete:
+      summary: Delete the account (App Store / Play requirement)
+      operationId: auth_destroy_delete
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Your account has been deleted.
+                data: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Delete the account (App Store / Play requirement). Irreversible: personal data is anonymised, addresses/wishlist/push tokens
+        removed, all tokens revoked, the e-mail becomes free to register again. Orders are kept (anonymous customer) for accounting.
+
+
+        Body (`*` required): `password`* (the account password) - or `confirm: true` for Google-only accounts without a password
+
+
+        Rate limit 5/min. Wrong password = 422 on `password`.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                confirm:
+                  type: boolean
+  /auth/register:
+    post:
+      summary: Create an account and sign in
+      operationId: auth_register_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                password:
+                  type: string
+              required:
+              - name
+              - email
+              - password
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Welcome back!
+                data:
+                  token: 12|AbCdEf...
+                  token_type: Bearer
+                  abilities:
+                  - customer
+                  customer:
+                    id: 2
+                    name: Mona
+                    email: mona@example.com
+                    phone: null
+                    phone_country_code: null
+                    phone_full: null
+                    email_verified: false
+                    created_at: '2026-11-01T23:51:45+02:00'
+                meta: {}
+      description: 'Create an account and sign in. Sends an e-mail verification code. A guest cart sent in `X-Cart-Token` is adopted.
+
+
+        Body (`*` required): `name`*, `email`*, `password`* (min 8), `password_confirmation`*, `phone`, `phone_country_code`, `device_name`
+
+
+        Rate limit 10/min. The same e-mail may exist in another store.'
+  /auth/reset-password:
+    post:
+      summary: Reset with the code (single use, expires)
+      operationId: auth_reset_post
+      tags:
+      - auth
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                password:
+                  type: string
+              required:
+              - email
+              - code
+              - password
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Reset with the code (single use, expires). Revokes every existing session.
+
+
+        Body (`*` required): `email`*, `code`* (6 digits), `password`*, `password_confirmation`*'
+  /blog:
+    get:
+      summary: Published blog posts of the store, newest first
+      operationId: blog_index_get
+      tags:
+      - blog
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          maximum: 30
+      - name: page
+        in: query
+        schema:
+          type: integer
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - slug: hello-world
+                  title: Hello world
+                  excerpt: Summary
+                  meta_description: null
+                  published_at: '2026-10-31T21:51:44+02:00'
+                  url: http://egy.3alraf.test/en/blog/hello-world
+                meta:
+                  pagination:
+                    current_page: 1
+                    last_page: 1
+                    per_page: 9
+                    total: 1
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Published blog posts of the store, newest first. List items carry no `content`.
+
+
+        Query/params: `per_page` (1-30, default 9), `page`'
+  /blog/{slug}:
+    get:
+      summary: One post; `content` is HTML (sanitised server side; render with a safe HTML widget, never a WebView with JS)
+      operationId: blog_show_get
+      tags:
+      - blog
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  slug: hello-world
+                  title: Hello world
+                  excerpt: Summary
+                  meta_description: null
+                  published_at: '2026-10-31T21:51:44+02:00'
+                  url: http://egy.3alraf.test/en/blog/hello-world
+                  content: <p>Body</p>
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: One post; `content` is HTML (sanitised server side; render with a safe HTML widget, never a WebView with JS).
+  /brands:
+    get:
+      summary: Brands that have at least one sellable product
+      operationId: brands_get
+      tags:
+      - brands
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  name: Sony
+                  slug: sony
+                  logo: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Brands that have at least one sellable product.
+  /brands/{slug}:
+    get:
+      summary: Brand page header (`products_count` = sellable products)
+      operationId: brands_show_get
+      tags:
+      - brands
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 1
+                  name: Sony
+                  slug: sony
+                  logo: null
+                  products_count: 2
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Brand page header (`products_count` = sellable products). Its products: `GET /catalog?brand={slug}`.'
+  /bundles:
+    get:
+      summary: Live fixed-price bundles
+      operationId: bundles_index_get
+      tags:
+      - bundles
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Live fixed-price bundles. Add one with `POST /cart/items {bundle_id, quantity}`.
+  /bundles/{slug}:
+    get:
+      summary: One bundle
+      operationId: bundles_show_get
+      tags:
+      - bundles
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: One bundle.
+  /cart:
+    get:
+      summary: Current cart (customer cart when signed in, else the guest cart of `X-Cart-Token`)
+      operationId: cart_show_get
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 2
+                    name: P cheap
+                    slug: cheap
+                    image: null
+                    unit_price: '100.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '200.00'
+                    discount: '0.00'
+                    shipping: '0.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '0.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '200.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '0.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Current cart (customer cart when signed in, else the guest cart of `X-Cart-Token`). Totals are computed by the server; display
+        them, never recompute.
+  /cart/items:
+    post:
+      summary: Add a line (`product_id` + `variant_id` (0 = simple product)) or a bundle (`bundle_id`)
+      operationId: cart_add_post
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: integer
+                bundle_id:
+                  type: integer
+                variant_id:
+                  type: integer
+                quantity:
+                  type: integer
+              required:
+              - quantity
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Added to cart.
+                data:
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 2
+                    name: P cheap
+                    slug: cheap
+                    image: null
+                    unit_price: '100.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '200.00'
+                    discount: '0.00'
+                    shipping: '0.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '0.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '200.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '0.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Add a line (`product_id` + `variant_id` (0 = simple product)) or a bundle (`bundle_id`). Quantities add up. Returns the cart.
+        The first guest call returns the `X-Cart-Token` response header: persist it and send it on every call.
+
+
+        Body (`*` required): `product_id` or `bundle_id`, `variant_id`, `quantity`*
+
+
+        422 on insufficient stock. Rate limit 90/min.'
+  /cart/items/{item}:
+    put:
+      summary: Set the quantity of a line
+      operationId: cart_update_put
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: item
+        in: path
+        required: true
+        schema:
+          type: integer
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: integer
+                bundle_id:
+                  type: integer
+                variant_id:
+                  type: integer
+                quantity:
+                  type: integer
+              required:
+              - quantity
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 3
+                    name: P cheap
+                    slug: cheap
+                    image: null
+                    unit_price: '100.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '300.00'
+                    discount: '0.00'
+                    shipping: '0.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '0.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '300.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '0.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Set the quantity of a line.
+
+
+        Body (`*` required): `quantity`*'
+    delete:
+      summary: Remove a line
+      operationId: cart_remove_delete
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: item
+        in: path
+        required: true
+        schema:
+          type: integer
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Remove a line. Returns the cart.
+  /cart/merge:
+    post:
+      summary: 'After login:'
+      operationId: cart_merge_post
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  items:
+                  - id: 2
+                    product_id: 2
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 1
+                    name: P mid
+                    slug: mid
+                    image: null
+                    unit_price: '250.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '250.00'
+                    discount: '0.00'
+                    shipping: '0.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '0.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '250.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '0.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'After login: merge the guest cart (`X-Cart-Token`) into the customer cart (quantities add up) and consume the guest cart.'
+  /cart/quote:
+    post:
+      summary: Priced totals for the current selections; every field is optional (city, shipping company, payment method, prepay method
+      operationId: cart_quote_post
+      tags:
+      - cart
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                address_id:
+                  type: integer
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                city_id:
+                  type: string
+                address:
+                  type: string
+                notes:
+                  type: string
+                shipping_company_id:
+                  type: string
+                payment_method_id:
+                  type: string
+                prepay_method_id:
+                  type: string
+                discount_code:
+                  type: string
+                packaging_option_id:
+                  type: integer
+                proof:
+                  type: string
+                  format: binary
+              required:
+              - name
+              - phone
+              - city_id
+              - address
+              - shipping_company_id
+              - payment_method_id
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 3
+                    name: P cheap
+                    slug: cheap
+                    image: null
+                    unit_price: '100.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '300.00'
+                    discount: '0.00'
+                    shipping: '40.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '40.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '340.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '340.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Priced totals for the current selections; every field is optional (city, shipping company, payment method, prepay method,
+        `discount_code`, `packaging_option_id`). Use it for the cart screen and each checkout step.
+
+
+        Body (`*` required): Same fields as `POST /checkout` (none required)
+
+
+        Rate limit 60/min. An invalid discount code = 422 on `discount_code`.'
+  /catalog:
+    get:
+      summary: Product listing / search
+      operationId: catalog_get
+      tags:
+      - catalog
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: brand
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: tag
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: price_min
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: price_max
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 2
+                  slug: mid
+                  name: P mid
+                  image: null
+                  price: '250.00'
+                  old_price: '300.00'
+                  discount_percent: 17
+                  flash: false
+                  flash_ends_at: null
+                  rating: null
+                  reviews_count: 0
+                meta:
+                  pagination:
+                    current_page: 1
+                    last_page: 2
+                    per_page: 1
+                    total: 2
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Product listing / search. One endpoint for category, brand, tag and search pages (combine freely).
+
+
+        Query/params: `category` (slug), `brand` (slug), `tag` (slug), `q` (min 2 chars), `brands[]` (ids), `values[]` (attribute value ids),
+        `tags[]` (ids), `price_min`, `price_max`, `sort` (`newest|price_asc|price_desc|best_selling|top_rated`), `per_page` (1-60, default 24),
+        `page`. Unknown/inactive `category`, `brand` or `tag` slug = 404.
+
+
+        Pagination in `meta.pagination`.'
+  /catalog/facets:
+    get:
+      summary: 'Filter-sheet data for the same scope (accepts the same `category`/`brand`/`tag`/`q` params):'
+      operationId: catalog_facets_get
+      tags:
+      - catalog
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: brand
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: tag
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: price_min
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: price_max
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  brands:
+                  - id: 1
+                    name: Sony
+                    slug: sony
+                    logo: null
+                  attributes: []
+                  price:
+                    min: 100
+                    max: 250
+                  sorts:
+                  - newest
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Filter-sheet data for the same scope (accepts the same `category`/`brand`/`tag`/`q` params): brands, tags, attributes with
+        values, price range, sort keys.'
+  /catalog/suggest:
+    get:
+      summary: Live search suggestions (products + categories)
+      operationId: catalog_suggest_get
+      tags:
+      - catalog
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  products:
+                  - name: P cheap
+                    slug: cheap
+                    image: null
+                    price: '100.00'
+                  categories: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Live search suggestions (products + categories). `q` shorter than 2 chars returns empty lists.
+
+
+        Query/params: `q`'
+  /categories/{slug}:
+    get:
+      summary: 'Category page header:'
+      operationId: categories_show_get
+      tags:
+      - categories
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 1
+                  name: Devices
+                  slug: devices
+                  image: null
+                  icon: null
+                  description: null
+                  parent_id: null
+                  breadcrumbs:
+                  - id: 1
+                    name: Devices
+                    slug: devices
+                  children: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Category page header: name, image, icon, description, breadcrumbs (root to self), active children. Its products: `GET /catalog?category={slug}`.'
+  /checkout:
+    post:
+      summary: Place the order from the cart
+      operationId: checkout_place_post
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                address_id:
+                  type: integer
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                city_id:
+                  type: string
+                address:
+                  type: string
+                notes:
+                  type: string
+                shipping_company_id:
+                  type: string
+                payment_method_id:
+                  type: string
+                prepay_method_id:
+                  type: string
+                discount_code:
+                  type: string
+                packaging_option_id:
+                  type: integer
+                proof:
+                  type: string
+                  format: binary
+              required:
+              - name
+              - phone
+              - city_id
+              - address
+              - shipping_company_id
+              - payment_method_id
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Your order has been placed.
+                data:
+                  number: ORD-000001
+                  token: 2e81f703-717c-4d21-9762-f47f823bff9f
+                  status:
+                    value: pending
+                    label: Pending
+                  payment_status: unpaid
+                  proof_status: null
+                  payment_method:
+                    id: 1
+                    type: cod
+                    name: Cash on delivery
+                  subtotal: '300.00'
+                  discount: '0.00'
+                  shipping: '40.00'
+                  tax: '0.00'
+                  payment_fee: '0.00'
+                  total: '340.00'
+                  paid_amount: '0.00'
+                  due: '340.00'
+                  cod_fee: '0.00'
+                  cod_fee_label: null
+                  cod_amount: '340.00'
+                  prepaid_shipping: '0.00'
+                  currency: EGP
+                  packaging_fee: '0.00'
+                  packaging_name: null
+                  placed_at: '2026-11-01T23:51:45+02:00'
+                  items_count: 3
+                  customer:
+                    name: Ali
+                    phone: '01000000100'
+                    phone_country_code: '+20'
+                    phone_full: '+201000000100'
+                    email: g@x.test
+                  city: Cairo
+                  address: St 1
+                  notes: null
+                  shipping_company: Fast Shipping
+                  prepay_method: null
+                  has_proof: false
+                  pay_now: '340.00'
+                  can_pay_online: false
+                  can_upload_proof: false
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    bundle_name: null
+                    bundle_group: null
+                    name: P cheap
+                    sku: CHEAP
+                    unit_price: '100.00'
+                    quantity: 3
+                    line_subtotal: '300.00'
+                    line_discount: '0.00'
+                    returned_qty: 0
+                  timeline:
+                  - status: pending
+                    note: null
+                    at: '2026-11-01T23:51:45+02:00'
+                  returns: []
+                meta:
+                  next_action: none
+                  payment_url: null
+      description: 'Place the order from the cart. Guests need `name`, `phone`, `city_id`, `address`; signed-in customers may send `address_id`
+        instead. The order always waits for admin confirmation. Follow `meta.next_action`: `none` (COD), `redirect_to_payment` (open `meta.payment_url`
+        in a WebView, then poll `GET /payments/return/{token}`), `retry_payment` (`POST /orders/{token}/pay`), `upload_proof`.
+
+
+        Body (`*` required): `address_id` (customer address) or `name`*, `phone`*, `phone_country_code`, `email`, `city_id`*, `address`*, `notes`;
+        `shipping_company_id`*, `payment_method_id`*, `prepay_method_id` (COD with upfront shipping), `discount_code`, `packaging_option_id`,
+        `proof` (file: jpg/png/webp/pdf, required for wallet/bank-transfer methods; multipart)
+
+
+        Rate limit 20/min. 429 + `Retry-After` when the proof anti-abuse limiter trips.'
+  /checkout/cities:
+    get:
+      summary: Cities for the address form
+      operationId: checkout_cities_get
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  name: Cairo
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Cities for the address form.
+  /checkout/packaging:
+    get:
+      summary: Special-packaging options (price only)
+      operationId: checkout_packaging_get
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Special-packaging options (price only).
+  /checkout/payment-methods:
+    get:
+      summary: Usable payment methods
+      operationId: checkout_payment-methods_get
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  type: cod
+                  provider: cod
+                  name: Cash on delivery
+                  instructions: null
+                  account_number: null
+                  requires_proof: false
+                  fee_percent: '0.000'
+                  fee_fixed: '0.00'
+                meta:
+                  cod_collect_shipping_upfront: false
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Usable payment methods. `meta.cod_collect_shipping_upfront=true` means COD needs a prepaid shipping leg (`prepay_method_id`
+        + proof).
+  /checkout/shipping:
+    get:
+      summary: Shipping options for a city with the order total per option
+      operationId: checkout_shipping_get
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - shipping_company_id: 1
+                  name: Fast Shipping
+                  eta_days: 1-2
+                  supports_cod: true
+                  fee: '40.00'
+                  free: false
+                  order_total: '340.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Shipping options for a city with the order total per option.
+
+
+        Query/params: `city_id`*'
+  /checkout/validate:
+    post:
+      summary: Full quote with the strict checkout rules (stock, discount, shipping, payment, proof)
+      operationId: checkout_validate_post
+      tags:
+      - checkout
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                address_id:
+                  type: integer
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                city_id:
+                  type: string
+                address:
+                  type: string
+                notes:
+                  type: string
+                shipping_company_id:
+                  type: string
+                payment_method_id:
+                  type: string
+                prepay_method_id:
+                  type: string
+                discount_code:
+                  type: string
+                packaging_option_id:
+                  type: integer
+                proof:
+                  type: string
+                  format: binary
+              required:
+              - name
+              - phone
+              - city_id
+              - address
+              - shipping_company_id
+              - payment_method_id
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    is_bundle: false
+                    components: []
+                    quantity: 3
+                    name: P cheap
+                    slug: cheap
+                    image: null
+                    unit_price: '100.00'
+                    available: true
+                  packaging: null
+                  has_flash: false
+                  totals:
+                    subtotal: '300.00'
+                    discount: '0.00'
+                    shipping: '40.00'
+                    shipping_discount: '0.00'
+                    shipping_net: '40.00'
+                    tax: '0.00'
+                    payment_fee: '0.00'
+                    total: '340.00'
+                    cod_fee: '0.00'
+                    cod_fee_label: COD fee
+                    packaging_fee: '0.00'
+                    cod_amount: '340.00'
+                    prepaid_shipping: '0.00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Full quote with the strict checkout rules (stock, discount, shipping, payment, proof). 200 = placeable; 422 with field `errors`
+        otherwise. Send multipart when a `proof` file is included.
+
+
+        Body (`*` required): Same as `POST /checkout`
+
+
+        Rate limit 40/min.'
+  /custom-pages:
+    get:
+      summary: Active custom landing pages
+      operationId: custom-pages_index_get
+      tags:
+      - custom-pages
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - slug: offers
+                  title: Offers
+                  url: http://egy.3alraf.test/offers
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Active custom landing pages.
+  /custom-pages/{slug}:
+    get:
+      summary: Custom page + its product grid (pinned first)
+      operationId: custom-pages_show_get
+      tags:
+      - custom-pages
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Custom page + its product grid (pinned first).
+
+
+        Query/params: `price_min`, `price_max`, `sort` (`newest|price_asc|price_desc|best_selling`), `page`'
+  /devices:
+    post:
+      summary: Register/refresh a push token (FCM)
+      operationId: devices_store_post
+      tags:
+      - devices
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                platform:
+                  type: string
+                locale:
+                  type: string
+                app_version:
+                  type: string
+              required:
+              - token
+              - platform
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Saved successfully.
+                data:
+                  id: 1
+                  platform: android
+                  locale: ar
+                  bound_to_customer: true
+                meta: {}
+      description: 'Register/refresh a push token (FCM). Upsert by token within the store; with a bearer token the device is bound to the customer.
+        Call after login and whenever FCM rotates the token. Sending is not implemented yet (see Push).
+
+
+        Body (`*` required): `token`* (20-512 chars), `platform`* (`android|ios|web`), `locale`, `app_version`
+
+
+        Rate limit 30/min.'
+    delete:
+      summary: Unregister a push token (call on logout / opt-out)
+      operationId: devices_destroy_delete
+      tags:
+      - devices
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Deleted successfully.
+                data: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Unregister a push token (call on logout / opt-out). Idempotent.
+
+
+        Body (`*` required): `token`*'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              properties:
+                token:
+                  type: string
+  /gift-finder:
+    post:
+      summary: Gift finder search (feature `gift_finder`)
+      operationId: gift-finder_search_post
+      tags:
+      - gift-finder
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                budget:
+                  type: number
+                occasion:
+                  type: string
+                recipient:
+                  type: string
+                category_id:
+                  type: integer
+                restrictions:
+                  type: string
+              required:
+              - budget
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Gift finder search (feature `gift_finder`).
+
+
+        Body (`*` required): `budget`* (number), `occasion`, `recipient`, `category_id`, `restrictions`'
+  /gift-finder/{token}/cart:
+    post:
+      summary: Add the suggested gift set from a search to the cart (feature `gift_finder`)
+      operationId: gift-finder_cart_post
+      tags:
+      - gift-finder
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Add the suggested gift set from a search to the cart (feature `gift_finder`).
+  /health:
+    get:
+      summary: Liveness/readiness probe (database, cache, storage, failed jobs)
+      operationId: health_get
+      tags:
+      - health
+      parameters:
+      - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              example:
+                status: ok
+                checks:
+                  database: ok
+                  cache: ok
+                  storage: ok
+                  failed_jobs: ok
+                time: '2026-11-01T21:51:44+00:00'
+        '503':
+          description: A check failed
+      description: Liveness/readiness probe (database, cache, storage, failed jobs). Not enveloped.
+      servers:
+      - url: https://example.com/api/v1
+        description: Central host only
+  /home:
+    get:
+      summary: 'Home screen payload:'
+      operationId: home_get
+      tags:
+      - home
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  banners:
+                    hero: []
+                    strips: []
+                    tiles: []
+                    popup: null
+                  categories:
+                  - id: 1
+                    name: Devices
+                    slug: devices
+                    image: null
+                    icon: null
+                    children: []
+                  flash_sale: null
+                  rails:
+                    recommended:
+                    - id: 2
+                      slug: mid
+                      name: P mid
+                      image: null
+                      price: '250.00'
+                      old_price: '300.00'
+                      discount_percent: 17
+                      flash: false
+                      flash_ends_at: null
+                      rating: null
+                      reviews_count: 0
+                    most_sold: []
+                    most_reviewed: []
+                  brands:
+                  - id: 1
+                    name: Sony
+                    slug: sony
+                    logo: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Home screen payload: banners (hero/strips/tiles/popup), category rail, flash sale, product rails, brands.'
+  /launch/{code}:
+    get:
+      summary: Small-batch launch page (interest / survey / limited stock / pre-order)
+      operationId: launch_show_get
+      tags:
+      - launch
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  code: abcd1234
+                  name: Rose serum pilot
+                  description: Help us decide
+                  mode: survey
+                  survey_question: Which size would you buy?
+                  preorder: false
+                  preorder_terms: null
+                  is_open: true
+                  ends_on: null
+                  product:
+                    id: 1
+                    slug: cheap
+                    name: P cheap
+                    image: null
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Small-batch launch page (interest / survey / limited stock / pre-order). Feature `small_batch_lab`. `code` = 6-12 lowercase
+        alphanumerics; draft or other-store tests = 404.
+
+
+        When `preorder` is true, show `preorder_terms` and send `preorder_accepted=true`.'
+    post:
+      summary: 'Join a launch (idempotent per contact:'
+      operationId: launch_signup_post
+      tags:
+      - launch
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact:
+                  type: string
+                answer:
+                  type: string
+                quantity:
+                  type: integer
+                preorder_accepted:
+                  type: boolean
+                consent:
+                  type: string
+              required:
+              - contact
+              - consent
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Thank you, your interest is recorded.
+                data:
+                  created: true
+                meta: {}
+      description: 'Join a launch (idempotent per contact: a repeat returns `created:false`, HTTP 200). 422 when the test is closed, sold out,
+        consent/terms missing.
+
+
+        Body (`*` required): `contact`* (phone or e-mail, max 120), `answer` (survey, max 300), `quantity` (1-20), `preorder_accepted`, `consent`*
+        (must be true)'
+  /menu:
+    get:
+      summary: Category tree (nested `children`)
+      operationId: menu_get
+      tags:
+      - menu
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  name: Devices
+                  slug: devices
+                  image: null
+                  icon: null
+                  children: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Category tree (nested `children`).
+  /orders:
+    get:
+      summary: The customer's orders, newest first (no items)
+      operationId: orders_index_get
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - number: ORD-000002
+                  token: 184aa88f-78b2-4f83-92aa-86bc8b9df0b8
+                  status:
+                    value: pending
+                    label: Pending
+                  payment_status: unpaid
+                  proof_status: null
+                  payment_method:
+                    id: 1
+                    type: cod
+                    name: Cash on delivery
+                  subtotal: '200.00'
+                  discount: '0.00'
+                  shipping: '40.00'
+                  tax: '0.00'
+                  payment_fee: '0.00'
+                  total: '240.00'
+                  paid_amount: '0.00'
+                  due: '240.00'
+                  cod_fee: '0.00'
+                  cod_fee_label: null
+                  cod_amount: '240.00'
+                  prepaid_shipping: '0.00'
+                  currency: EGP
+                  packaging_fee: '0.00'
+                  packaging_name: null
+                  placed_at: '2026-11-01T23:51:45+02:00'
+                  items_count: 2
+                meta:
+                  pagination:
+                    current_page: 1
+                    last_page: 1
+                    per_page: 10
+                    total: 1
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'The customer''s orders, newest first (no items).
+
+
+        Query/params: `per_page` (1-50, default 10), `page`'
+  /orders/{token}:
+    get:
+      summary: 'Order detail by its unguessable public token (guest-safe):'
+      operationId: orders_show_get
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  number: ORD-000001
+                  token: 2e81f703-717c-4d21-9762-f47f823bff9f
+                  status:
+                    value: pending
+                    label: Pending
+                  payment_status: unpaid
+                  proof_status: null
+                  payment_method:
+                    id: 1
+                    type: cod
+                    name: Cash on delivery
+                  subtotal: '300.00'
+                  discount: '0.00'
+                  shipping: '40.00'
+                  tax: '0.00'
+                  payment_fee: '0.00'
+                  total: '340.00'
+                  paid_amount: '0.00'
+                  due: '340.00'
+                  cod_fee: '0.00'
+                  cod_fee_label: null
+                  cod_amount: '340.00'
+                  prepaid_shipping: '0.00'
+                  currency: EGP
+                  packaging_fee: '0.00'
+                  packaging_name: null
+                  placed_at: '2026-11-01T23:51:45+02:00'
+                  items_count: 3
+                  customer:
+                    name: Ali
+                    phone: '01000000100'
+                    phone_country_code: '+20'
+                    phone_full: '+201000000100'
+                    email: g@x.test
+                  city: Cairo
+                  address: St 1
+                  notes: null
+                  shipping_company: Fast Shipping
+                  prepay_method: null
+                  has_proof: false
+                  pay_now: '340.00'
+                  can_pay_online: false
+                  can_upload_proof: false
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    bundle_name: null
+                    bundle_group: null
+                    name: P cheap
+                    sku: CHEAP
+                    unit_price: '100.00'
+                    quantity: 3
+                    line_subtotal: '300.00'
+                    line_discount: '0.00'
+                    returned_qty: 0
+                  timeline:
+                  - status: pending
+                    note: null
+                    at: '2026-11-01T23:51:45+02:00'
+                  returns: []
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Order detail by its unguessable public token (guest-safe): items, customer, timeline, returns, payment state, `can_pay_online`,
+        `can_upload_proof`.'
+  /orders/{token}/cancel:
+    post:
+      summary: Cancel with a structured reason (feature `return_intel`; 404 when off)
+      operationId: orders_cancel_post
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Cancel with a structured reason (feature `return_intel`; 404 when off).
+
+
+        Body (`*` required): `reason_code`'
+  /orders/{token}/invoice:
+    get:
+      summary: 'Invoice as a PDF download (`Content-Type:'
+      operationId: orders_invoice_get
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: PDF invoice
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Invoice as a PDF download (`Content-Type: application/pdf`, `Content-Disposition: attachment`). Rendered in the request locale.
+        Binary response, not enveloped; 404 for an unknown token or another store''s order.
+
+
+        Rate limit 10/min. Save the bytes to a temp file and open/share it.'
+  /orders/{token}/pay:
+    post:
+      summary: 'New gateway link for an unpaid online order:'
+      operationId: orders_pay_post
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'New gateway link for an unpaid online order: `data.payment_url`.'
+  /orders/{token}/proof:
+    get:
+      summary: 'The uploaded transfer proof (image/PDF stream from the private disk, `Cache-Control:'
+      operationId: orders_proof_file_get
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Proof file (image or PDF)
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'The uploaded transfer proof (image/PDF stream from the private disk, `Cache-Control: private, no-store`). 404 when nothing
+        was uploaded.
+
+
+        Binary response, not enveloped. Rate limit 10/min.'
+    post:
+      summary: 'Upload or replace the wallet-transfer proof (multipart field `proof`:'
+      operationId: orders_proof_post
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                proof:
+                  type: string
+                  format: binary
+              required:
+              - proof
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Upload or replace the wallet-transfer proof (multipart field `proof`: jpg, png, webp, pdf). Returns the order. The admin approval
+        is what confirms payment.
+
+
+        Body (`*` required): `proof`* (file)
+
+
+        Rate limit 10/min plus a re-upload limiter (429 + `Retry-After`).'
+  /orders/{token}/return:
+    post:
+      summary: 'Request a return for a delivered order (owner only; 403 otherwise, 422 when not delivered or quantities exceed what was '
+      operationId: orders_return_post
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items: {}
+                reason:
+                  type: string
+              required:
+              - items
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Return created.
+                data:
+                  number: RET-000001
+                  status: requested
+                  reason: broken
+                  refund_amount: ''
+                  requested_at: '2026-11-01T23:51:45+02:00'
+                meta: {}
+      description: 'Request a return for a delivered order (owner only; 403 otherwise, 422 when not delivered or quantities exceed what was bought).
+
+
+        Body (`*` required): `items`* `[{order_item_id, quantity}]`, `reason`'
+  /orders/{token}/track:
+    get:
+      summary: 'Compact tracking:'
+      operationId: orders_track_get
+      tags:
+      - orders
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  number: ORD-000001
+                  status: pending
+                  payment_status: unpaid
+                  timeline:
+                  - status: pending
+                    note: null
+                    at: '2026-11-01T23:51:45+02:00'
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Compact tracking: number, status, payment status, timeline.'
+  /pages:
+    get:
+      summary: Static pages (terms, privacy, about...)
+      operationId: pages_get
+      tags:
+      - pages
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - slug: privacy-policy
+                  title: Privacy policy
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Static pages (terms, privacy, about...).
+  /pages/{slug}:
+    get:
+      summary: One static page
+      operationId: pages_show_get
+      tags:
+      - pages
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  slug: terms
+                  title: Terms & conditions
+                  content: Content of Terms & conditions
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: One static page. `content` is plain text / light HTML.
+  /payments/return/{token}:
+    get:
+      summary: Call when the in-app browser returns from the gateway
+      operationId: payments_return_get
+      tags:
+      - payments
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  number: ORD-000001
+                  token: 2e81f703-717c-4d21-9762-f47f823bff9f
+                  status:
+                    value: pending
+                    label: Pending
+                  payment_status: unpaid
+                  proof_status: null
+                  payment_method:
+                    id: 1
+                    type: cod
+                    name: Cash on delivery
+                  subtotal: '300.00'
+                  discount: '0.00'
+                  shipping: '40.00'
+                  tax: '0.00'
+                  payment_fee: '0.00'
+                  total: '340.00'
+                  paid_amount: '0.00'
+                  due: '340.00'
+                  cod_fee: '0.00'
+                  cod_fee_label: null
+                  cod_amount: '340.00'
+                  prepaid_shipping: '0.00'
+                  currency: EGP
+                  packaging_fee: '0.00'
+                  packaging_name: null
+                  placed_at: '2026-11-01T23:51:45+02:00'
+                  items_count: 3
+                  customer:
+                    name: Ali
+                    phone: '01000000100'
+                    phone_country_code: '+20'
+                    phone_full: '+201000000100'
+                    email: g@x.test
+                  city: Cairo
+                  address: St 1
+                  notes: null
+                  shipping_company: Fast Shipping
+                  prepay_method: null
+                  has_proof: false
+                  pay_now: '340.00'
+                  can_pay_online: false
+                  can_upload_proof: false
+                  items:
+                  - id: 1
+                    product_id: 1
+                    variant_id: 0
+                    bundle_id: null
+                    bundle_name: null
+                    bundle_group: null
+                    name: P cheap
+                    sku: CHEAP
+                    unit_price: '100.00'
+                    quantity: 3
+                    line_subtotal: '300.00'
+                    line_discount: '0.00'
+                    returned_qty: 0
+                  timeline:
+                  - status: pending
+                    note: null
+                    at: '2026-11-01T23:51:45+02:00'
+                  returns: []
+                meta:
+                  paid: false
+                  authoritative: false
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Call when the in-app browser returns from the gateway. NOT authoritative: only the signed webhook marks an order paid, so
+        poll until `meta.paid` is true.'
+  /products/{slug}:
+    get:
+      summary: 'Product detail:'
+      operationId: products_show_get
+      tags:
+      - products
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 2
+                  slug: mid
+                  name: P mid
+                  description: null
+                  sku: MID
+                  barcode: '2006938135225'
+                  type: simple
+                  brand:
+                    id: 1
+                    name: Sony
+                    logo: null
+                  categories:
+                  - id: 1
+                    name: Devices
+                    slug: devices
+                  images: []
+                  price: '250.00'
+                  regular_price: '300.00'
+                  options: []
+                  variants:
+                  - id: 0
+                    values: []
+                    price: '250.00'
+                    old: '300.00'
+                    flash_ends: null
+                    stock: 50
+                    in_stock: true
+                    label: null
+                    alert: 5
+                    barcode: '2006938135225'
+                    sku: MID
+                    image: null
+                  rating:
+                    average: 0
+                    count: 0
+                  reviews: []
+                  related:
+                  - id: 1
+                    slug: cheap
+                    name: P cheap
+                    image: null
+                    price: '100.00'
+                    old_price: null
+                    discount_percent: null
+                    flash: false
+                    flash_ends_at: null
+                    rating: null
+                    reviews_count: 0
+                  in_wishlist: false
+                  can_review: false
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Product detail: gallery, variants with exact prices/stock, options, rating, reviews, related, `in_wishlist`, `can_review`.'
+  /products/{slug}/reviews:
+    get:
+      summary: Approved reviews (paginated)
+      operationId: products_reviews_get
+      tags:
+      - products
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data: []
+                meta:
+                  pagination:
+                    current_page: 1
+                    last_page: 1
+                    per_page: 20
+                    total: 0
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Approved reviews (paginated).
+    post:
+      summary: Write a review (delivered purchase only, one per product; goes to moderation)
+      operationId: products_reviews_store_post
+      tags:
+      - products
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                body:
+                  type: string
+              required:
+              - rating
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Thanks! Your review will appear after moderation.
+                data:
+                  id: 1
+                  rating: 5
+                  body: Great product
+                  status: pending
+                  author: null
+                  created_at: '2026-11-01T23:51:45+02:00'
+                meta: {}
+      description: 'Write a review (delivered purchase only, one per product; goes to moderation).
+
+
+        Body (`*` required): `rating`* (1-5), `body`
+
+
+        Rate limit 10/min.'
+  /stock-requests:
+    post:
+      summary: '"Notify me when back in stock" (works for guests; a bearer token links the request to the customer)'
+      operationId: stock-requests_store_post
+      tags:
+      - stock-requests
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: integer
+                variant_id:
+                  type: integer
+                name:
+                  type: string
+                phone:
+                  type: string
+                phone_country_code:
+                  type: string
+                note:
+                  type: string
+              required:
+              - product_id
+              - name
+              - phone
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '201':
+          description: Example
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Your request was sent. We will contact you soon.
+                data: null
+                meta: {}
+      description: '"Notify me when back in stock" (works for guests; a bearer token links the request to the customer). Same rules and de-duplication
+        as the web form: the same phone asking twice for the same item while the first is open is a no-op (still 201).
+
+
+        Body (`*` required): `product_id`* (sellable product), `variant_id`, `name`* (max 120), `phone`* (no country code; the store code is added),
+        `phone_country_code`, `note` (max 500)
+
+
+        Rate limit: 3/min and 15/hour per IP.'
+  /store:
+    get:
+      summary: 'Store profile for the UI:'
+      operationId: store_get
+      tags:
+      - store
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  slug: egy
+                  name: Egypt Store
+                  country: EG
+                  currency:
+                    code: EGP
+                    symbol: EGP
+                  timezone: Africa/Cairo
+                  default_locale: ar
+                  locales:
+                  - code: ar
+                    rtl: true
+                  cod_collect_shipping_upfront: false
+                  prices_include_tax: false
+                  logo_url: http://egy.3alraf.test/logo.png
+                  favicon_url: http://egy.3alraf.test/logo-192.png
+                  colors:
+                    primary: '#A8456C'
+                    primary_dark: '#8F3A5C'
+                    primary_soft: '#C96F91'
+                    primary_tint: '#FBEAF0'
+                    accent: '#D7B987'
+                    accent_tint: '#F4E8D5'
+                    text: '#45313B'
+                    heading: '#2F2129'
+                    muted: '#7A6672'
+                    border: '#F0DDE4'
+                    surface: '#FFF9F7'
+                    card: '#FFFFFF'
+                    success: '#2F806A'
+                    warning: '#D99A36'
+                    danger: '#C8384F'
+                  contact:
+                    email: hello@egy.3alraf.com
+                    phone: +20 100 123 4567
+                    whatsapp: '201001234567'
+                  social:
+                    facebook: https://facebook.com/3alraf
+                    instagram: https://instagram.com/3alraf
+                  app_links:
+                    ios: https://apps.apple.com/app/id000
+                    android: https://play.google.com/store/apps/details?id=com.alraf.shop
+                  footer:
+                    pages:
+                    - slug: privacy-policy
+                      title: Privacy policy
+                    has_blog: true
+                    payment_methods:
+                    - name: Cash on delivery
+                      type: cod
+                      provider: cod
+                  features:
+                    gift_finder: true
+                    small_batch_lab: true
+                    ambassadors: true
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon, colours), contact (email/phone/WhatsApp
+        digits for `wa.me/<digits>`), social links, app-store links, footer data (static pages, whether a blog exists, accepted payment methods)
+        and feature switches for optional sections.
+
+
+        `colors` = tenant overrides (`settings.branding.colors`, hex only) merged over the 3alraf defaults (config/mobile.php), so every key is
+        always present. `social` only contains configured networks. `contact.whatsapp` = `settings.contact.whatsapp` else the organisation phone,
+        digits only. `features.*` hide Gift finder / Small-batch launch / Ambassadors entry points when `false` (the matching endpoints answer
+        403 `feature_disabled`).'
+  /tags/{slug}:
+    get:
+      summary: Tag page header
+      operationId: tags_show_get
+      tags:
+      - tags
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                  id: 1
+                  name: New
+                  slug: new
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Tag page header. Its products: `GET /catalog?tag={slug}`.'
+  /tenants:
+    get:
+      summary: Active stores (countries) for the country picker
+      operationId: tenants_get
+      tags:
+      - tenants
+      parameters:
+      - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - slug: egy
+                  name: Egypt Store
+                  country: EG
+                  flag: 🇪🇬
+                  currency: EGP
+                  default_locale: ar
+                  locales:
+                  - ar
+                  languages:
+                  - العربية
+                  logo_url: http://3alraf.test/logo.png
+                  base_url: http://egy.3alraf.test/
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 'Active stores (countries) for the country picker. Sorted by name. `languages` are native names of `locales`; `logo_url` is
+        the store logo (falls back to the 3alraf logo); `base_url` is informational: the app keeps using ONE base URL plus `X-Tenant`.
+
+
+        Rate limit 60/min/IP.'
+      servers:
+      - url: https://example.com/api/v1
+        description: Central host only
+  /wishlist:
+    get:
+      summary: Wishlist products
+      operationId: wishlist_index_get
+      tags:
+      - wishlist
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: null
+                data:
+                - id: 1
+                  slug: cheap
+                  name: P cheap
+                  image: null
+                  price: '100.00'
+                  old_price: null
+                  discount_percent: null
+                  flash: false
+                  flash_ends_at: null
+                  rating: null
+                  reviews_count: 0
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Wishlist products.
+  /wishlist/{product}/toggle:
+    post:
+      summary: Add/remove a product (`{product}` = numeric product id)
+      operationId: wishlist_toggle_post
+      tags:
+      - wishlist
+      parameters:
+      - $ref: '#/components/parameters/XTenant'
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: product
+        in: path
+        required: true
+        schema:
+          type: integer
+      security:
+      - customerToken: []
+      responses:
+        '200':
+          description: Success (envelope)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+              example:
+                success: true
+                message: Added to wishlist.
+                data:
+                  in_wishlist: true
+                meta: {}
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing / wrong-type / other-tenant token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: Add/remove a product (`{product}` = numeric product id). Returns `in_wishlist`.
+components:
+  securitySchemes:
+    customerToken:
+      type: http
+      scheme: bearer
+      description: Sanctum token with ability `customer` (POST /auth/login)
+    affiliateToken:
+      type: http
+      scheme: bearer
+      description: Sanctum token with ability `affiliate` (POST /affiliate/login)
+  parameters:
+    XTenant:
+      name: X-Tenant
+      in: header
+      required: false
+      description: Store slug when calling the central host
+      schema:
+        type: string
+        example: egy
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: false
+      description: ar | en (limited to the store locales)
+      schema:
+        type: string
+        example: ar
+    XCartToken:
+      name: X-Cart-Token
+      in: header
+      required: false
+      description: Guest cart token, returned in the X-Cart-Token response header
+      schema:
+        type: string
+    XAffiliateRef:
+      name: X-Affiliate-Ref
+      in: header
+      required: false
+      description: Affiliate ref (uuid) of a shared link, for commission attribution
+      schema:
+        type: string
+    XAttribution:
+      name: X-Attribution
+      in: header
+      required: false
+      description: 'Growth first-touch attribution: base64url(JSON) of {utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session,
+        ab}, max 1024 chars. Stored on the cart (first touch wins) and copied to the order channel at checkout. Malformed values are ignored.'
+      schema:
+        type: string
+        maxLength: 1024
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type:
+          - string
+          - 'null'
+        data: {}
+        meta:
+          type: object
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        data:
+          type: 'null'
+        meta:
+          type: object
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        last_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+security: []
