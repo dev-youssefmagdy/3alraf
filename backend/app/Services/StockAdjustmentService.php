@@ -31,6 +31,8 @@ class StockAdjustmentService
                 $a->items()->create(['product_id' => $i['product_id'], 'product_variant_id' => $i['variant_id'], 'quantity' => $i['quantity'], 'unit_cost' => $m->unit_cost]);
             }
 
+            event(new \App\Events\Erp\StockAdjusted($a)); // ERP: inventory loss / gain
+
             return $a;
         });
     }

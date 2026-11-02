@@ -145,3 +145,12 @@ order_net_profit = (230−150) + 30 − 25 − 7.50 − 11.50 + 7.50 = **73.50**
 - **Hijri date confirmation**: lunar events (`seasonal_events.hijri`) use the tabular calendar and can be 1 day off the sighting. Until `date_confirmed` they show a warning badge; `growth:operate` creates an ImprovementTask (`hijri_confirm`) 7 days before the start and another once within 2 days. Confirming (button) or editing the dates of a lunar event sets `date_confirmed/confirmed_at/confirmed_by`; no external moon-sighting API.
 - **Mobile attribution**: header `X-Attribution` (base64url JSON, <= 1024 chars; keys utm_source/medium/campaign/content, ref, link (tracked-link code), gift_session, ab; values sanitised, 80 chars) is first-touch stored on `carts.attribution`; at checkout it is copied to `orders.attribution/channel` (channel from the same `AttributionService::normalise` rules as web; affiliate still wins). Malformed headers are ignored.
 - **AI classifier fallback** (switch `ai_classify`, default OFF): used only when keyword confidence < `classifier.low_confidence` (0.6), on PII-masked text, output validated against the fixed enums, errors/quota never block ingest. `php artisan growth:eval-classifier` measures the keyword classifier on `tests/Fixtures/growth/interactions_labelled.json` (targets 70% in config).
+
+## ERP financial reports (Phase 7)
+The ERP reports/dashboard never recompute order math: they sum posted journal lines (docs/ERP_PLAN.md section 8). The Financial Reconciliation report compares those sums with the Net Profit report and order/purchase/stock records; differences are reported, not adjusted.
+
+### ERP inventory reconciliation (Phase 9)
+Stock is deducted at shipping while COGS is booked at confirmation, so ledger inventory is expected to equal `stock valuation - COGS of confirmed/processing orders that are posted but not yet deducted`. The Inventory report shows this as "committed".
+
+### ERP ledger integrity (Phase 10)
+`erp:verify` audits each tenant's ledger against itself (posted entries balance, cached `current_balance` = balance recomputed from lines, no orphan lines, unique idempotency keys/numbers); `erp:reconcile` compares it with business records. Run both after any backfill and weekly (verify is scheduled). Both exit non-zero on a mismatch.

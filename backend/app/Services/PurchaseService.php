@@ -60,7 +60,10 @@ class PurchaseService
                 $this->ledger->record($po->branch_id, $i->product_id, $i->product_variant_id, StockMovementType::PURCHASE_IN, $i->quantity, (string) $i->unit_cost, $po, $po->number);
             }
 
-            return $this->orders->update($po, ['status' => PurchaseStatus::RECEIVED, 'received_at' => now()]);
+            $po = $this->orders->update($po, ['status' => PurchaseStatus::RECEIVED, 'received_at' => now()]);
+            event(new \App\Events\Erp\PurchaseReceived($po)); // ERP: Dr Inventory / Cr Payable
+
+            return $po;
         });
     }
 
@@ -68,7 +71,10 @@ class PurchaseService
     {
         $this->ensureDraft($po);
 
-        return $this->orders->update($po, ['status' => PurchaseStatus::CANCELLED]);
+        $po = $this->orders->update($po, ['status' => PurchaseStatus::CANCELLED]);
+        event(new \App\Events\Erp\PurchaseCancelled($po));
+
+        return $po;
     }
 
     public function delete(PurchaseOrder $po): void

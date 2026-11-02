@@ -37,3 +37,9 @@ Schedule::command('growth:operate')->dailyAt('06:30')->withoutOverlapping();
 
 // WhatsApp chat retention (config whatsapp_chat.retention_days, 0 = keep forever).
 Schedule::command('whatsapp:chat-prune')->dailyAt('04:20')->withoutOverlapping()->onOneServer();
+
+// ERP: monthly fixed-asset depreciation for the previous month (idempotent per asset + month).
+Schedule::command('erp:depreciate')->monthlyOn(1, '03:20')->withoutOverlapping()->onOneServer();
+
+// ERP: weekly ledger integrity audit (non-zero exit is reported by the scheduler; wire an alert on failure).
+Schedule::command('erp:verify')->weeklyOn(1, '04:10')->withoutOverlapping()->onOneServer();

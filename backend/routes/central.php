@@ -14,6 +14,9 @@ use App\Http\Controllers\Central\AttributeController;
 use App\Http\Controllers\Central\BrandController;
 use App\Http\Controllers\Central\CategoryController;
 use App\Http\Controllers\Central\DashboardController;
+use App\Http\Controllers\Central\Erp\AuditController as ErpAuditController;
+use App\Http\Controllers\Central\Erp\FinanceController as ErpFinanceController;
+use App\Http\Controllers\Central\Erp\HubController as ErpHubController;
 use App\Http\Controllers\Central\LandingController;
 use App\Http\Controllers\Central\LanguageController;
 use App\Http\Controllers\Central\ProductController;
@@ -136,6 +139,27 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
             Route::put('tenants/{tenant}', [TenantAiController::class, 'update'])->name('tenants.update');
             Route::get('usage', [AiUsageController::class, 'index'])->name('usage.index');
             Route::get('usage/datatable', [AiUsageController::class, 'datatable'])->name('usage.datatable');
+        });
+
+        // ERP monitoring (read-only, consolidated across tenants; each page gated by erp_central.view|reports|audit)
+        Route::prefix('erp')->name('erp.')->group(function () {
+            $f = ErpFinanceController::class;
+            $a = ErpAuditController::class;
+            Route::get('/', [ErpHubController::class, 'index'])->name('hub');
+            Route::get('overview', [$f, 'overview'])->name('overview');
+            Route::get('overview/export', [$f, 'exportOverview'])->name('overview.export');
+            Route::get('tenants/{id}', [$f, 'tenant'])->whereNumber('id')->name('tenant');
+            Route::get('performance', [$f, 'performance'])->name('performance');
+            Route::get('consolidated', [$f, 'consolidated'])->name('consolidated');
+            Route::get('transactions', [$f, 'transactions'])->name('transactions');
+            Route::get('transactions/{id}', [$f, 'entry'])->whereNumber('id')->name('transactions.show');
+            Route::get('parties', [$f, 'parties'])->name('parties');
+            Route::get('inventory', [$f, 'inventory'])->name('inventory');
+            Route::get('periods', [$f, 'periods'])->name('periods');
+            Route::get('anomalies', [$a, 'anomalies'])->name('anomalies');
+            Route::get('anomalies/export', [$a, 'exportAnomalies'])->name('anomalies.export');
+            Route::get('audit', [$a, 'audit'])->name('audit');
+            Route::get('migration', [$a, 'migration'])->name('migration');
         });
 
         Route::get('tenants/datatable', [TenantController::class, 'datatable'])->name('tenants.datatable');

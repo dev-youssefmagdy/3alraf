@@ -12,7 +12,7 @@ class ExpenseCategory extends Model
 
     protected array $translatable = ['name'];
 
-    protected $fillable = ['name', 'is_active'];
+    protected $fillable = ['name', 'is_active', 'erp_account_id'];
 
     protected function casts(): array
     {

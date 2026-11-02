@@ -66,6 +66,14 @@ use App\Http\Controllers\Tenant\StockController;
 use App\Http\Controllers\Tenant\StockRequestController;
 use App\Http\Controllers\Tenant\StockTransferController;
 use App\Http\Controllers\Tenant\SupplierController;
+use App\Http\Controllers\Tenant\Erp\AccountController as ErpAccountController;
+use App\Http\Controllers\Tenant\Erp\HubController as ErpHubController;
+use App\Http\Controllers\Tenant\Erp\JournalController as ErpJournalController;
+use App\Http\Controllers\Tenant\Erp\PeriodController as ErpPeriodController;
+use App\Http\Controllers\Tenant\Erp\PartyController as ErpPartyController;
+use App\Http\Controllers\Tenant\Erp\OwnerController as ErpOwnerController;
+use App\Http\Controllers\Tenant\Erp\AssetController as ErpAssetController;
+use App\Http\Controllers\Tenant\Erp\ReportController as ErpReportController;
 use App\Http\Controllers\Whatsapp\ChatConversationController;
 use App\Http\Controllers\Whatsapp\ChatMediaController;
 use App\Http\Controllers\Whatsapp\ChatMessageController;
@@ -118,6 +126,77 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::post("$uri/validate/{id?}", [$ctl, 'validateForm'])->name("$uri.validate");
             Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
         }
+
+        // ERP / accounting: hub of cards, each card its own page
+        Route::prefix('erp')->name('erp.')->group(function () {
+            Route::get('/', [ErpHubController::class, 'index'])->name('hub');
+            Route::get('accounts', [ErpAccountController::class, 'index'])->name('accounts.index');
+            Route::post('accounts', [ErpAccountController::class, 'store'])->name('accounts.store');
+            Route::delete('accounts/{id}', [ErpAccountController::class, 'destroy'])->whereNumber('id')->name('accounts.destroy');
+            Route::post('accounts/{id}/restore', [ErpAccountController::class, 'restore'])->whereNumber('id')->name('accounts.restore');
+            Route::get('journals', [ErpJournalController::class, 'index'])->name('journals.index');
+            Route::get('journals/create', [ErpJournalController::class, 'create'])->name('journals.create');
+            Route::post('journals', [ErpJournalController::class, 'store'])->name('journals.store');
+            Route::get('journals/{id}', [ErpJournalController::class, 'show'])->whereNumber('id')->name('journals.show');
+            Route::post('journals/{id}/post', [ErpJournalController::class, 'post'])->whereNumber('id')->name('journals.post');
+            Route::post('journals/{id}/reverse', [ErpJournalController::class, 'reverse'])->whereNumber('id')->name('journals.reverse');
+            Route::delete('journals/{id}', [ErpJournalController::class, 'destroy'])->whereNumber('id')->name('journals.destroy');
+            Route::get('periods', [ErpPeriodController::class, 'index'])->name('periods.index');
+            Route::post('periods/{id}/close', [ErpPeriodController::class, 'close'])->whereNumber('id')->name('periods.close');
+            Route::post('periods/{id}/reopen', [ErpPeriodController::class, 'reopen'])->whereNumber('id')->name('periods.reopen');
+            Route::post('periods/years/{id}/close', [ErpPeriodController::class, 'closeYear'])->whereNumber('id')->name('periods.year-close');
+            Route::post('periods/years/{id}/reopen', [ErpPeriodController::class, 'reopenYear'])->whereNumber('id')->name('periods.year-reopen');
+            // profit distribution + settings
+            Route::get('profits', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'index'])->name('profits.index');
+            Route::post('profits', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'store'])->name('profits.store');
+            Route::get('profits/report', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'report'])->name('profits.report');
+            Route::get('profits/owner/{owner}/statement', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'statement'])->whereNumber('owner')->name('profits.statement');
+            Route::get('profits/{id}', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'show'])->whereNumber('id')->name('profits.show');
+            Route::post('profits/{id}/approve', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'approve'])->whereNumber('id')->name('profits.approve');
+            Route::post('profits/{id}/post', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'post'])->whereNumber('id')->name('profits.post');
+            Route::post('profits/{id}/cancel', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'cancel'])->whereNumber('id')->name('profits.cancel');
+            Route::post('profits/{id}/lines/{line}/pay', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'pay'])->whereNumber(['id', 'line'])->name('profits.pay');
+            Route::get('settings', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/rates', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'storeRate'])->name('settings.rates.store');
+            Route::delete('settings/rates/{id}', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'destroyRate'])->whereNumber('id')->name('settings.rates.destroy');
+            Route::get('migration', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'index'])->name('migration.index');
+            Route::post('migration/reconcile', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'reconcile'])->name('migration.reconcile');
+            Route::post('migration/detect', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'detect'])->name('migration.detect');
+            Route::post('migration/post-missing', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'postMissing'])->name('migration.post-missing');
+            Route::put('migration/auto-posting', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'toggle'])->name('migration.toggle');
+            Route::get('dashboard', [\App\Http\Controllers\Tenant\Erp\DashboardController::class, 'index'])->name('dashboard');
+            Route::get('branches', [\App\Http\Controllers\Tenant\Erp\BranchController::class, 'index'])->name('branches.index');
+            Route::post('branches/transfer', [\App\Http\Controllers\Tenant\Erp\BranchController::class, 'transfer'])->name('branches.transfer');
+            Route::get('reports', [ErpReportController::class, 'index'])->name('reports.index');
+            Route::get('reports/{report}', [ErpReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
+            Route::get('reports/{report}/export', [ErpReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
+            // customers & suppliers ledgers
+            Route::prefix('parties/{type}')->where(['type' => 'customer|supplier'])->name('parties.')->group(function () {
+                Route::get('/', [ErpPartyController::class, 'index'])->name('index');
+                Route::get('ageing', [ErpPartyController::class, 'ageing'])->name('ageing');
+                Route::get('{id}', [ErpPartyController::class, 'show'])->whereNumber('id')->name('show');
+                Route::post('{id}/settle', [ErpPartyController::class, 'settle'])->whereNumber('id')->name('settle');
+                Route::post('{id}/apply-advance', [ErpPartyController::class, 'applyAdvance'])->whereNumber('id')->name('apply-advance');
+                Route::post('{id}/note', [ErpPartyController::class, 'note'])->whereNumber('id')->name('note');
+                Route::post('{id}/opening', [ErpPartyController::class, 'opening'])->whereNumber('id')->name('opening');
+            });
+            // owners & equity
+            Route::get('owners', [ErpOwnerController::class, 'index'])->name('owners.index');
+            Route::post('owners', [ErpOwnerController::class, 'store'])->name('owners.store');
+            Route::post('owners/branch-allocation', [ErpOwnerController::class, 'allocate'])->name('owners.allocate');
+            Route::get('owners/{id}', [ErpOwnerController::class, 'show'])->whereNumber('id')->name('owners.show');
+            Route::put('owners/{id}', [ErpOwnerController::class, 'update'])->whereNumber('id')->name('owners.update');
+            Route::post('owners/{id}/transactions', [ErpOwnerController::class, 'transact'])->whereNumber('id')->name('owners.transact');
+            // fixed assets
+            Route::get('assets', [ErpAssetController::class, 'index'])->name('assets.index');
+            Route::post('assets', [ErpAssetController::class, 'store'])->name('assets.store');
+            Route::post('assets/depreciate', [ErpAssetController::class, 'depreciate'])->name('assets.depreciate-all');
+            Route::get('assets/{id}', [ErpAssetController::class, 'show'])->whereNumber('id')->name('assets.show');
+            Route::post('assets/{id}/depreciate', [ErpAssetController::class, 'depreciate'])->whereNumber('id')->name('assets.depreciate');
+            Route::post('assets/{id}/dispose', [ErpAssetController::class, 'dispose'])->whereNumber('id')->name('assets.dispose');
+            Route::post('assets/{id}/transfer', [ErpAssetController::class, 'transfer'])->whereNumber('id')->name('assets.transfer');
+        });
 
         Route::get('notification-settings', [NotificationSettingsController::class, 'edit'])->name('notification-settings.edit');
         Route::put('notification-settings', [NotificationSettingsController::class, 'update'])->name('notification-settings.update');

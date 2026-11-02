@@ -16,6 +16,7 @@ class CarrierSettlementService
             ->where('shipping_company_id', $shippingCompanyId)->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])
             ->each(function (Order $o) use (&$count) { // per model so the audit log records each order
                 $o->forceFill(['carrier_settled_at' => now()])->save();
+                event(new \App\Events\Erp\CarrierSettled($o)); // ERP: Dr cash + shipping payable / Cr carrier receivable
                 $count++;
             });
 
