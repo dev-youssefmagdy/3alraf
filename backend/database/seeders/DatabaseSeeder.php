@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-/** Full demo: tenants egy + sa, 3-level categories, ~40 products with variants/images, banners, stock, sample orders. */
+/** Full seed: tenants egy + sa, countries/cities and the gift store catalog (~1,140 bilingual products with photos, listed with EGP prices + opening stock in the EGP store). No demo orders. CatalogSeeder/TenantDemoSeeder (generic demo data) stay available for tests. */
 class DatabaseSeeder extends FoundationSeeder
 {
     protected function tenants(): array
@@ -15,6 +15,6 @@ class DatabaseSeeder extends FoundationSeeder
 
     protected function demo(): void
     {
-        $this->call([CountrySeeder::class, CitySeeder::class, CatalogSeeder::class, TenantDemoSeeder::class]);
+        $this->call([CountrySeeder::class, CitySeeder::class, GiftCatalogSeeder::class]);
     }
 }
