@@ -68,7 +68,7 @@ class ProfitService
         $ledgerProfit = $pl['net_profit'];
 
         // tax: booked account wins; otherwise an estimate (not posted) on positive profit
-        $estimated = $taxAccountId ? '0' : (bccomp($beforeTax, '0', self::S) > 0 ? Money::percent($beforeTax, (string) $this->settings->get('tax_rate')) : '0');
+        $estimated = $taxAccountId ? '0' : (bccomp($beforeTax, '0', self::S) > 0 ? Money::percent($beforeTax, $this->settings->decimal('tax_rate')) : '0');
         $tax = $taxAccountId ? $bookedTax : $estimated;
         $netProfit = bcsub($beforeTax, $tax, self::S);
 
@@ -82,7 +82,7 @@ class ProfitService
         $usePrior = $this->settings->bool('distribute_prior_retained');
         $pool = $usePrior ? bcadd($prior, $netProfit, self::S) : (bccomp($prior, '0', self::S) < 0 ? bcadd($prior, $netProfit, self::S) : $netProfit);
         $afterLosses = bccomp($pool, '0', self::S) > 0 ? $pool : '0';
-        $pct = (string) $this->settings->get('reserve_percent');
+        $pct = $this->settings->decimal('reserve_percent');
         $reserve = Money::percent($afterLosses, $pct);
         $distributableProfit = self::floor2(bcsub($afterLosses, $reserve, self::S));
 
@@ -101,7 +101,7 @@ class ProfitService
             $liab = bcadd($liab, $liabRows[$role], self::S);
         }
         $reservesBalance = $bal['reserves'] ?? '0.0000';
-        $buffer = (string) $this->settings->get('distribution_min_cash_buffer');
+        $buffer = $this->settings->decimal('distribution_min_cash_buffer');
         $cashAfter = bcsub(bcsub(bcsub(bcsub(bcsub($cash, $liab, self::S), $estimated, self::S), $reservesBalance, self::S), $reserve, self::S), $buffer, self::S);
         $distributableCash = self::floor2($cashAfter);
 

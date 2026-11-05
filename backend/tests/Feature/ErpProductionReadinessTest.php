@@ -28,9 +28,24 @@ function erpFiles(): array
     return array_values(array_unique($files));
 }
 
+/** QA sign-off: erp* translation keys are also used outside the ERP folders (expenses, returns, POS, affiliate payouts, ErpRules, DecimalAmount, ...). */
+function erpKeyFiles(): array
+{
+    $files = erpFiles();
+    foreach ([app_path(), resource_path('views')] as $d) {
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($d, FilesystemIterator::SKIP_DOTS)) as $f) {
+            if (preg_match('/\.php$/', $f->getFilename())) {
+                $files[] = $f->getPathname();
+            }
+        }
+    }
+
+    return array_values(array_unique($files));
+}
+
 function erpGroups(): array
 {
-    return ['erp', 'erp_central', 'erp_dist', 'erp_ext', 'erp_rep'];
+    return ['erp', 'erp_central', 'erp_dist', 'erp_ext', 'erp_rep', 'erp_acc'];
 }
 
 function langFlat(string $group, string $locale): array
@@ -50,7 +65,7 @@ function langFlat(string $group, string $locale): array
 it('resolves every static erp* translation key used by ERP code in BOTH en and ar', function () {
     $missing = [];
     $dynamic = [];
-    foreach (erpFiles() as $file) {
+    foreach (erpKeyFiles() as $file) {
         $src = file_get_contents($file);
         preg_match_all('/(?:__|trans|trans_choice|@lang)\(\s*[\'"](erp[a-z_]*\.[A-Za-z0-9_.\-]*)([\'"])(\s*\.)?/', $src, $m, PREG_SET_ORDER);
         foreach ($m as $x) {
@@ -198,8 +213,11 @@ it('keeps ERP permissions complete: every permission used by a gate exists in co
         $used = array_merge($used, $m[1]);
     }
     foreach (array_merge(array_column(TenantHub::CARDS, 3), array_column(CentralHub::CARDS, 3)) as $p) {
-        $used[] = $p;
+        array_push($used, ...explode('|', $p)); // "a|b" = any of the permissions (ERP-028 view-or-manage cards)
     }
-    $unknown = array_values(array_diff(array_unique($used), $flat, ['expenses.view']));
+    // abilities defined as Gates (not stored permissions) must really be defined: erp.access = "any ERP permission" (ERP-028)
+    $gates = array_values(array_filter(array_unique($used), fn ($p) => \Illuminate\Support\Facades\Gate::has($p)));
+    expect($gates)->toBe(['erp.access']);
+    $unknown = array_values(array_diff(array_unique($used), $flat, $gates, ['expenses.view']));
     expect($unknown)->toBe([]);
 });

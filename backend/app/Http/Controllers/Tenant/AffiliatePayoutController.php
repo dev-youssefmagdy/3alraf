@@ -36,9 +36,10 @@ class AffiliatePayoutController extends Controller implements HasMiddleware
 
     public function pay(Request $r, int $id): JsonResponse
     {
-        $payout = $this->service->markPaid($this->service->findPayout($id), $r->input('note'));
+        $r->validate(['paid_from' => ['nullable', 'in:'.implode(',', \App\Services\Erp\Posting\AffiliatePoster::PAY_ROLES)]]);
+        $payout = $this->service->markPaid($this->service->findPayout($id), $r->input('note'), $r->input('paid_from') ?: null);
         if (app(GrowthFeatures::class)->active('ambassadors')) {
-            app(AmbassadorService::class)->settle($payout->affiliate_id); // ambassador rewards of this affiliate are paid in the same run
+            app(AmbassadorService::class)->settle($payout->affiliate_id, 'payout'.$payout->id, $payout->paid_from); // ambassador rewards of this affiliate are paid in the same run
         }
 
         return $this->ok(__('growth.payout_paid'));

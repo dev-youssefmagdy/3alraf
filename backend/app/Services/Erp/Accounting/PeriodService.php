@@ -48,6 +48,9 @@ class PeriodService
             if ($period->status === 'closed') {
                 return $period; // double submit: already closed
             }
+            if ($period->starts_on->toDateString() > now()->toDateString()) { // QA-015: a month that has not started yet cannot be closed
+                throw new AccountingException(__('erp_acc.errors.period_not_started', ['period' => $period->name]));
+            }
             if (Period::where('starts_on', '<', $period->starts_on)->where('status', 'open')->exists()) {
                 throw new AccountingException(__('erp.errors.close_previous_first'));
             }
@@ -94,6 +97,9 @@ class PeriodService
             $fy = FiscalYear::whereKey($fy->id)->lockForUpdate()->firstOrFail();
             if ($fy->status === 'closed') {
                 throw new AccountingException(__('erp.errors.year_closed'));
+            }
+            if ($fy->ends_on->toDateString() >= now()->toDateString()) { // QA-015: year-end close only after the year has ended
+                throw new AccountingException(__('erp_acc.errors.year_not_ended', ['year' => $fy->name, 'date' => $fy->ends_on->toDateString()]));
             }
             if (FiscalYear::where('starts_on', '<', $fy->starts_on)->where('status', 'open')->exists()) {
                 throw new AccountingException(__('erp.errors.close_previous_year_first'));
@@ -146,6 +152,26 @@ class PeriodService
             }
             if ($re) {
                 $journals->post($base + ['description' => __('erp.year_close_re', ['year' => $fy->name]), 'idempotency_key' => "fy:{$fy->id}:close:$run:re"], $re);
+            }
+
+            // ERP-031: owners' drawings of the year are closed against their capital (per owner party), so drawings restart at zero each year
+            $dr = app(AccountResolver::class)->id('owner_drawings');
+            $rows = \App\Models\Erp\JournalLine::query()->join('erp_journal_entries as e', 'e.id', '=', 'erp_journal_lines.entry_id')->whereIn('e.status', ['posted', 'reversed'])
+                ->where('e.entry_date', '<=', $to)->where('erp_journal_lines.account_id', $dr)->groupBy('erp_journal_lines.party_type', 'erp_journal_lines.party_id', 'erp_journal_lines.branch_id')
+                ->select('erp_journal_lines.party_type', 'erp_journal_lines.party_id', 'erp_journal_lines.branch_id', DB::raw('SUM(erp_journal_lines.debit) - SUM(erp_journal_lines.credit) as d'))->get();
+            $dl = [];
+            foreach ($rows as $r) {
+                $d = bcadd((string) $r->d, '0', 4);
+                if (bccomp($d, '0', 4) === 0) {
+                    continue;
+                }
+                $pos = bccomp($d, '0', 4) > 0;
+                $p = ['party_type' => $r->party_type, 'party_id' => $r->party_id, 'branch_id' => $r->branch_id, 'memo' => __('erp.year_close_memo')];
+                $dl[] = ['account' => 'owner_capital', ($pos ? 'debit' : 'credit') => ltrim($d, '-')] + $p;
+                $dl[] = ['account' => 'owner_drawings', ($pos ? 'credit' : 'debit') => ltrim($d, '-')] + $p;
+            }
+            if ($dl) {
+                $journals->post($base + ['description' => __('erp.year_close_desc', ['year' => $fy->name]).' - drawings', 'idempotency_key' => "fy:{$fy->id}:close:$run:drawings"], $dl);
             }
 
             foreach ($fy->periods()->where('status', 'open')->get() as $p) {

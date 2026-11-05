@@ -66,6 +66,15 @@ final class Money
 
     private static function str(string|int|float $v): string
     {
-        return is_float($v) ? number_format($v, 8, '.', '') : (string) ($v === '' ? '0' : $v);
+        if (is_float($v)) {
+            return number_format($v, 8, '.', '');
+        }
+        $v = trim((string) $v);
+        if ($v === '' || preg_match('/^[+-]?(\d+(\.\d*)?|\.\d+)$/', $v)) {
+            return $v === '' ? '0' : $v;
+        }
+
+        // QA-005: exponent forms ("1e1") or garbage stored by an older form never reach bcmath (ValueError)
+        return is_numeric($v) ? number_format((float) $v, 8, '.', '') : '0';
     }
 }

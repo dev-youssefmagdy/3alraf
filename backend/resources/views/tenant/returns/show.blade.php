@@ -35,6 +35,7 @@
                 <x-card :title="__('orders.refund')">
                     <form data-ajax-form action="{{ route('tenant.returns.refund', $ret->id) }}" method="POST" class="space-y-3">@csrf
                         <x-input name="amount" type="number" step="0.01" min="0.01" max="{{ $refundable }}" :label="__('orders.fields.refund_amount')" :value="$refundable" :hint="__('orders.fields.max').': '.$refundable" />
+                        <x-select name="refund_from" :label="__('erp_acc.refund_from')" :placeholder="__('erp_acc.refund_from_default')" :options="collect(\App\Services\Erp\Posting\Poster::REFUND_ROLES)->mapWithKeys(fn ($k) => [$k => __('erp_acc.roles.'.$k)])->all()" />
                         <button class="btn btn-primary w-full" type="submit">{{ __('orders.refund') }}</button>
                     </form>
                 </x-card>

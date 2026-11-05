@@ -9,6 +9,14 @@
         </form>
     </x-card>
 
+    @if (($failures ?? collect())->isNotEmpty())
+    <x-card :title="__('erp_acc.failures')" class="mb-5">
+        <table class="w-full text-sm" data-posting-failures><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">{{ __('erp.f.date') }}</th><th class="text-start">{{ __('erp.f.source') }}</th><th class="text-start">{{ __('erp.f.description') }}</th><th></th></tr></thead><tbody>
+        @foreach ($failures as $f)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $f->created_at }}</td><td>{{ $f->subject_type }} #{{ $f->subject_id }}</td><td class="text-xs">{{ $f->meta['event'] ?? '' }}: {{ \Illuminate\Support\Str::limit($f->meta['error'] ?? '', 160) }}</td>
+            <td class="text-end"><form method="POST" action="{{ route('tenant.erp.migration.retry', $f->id) }}">@csrf<x-button type="submit">{{ __('erp_acc.retry') }}</x-button></form></td></tr>@endforeach
+        </tbody></table>
+    </x-card>
+    @endif
     <x-card :title="__('erp.bf.runs')" class="mb-5">
         <div class="overflow-x-auto"><table class="w-full text-sm" data-runs>
             <thead><tr class="border-b text-slate-500"><th class="py-2 text-start">#</th><th class="text-start">{{ __('erp.bf.from') }}</th><th class="text-start">{{ __('erp.bf.status') }}</th><th class="text-start">{{ __('erp.bf.started') }}</th><th class="text-start">{{ __('erp.bf.by') }}</th><th class="text-start">{{ __('erp.bf.counts') }}</th></tr></thead>

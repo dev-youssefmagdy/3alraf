@@ -148,11 +148,11 @@ Route::prefix('admin')->middleware('admin.locale')->name('central.')->group(func
             Route::get('/', [ErpHubController::class, 'index'])->name('hub');
             Route::get('overview', [$f, 'overview'])->name('overview');
             Route::get('overview/export', [$f, 'exportOverview'])->name('overview.export');
-            Route::get('tenants/{id}', [$f, 'tenant'])->whereNumber('id')->name('tenant');
+            Route::get('tenants/{id}', [$f, 'tenant'])->where('id', '[0-9]{1,18}')->name('tenant');
             Route::get('performance', [$f, 'performance'])->name('performance');
             Route::get('consolidated', [$f, 'consolidated'])->name('consolidated');
             Route::get('transactions', [$f, 'transactions'])->name('transactions');
-            Route::get('transactions/{id}', [$f, 'entry'])->whereNumber('id')->name('transactions.show');
+            Route::get('transactions/{id}', [$f, 'entry'])->where('id', '[0-9]{1,18}')->name('transactions.show');
             Route::get('parties', [$f, 'parties'])->name('parties');
             Route::get('inventory', [$f, 'inventory'])->name('inventory');
             Route::get('periods', [$f, 'periods'])->name('periods');

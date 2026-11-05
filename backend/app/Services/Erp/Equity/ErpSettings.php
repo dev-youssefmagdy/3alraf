@@ -17,7 +17,10 @@ class ErpSettings
         'tax_rate' => '0',                                 // % applied to positive profit before tax (estimate, not posted)
         'tax_account_id' => null,                          // optional expense account already carrying booked tax
         'costing_policy' => 'Weighted average cost per branch/product/variant (see docs/CALCULATIONS.md).',
-        'revenue_policy' => 'Revenue is recognised when the order is confirmed by the admin (same rule as the Net Profit report).',
+        'revenue_policy' => 'Revenue, VAT and COGS are recognised when control passes to the customer (default: at shipment; see revenue_recognition).',
+        'revenue_recognition' => 'shipped',                // shipped | delivered | confirmed (legacy, mirrors the Net Profit report) - docs/CALCULATIONS.md §ERP revenue recognition
+        'landed_costs' => 'expense',                       // expense (PO shipping/other -> purchase expenses) | capitalise (IAS 2: allocated into the received unit cost)
+        'journal_requires_second_poster' => false,         // maker-checker: a manual journal draft must be posted by another user
     ];
 
     private array $cache = [];
@@ -37,6 +40,21 @@ class ErpSettings
     public function get(string $key, mixed $default = null): mixed
     {
         return $this->all()[$key] ?? $default ?? (self::DEFAULTS[$key] ?? null);
+    }
+
+    /** Numeric setting as a bcmath-safe plain decimal (QA-005: a stored "1e1" / garbage never reaches bcmath; garbage = the default). */
+    public function decimal(string $key): string
+    {
+        $v = $this->get($key);
+        $v = is_float($v) ? number_format($v, 8, '.', '') : trim((string) $v);
+        if (preg_match('/^\d+(\.\d+)?$/', $v)) {
+            return $v;
+        }
+        if (is_numeric($v) && (float) $v >= 0 && is_finite((float) $v)) {
+            return rtrim(rtrim(number_format((float) $v, 4, '.', ''), '0'), '.');
+        }
+
+        return (string) (self::DEFAULTS[$key] ?? '0');
     }
 
     public function bool(string $key): bool

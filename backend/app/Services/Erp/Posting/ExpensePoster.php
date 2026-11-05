@@ -33,7 +33,8 @@ class ExpensePoster extends Poster
         $from = $paid ? ($e->paid_from ?: 'cash') : 'payable';
         $amount = Money::round((string) $e->amount);
         $date = $e->expense_date->toDateString();
-        $sig = substr(sha1(json_encode([$amount, $date, $debit, $from, $e->branch_id])), 0, 12);
+        $party = $paid ? null : $e->supplier_id; // unpaid bill: the payable line carries the supplier (ERP-013)
+        $sig = substr(sha1(json_encode([$amount, $date, $debit, $from, $e->branch_id] + ($party ? [5 => $party] : []))), 0, 12);
         $key = 'expense:'.$e->id.':'.$sig;
 
         if (JournalEntry::where('idempotency_key', $key)->where('status', 'reversed')->exists()) { // A -> B -> A edits: a reversed key is never reused
@@ -50,7 +51,7 @@ class ExpensePoster extends Poster
         }
 
         return $this->post($key, $date, 'Expense #'.$e->id, 'expense', $e->id, [
-            $this->dr($debit, $amount, $e->branch_id, $e->note), $this->cr($from, $amount, $e->branch_id, $e->note),
+            $this->dr($debit, $amount, $e->branch_id, $e->note), $this->cr($from, $amount, $e->branch_id, $e->note, $party ? 'supplier' : null, $party),
         ], $e->branch_id);
     }
 

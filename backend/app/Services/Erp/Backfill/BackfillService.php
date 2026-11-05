@@ -180,30 +180,36 @@ class BackfillService
         return JournalEntry::where('idempotency_key', $k)->exists();
     }
 
+    /** A document key counts as posted only while a LIVE version exists: a manually reversed auto entry is "missing" again (ERP-007). */
+    private function live(string $k): bool
+    {
+        return Poster::live($k);
+    }
+
     /** Is every journal this document should have already in the ledger? */
     public function posted(string $type, $doc, string $from): bool
     {
         switch ($type) {
             case 'purchases':
-                return $this->key('po:'.$doc->id.':receive') || $this->zeroValue($doc->total_cost);
+                return $this->live('po:'.$doc->id.':receive') || $this->zeroValue($doc->total_cost);
             case 'orders':
-                return $this->key(SalesPoster::confirmKey($doc));
+                return $this->live(SalesPoster::confirmKey($doc));
             case 'payments':
-                $paidOk = ! $this->positive($doc->paid_amount) || $this->key('order:'.$doc->id.':pay:'.Money::round((string) $doc->paid_amount));
-                $carrierOk = ! ($doc->carrier_settled_at && $this->positive($doc->cod_amount)) || $this->key('order:'.$doc->id.':carrier-settle');
+                $paidOk = ! $this->positive($doc->paid_amount) || $this->live('order:'.$doc->id.':pay:'.Money::round((string) $doc->paid_amount));
+                $carrierOk = ! ($doc->carrier_settled_at && $this->positive($doc->cod_amount)) || $this->live('order:'.$doc->id.':carrier-settle');
 
                 return $paidOk && $carrierOk;
             case 'returns':
-                $goods = $this->key('return:'.$doc->id.':goods') || ($this->zeroValue($doc->return_value) && $this->zeroValue($doc->returned_cogs));
+                $goods = $this->live('return:'.$doc->id.':goods') || ($this->zeroValue($doc->return_value) && $this->zeroValue($doc->returned_cogs));
 
-                return $goods && ($doc->status->value !== 'refunded' || ! $this->positive($doc->refund_amount) || $this->key('return:'.$doc->id.':refund'));
+                return $goods && ($doc->status->value !== 'refunded' || ! $this->positive($doc->refund_amount) || $this->live('return:'.$doc->id.':refund'));
             case 'stock':
                 if ($doc instanceof StockAdjustment) {
-                    return $this->key('adj:'.$doc->id) || $this->stockValue($doc) === '0.00';
+                    return $this->live('adj:'.$doc->id) || $this->stockValue($doc) === '0.00';
                 }
 
-                return ($this->key('transfer:'.$doc->id.':out') || $this->stockValue($doc) === '0.00')
-                    && ($doc->status->value !== 'received' || ! $doc->received_at || $doc->received_at->toDateString() < $from || $this->key('transfer:'.$doc->id.':in') || $this->stockValue($doc) === '0.00');
+                return ($this->live('transfer:'.$doc->id.':out') || $this->stockValue($doc) === '0.00')
+                    && ($doc->status->value !== 'received' || ! $doc->received_at || $doc->received_at->toDateString() < $from || $this->live('transfer:'.$doc->id.':in') || $this->stockValue($doc) === '0.00');
             case 'expenses':
                 return JournalEntry::where('source_type', 'expense')->where('source_id', $doc->id)->where('type', 'auto')->where('status', 'posted')->exists() || $this->zeroValue($doc->amount);
         }
@@ -256,7 +262,11 @@ class BackfillService
                 Poster::withDate($this->d($doc->received_at), fn () => $this->purchases->received($doc));
                 break;
             case 'orders':
-                Poster::withDate($this->d(OpeningState::confirmedAt($doc)), fn () => $this->sales->confirmed($doc, true));
+                Poster::withDate($this->d(OpeningState::confirmedAt($doc)), function () use ($doc) {
+                    $this->sales->confirmed($doc, true);
+                    $this->sales->shipped($doc);                  // COGS true-up / goods out for delivery (zero delta when nothing is missing)
+                    $this->sales->syncCommission($doc, 'backfill'); // commission deltas left behind by a manually reversed recognition entry
+                });
                 break;
             case 'payments':
                 $base = OpeningState::confirmedAt($doc) ?? $doc->placed_at ?? $doc->created_at;
@@ -540,7 +550,8 @@ class BackfillService
         $from = $this->scanFrom();
         $out = [];
         foreach (['purchases', 'orders', 'payments', 'returns', 'stock', 'expenses'] as $type) {
-            $out[$type] = $this->process($type, $from, ! $post, $progress, $userId);
+            // posting runs in "repost" mode: a document whose auto entry was reversed by hand gets a corrected, versioned entry
+            $out[$type] = $post ? Poster::reposting(fn () => $this->process($type, $from, false, $progress, $userId)) : $this->process($type, $from, true, $progress, $userId);
         }
         if ($post) {
             AuditLog::create(['action' => 'backfill.post_missing', 'subject_type' => 'erp', 'subject_id' => 0, 'user_id' => $userId, 'meta' => ['from' => $from, 'counts' => $out]]);

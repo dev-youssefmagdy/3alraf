@@ -20,10 +20,11 @@ class InventoryReport extends ReportBase
             ->whereIn('erp_journal_lines.account_id', $ids->values()->all() ?: [0])->groupBy('erp_journal_lines.branch_id', 'erp_journal_lines.account_id')
             ->selectRaw('erp_journal_lines.branch_id as b, erp_journal_lines.account_id as acc, SUM(erp_journal_lines.debit - erp_journal_lines.credit) as net')->get();
         $stock = StockLevel::query()->when($branchId, fn ($q) => $q->where('branch_id', $branchId))->groupBy('branch_id')->selectRaw('branch_id as b, SUM(ROUND(on_hand * avg_cost, 2)) as v')->pluck('v', 'b');
-        // COGS already booked at confirmation for orders whose stock is still on hand (deducted only at shipping): ledger is legitimately lower by that amount
-        $committed = DB::table('orders')->join('erp_journal_entries as e', fn ($j) => $j->on('e.idempotency_key', '=', DB::raw("CONCAT('order:', orders.id, ':confirm')")))
-            ->whereIn('orders.status', ['confirmed', 'processing'])->where('orders.stock_deducted', false)->where('e.status', 'posted')
-            ->when($branchId, fn ($q) => $q->where('orders.branch_id', $branchId))->groupBy('orders.branch_id')->selectRaw('orders.branch_id as b, SUM(orders.cogs + orders.packaging_cost) as v')->pluck('v', 'b');
+        // legacy "confirmed" recognition only: COGS already booked for orders whose stock is still on hand (deducted at shipping) - ledger is
+        // legitimately lower by that amount. Under the default (shipped/delivered) policy COGS is booked when stock leaves, so this is 0.
+        $committed = DB::table('orders')->join('erp_journal_entries as e', fn ($j) => $j->on('e.source_id', '=', 'orders.id')->where('e.source_type', 'order')->where('e.idempotency_key', 'like', 'order:%:confirm%'))
+            ->whereIn('orders.status', ['confirmed', 'processing'])->where('orders.stock_deducted', false)->where('e.status', 'posted')->whereColumn('e.tenant_id', 'orders.tenant_id')
+            ->when($branchId, fn ($q) => $q->where('orders.branch_id', $branchId))->groupBy('orders.branch_id')->selectRaw('orders.branch_id as b, SUM(orders.cogs) as v')->pluck('v', 'b');
         $rows = [];
         $get = function (int $b) use (&$rows) {
             return $rows[$b] ??= ['ledger' => '0', 'transit' => '0', 'stock' => '0', 'committed' => '0'];

@@ -29,9 +29,15 @@ enum OrderStatus: string
             self::PENDING => [self::CONFIRMED, self::CANCELLED],
             self::CONFIRMED => [self::PROCESSING, self::CANCELLED],
             self::PROCESSING => [self::SHIPPED, self::CANCELLED],
-            self::SHIPPED => [self::DELIVERED],
+            self::SHIPPED => [self::DELIVERED, self::CANCELLED], // cancel after shipment = failed delivery / returned to sender (restocked, revenue reversed)
             default => [],
         };
+    }
+
+    /** A customer (or an unattended flow) may cancel only before the parcel left the warehouse. */
+    public function cancellableBeforeShipping(): bool
+    {
+        return in_array($this, [self::PENDING, self::CONFIRMED, self::PROCESSING], true);
     }
 
     public function color(): string

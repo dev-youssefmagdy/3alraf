@@ -36,7 +36,7 @@ class BranchTransferService
 
         return $this->journals->post([
             'entry_date' => $date ?: now()->toDateString(), 'type' => 'manual', 'source_type' => 'branch_cash_transfer', 'description' => $memo,
-            'idempotency_key' => $ref ? 'btransfer:'.$ref : null, 'created_by' => $userId,
+            'idempotency_key' => $ref ? 'btransfer:'.$ref : null, 'strict_replay' => true, 'created_by' => $userId,
         ], [
             ['account' => 'branch_transfer', 'debit' => $amount, 'branch_id' => $from->id, 'memo' => $memo],
             ['account' => $role, 'credit' => $amount, 'branch_id' => $from->id, 'memo' => $memo],

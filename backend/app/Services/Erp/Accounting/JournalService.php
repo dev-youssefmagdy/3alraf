@@ -35,6 +35,10 @@ class JournalService
     public function post(array $data, array $lines): JournalEntry
     {
         if (! empty($data['idempotency_key']) && ($existing = JournalEntry::where('idempotency_key', $data['idempotency_key'])->first())) {
+            if (! empty($data['strict_replay'])) {
+                $this->assertSameReplay($existing, $lines);
+            }
+
             return $existing;
         }
 
@@ -52,6 +56,32 @@ class JournalService
 
             throw $e;
         }
+    }
+
+    /**
+     * QA-012: a user form re-submitted with the same one-time token must carry the same money; a different total means the user changed the
+     * form after it was saved (browser Back) - refuse instead of silently returning the earlier entry.
+     *
+     * @param  array<int,array{debit?:mixed,credit?:mixed}>|string  $linesOrTotal
+     */
+    public function assertSameReplay(JournalEntry $existing, array|string $linesOrTotal): void
+    {
+        $total = is_string($linesOrTotal) ? $linesOrTotal
+            : array_reduce($linesOrTotal, fn ($c, $l) => bcadd($c, self::num($l['debit'] ?? 0), self::SCALE), '0');
+        if (bccomp(self::num($existing->total), self::num($total), self::SCALE) !== 0) {
+            throw new AccountingException(__('erp_acc.errors.duplicate_ref', ['number' => $existing->number]));
+        }
+    }
+
+    /** bcmath-safe decimal string (garbage / exponent forms never reach bcmath). */
+    public static function num(mixed $v): string
+    {
+        $v = is_float($v) ? number_format($v, 8, '.', '') : trim((string) ($v ?? '0'));
+        if (preg_match('/^[+-]?(\d+(\.\d*)?|\.\d+)$/', $v)) {
+            return $v;
+        }
+
+        return is_numeric($v) ? number_format((float) $v, 8, '.', '') : '0';
     }
 
     /** Run $fn atomically while holding the tenant row lock: serialises money-moving user actions (payments, receipts, advances) per tenant. */

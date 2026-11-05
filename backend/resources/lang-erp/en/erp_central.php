@@ -2,6 +2,8 @@
 
 return [
     'menu' => 'ERP', 'title' => 'ERP monitoring', 'hub_hint' => 'Read-only monitoring of every tenant\'s books. Each tenant keeps its own ledger and currency; nothing here changes any tenant data.',
+    'hub_empty_title' => 'No ERP pages available to you yet',
+    'hub_empty' => 'You have no access to the ERP reports or audit pages. Ask a super admin to grant the "ERP reports" or "ERP audit" permission.',
     'cards' => [
         'overview' => ['Tenant Overview', 'Revenue, expenses, profit, cash, receivables, payables, inventory and equity per tenant.'],
         'performance' => ['Performance Comparison', 'Tenants side by side within each currency group.'],

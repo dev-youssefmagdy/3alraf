@@ -9,7 +9,7 @@ class Expense extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['expense_category_id', 'branch_id', 'amount', 'is_paid', 'paid_from', 'expense_date', 'note', 'attachment', 'created_by'];
+    protected $fillable = ['expense_category_id', 'branch_id', 'amount', 'is_paid', 'paid_from', 'supplier_id', 'expense_date', 'note', 'attachment', 'created_by'];
 
     protected function casts(): array
     {

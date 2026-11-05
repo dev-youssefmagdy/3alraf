@@ -104,16 +104,23 @@ class AffiliateService
         });
     }
 
-    public function markPaid(AffiliatePayout $p, ?string $note = null): AffiliatePayout
+    /** @param string|null $paidFrom account the money left (cash|bank|pos_cash|wallet|gateway; default cash) - ERP: Dr Affiliate payable / Cr it */
+    public function markPaid(AffiliatePayout $p, ?string $note = null, ?string $paidFrom = null): AffiliatePayout
     {
         $this->ensureRequested($p);
+        if ($paidFrom !== null && ! in_array($paidFrom, \App\Services\Erp\Posting\AffiliatePoster::PAY_ROLES, true)) {
+            throw ValidationException::withMessages(['paid_from' => __('validation.in', ['attribute' => 'paid_from'])]);
+        }
 
-        return DB::transaction(function () use ($p, $note) {
+        return DB::transaction(function () use ($p, $note, $paidFrom) {
             $p->commissions()->where('status', CommissionStatus::APPROVED->value)->update(['status' => CommissionStatus::PAID->value]);
             // voided commissions inside the payout reduce what is actually paid
             $paid = Money::round((string) $p->commissions()->where('status', CommissionStatus::PAID->value)->sum('amount'));
 
-            return $this->payouts->update($p, ['status' => PayoutStatus::PAID, 'amount' => $paid, 'paid_at' => now(), 'note' => $note]);
+            $p = $this->payouts->update($p, ['status' => PayoutStatus::PAID, 'amount' => $paid, 'paid_from' => $paidFrom ?? 'cash', 'paid_at' => now(), 'note' => $note]);
+            DB::afterCommit(fn () => event(new \App\Events\Erp\AffiliatePayoutPaid($p))); // ERP: clears the affiliate payable
+
+            return $p;
         });
     }
 

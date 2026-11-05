@@ -61,10 +61,17 @@ class OwnerService
         });
     }
 
-    /** contribution: Dr cash-like / Cr owner_capital; withdrawal: Dr owner_drawings / Cr cash-like; distribution paid: Dr retained_earnings / Cr cash-like. */
+    /**
+     * contribution: Dr cash-like / Cr owner_capital; withdrawal: Dr owner_drawings / Cr cash-like (refused when the paying account cannot cover it).
+     * Profit distributions are NOT owner transactions: they go through the controlled workflow (ProfitDistributionService: distributable profit,
+     * cash buffer, approval, period checks) - ERP-005.
+     */
     public function transact(Owner $owner, string $type, string $amount, string $date, string $account = 'cash', ?int $branchId = null, ?string $note = null, ?string $ref = null): OwnerTransaction
     {
-        if (! in_array($type, OwnerTransaction::TYPES, true)) {
+        if ($type === 'distribution') {
+            throw new AccountingException(__('erp_acc.errors.distribution_workflow'));
+        }
+        if (! in_array($type, OwnerTransaction::NEW_TYPES, true)) {
             throw new AccountingException(__('erp_ext.errors.bad_account'));
         }
         if (! in_array($account, PartyService::CASH_ROLES, true)) {
@@ -80,12 +87,21 @@ class OwnerService
         $this->ensureChart();
 
         return DB::transaction(function () use ($owner, $type, $amount, $date, $account, $branchId, $note, $ref) {
+            if ($ref && ($done = OwnerTransaction::whereHas('entry', fn ($q) => $q->where('idempotency_key', 'owner:'.$owner->id.':'.$type.':'.$ref))->first())) {
+                if (bccomp((string) $done->amount, (string) $amount, 4) !== 0) { // QA-012: same token, different amount = the form was changed after saving
+                    throw new AccountingException(__('erp_acc.errors.duplicate_ref', ['number' => $done->entry?->number ?? '']));
+                }
+
+                return $done; // replay of the same form token (checked before the cash test: the first submit already moved the money)
+            }
+            if ($type === 'withdrawal') {
+                $this->assertCovered($account, $amount); // ERP-031: never pay an owner money the business does not hold
+            }
             $p = ['party_type' => 'owner', 'party_id' => $owner->id, 'branch_id' => $branchId, 'memo' => $note ?: __('erp_ext.own.t.'.$type)];
             $cash = ['account' => $account, 'branch_id' => $branchId, 'memo' => $p['memo']];
             $lines = match ($type) {
                 'contribution' => [$cash + ['debit' => $amount], ['account' => 'owner_capital', 'credit' => $amount] + $p],
                 'withdrawal' => [['account' => 'owner_drawings', 'debit' => $amount] + $p, $cash + ['credit' => $amount]],
-                'distribution' => [['account' => 'retained_earnings', 'debit' => $amount] + $p, $cash + ['credit' => $amount]],
             };
             $entry = $this->journals->post([
                 'entry_date' => $date, 'type' => 'auto', 'description' => __('erp_ext.own.t.'.$type).' - '.$owner->name, 'source_type' => 'owner', 'source_id' => $owner->id,
@@ -100,21 +116,57 @@ class OwnerService
         });
     }
 
-    /** Branch capital allocation per spec: Dr cash of the branch / Cr branch_capital of the branch. */
-    public function allocateToBranch(int $branchId, string $amount, string $date, ?string $note = null, ?string $ref = null)
+    /** Balance of a cash-like account (all branches, posted lines) must cover $amount. */
+    private function assertCovered(string $role, string $amount, ?int $branchId = null, bool $branchOnly = false): void
+    {
+        $acc = Account::where('role_key', $role)->value('id');
+        $q = JournalLine::query()->join('erp_journal_entries as e', 'e.id', '=', 'erp_journal_lines.entry_id')->whereIn('e.status', ['posted', 'reversed'])
+            ->where('erp_journal_lines.account_id', $acc)->when($branchOnly, fn ($w) => $branchId ? $w->where('erp_journal_lines.branch_id', $branchId) : $w->whereNull('erp_journal_lines.branch_id'));
+        $bal = (string) ($q->selectRaw('COALESCE(SUM(erp_journal_lines.debit - erp_journal_lines.credit),0) as b')->value('b') ?? '0');
+        if (bccomp($bal, $amount, 4) < 0) {
+            throw new AccountingException(__('erp_acc.errors.insufficient_cash', ['balance' => number_format((float) $bal, 2), 'amount' => number_format((float) $amount, 2)]));
+        }
+    }
+
+    /**
+     * Branch capital allocation (ERP-006): an INTERNAL, zero-sum move - the money comes from a real source.
+     *   cash  : Dr cash-like (branch B) / Cr cash-like (source branch, NULL = head office / unallocated)  -> consolidated cash unchanged
+     *   equity: Dr Owner capital / Cr Branch capital (branch B)  -> memo reclass for branch capital reporting, total equity unchanged
+     * Fresh owner money for a branch is a contribution (transact('contribution', branch: B)), never an allocation.
+     */
+    public function allocateToBranch(int $branchId, string $amount, string $date, ?string $note = null, ?string $ref = null, string $account = 'cash', ?int $fromBranchId = null)
     {
         $branch = Branch::findOrFail($branchId);
+        if ($fromBranchId) {
+            Branch::findOrFail($fromBranchId);
+        }
+        if ($fromBranchId === $branchId) {
+            throw new AccountingException(__('erp_rep.bt.same'));
+        }
+        if (! in_array($account, PartyService::CASH_ROLES, true)) {
+            throw new AccountingException(__('erp_ext.errors.bad_account'));
+        }
         $amount = Money::round($amount);
         if (Money::cmp($amount, '0') <= 0) {
             throw new AccountingException(__('erp_ext.errors.amount_positive'));
         }
         $this->ensureChart();
         $m = $note ?: __('erp_ext.own.branch_alloc');
+        $key = $ref ? 'branchcap:'.$branch->id.':'.$ref : null;
+        if ($key && ($done = \App\Models\Erp\JournalEntry::where('idempotency_key', $key)->first())) {
+            return $done;
+        }
+        $this->assertCovered($account, $amount, $fromBranchId, true);
 
         return $this->journals->post([
             'entry_date' => $date, 'type' => 'auto', 'description' => $m.' - '.$branch->name, 'source_type' => 'branch_capital', 'source_id' => $branch->id,
-            'idempotency_key' => $ref ? 'branchcap:'.$branch->id.':'.$ref : null, 'branch_id' => $branch->id, 'created_by' => auth('tenant')->id(),
-        ], [['account' => 'cash', 'debit' => $amount, 'branch_id' => $branch->id, 'memo' => $m], ['account' => 'branch_capital', 'credit' => $amount, 'branch_id' => $branch->id, 'memo' => $m]]);
+            'idempotency_key' => $key, 'branch_id' => null, 'created_by' => auth('tenant')->id(), // per-line branches (a NULL source line must stay head office)
+        ], [
+            ['account' => $account, 'debit' => $amount, 'branch_id' => $branch->id, 'memo' => $m],
+            ['account' => $account, 'credit' => $amount, 'branch_id' => $fromBranchId, 'memo' => $m],
+            ['account' => 'owner_capital', 'debit' => $amount, 'branch_id' => $fromBranchId, 'memo' => $m],
+            ['account' => 'branch_capital', 'credit' => $amount, 'branch_id' => $branch->id, 'memo' => $m],
+        ]);
     }
 
     private function lines(?int $ownerId = null)

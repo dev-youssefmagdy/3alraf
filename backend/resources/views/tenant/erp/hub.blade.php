@@ -1,5 +1,11 @@
 <x-layouts.admin guard="tenant" :title="__('erp.title')">
     <p class="mb-5 text-sm text-slate-500">{{ __('erp.hub_hint') }}</p>
+    @if ($cards->isEmpty())
+        <div class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center" data-empty="hub">
+            <h3 class="font-semibold text-slate-800">{{ __('erp_central.hub_empty_title') }}</h3>
+            <p class="mx-auto mt-1 max-w-xl text-sm text-slate-500">{{ __('erp_acc.hub_empty') }}</p>
+        </div>
+    @endif
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @foreach ($cards as $c)
             @php $t = __('erp.cards.'.$c['key']); @endphp
@@ -17,7 +23,9 @@
             @if ($c['url']) </a> @else </div> @endif
         @endforeach
     </div>
+    @if ($alerts !== null)
     <x-card :title="__('erp_central.alerts.title')" class="mt-6" data-alerts>
         @if ($alerts->isEmpty())<p class="text-sm text-emerald-700">{{ __('erp_central.alerts.none') }}</p>@else @include('central.erp._alerts', ['alerts' => $alerts]) @endif
     </x-card>
+    @endif
 </x-layouts.admin>

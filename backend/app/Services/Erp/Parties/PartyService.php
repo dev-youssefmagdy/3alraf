@@ -51,11 +51,12 @@ class PartyService
         return in_array($role, self::CASH_ROLES, true) ? $role : throw new AccountingException(__('erp_ext.errors.bad_account'));
     }
 
-    private function post(string $type, int $id, string $key, string $date, string $desc, array $lines, string $entryType = 'auto', ?int $branchId = null): JournalEntry
+    private function post(string $type, int $id, string $key, string $date, string $desc, array $lines, string $entryType = 'auto', ?int $branchId = null, bool $strict = true): JournalEntry
     {
         return $this->journals->post([
             'entry_date' => $date, 'type' => $entryType, 'description' => $desc, 'source_type' => $type, 'source_id' => $id,
             'idempotency_key' => 'party:'.$type.':'.$id.':'.$key, 'branch_id' => $branchId, 'created_by' => auth('tenant')->id(),
+            'strict_replay' => $strict, // QA-012: same form token + different amount = error, not a silent no-op
         ], $lines);
     }
 
@@ -98,7 +99,7 @@ class PartyService
         $c = $this->party('customer', $customerId);
         $amount = $this->amount($amount);
         $into = $this->cashRole($into);
-        $open = Money::max($this->ledger->position('customer', $c->id)['outstanding'], '0');
+        $open = $this->nonOrderOpen($c->id);
         $apply = $advanceOnly ? '0.00' : Money::min($amount, $open);
         $adv = Money::sub($amount, $apply);
         $m = $note ?: __('erp_ext.memo.customer_receipt');
@@ -113,6 +114,22 @@ class PartyService
         return $this->post('customer', $c->id, 'rcpt:'.$ref, $date ?? now()->toDateString(), $m.' - '.$c->name, $lines, 'auto', $branchId);
     }
 
+    /**
+     * Open receivable of a customer that is NOT driven by orders (opening balances, debit notes...). Order receivables are settled only by the
+     * order's own payment flow (proof approval, gateway webhook, COD delivery / carrier), which updates orders.paid_amount and posts the payment;
+     * settling them here as well would book the same money twice (ERP-015). A receipt beyond this amount is held as a customer advance.
+     */
+    public function nonOrderOpen(int $customerId): string
+    {
+        $open = Money::max($this->ledger->position('customer', $customerId)['outstanding'], '0');
+        $rid = Account::where('role_key', 'receivable')->value('id');
+        $orders = (string) (\App\Models\Erp\JournalLine::query()->join('erp_journal_entries as e', 'e.id', '=', 'erp_journal_lines.entry_id')->whereIn('e.status', ['posted', 'reversed'])
+            ->where('erp_journal_lines.account_id', $rid)->where('erp_journal_lines.party_type', 'customer')->where('erp_journal_lines.party_id', $customerId)
+            ->whereIn('e.source_type', ['order', 'order_return'])->selectRaw('COALESCE(SUM(erp_journal_lines.debit - erp_journal_lines.credit),0) as n')->value('n') ?? '0');
+
+        return Money::max('0', Money::sub($open, Money::max('0', $orders)));
+    }
+
     /** Set an advance held for the party against what they owe / what we owe (Dr advances/payable swap). Applies min(advance, outstanding) or the given amount. */
     public function applyAdvance(string $type, int $id, string $ref, ?string $amount = null, ?string $date = null): ?JournalEntry
     {
@@ -124,7 +141,8 @@ class PartyService
         $this->ensureChart();
         $p = $this->party($type, $id);
         $pos = $this->ledger->position($type, $p->id);
-        $max = Money::min(Money::max($pos['advance'], '0'), Money::max($pos['outstanding'], '0'));
+        $owed = $type === 'customer' ? $this->nonOrderOpen($p->id) : Money::max($pos['outstanding'], '0'); // order receivables clear through the order (ERP-015)
+        $max = Money::min(Money::max($pos['advance'], '0'), $owed);
         $use = $amount ? Money::min($this->amount($amount), $max) : $max;
         if (Money::cmp($use, '0') <= 0) {
             throw new AccountingException(__('erp_ext.errors.nothing_to_apply'));
@@ -134,7 +152,7 @@ class PartyService
             ? [['account' => 'customer_advances', 'debit' => $use, 'memo' => $m, 'party_type' => 'customer', 'party_id' => $p->id], ['account' => 'receivable', 'credit' => $use, 'memo' => $m, 'party_type' => 'customer', 'party_id' => $p->id]]
             : [['account' => 'payable', 'debit' => $use, 'memo' => $m, 'party_type' => 'supplier', 'party_id' => $p->id], ['account' => 'supplier_advances', 'credit' => $use, 'memo' => $m, 'party_type' => 'supplier', 'party_id' => $p->id]];
 
-        return $this->post($type, $p->id, 'adv:'.$ref, $date ?? now()->toDateString(), $m.' - '.$p->name, $lines);
+        return $this->post($type, $p->id, 'adv:'.$ref, $date ?? now()->toDateString(), $m.' - '.$p->name, $lines, 'auto', null, false); // amount is derived, not typed
     }
 
     /**
@@ -145,6 +163,10 @@ class PartyService
         $this->ensureChart();
         $p = $this->party($type, $id);
         $a = $this->amount($amount);
+        $cut = \App\Services\Erp\Backfill\OpeningState::openingDate();
+        if ($cut && ($date ?? now()->toDateString()) > $cut) {
+            throw new AccountingException(__('erp_acc.errors.opening_after_cutover', ['date' => $cut])); // after go-live a balance is a document, not an opening
+        }
         $m = __('erp_ext.memo.opening');
         $lines = $type === 'customer'
             ? [['account' => 'receivable', 'debit' => $a, 'memo' => $m, 'party_type' => 'customer', 'party_id' => $p->id], ['account' => 'opening_equity', 'credit' => $a, 'memo' => $m]]
@@ -157,7 +179,7 @@ class PartyService
      * Credit / debit note with a party (journal types credit_note | debit_note). The note always moves the party's open balance:
      * customer: credit_note reduces what they owe (Dr counter / Cr receivable), debit_note increases it;
      * supplier: debit_note reduces what we owe (Dr payable / Cr counter), credit_note increases it.
-     * $counter = account id (defaults: customer credit note -> sales_returns, customer debit note -> other_revenue, supplier debit note -> inventory, supplier credit note -> purchase_expenses).
+     * $counter = account id (defaults: customer credit note -> sales_returns, customer debit note -> other_revenue, supplier debit/credit note -> purchase_expenses (goods physically returned go through a stock document)).
      */
     public function note(string $type, int $id, string $kind, string $amount, string $ref, ?int $counterAccountId = null, ?string $date = null, ?string $desc = null): JournalEntry
     {
@@ -170,7 +192,7 @@ class PartyService
         $reduces = ($type === 'customer') === ($kind === 'credit_note');
         $counter = $counterAccountId ?: match (true) {
             $type === 'customer' && $reduces => 'sales_returns', $type === 'customer' => 'other_revenue',
-            $reduces => 'inventory', default => 'purchase_expenses',
+            $reduces => 'purchase_expenses', default => 'purchase_expenses', // a debit note never touches Inventory: no stock moved (ERP-009)
         };
         if (is_int($counter) && ! Account::where('is_group', false)->where('is_active', true)->whereKey($counter)->exists()) {
             throw new AccountingException(__('erp_ext.errors.bad_account'));

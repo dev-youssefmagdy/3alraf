@@ -267,7 +267,9 @@ it('keeps reports tenant-isolated', function () {
     expect($csv)->not->toContain('777')->and(count(($this->rows)('journal-entries', ($this->f)(['from' => $this->old]))))->toBe(2 * 7 + 1);
     $this->get($this->base."/reports/profit-loss?branch_id={$ob->id}")->assertNotFound();
     $this->get($this->base.'/branches')->assertOk()->assertDontSee('OB');
-    $this->post($this->base.'/branches/transfer', ['from_branch' => $this->branch->id, 'to_branch' => $ob->id, 'amount' => '5'])->assertNotFound();
+    // QA-003: another tenant's branch is an unknown id for this tenant -> field error (tenant-scoped exists), nothing posted
+    $this->post($this->base.'/branches/transfer', ['from_branch' => $this->branch->id, 'to_branch' => $ob->id, 'amount' => '5'])->assertSessionHasErrors('to_branch');
+    expect(\App\Models\Erp\JournalEntry::where('source_type', 'branch_cash_transfer')->count())->toBe(0);
 });
 
 it('keeps report query counts bounded (no N+1)', function () {

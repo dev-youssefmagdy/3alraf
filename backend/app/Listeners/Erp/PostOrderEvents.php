@@ -31,23 +31,25 @@ class PostOrderEvents
     {
         $o = $e->order;
         $this->guard->run($o->tenant_id, 'order', $o->id, 'status:'.$e->to->value, function () use ($o, $e) {
-            if (in_array($e->to, OrderStatus::salesStatuses(), true)) {
-                $this->sales->confirmed($o);
-                $this->payments->sync($o);
-            } elseif ($e->to === OrderStatus::CANCELLED) {
+            if ($e->to === OrderStatus::CANCELLED) {
                 $this->payments->sync($o);
                 $this->sales->cancelled($o);
                 $this->payments->cancelRefund($o);
-            } else {
-                $this->payments->sync($o);
+
+                return;
             }
+            $this->sales->confirmed($o);            // no-op until the tenant's recognition point (RevenueRecognition)
+            if ($e->to === OrderStatus::SHIPPED) {
+                $this->sales->shipped($o);          // COGS true-up / goods out for delivery
+            }
+            $this->payments->sync($o);
         });
     }
 
     public function onCarrierSettled(\App\Events\Erp\CarrierSettled $e): void
     {
         $o = $e->order;
-        $this->guard->run($o->tenant_id, 'order', $o->id, 'carrier.settled', fn () => $this->payments->carrierSettled($o));
+        $this->guard->run($o->tenant_id, 'order', $o->id, 'carrier.settled', fn () => $this->payments->carrierSettled($o, $e->into));
     }
 
     public function onPaymentUpdated(OrderPaymentUpdated $e): void

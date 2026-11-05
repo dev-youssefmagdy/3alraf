@@ -3,7 +3,7 @@
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'rounded border border-slate-300 px-2 py-1 text-xs'; @endphp
     <div class="mb-4 flex flex-wrap items-center gap-4 text-sm"><a class="text-brand-600" href="{{ route('tenant.erp.profits.index') }}">&larr; {{ __('erp.cards.distribution')[0] }}</a>
         <span>{{ $d->period_start->format('Y-m-d') }} → {{ $d->period_end->format('Y-m-d') }}</span><span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">{{ __('erp_dist.status.'.$d->status) }}</span>
-        @if ($d->entry)<a class="font-mono text-brand-600" href="{{ route('tenant.erp.journals.show', $d->journal_entry_id) }}">{{ $d->entry->number }}</a>@endif</div>
+        @if ($d->entry)@include('tenant.erp._jlink', ['id' => $d->journal_entry_id, 'no' => $d->entry->number])@endif</div>
     <x-card :title="__('erp_dist.summary')" class="mb-5"><table class="w-full text-sm"><tbody>
         @foreach (['ledger_profit' => 'ledger_profit', 'tax_amount' => 'tax', 'net_profit' => 'net_profit', 'retained_before' => 'prior_retained', 'reserve_amount' => 'reserve', 'distributable_profit' => 'distributable_profit', 'cash_available' => 'distributable_cash', 'distributable' => 'distributable', 'distributed_amount' => 'distributed', 'retained_after' => 'retained_after'] as $col => $l)
             <tr class="border-b border-slate-100"><td class="py-1.5">{{ __('erp_dist.l.'.$l) }}</td><td class="text-end tabular-nums">{{ $n($d->$col) }}</td></tr>@endforeach

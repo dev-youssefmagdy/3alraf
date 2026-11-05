@@ -6,6 +6,8 @@ return [
     'period_closed' => 'Period closed.', 'period_reopened' => 'Period reopened.', 'reversal_of' => 'Reversal of :number.',
     'year_closed_ok' => 'Fiscal year closed and locked.', 'year_reopened_ok' => 'Fiscal year reopened (closing entries reversed).', 'year_close_memo' => 'Year-end closing', 'year_close_desc' => 'Year-end closing :year - revenue and expenses to income summary', 'year_close_re' => 'Year-end closing :year - income summary to retained earnings',
     'cards' => [
+        'audit' => ['Audit trail', 'Every posting, reversal, period close and settings change, with who and when.'],
+        'cash_bank' => ['Cash & Bank', 'Money balances, VAT payment, carrier payments, gateway payouts and register close.'],
         'accounts' => ['Chart of Accounts', 'Hierarchical accounts, custom accounts and archiving.'],
         'journals' => ['Journal Entries', 'Manual and automatic double-entry journals, post and reverse.'],
         'periods' => ['Accounting Periods', 'Fiscal years, monthly periods, closing and locking.'],

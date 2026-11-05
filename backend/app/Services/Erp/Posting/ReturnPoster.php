@@ -12,7 +12,8 @@ use App\Support\Money;
  *  approved : Dr Sales returns (net of VAT) + VAT payable / Cr Receivable ;
  *             restocked : Dr Inventory / Cr COGS ; damaged (restock=false) : Dr Inventory loss / Cr COGS ;
  *             return shipping cost : Dr Shipping expense / Cr Shipping payable ; commission follows the order (delta entry)
- *  refunded : Dr Receivable (+ Shipping revenue for a refunded shipping part) / Cr cash-like account of the paying method
+ *  refunded : Dr Receivable (+ Shipping revenue for a refunded shipping part) / Cr Gateway (part refunded through the provider) + Cr the account
+ *             the rest is paid back from (refund_from; default cash for COD, wallet for wallet orders) - never the carrier receivable unless chosen
  * Fully-returned orders keep their shipping/fee lines (those costs and income were real); see docs/ERP_PLAN.md Phase 4 notes.
  */
 class ReturnPoster extends Poster
@@ -71,12 +72,14 @@ class ReturnPoster extends Poster
         $shipping = Money::min(Money::max('0', Money::sub($amount, $cap)), (string) $o->shipping_net); // refunded shipping reverses shipping revenue
         $b = $r->branch_id ?? $o->branch_id;
         $m = $r->number ?: 'RET-'.$r->id;
-        $role = self::settlementRole($o->payingMethod(), (bool) $o->shipping_company_id);
         $lines = [
             $this->dr('receivable', Money::sub($amount, $shipping), $b, $m, 'customer', $o->customer_id),
             $this->dr('shipping_revenue', $shipping, $b, $m),
-            $this->cr($role, $amount, $b, $m),
         ];
+        // credit = where the money is paid back FROM: the provider part (stored by ReturnService) -> gateway, the rest -> refund_from (ERP-001/010)
+        foreach (self::refundCredits($o, $amount, (string) $r->refund_online, $shipping, $r->refund_from) as $role => $amt) {
+            $lines[] = $this->cr($role, $amt, $b, $m);
+        }
 
         return $this->post('return:'.$r->id.':refund', $this->today(), 'Refund of return '.$m, 'order_return', $r->id, $lines, $b);
     }

@@ -23,14 +23,17 @@ class AccountController extends ErpController
         $d = $r->validate([
             'code' => ['required', 'string', 'max:32', Rule::unique('erp_accounts', 'code')->where('tenant_id', current_tenant()->id)],
             'name_en' => ['required', 'string', 'max:150'], 'name_ar' => ['nullable', 'string', 'max:150'], 'description' => ['nullable', 'string', 'max:500'],
-            'type' => ['required', Rule::in(Account::TYPES)], 'parent_id' => ['nullable', 'integer'], 'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)],
+            'type' => ['required', Rule::in(Account::TYPES)], 'parent_id' => ['nullable', 'integer', $this->tenantExists('erp_accounts')], // QA-003: unknown id = field error 'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)],
             'is_group' => ['nullable', 'boolean'],
         ]);
-        $parent = ! empty($d['parent_id']) ? Account::findOrFail($d['parent_id']) : null; // scoped: foreign ids 404
+        $parent = ! empty($d['parent_id']) ? Account::find($d['parent_id']) : null;
         if ($parent && $parent->type !== $d['type']) {
             return back()->withInput()->withErrors(['parent_id' => __('erp.errors.parent_type')]);
         }
-        Account::create(['code' => $d['code'], 'name' => ['en' => $d['name_en'], 'ar' => $d['name_ar'] ?: $d['name_en']], 'description' => $d['description'] ?? null,
+        if ($parent && ! $parent->is_group) { // QA-002: only a group (header) account can have children; a postable account keeps its own balance
+            return back()->withInput()->withErrors(['parent_id' => __('erp_acc.errors.parent_group')]);
+        }
+        Account::create(['code' => $d['code'], 'name' => ['en' => $d['name_en'], 'ar' => ($d['name_ar'] ?? null) ?: $d['name_en']], // QA-001 'description' => $d['description'] ?? null,
             'type' => $d['type'], 'normal_balance' => Account::normalBalanceFor($d['type']), 'parent_id' => $parent?->id, 'branch_id' => $d['branch_id'] ?? null,
             'currency' => current_tenant()->currency_code, 'is_group' => (bool) ($d['is_group'] ?? false)]);
 

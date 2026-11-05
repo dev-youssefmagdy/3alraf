@@ -47,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // ERP strings live in resources/lang-erp (FileLoader merges every registered path per group)
         $this->app->make('translator')->getLoader()->addPath(resource_path('lang-erp'));
+        // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
+        Gate::define('erp.access', fn ($user) => method_exists($user, 'getAllPermissions')
+            && $user->getAllPermissions()->contains(fn ($p) => str_starts_with($p->name, 'erp.') && $p->guard_name === 'tenant'));
         Blade::if('growthFeature', fn (string $key) => app(GrowthFeatures::class)->active($key, current_tenant()));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
         // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).

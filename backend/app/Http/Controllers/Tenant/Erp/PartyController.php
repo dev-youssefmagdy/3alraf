@@ -6,9 +6,10 @@ use App\Models\Branch;
 use App\Models\Erp\Account;
 use App\Services\Erp\Parties\PartyService;
 use App\Services\Erp\Reports\PartyLedger;
+use App\Support\ErpRules;
 use Illuminate\Http\Request;
 
-/** Customers & suppliers ledgers (type = customer|supplier). Views need erp.accounts.view; money movements need erp.journals.create. */
+/** Customers & suppliers ledgers (type = customer|supplier). Views need erp.accounts.view; money movements post at once: erp.journals.create + erp.journals.post. */
 class PartyController extends ErpController
 {
     private function type(string $type): string
@@ -66,13 +67,11 @@ class PartyController extends ErpController
     public function settle(Request $r, string $type, int $id, PartyService $svc)
     {
         $this->allow('erp.journals.create');
+        $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
-        $d = $r->validate(['amount' => ['required', 'numeric', 'gt:0'], 'account' => ['required', 'in:'.implode(',', PartyService::CASH_ROLES)], 'date' => ['nullable', 'date'],
+        $d = $r->validate(['amount' => ErpRules::money(), 'account' => ['required', 'in:'.implode(',', PartyService::CASH_ROLES)], 'date' => ErpRules::date(false),
             'ref' => ['required', 'string', 'max:60'], 'advance_only' => ['nullable', 'boolean'], 'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)], 'note' => ['nullable', 'string', 'max:300']]);
         $svc->party($type, $id);
-        if (! empty($d['branch_id'])) {
-            Branch::findOrFail($d['branch_id']);
-        }
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {
             $args = [$id, (string) $d['amount'], $d['ref'], $d['account'], $d['date'] ?? null, ! empty($d['advance_only']), $d['branch_id'] ?? null, $d['note'] ?? null];
@@ -85,8 +84,9 @@ class PartyController extends ErpController
     public function applyAdvance(Request $r, string $type, int $id, PartyService $svc)
     {
         $this->allow('erp.journals.create');
+        $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
-        $d = $r->validate(['amount' => ['nullable', 'numeric', 'gt:0'], 'ref' => ['required', 'string', 'max:60'], 'date' => ['nullable', 'date']]);
+        $d = $r->validate(['amount' => ErpRules::money(false), 'ref' => ['required', 'string', 'max:60'], 'date' => ErpRules::date(false)]);
         $svc->party($type, $id);
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {
@@ -99,13 +99,11 @@ class PartyController extends ErpController
     public function note(Request $r, string $type, int $id, PartyService $svc)
     {
         $this->allow('erp.journals.create');
+        $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
-        $d = $r->validate(['kind' => ['required', 'in:credit_note,debit_note'], 'amount' => ['required', 'numeric', 'gt:0'], 'ref' => ['required', 'string', 'max:60'],
-            'account_id' => ['nullable', 'integer'], 'date' => ['nullable', 'date'], 'description' => ['nullable', 'string', 'max:300']]);
+        $d = $r->validate(['kind' => ['required', 'in:credit_note,debit_note'], 'amount' => ErpRules::money(), 'ref' => ['required', 'string', 'max:60'],
+            'account_id' => ['nullable', 'integer', $this->tenantExists('erp_accounts')->where('is_group', false)], 'date' => ErpRules::date(false), 'description' => ['nullable', 'string', 'max:300']]);
         $svc->party($type, $id);
-        if (! empty($d['account_id'])) {
-            abort_unless(Account::whereKey($d['account_id'])->exists(), 404);
-        }
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {
             $svc->note($type, $id, $d['kind'], (string) $d['amount'], $d['ref'], $d['account_id'] ?? null, $d['date'] ?? null, $d['description'] ?? null);
@@ -117,8 +115,9 @@ class PartyController extends ErpController
     public function opening(Request $r, string $type, int $id, PartyService $svc)
     {
         $this->allow('erp.journals.create');
+        $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
-        $d = $r->validate(['amount' => ['required', 'numeric', 'gt:0'], 'ref' => ['required', 'string', 'max:60'], 'date' => ['nullable', 'date']]);
+        $d = $r->validate(['amount' => ErpRules::money(), 'ref' => ['required', 'string', 'max:60'], 'date' => ErpRules::date(false)]);
         $svc->party($type, $id);
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {

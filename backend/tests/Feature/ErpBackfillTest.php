@@ -51,6 +51,9 @@ beforeEach(function () {
     });
     $this->product = $mk('pa', '100', '60');
     $this->actingAs(TenantAdmin::first(), 'tenant');
+    // these scenarios model a tenant whose history was recognised at admin confirmation (legacy policy, pinned for pre-existing ledgers by
+    // migration 2026_12_17_100001); the default "shipped" policy is covered by ErpPostingTest / QaProbeErpAccountingTest (REG ERP-007/011)
+    app(\App\Services\Erp\Equity\ErpSettings::class)->set('revenue_recognition', 'confirmed');
     $this->from = now()->subMonths(6)->startOfMonth()->toDateString();
     $this->before = now()->subMonths(8)->startOfMonth()->addDays(9)->toDateString();   // clearly before --from
     $this->after = fn (int $d) => now()->subMonths(4)->startOfMonth()->addDays($d)->toDateString();

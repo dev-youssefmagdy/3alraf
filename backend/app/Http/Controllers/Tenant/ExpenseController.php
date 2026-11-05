@@ -34,6 +34,9 @@ class ExpenseController extends ResourceController
         return [
             'categories' => \App\Models\ExpenseCategory::where('is_active', true)->get()->mapWithKeys(fn ($c) => [$c->id => $c->name])->all(),
             'branches' => \App\Models\Branch::where('is_active', true)->get()->mapWithKeys(fn ($c) => [$c->id => $c->name])->all(),
+            // ERP-013: settlement account (ledger role) of a paid expense / payee of an unpaid bill
+            'paidFrom' => collect(\App\Http\Requests\Tenant\ExpenseRequest::PAID_FROM)->mapWithKeys(fn ($r) => [$r => __('erp_acc.roles.'.$r)])->all(),
+            'suppliers' => \App\Models\Supplier::where('is_active', true)->orWhere('id', $model->supplier_id ?? 0)->orderBy('name')->limit(1000)->pluck('name', 'id')->all(),
         ];
     }
 }

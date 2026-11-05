@@ -103,15 +103,17 @@ it('records owner contributions and withdrawals and derives equity from the ledg
     $svc = app(OwnerService::class);
     $o = $svc->save(['name' => 'Ali', 'ownership_percent' => 60, 'is_eligible' => true]);
     $svc->transact($o, 'contribution', '1000', now()->toDateString(), 'bank', null, null, 'c1');
-    $svc->transact($o, 'withdrawal', '200', now()->toDateString(), 'cash', null, null, 'w1');
-    $svc->transact($o, 'withdrawal', '200', now()->toDateString(), 'cash', null, null, 'w1'); // replay
-    expect(($this->bal)('owner_capital'))->toBe('1000.0000')->and(($this->bal)('owner_drawings'))->toBe('-200.0000')->and(($this->bal)('bank'))->toBe('1000.0000')->and(($this->bal)('cash'))->toBe('-200.0000');
+    expect(fn () => $svc->transact($o, 'withdrawal', '200', now()->toDateString(), 'cash', null, null, 'w0'))->toThrow(AccountingException::class); // no cash on hand (ERP-031)
+    $svc->transact($o, 'withdrawal', '200', now()->toDateString(), 'bank', null, null, 'w1');
+    $svc->transact($o, 'withdrawal', '200', now()->toDateString(), 'bank', null, null, 'w1'); // replay
+    expect(($this->bal)('owner_capital'))->toBe('1000.0000')->and(($this->bal)('owner_drawings'))->toBe('-200.0000')->and(($this->bal)('bank'))->toBe('800.0000')->and(($this->bal)('cash'))->toBe('0.0000');
     expect($svc->equity()[$o->id]['equity'])->toBe('800.0000')->and($o->transactions()->count())->toBe(2);
     $st = $svc->statement($o, now()->startOfYear()->toDateString(), now()->toDateString());
     expect($st['closing'])->toBe('800.0000')->and(count($st['rows']))->toBe(2);
     $b = Branch::first();
-    $svc->allocateToBranch($b->id, '300', now()->toDateString());
-    expect(($this->bal)('branch_capital'))->toBe('300.0000')->and(\App\Models\Erp\JournalLine::where('branch_id', $b->id)->count())->toBe(2);
+    $svc->allocateToBranch($b->id, '300', now()->toDateString(), null, null, 'bank'); // zero-sum: bank moves from head office to the branch (ERP-006)
+    expect(($this->bal)('branch_capital'))->toBe('300.0000')->and(($this->bal)('bank'))->toBe('800.0000')->and(($this->bal)('owner_capital'))->toBe('700.0000')
+        ->and(\App\Models\Erp\JournalLine::where('branch_id', $b->id)->count())->toBe(2);
 });
 
 it('rejects ownership above 100 percent', function () {
@@ -191,7 +193,7 @@ it('serves every new page and enforces tenant isolation and permissions', functi
     expect($this->ledger->balances('supplier'))->toHaveCount(1)->and(Owner::count())->toBe(1)->and(FixedAsset::count())->toBe(1);
 
     // permission gates
-    foreach (['erp.owners.manage', 'erp.assets.manage', 'erp.journals.create', 'erp.accounts.view'] as $p) {
+    foreach (['erp.owners.manage', 'erp.owners.view', 'erp.assets.manage', 'erp.assets.view', 'erp.journals.create', 'erp.accounts.view'] as $p) {
         $this->owner->roles->each->revokePermissionTo($p);
     }
     app(PermissionRegistrar::class)->forgetCachedPermissions();

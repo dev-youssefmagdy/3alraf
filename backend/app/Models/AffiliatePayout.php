@@ -10,7 +10,7 @@ class AffiliatePayout extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['affiliate_id', 'amount', 'status', 'note', 'paid_at'];
+    protected $fillable = ['affiliate_id', 'amount', 'paid_from', 'status', 'note', 'paid_at'];
 
     protected function casts(): array
     {

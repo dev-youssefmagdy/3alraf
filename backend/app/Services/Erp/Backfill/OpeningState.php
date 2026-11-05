@@ -22,14 +22,14 @@ class OpeningState
         return $d ? (string) $d : null;
     }
 
-    /** First time the order reached a sales status (confirmed..delivered); orders without history fall back to placed/created date. Null = never confirmed. */
+    /** First time the order reached its revenue-recognition status (RevenueRecognition policy); orders without history fall back to placed/created date. Null = never recognised. */
     public static function confirmedAt(Order $o): ?string
     {
         $h = OrderStatusHistory::where('order_id', $o->id)->whereIn('to_status', self::salesValues())->min('created_at');
         if ($h) {
             return (string) $h;
         }
-        if (in_array($o->status, [...OrderStatus::salesStatuses(), OrderStatus::RETURNED], true)) {
+        if (in_array($o->status, [...\App\Services\Erp\Posting\RevenueRecognition::statuses(), OrderStatus::RETURNED], true)) {
             return (string) ($o->placed_at ?? $o->created_at);
         }
 
@@ -56,9 +56,9 @@ class OpeningState
         return ['paid' => (string) ($r->paid_amount ?? '0'), 'refunded' => (string) ($r->refunded_amount ?? '0')];
     }
 
-    /** @return array<int,string> */
+    /** Statuses at/after the tenant's revenue-recognition point. @return array<int,string> */
     public static function salesValues(): array
     {
-        return array_map(fn ($s) => $s->value, OrderStatus::salesStatuses());
+        return \App\Services\Erp\Posting\RevenueRecognition::values();
     }
 }

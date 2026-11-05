@@ -1,9 +1,10 @@
 <x-layouts.admin guard="tenant" :title="__('erp.cards.assets')[0]">
     @include('tenant.erp._flash')
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; @endphp
+    @can('erp.assets.manage')
     <div class="mb-5 grid gap-4 lg:grid-cols-2">
         <x-card :title="__('erp_ext.fa.add')">
-            <form method="POST" action="{{ route('tenant.erp.assets.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
+            <form method="POST" action="{{ route('tenant.erp.assets.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf<input type="hidden" name="ref" value="{{ old('ref', (string) \Illuminate\Support\Str::uuid()) }}">
                 <label class="text-sm">{{ __('erp_ext.f.name') }}<input name="name" required maxlength="150" value="{{ old('name') }}" class="{{ $in }}"></label>
                 <label class="text-sm">{{ __('erp_ext.fa.category') }}<input name="category" maxlength="80" value="{{ old('category') }}" class="{{ $in }}"></label>
                 <label class="text-sm">{{ __('erp_ext.fa.acquired') }}<input name="acquisition_date" type="date" required value="{{ old('acquisition_date', now()->toDateString()) }}" class="{{ $in }}"></label>
@@ -24,6 +25,7 @@
                 <div class="mt-1 text-slate-500">{{ __('erp_ext.fa.cost') }}: {{ $n($rep['cost']) }} / {{ $n($rep['gl_cost']) }} &middot; {{ __('erp_ext.fa.accumulated') }}: {{ $n($rep['accumulated']) }} / {{ $n($rep['gl_accumulated']) }}</div></div>
         </x-card>
     </div>
+    @endcan
     @if ($rep['categories'])
     <x-card :title="__('erp_ext.fa.by_category')" class="mb-5"><table class="w-full text-sm"><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">{{ __('erp_ext.fa.category') }}</th><th class="text-end">{{ __('erp_ext.fa.cost') }}</th><th class="text-end">{{ __('erp_ext.fa.accumulated') }}</th><th class="text-end">{{ __('erp_ext.fa.nbv') }}</th></tr></thead><tbody>
         @foreach ($rep['categories'] as $k => $c)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $k }}</td><td class="text-end tabular-nums">{{ $n($c['cost']) }}</td><td class="text-end tabular-nums">{{ $n($c['acc']) }}</td><td class="text-end tabular-nums">{{ $n($c['nbv']) }}</td></tr>@endforeach

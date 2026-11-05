@@ -59,8 +59,8 @@ class ReturnController extends Controller implements HasMiddleware
 
     public function refund(Request $r, int $id): JsonResponse
     {
-        $r->validate(['amount' => ['nullable', 'numeric', 'min:0.01']]);
-        $this->service->refund($this->service->find($id), $r->input('amount'));
+        $r->validate(['amount' => ['nullable', 'numeric', 'min:0.01'], 'refund_from' => ['nullable', 'in:'.implode(',', \App\Services\Erp\Posting\Poster::REFUND_ROLES)]]);
+        $this->service->refund($this->service->find($id), $r->input('amount'), $r->input('refund_from') ?: null);
 
         return $this->ok(__('orders.refunded'), route('tenant.returns.show', $id));
     }

@@ -21,7 +21,7 @@
     <x-card :title="__('erp_rep.dash.recent')">
         <table class="w-full text-sm"><tbody>
         @forelse ($d['recent'] as $e)
-            <tr class="border-b border-slate-100"><td class="py-1.5">{{ $e->entry_date->format('Y-m-d') }}</td><td><a class="font-mono text-brand-600" href="{{ route('tenant.erp.journals.show', $e->id) }}">{{ $e->number }}</a></td><td>{{ $e->description }}</td><td class="text-end tabular-nums">{{ $n($e->total) }}</td></tr>
+            <tr class="border-b border-slate-100"><td class="py-1.5">{{ $e->entry_date->format('Y-m-d') }}</td><td>@include('tenant.erp._jlink', ['id' => $e->id, 'no' => $e->number])</td><td>{{ $e->description }}</td><td class="text-end tabular-nums">{{ $n($e->total) }}</td></tr>
         @empty<tr><td class="py-3 text-slate-500">{{ __('erp_rep.empty') }}</td></tr>@endforelse
         </tbody></table>
     </x-card>

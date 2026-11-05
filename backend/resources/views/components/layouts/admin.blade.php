@@ -53,7 +53,7 @@
             ['tenant.banners.index', 'ops.banners', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5', 'banners.view'],
             ['tenant.expense-categories.index', 'ops.expense_categories', 'M4 6h16M4 12h16M4 18h16', 'expense_categories.view'],
             ['tenant.expenses.index', 'ops.expenses', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', 'expenses.view'],
-            ['tenant.erp.hub', 'erp.menu', 'M3 6h18M3 12h18M3 18h18M7 3v18M17 3v18', 'erp.dashboard.view', 'tenant.erp.*'],
+            ['tenant.erp.hub', 'erp.menu', 'M3 6h18M3 12h18M3 18h18M7 3v18M17 3v18', 'erp.access', 'tenant.erp.*'],
             ['tenant.stock.index', 'ops.stock', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', 'stock.view', 'tenant.stock.index'],
             ['tenant.stock.low', 'stock_requests.low_stock', 'M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z', 'stock.view', 'tenant.stock.low'],
             ['tenant.stock.movements', 'ops.stock_movements', 'M4 6h16M4 12h16M4 18h16', 'stock.view', 'tenant.stock.movements*'],

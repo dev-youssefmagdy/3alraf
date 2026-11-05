@@ -6,7 +6,9 @@
             <label>{{ __('erp.f.from') }}<input type="date" name="from" value="{{ $f->from }}" class="{{ $in }}"></label>
             <label>{{ __('erp.f.to') }}<input type="date" name="to" value="{{ $f->to }}" class="{{ $in }}"></label>
             <x-button type="submit">{{ __('erp.f.filter') }}</x-button>
-            <a class="text-brand-600" href="{{ route('tenant.erp.reports.show', ['report' => 'branch-profitability'] + $f->query()) }}">{{ __('erp_rep.t.branch-profitability') }}</a>
+            @can('erp.reports.view')
+                <a class="text-brand-600" href="{{ route('tenant.erp.reports.show', ['report' => 'branch-profitability'] + $f->query()) }}">{{ __('erp_rep.t.branch-profitability') }}</a>
+            @endcan
         </form>
     </x-card>
     <x-card class="mb-5"><div class="overflow-x-auto"><table class="w-full text-sm">

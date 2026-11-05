@@ -1,6 +1,7 @@
 <x-layouts.admin guard="tenant" :title="__('erp.cards.owners')[0]">
     @include('tenant.erp._flash')
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; $tok = fn () => \Illuminate\Support\Str::uuid(); @endphp
+    @can('erp.owners.manage')
     <div class="mb-5 grid gap-4 lg:grid-cols-2">
         <x-card :title="__('erp_ext.own.add')">
             <form method="POST" action="{{ route('tenant.erp.owners.store') }}" class="grid gap-3 sm:grid-cols-2">@csrf
@@ -15,13 +16,16 @@
         <x-card :title="__('erp_ext.own.branch_title')">
             <form method="POST" action="{{ route('tenant.erp.owners.allocate') }}" class="grid gap-3 sm:grid-cols-2">@csrf<input type="hidden" name="ref" value="{{ $tok() }}">
                 <label class="text-sm">{{ __('erp_ext.f.branch') }}<select name="branch_id" required class="{{ $in }}">@foreach ($branches as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach</select></label>
+                <label class="text-sm">{{ __('erp_acc.alloc_from') }}<select name="from_branch_id" class="{{ $in }}"><option value="">{{ __('erp_acc.head_office') }}</option>@foreach ($branches as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach</select></label>
+                <label class="text-sm">{{ __('erp_ext.f.account') }}<select name="account" class="{{ $in }}">@foreach ($cashRoles as $c)<option value="{{ $c }}">{{ __('erp_acc.roles.'.$c) }}</option>@endforeach</select></label>
                 <label class="text-sm">{{ __('erp_ext.f.amount') }}<input name="amount" type="number" step="0.01" min="0.01" required class="{{ $in }}"></label>
                 <label class="text-sm">{{ __('erp_ext.f.date') }}<input name="date" type="date" value="{{ now()->toDateString() }}" required class="{{ $in }}"></label>
                 <label class="text-sm">{{ __('erp_ext.f.note') }}<input name="note" maxlength="300" class="{{ $in }}"></label>
-                <p class="text-xs text-slate-500 sm:col-span-2">{{ __('erp_ext.own.branch_hint') }}</p>
+                <p class="text-xs text-slate-500 sm:col-span-2">{{ __('erp_acc.alloc_hint') }}</p>
                 <div class="sm:col-span-2"><x-button type="submit">{{ __('erp_ext.f.save') }}</x-button></div></form>
         </x-card>
     </div>
+    @endcan
     <x-card :title="__('erp_ext.own.owners')" class="mb-5">
         <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">{{ __('erp_ext.f.name') }}</th><th class="text-end">{{ __('erp_ext.own.percent') }}</th><th class="text-end">{{ __('erp_ext.own.capital') }}</th><th class="text-end">{{ __('erp_ext.own.drawings') }}</th><th class="text-end">{{ __('erp_ext.own.distributions') }}</th><th class="text-end">{{ __('erp_ext.own.equity') }}</th><th></th></tr></thead><tbody>
         @forelse ($owners as $o)@php $e = $equity[$o->id] ?? null; @endphp

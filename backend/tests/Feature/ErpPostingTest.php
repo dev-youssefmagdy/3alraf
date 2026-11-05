@@ -73,6 +73,7 @@ beforeEach(function () {
         return $o->refresh();
     };
     $this->deliver = fn (Order $o) => ($this->to)($o, S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED);
+    $this->ship = fn (Order $o) => ($this->to)($o, S::CONFIRMED, S::PROCESSING, S::SHIPPED);   // revenue recognition point (default policy)
     $this->bal = fn (string $role) => (string) Account::where('role_key', $role)->value('current_balance');
     $this->reports = fn () => app(LedgerReports::class);
     $this->admin = TenantAdmin::first();
@@ -100,19 +101,21 @@ function ledgerNet(): string
     return number_format((float) app(LedgerReports::class)->profitLoss(null, null)['net_profit'], 2);
 }
 
-it('posts sale + COGS on confirmation and the payment on delivery, all balanced', function () {
+it('posts sale + COGS at shipment (default recognition) and the payment on delivery, all balanced', function () {
     $o = ($this->place)();
     expect(JournalEntry::count())->toBe(0);                        // pending: nothing
-    ($this->to)($o, S::CONFIRMED);
+    ($this->to)($o, S::CONFIRMED, S::PROCESSING);
+    expect(JournalEntry::count())->toBe(0);                        // confirmed but not shipped: control has not passed, nothing recognised
+    ($this->to)($o, S::SHIPPED);
     $o->refresh();
     expect(JournalEntry::count())->toBe(1);
     expect((float) ($this->bal)('receivable'))->toBe((float) $o->total)
         ->and((float) ($this->bal)('sales_revenue'))->toBe((float) $o->revenueGoods())
         ->and((float) ($this->bal)('cogs'))->toBe(120.0)
-        ->and((float) ($this->bal)('inventory'))->toBe(-120.0)       // no purchase document booked it in
+        ->and((float) ($this->bal)('inventory'))->toBe(-120.0)       // no purchase document booked it in; = value of the sale_out movements
         ->and((float) ($this->bal)('shipping_revenue'))->toBe((float) $o->shipping_net);
     expect(JournalLine::whereNotNull('branch_id')->count())->toBe(JournalLine::count());   // branch on every line
-    ($this->to)($o, S::PROCESSING, S::SHIPPED, S::DELIVERED);
+    ($this->to)($o, S::DELIVERED);
     $o->refresh();
     expect((float) ($this->bal)('receivable'))->toBe(0.0)
         ->and((float) ($this->bal)('carrier_receivable'))->toBe((float) $o->total);   // COD cash held by the carrier
@@ -121,7 +124,7 @@ it('posts sale + COGS on confirmation and the payment on delivery, all balanced'
 });
 
 it('handles partial payments by cumulative amount and never double posts a replay', function () {
-    $o = ($this->to)(($this->place)(), S::CONFIRMED);
+    $o = ($this->ship)(($this->place)());
     $poster = app(\App\Services\Erp\Posting\PaymentPoster::class);
     $o->update(['paid_amount' => '50.00']);
     $poster->sync($o->refresh());
@@ -136,7 +139,7 @@ it('handles partial payments by cumulative amount and never double posts a repla
 
 it('keeps revenue net of the discount', function () {
     DiscountCode::create(['code' => 'ALL10', 'type' => 'percent', 'value' => 10, 'scope' => 'all', 'is_active' => true, 'min_order' => 0]);
-    $o = ($this->to)(($this->place)(null, ['discountCode' => 'ALL10']), S::CONFIRMED);
+    $o = ($this->ship)(($this->place)(null, ['discountCode' => 'ALL10']));
     expect((float) $o->discount)->toBe(20.0)
         ->and((float) ($this->bal)('sales_revenue'))->toBe(180.0)
         ->and((float) ($this->bal)('receivable'))->toBe((float) $o->total);
@@ -146,13 +149,13 @@ it('keeps revenue net of the discount', function () {
 
 it('books VAT as a liability, never revenue (exclusive and inclusive prices)', function () {
     $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => 14])]);
-    $o = ($this->to)(($this->place)(), S::CONFIRMED);
+    $o = ($this->ship)(($this->place)());
     expect((float) $o->tax)->toBe(28.0)->and((float) ($this->bal)('vat_payable'))->toBe(28.0)->and((float) ($this->bal)('sales_revenue'))->toBe(200.0)
         ->and((float) ($this->bal)('receivable'))->toBe((float) $o->total);
     expect(ledgerNet())->toBe(number_format((float) $o->net_profit, 2));
 
     $this->tenant->update(['settings' => array_merge($this->tenant->settings, ['prices_include_tax' => true])]);
-    $i = ($this->to)(($this->place)(), S::CONFIRMED);
+    $i = ($this->ship)(($this->place)());
     expect($i->taxIncluded())->toBeTrue();
     $entry = JournalEntry::where('idempotency_key', 'order:'.$i->id.':confirm')->first();
     $rev = (float) $entry->lines()->where('account_id', Account::where('role_key', 'sales_revenue')->value('id'))->sum('credit');
@@ -165,7 +168,7 @@ it('books shipping revenue and cost, gateway fee, packaging and affiliate commis
     $o = ($this->place)();
     $o->update(['shipping_net' => '30.00', 'shipping_cost' => '25.00', 'payment_fee' => '7.50', 'payment_fee_charged' => '7.50', 'cod_fee' => '5.00',
         'affiliate_commission' => '11.50', 'packaging_fee' => '15.00', 'packaging_cost' => '4.00', 'total' => '200.00' + 30 + 7.5 + 5 + 15]);
-    $o = ($this->to)($o, S::CONFIRMED);
+    $o = ($this->ship)($o);
     expect((float) ($this->bal)('shipping_revenue'))->toBe(30.0)->and((float) ($this->bal)('shipping_expense'))->toBe(25.0)->and((float) ($this->bal)('gateway_fees'))->toBe(7.5)
         ->and((float) ($this->bal)('fee_income'))->toBe(12.5)->and((float) ($this->bal)('affiliate_expense'))->toBe(11.5)->and((float) ($this->bal)('packaging'))->toBe(4.0)
         ->and((float) ($this->bal)('other_revenue'))->toBe(15.0)->and((float) ($this->bal)('receivable'))->toBe(257.5);
@@ -203,7 +206,8 @@ it('posts the refund cash leg and clears the receivable', function () {
     $r = $svc->approve($svc->request($o, new ReturnRequestData(quantities: [$item->id => 1], reason: 'x', restock: true, refundShipping: false, returnShippingCost: '0')));
     expect((float) ($this->bal)('receivable'))->toBe(-100.0 + (float) $o->total - (float) $o->total);   // paid in full on delivery, return credits the customer
     $svc->refund($r);
-    expect((float) ($this->bal)('receivable'))->toBe(0.0)->and((float) ($this->bal)('carrier_receivable'))->toBe((float) $o->total - 100);
+    // ERP-001: the merchant hands the cash back; the carrier still owes the full COD amount it collected
+    expect((float) ($this->bal)('receivable'))->toBe(0.0)->and((float) ($this->bal)('carrier_receivable'))->toBe((float) $o->total)->and((float) ($this->bal)('cash'))->toBe(-100.0);
     assertLedgerBalanced();
 });
 
@@ -219,13 +223,17 @@ it('refunding shipping with a return reverses shipping revenue', function () {
     assertLedgerBalanced();
 });
 
-it('cancel before confirmation posts nothing, cancel after confirmation reverses the confirmation', function () {
+it('cancel before recognition posts nothing, cancel after shipment (returned to sender) reverses the recognition', function () {
     $a = ($this->to)(($this->place)(), S::CANCELLED);
     expect(JournalEntry::count())->toBe(0);
 
-    $b = ($this->to)(($this->place)(), S::CONFIRMED);
+    $c = ($this->to)(($this->place)(), S::CONFIRMED);                    // confirmed, not shipped: nothing recognised, cancel posts nothing
+    ($this->to)($c, S::CANCELLED);
+    expect(JournalEntry::count())->toBe(0);
+
+    $b = ($this->ship)(($this->place)());
     expect(JournalEntry::where('status', 'posted')->count())->toBe(1);
-    ($this->to)($b, S::CANCELLED);
+    ($this->to)($b, S::CANCELLED);                                       // returned to sender after shipment: restocked + reversed
     expect(JournalEntry::where('type', 'reversal')->count())->toBe(1)->and(JournalEntry::where('status', 'reversed')->count())->toBe(1);
     foreach (['receivable', 'sales_revenue', 'cogs', 'inventory', 'shipping_revenue'] as $role) {
         expect((float) ($this->bal)($role))->toBe(0.0);
@@ -235,11 +243,12 @@ it('cancel before confirmation posts nothing, cancel after confirmation reverses
 });
 
 it('cancel of a paid wallet-style order refunds the money in the ledger', function () {
-    $o = ($this->to)(($this->place)(), S::CONFIRMED);
+    $o = ($this->ship)(($this->place)());
     $o->update(['paid_amount' => $o->total]);
     app(\App\Services\Erp\Posting\PaymentPoster::class)->sync($o->refresh());
     app(OrderStatusService::class)->change($o, S::CANCELLED);
-    expect((float) ($this->bal)('receivable'))->toBe(0.0)->and((float) ($this->bal)('carrier_receivable'))->toBe(0.0);
+    // the COD money sits with the carrier (receivable), the refund is paid by the merchant from cash (ERP-001), never credited to the carrier
+    expect((float) ($this->bal)('receivable'))->toBe(0.0)->and((float) ($this->bal)('carrier_receivable'))->toBe((float) $o->total)->and((float) ($this->bal)('cash'))->toBe(-(float) $o->total);
     assertLedgerBalanced();
 });
 
@@ -331,8 +340,8 @@ it('logs a closed-period posting failure without breaking the business flow, and
     foreach ($periods as $p) {
         $ps->close($p, $this->admin->id);
     }
-    $o = ($this->to)(($this->place)(), S::CONFIRMED);                    // business op still succeeds
-    expect($o->status)->toBe(S::CONFIRMED)->and(JournalEntry::count())->toBe(0);
+    $o = ($this->ship)(($this->place)());                                // business op still succeeds
+    expect($o->status)->toBe(S::SHIPPED)->and(JournalEntry::count())->toBe(0);
     $log = AuditLog::where('action', 'posting.failed')->first();
     expect($log)->not->toBeNull()->and($log->subject_id)->toBe($o->id)->and($log->meta['error'])->toContain('closed');
     foreach ($periods->reverse() as $p) {
@@ -345,7 +354,7 @@ it('logs a closed-period posting failure without breaking the business flow, and
 
 it('lazily seeds the chart of accounts for a tenant without one', function () {
     Account::query()->delete();
-    $o = ($this->to)(($this->place)(), S::CONFIRMED);
+    $o = ($this->ship)(($this->place)());
     expect(Account::count())->toBeGreaterThan(40)->and(JournalEntry::count())->toBe(1);
 });
 

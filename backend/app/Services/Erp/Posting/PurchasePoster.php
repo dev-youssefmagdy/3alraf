@@ -16,9 +16,13 @@ class PurchasePoster extends Poster
 {
     public function received(PurchaseOrder $po): ?JournalEntry
     {
-        $items = Money::round((string) $po->items_total);
-        $landed = Money::add((string) $po->shipping_cost, (string) $po->other_cost);
-        $total = Money::add($items, $landed);
+        $total = Money::add(Money::round((string) $po->items_total), (string) $po->shipping_cost, (string) $po->other_cost);
+        // inventory = what the stock ledger actually received (incl. capitalised landed costs, ERP-019); the rest (landed costs when expensed,
+        // cent rounding of the allocation) goes to purchase expenses -> ledger inventory == stock valuation
+        $moved = (string) (\App\Models\StockMovement::where('reference_type', $po->getMorphClass())->where('reference_id', $po->id)->where('type', 'purchase_in')
+            ->selectRaw('COALESCE(SUM(quantity * unit_cost),0) as v')->value('v') ?? '0');
+        $items = Money::cmp($moved, '0') > 0 ? Money::min(Money::round($moved), $total) : Money::round((string) $po->items_total);
+        $landed = Money::sub($total, $items);
         $b = $po->branch_id;
         $lines = [
             $this->dr('inventory', $items, $b, $po->number), $this->dr('purchase_expenses', $landed, $b, $po->number),

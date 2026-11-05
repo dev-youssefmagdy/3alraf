@@ -19,7 +19,12 @@ class MigrationController extends ErpController
         $this->ensureSetup();
         $s = app(ErpSettings::class);
 
-        return view('tenant.erp.migration', ['runs' => BackfillRun::orderByDesc('id')->limit(30)->get(), 'auto' => $s->bool('auto_posting_enabled'), 'openingDate' => OpeningState::openingDate(),
+        $resolved = AuditLog::where('action', 'posting.resolved')->get(['subject_type', 'subject_id', 'id']);
+        $failures = AuditLog::where('action', 'posting.failed')->where('created_at', '>=', now()->subDays(30))->orderByDesc('id')->limit(50)->get()
+            ->reject(fn ($f) => $resolved->contains(fn ($r) => $r->subject_type === $f->subject_type && (int) $r->subject_id === (int) $f->subject_id && $r->id > $f->id))
+            ->unique(fn ($f) => $f->subject_type.'#'.$f->subject_id)->values();
+
+        return view('tenant.erp.migration', ['failures' => $failures, 'runs' => BackfillRun::orderByDesc('id')->limit(30)->get(), 'auto' => $s->bool('auto_posting_enabled'), 'openingDate' => OpeningState::openingDate(),
             'recon' => $recon, 'missing' => $missing, 'benign' => array_keys(__('erp.bf.benign'))]);
     }
 
@@ -60,5 +65,20 @@ class MigrationController extends ErpController
         AuditLog::create(['action' => $on ? 'auto_posting.enabled' : 'auto_posting.disabled', 'subject_type' => 'erp_settings', 'subject_id' => 0, 'user_id' => auth('tenant')->id(), 'meta' => ['by' => 'admin']]);
 
         return back()->with('status', __('erp.saved'));
+    }
+
+    /** ERP-016: retry a failed posting once its cause (closed period, inactive account...) is fixed; idempotent per document. */
+    public function retry(int $id, \App\Services\Erp\Posting\DocumentPoster $docs)
+    {
+        $this->allow('erp.settings.manage');
+        $log = AuditLog::where('action', 'posting.failed')->findOrFail($id);
+        try {
+            $ok = \Illuminate\Support\Facades\DB::transaction(fn () => $docs->post((string) $log->subject_type, (int) $log->subject_id));
+        } catch (\Throwable $e) {
+            return back()->withErrors(['erp' => __('erp_acc.retry_failed', ['error' => $e->getMessage()])]);
+        }
+        AuditLog::create(['action' => 'posting.resolved', 'subject_type' => $log->subject_type, 'subject_id' => $log->subject_id, 'user_id' => auth('tenant')->id(), 'meta' => ['failure' => $log->id, 'found' => $ok]]);
+
+        return back()->with('status', __('erp_acc.retried'));
     }
 }

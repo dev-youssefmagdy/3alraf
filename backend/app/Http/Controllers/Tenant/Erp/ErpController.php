@@ -17,6 +17,13 @@ abstract class ErpController extends Controller
         abort_unless(auth('tenant')->user()?->can($perm), 403);
     }
 
+    /** Any of the given permissions (e.g. view-only OR manage). */
+    protected function allowAny(string ...$perms): void
+    {
+        $u = auth('tenant')->user();
+        abort_unless($u && collect($perms)->contains(fn ($p) => $u->can($p)), 403);
+    }
+
     /** `exists` rule limited to the current tenant (the bare `exists:table,id` rule bypasses the model tenant scope). */
     protected function tenantExists(string $table, bool $softDeletes = false): Exists
     {

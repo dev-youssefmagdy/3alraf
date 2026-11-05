@@ -22,6 +22,8 @@ class CoaTemplate
         ['1200', 'Accounts Receivable', 'العملاء (ذمم مدينة)', 'asset', 'receivable', 'receivable', '1100', false],
         ['1300', 'Inventory', 'المخزون', 'asset', 'inventory', 'inventory', '1100', false],
         ['1310', 'Inventory in Transit', 'مخزون في الطريق', 'asset', 'inventory', 'inventory_transit', '1100', false],
+        ['1320', 'Goods Out for Delivery', 'بضاعة لدى شركات الشحن (قيد التسليم)', 'asset', 'inventory', 'goods_in_delivery', '1100', false],
+        ['1330', 'Packaging Supplies', 'مخزون مواد التغليف', 'asset', 'supplies', 'packaging_supplies', '1100', false],
         ['1400', 'Supplier Advances', 'دفعات مقدمة للموردين', 'asset', 'advance', 'supplier_advances', '1100', false],
         ['1410', 'Prepaid Expenses', 'مصروفات مدفوعة مقدماً', 'asset', 'prepaid', 'prepaid', '1100', false],
         ['1420', 'Employee Advances', 'سلف الموظفين', 'asset', 'advance', 'employee_advances', '1100', false],

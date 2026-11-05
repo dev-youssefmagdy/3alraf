@@ -16,7 +16,8 @@ use App\Services\Erp\Posting\StockPoster;
 /** Thin adapters: purchases / stock / expenses hooks -> ledger posters. */
 class PostOperationsEvents
 {
-    public function __construct(private PostingGuard $guard, private PurchasePoster $purchases, private StockPoster $stock, private ExpensePoster $expenses) {}
+    public function __construct(private PostingGuard $guard, private PurchasePoster $purchases, private StockPoster $stock, private ExpensePoster $expenses,
+        private \App\Services\Erp\Posting\AffiliatePoster $affiliates) {}
 
     public function subscribe($events): array
     {
@@ -27,6 +28,8 @@ class PostOperationsEvents
             \App\Events\Erp\StockTransferMoved::class => 'onTransferMoved',
             \App\Events\Erp\ExpenseSaved::class => 'onExpenseSaved',
             \App\Events\Erp\ExpenseDeleted::class => 'onExpenseDeleted',
+            \App\Events\Erp\AffiliatePayoutPaid::class => 'onAffiliatePayoutPaid',
+            \App\Events\Erp\AmbassadorRewardsPaid::class => 'onAmbassadorRewardsPaid',
         ];
     }
 
@@ -59,5 +62,16 @@ class PostOperationsEvents
     public function onExpenseDeleted(ExpenseDeleted $e): void
     {
         $this->guard->run($e->expense->tenant_id, 'expense', $e->expense->id, 'expense.deleted', fn () => $this->expenses->deleted($e->expense));
+    }
+
+    public function onAffiliatePayoutPaid(\App\Events\Erp\AffiliatePayoutPaid $e): void
+    {
+        $p = $e->payout;
+        $this->guard->run($p->tenant_id, 'affiliate_payout', $p->id, 'affiliate.payout_paid', fn () => $this->affiliates->payoutPaid($p));
+    }
+
+    public function onAmbassadorRewardsPaid(\App\Events\Erp\AmbassadorRewardsPaid $e): void
+    {
+        $this->guard->run($e->tenantId, 'ambassador_rewards', $e->affiliateId, 'ambassador.rewards_paid', fn () => $this->affiliates->rewardsPaid($e->affiliateId, $e->amount, $e->ref, $e->paidFrom));
     }
 }

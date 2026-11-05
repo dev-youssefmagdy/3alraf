@@ -10,6 +10,7 @@ use App\Services\Erp\Equity\ErpSettings;
 use App\Services\Erp\Equity\ProfitDistributionService;
 use App\Services\Erp\Equity\ProfitService;
 use App\Services\Erp\Parties\PartyService;
+use App\Support\ErpRules;
 use Illuminate\Http\Request;
 
 /** Profit calculation + controlled distribution. View = erp.profits.view; every state change = erp.profits.distribute. */
@@ -37,8 +38,8 @@ class ProfitController extends ErpController
     public function store(Request $r, ProfitDistributionService $svc)
     {
         $this->allow('erp.profits.distribute');
-        $d = $r->validate(['from' => ['required', 'date'], 'to' => ['required', 'date'], 'retain_percent' => ['nullable', 'numeric', 'min:0', 'max:100'], 'retain_amount' => ['nullable', 'numeric', 'min:0'],
-            'acknowledge_open' => ['nullable', 'boolean'], 'overrides' => ['nullable', 'array'], 'overrides.*' => ['nullable', 'numeric', 'min:0'], 'note' => ['nullable', 'string', 'max:300']]);
+        $d = $r->validate(['from' => ErpRules::date(), 'to' => ErpRules::date(), 'retain_percent' => ErpRules::percent(false), 'retain_amount' => ErpRules::money(false, false),
+            'acknowledge_open' => ['nullable', 'boolean'], 'overrides' => ['nullable', 'array'], 'overrides.*' => ErpRules::money(false, false), 'note' => ['nullable', 'string', 'max:300']]);
         $d['overrides'] = array_filter($d['overrides'] ?? [], fn ($v) => $v !== null && $v !== '');
 
         return $this->guarded(function () use ($svc, $d) {
@@ -89,7 +90,7 @@ class ProfitController extends ErpController
     public function pay(Request $r, int $id, int $line, ProfitDistributionService $svc)
     {
         $this->allow('erp.profits.distribute');
-        $d = $r->validate(['account' => ['required', 'in:'.implode(',', PartyService::CASH_ROLES)], 'date' => ['nullable', 'date']]);
+        $d = $r->validate(['account' => ['required', 'in:'.implode(',', PartyService::CASH_ROLES)], 'date' => ErpRules::date(false)]);
         $l = ProfitDistributionLine::where('distribution_id', ProfitDistribution::findOrFail($id)->id)->findOrFail($line);
 
         return $this->guarded(function () use ($svc, $l, $d) {

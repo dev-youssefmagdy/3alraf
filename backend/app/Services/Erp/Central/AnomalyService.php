@@ -94,7 +94,9 @@ class AnomalyService
 
     private function postingFailed(?array $ids): Collection
     {
-        $q = DB::table('erp_audit_logs as a')->where('a.action', 'posting.failed')->where('a.created_at', '>=', now()->subDays(30));
+        $q = DB::table('erp_audit_logs as a')->where('a.action', 'posting.failed')->where('a.created_at', '>=', now()->subDays(30))
+            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_audit_logs as r')->where('r.action', 'posting.resolved')->whereColumn('r.tenant_id', 'a.tenant_id')
+                ->whereColumn('r.subject_type', 'a.subject_type')->whereColumn('r.subject_id', 'a.subject_id')->whereColumn('r.id', '>', 'a.id')); // retried successfully
 
         return $this->grouped($this->scoped($q, 'a.tenant_id', $ids), 'a.tenant_id', 'posting_failed', 'a.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
@@ -157,9 +159,13 @@ class AnomalyService
     /** Sales-status orders (confirmed..delivered) without a journal entry, only for tenants whose ledger was already live when the order was created (pre-ledger history belongs to the Phase 9 backfill). */
     private function ordersWithoutJournal(?array $ids): Collection
     {
+        // recognised per the tenant's revenue_recognition policy (default shipped); a recognition entry that was reversed by hand counts as missing (ERP-007)
+        $pol = "COALESCE((SELECT JSON_UNQUOTE(s.value) FROM erp_settings s WHERE s.tenant_id = o.tenant_id AND s.`key` = 'revenue_recognition'), 'shipped')";
         $q = DB::table('orders as o')->join(DB::raw('(SELECT tenant_id, MIN(created_at) as first_at FROM erp_journal_entries GROUP BY tenant_id) as f'), 'f.tenant_id', '=', 'o.tenant_id')
-            ->whereIn('o.status', array_map(fn ($s) => $s->value, \App\Enums\OrderStatus::salesStatuses()))->whereColumn('o.created_at', '>=', 'f.first_at')
-            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_journal_entries as j')->whereColumn('j.tenant_id', 'o.tenant_id')->where('j.source_type', 'order')->whereColumn('j.source_id', 'o.id'));
+            ->whereRaw("(o.status = 'delivered' OR (o.status = 'shipped' AND $pol <> 'delivered') OR (o.status IN ('confirmed','processing') AND $pol = 'confirmed'))")
+            ->whereColumn('o.created_at', '>=', 'f.first_at')
+            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_journal_entries as j')->whereColumn('j.tenant_id', 'o.tenant_id')->where('j.source_type', 'order')->whereColumn('j.source_id', 'o.id')
+                ->where('j.status', 'posted')->where('j.idempotency_key', 'like', 'order:%:confirm%'));
 
         return $this->grouped($this->scoped($q, 'o.tenant_id', $ids), 'o.tenant_id', 'order_without_journal', 'o.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
