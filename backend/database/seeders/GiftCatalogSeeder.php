@@ -336,8 +336,8 @@ class GiftCatalogSeeder extends Seeder
     }
 
     /**
-     * Apply the buying plan to listings created by an earlier run: phase-1 products (opening_qty > 0) are active with that opening stock,
-     * phase-2 products are hidden with no stock. Only touches products whose stock history is still just this seeder's opening entry and
+     * Apply the buying plan to listings created by an earlier run: phase-1 products (opening_qty > 0) get that opening stock, phase-2 products
+     * none; visibility follows the data `active` flag (owner: every product visible, phase 2 shows as out of stock until bought). Only touches products whose stock history is still just this seeder's opening entry and
      * that were never ordered (pre-launch seed data, nothing real to preserve); anything else is left exactly as it is.
      */
     private function reconcileOpeningStock(Tenant $t, Collection $rows, array $products): void
@@ -355,7 +355,7 @@ class GiftCatalogSeeder extends Seeder
             $seedOnly = $moves->isEmpty() || ($moves->count() === 1 && $moves[0]->note === self::OPENING_NOTE);
             $have = $moves->isEmpty() ? 0 : (int) $moves[0]->quantity;
             $costOk = $moves->isEmpty() || bccomp((string) $moves[0]->unit_cost, (string) $r['cost'], 2) === 0;
-            if (! $tp || ! $branch || ! $seedOnly || ($have === $want && $costOk && $tp->is_active === ($want > 0)) || DB::table('order_items')->where('product_id', $pid)->exists()) {
+            if (! $tp || ! $branch || ! $seedOnly || ($have === $want && $costOk && $tp->is_active === (bool) ($r['active'] ?? true)) || DB::table('order_items')->where('product_id', $pid)->exists()) {
                 continue;
             }
             DB::transaction(function () use ($t, $tp, $moves, $want, $r, $ledger, $branch) {
@@ -366,7 +366,7 @@ class GiftCatalogSeeder extends Seeder
                 if ($want > 0) {
                     $ledger->record($branch->id, $tp->product_id, 0, StockMovementType::ADJUSTMENT_IN, $want, (string) $r['cost'], null, self::OPENING_NOTE);
                 }
-                $tp->update(['is_active' => $want > 0]);
+                $tp->update(['is_active' => (bool) ($r['active'] ?? true)]);
             });
             $qr->listingSaved($tp);
             $n++;
@@ -435,14 +435,14 @@ class GiftCatalogSeeder extends Seeder
         $seedOwned->isNotEmpty() && $this->command?->info("{$t->slug}: {$seedOwned->count()} seed listings re-created in trend-rank order with current data");
     }
 
-    /** Home page "Recommended" rail = the top-ranked launch products, unless the store already pinned its own picks. */
+    /** Home page "Recommended" rail = the top-ranked in-stock (phase 1) products, unless the store already pinned its own picks. */
     private function pinRecommended(Collection $rows, array $products): void
     {
         if (ProductListItem::where('list_type', ProductListType::RECOMMENDED->value)->exists()) {
             return;
         }
         $active = TenantProduct::where('is_active', true)->pluck('product_id')->flip();
-        $top = $rows->map(fn ($r) => $products[$r['slug']]->id)->filter(fn ($pid) => isset($active[$pid]))->take(self::RECOMMENDED_PINS)->values();
+        $top = $rows->filter(fn ($r) => ($r['opening_qty'] ?? 1) > 0)->map(fn ($r) => $products[$r['slug']]->id)->filter(fn ($pid) => isset($active[$pid]))->take(self::RECOMMENDED_PINS)->values();
         foreach ($top as $i => $pid) {
             ProductListItem::create(['list_type' => ProductListType::RECOMMENDED->value, 'product_id' => $pid, 'sort_order' => $i]);
         }
