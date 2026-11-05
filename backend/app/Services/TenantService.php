@@ -11,6 +11,8 @@ use App\Models\Tenant;
 use App\Models\TenantAdmin;
 use App\Notifications\TenantNotification;
 use App\Repositories\Contracts\TenantRepositoryInterface;
+use Database\Seeders\CitySeeder;
+use Database\Seeders\GiftCatalogNoStockSeeder;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -28,10 +30,30 @@ class TenantService
                 app(\App\Services\Auth\SuperAdminProvisioner::class)->provision($tenant->id, $dto->adminName ?: $dto->name, $dto->adminPhone, $dto->adminPassword);
             }
 
-            DB::afterCommit(fn () => $this->notifyCentral($tenant, 'tenant_created'));
+            DB::afterCommit(function () use ($tenant) {
+                $this->seedLiveData($tenant);
+                $this->notifyCentral($tenant, 'tenant_created');
+            });
 
             return $tenant;
         });
+    }
+
+    /**
+     * Live data every new store starts with, same as `seed:live`: the cities of its country and (EGP stores) the whole gift catalog listed without stock.
+     * Runs after the tenant is committed; a failure is reported but never undoes the store (re-run `php artisan seed:live`).
+     */
+    private function seedLiveData(Tenant $tenant): void
+    {
+        if (! config('tenancy.seed_defaults', true)) {
+            return;
+        }
+        try {
+            app(CitySeeder::class)->forTenant($tenant)->run();
+            app(GiftCatalogNoStockSeeder::class)->forTenant($tenant)->run();
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /** Central admins allowed to view tenants get a bell + realtime notification (and the actor is skipped). */

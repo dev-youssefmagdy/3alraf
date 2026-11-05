@@ -9,4 +9,7 @@ return [
 
     // Currency that central (cross-tenant) reports are normalized to: amount x tenants.currency_rate.
     'base_currency' => env('BASE_CURRENCY', 'EGP'),
+
+    // Seed live defaults (cities, gift catalog listings without stock) when a tenant is created.
+    'seed_defaults' => env('TENANT_SEED_DEFAULTS', true),
 ];

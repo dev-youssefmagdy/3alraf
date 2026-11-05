@@ -14,11 +14,21 @@ use Illuminate\Database\Seeder;
  */
 class CitySeeder extends Seeder
 {
+    /** Restrict the run to one store (used when a tenant is created); null = every tenant. */
+    private ?Tenant $only = null;
+
+    public function forTenant(Tenant $tenant): static
+    {
+        $this->only = $tenant;
+
+        return $this;
+    }
+
     public function run(): void
     {
         $this->call(CountrySeeder::class);
 
-        foreach (Tenant::all() as $tenant) {
+        foreach ($this->only ? [$this->only] : Tenant::all() as $tenant) {
             $code = strtoupper((string) $tenant->country);
             $file = database_path("data/cities/{$code}.json");
             $country = Country::where('code', $code)->first();

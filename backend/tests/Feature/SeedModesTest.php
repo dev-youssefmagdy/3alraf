@@ -100,3 +100,23 @@ it('seed:dev refuses to run in production', function () {
     $this->artisan('seed:dev')->assertFailed();
     expect(CentralAdmin::count())->toBe(0);
 });
+
+it('a newly created EGP store starts with its cities and the whole catalog listed without stock', function () {
+    config(['tenancy.seed_defaults' => true]);
+    sliceCatalog();
+    ob_start();
+    imagepng(imagecreatetruecolor(300, 200));
+    Http::fake(['*' => Http::response((string) ob_get_clean(), 200, ['Content-Type' => 'image/png'])]);
+
+    $this->artisan('seed:live --force')->assertSuccessful();    // the shared catalog exists (no store yet, so no listings)
+    $this->artisan('tenants:create egy "3alraf Egypt" --country=EG --currency=EGP --owner-phone=01012345678')->assertSuccessful();
+    $egy = Tenant::where('slug', 'egy')->first();
+    expect(City::withoutGlobalScopes()->where('tenant_id', $egy->id)->count())->toBeGreaterThan(200)
+        ->and(TenantProduct::withoutGlobalScopes()->where('tenant_id', $egy->id)->count())->toBe(35)
+        ->and(DB::table('stock_movements')->count())->toBe(0);
+
+    // a store in another currency gets no EGP-priced listings (and cities only for countries that have a database/data/cities file)
+    $this->artisan('tenants:create sa "3alraf KSA" --country=SA --currency=SAR --owner-phone=0501234567')->assertSuccessful();
+    $sa = Tenant::where('slug', 'sa')->first();
+    expect(TenantProduct::withoutGlobalScopes()->where('tenant_id', $sa->id)->count())->toBe(0);
+});

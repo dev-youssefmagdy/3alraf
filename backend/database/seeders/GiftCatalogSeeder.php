@@ -144,9 +144,31 @@ class GiftCatalogSeeder extends Seeder
         return json_decode((string) file_get_contents(database_path('seeders/data/gift_catalog.json')), true, flags: JSON_THROW_ON_ERROR);
     }
 
+    /** Restrict the listings to one store (used when a tenant is created); null = every EGP store. */
+    private ?Tenant $only = null;
+
+    public function forTenant(Tenant $tenant): static
+    {
+        $this->only = $tenant;
+
+        return $this;
+    }
+
     public function run(): void
     {
         $rows = $this->rows();
+
+        // New store while the shared catalog already exists: only its listings are missing (no image downloads, no product writes).
+        if ($this->only) {
+            $existing = Product::withTrashed()->whereIn('slug', collect($rows)->pluck('slug'))->get()->keyBy('slug');
+            if ($existing->count() === count($rows)) {
+                if ($this->only->currency_code === 'EGP') {
+                    $this->listings($this->only, $rows, $existing->all());
+                }
+
+                return;
+            }
+        }
 
         $cats = $this->categories();
         $tags = collect(self::TAGS)->mapWithKeys(fn ($t, $flag) => [$flag => Tag::firstOrCreate(['slug' => $t[0]], ['name' => ['ar' => $t[1], 'en' => $t[2]], 'is_active' => true])]);
@@ -209,7 +231,7 @@ class GiftCatalogSeeder extends Seeder
         $this->dropRetiredCategories();
         $this->categoryCovers($cats, $rows, $images);
 
-        foreach (Tenant::where('currency_code', 'EGP')->get() as $t) {
+        foreach ($this->only ? collect([$this->only])->where('currency_code', 'EGP') : Tenant::where('currency_code', 'EGP')->get() as $t) {
             $this->listings($t, $rows, $products);
         }
     }
