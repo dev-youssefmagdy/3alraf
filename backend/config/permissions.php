@@ -25,6 +25,7 @@ return [
         'ai_usage' => ['view'],
         'whatsapp' => ['view', 'manage'],
         'whatsapp.chat' => ['view', 'send', 'manage', 'media'],
+        'erp_central' => ['view', 'reports', 'audit'],
     ],
     'tenant' => [
         'admins' => $crud,
@@ -51,6 +52,19 @@ return [
         // Phase 4 orders
         'orders' => ['view', 'edit', 'payments', 'email_notifications'],
         'pos' => ['use'],
+        // ERP / accounting
+        'erp.dashboard' => ['view'],
+        'erp.accounts' => ['view', 'manage'],
+        'erp.journals' => ['view', 'create', 'post', 'reverse'],
+        'erp.expenses' => ['manage'],
+        'erp.reports' => ['view', 'export'],
+        'erp.profits' => ['view', 'distribute'],
+        'erp.owners' => ['view', 'manage'],
+        'erp.branches' => ['view'],
+        'erp.settings' => ['manage'],
+        'erp.periods' => ['view', 'close', 'reopen'],
+        'erp.assets' => ['view', 'manage'],
+        'erp.audit' => ['view'],
         'returns' => ['view', 'create', 'approve', 'refund'],
         'customers' => ['view'],
         'discount_codes' => $crud,

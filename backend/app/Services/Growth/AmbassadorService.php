@@ -132,9 +132,21 @@ class AmbassadorService
     }
 
     /** Called when an affiliate payout is marked paid: the affiliate's valid rewards are settled in the same payment run. */
-    public function settle(int $affiliateId): int
+    public function settle(int $affiliateId, ?string $ref = null, ?string $paidFrom = null): int
     {
-        return AmbassadorReward::where('affiliate_id', $affiliateId)->where('status', 'valid')->update(['status' => 'paid', 'paid_at' => now()]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($affiliateId, $ref, $paidFrom) {
+            $rows = AmbassadorReward::where('affiliate_id', $affiliateId)->where('status', 'valid')->lockForUpdate()->get(['id', 'amount']);
+            if ($rows->isEmpty()) {
+                return 0;
+            }
+            $amount = $rows->reduce(fn ($c, $r) => \App\Support\Money::add($c, (string) $r->amount), '0');
+            $n = AmbassadorReward::whereIn('id', $rows->pluck('id'))->update(['status' => 'paid', 'paid_at' => now()]);
+            // ERP: the rewards are real money paid to the ambassador (Dr Marketing / Cr paying account), keyed by the payout run
+            $tenantId = (int) current_tenant()?->id;
+            \Illuminate\Support\Facades\DB::afterCommit(fn () => event(new \App\Events\Erp\AmbassadorRewardsPaid($tenantId, $affiliateId, $amount, $ref ?? 'r'.$rows->max('id'), $paidFrom ?? 'cash')));
+
+            return $n;
+        });
     }
 
     /** Participant report for a period (by placed_at). */

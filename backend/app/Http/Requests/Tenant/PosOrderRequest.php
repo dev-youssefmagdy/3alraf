@@ -73,6 +73,7 @@ class PosOrderRequest extends FormRequest
             'payment_method_id' => [$q ? 'nullable' : 'required', $methods([PaymentMethodType::COD->value, PaymentMethodType::WALLET->value])],
             'prepay_method_id' => ['nullable', $methods([PaymentMethodType::WALLET->value])],
             'discount_code' => ['nullable', 'string', 'max:50'],
+            'paid_at_counter' => ['nullable', 'boolean'],
             'packaging_option_id' => ['nullable', 'integer', Rule::exists('packaging_options', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
             'proof' => [! $q && $this->isOffline() ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.(int) config('checkout.proof.max_kb')],
         ];

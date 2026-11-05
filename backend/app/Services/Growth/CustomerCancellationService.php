@@ -23,14 +23,14 @@ class CustomerCancellationService
 
     public function canCancel(Order $o, ?Customer $c): bool
     {
-        return $this->enabled() && $c && $o->customer_id === $c->id && in_array(OrderStatus::CANCELLED, $o->status->next(), true);
+        return $this->enabled() && $c && $o->customer_id === $c->id && $o->status->cancellableBeforeShipping();
     }
 
     public function cancel(Order $o, ?Customer $c, ?string $code): Order
     {
         abort_unless($this->enabled(), 404);
         abort_unless($c && $o->customer_id === $c->id, 403);
-        if (! in_array(OrderStatus::CANCELLED, $o->status->next(), true)) {
+        if (! $o->status->cancellableBeforeShipping()) {
             throw ValidationException::withMessages(['status' => __('growth_gaps.cancel_not_allowed')]);
         }
         if (! $code || ! in_array($code, ReturnIntelService::CODES, true)) {

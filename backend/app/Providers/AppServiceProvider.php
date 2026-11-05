@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(MediaScanner::class, NullMediaScanner::class);
         $this->app->bind(\App\Services\Push\PushDispatcher::class, \App\Services\Push\LogPushDispatcher::class);
+        $this->app->scoped(\App\Services\Erp\Equity\ErpSettings::class);
         $this->app->scoped(AiAccess::class);
         $this->app->singleton(ApprovalService::class); // module handlers register on it
         $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('experiment_budget', fn ($ap) => app(ExperimentLabService::class)->materializeBudget($ap)));
@@ -44,6 +45,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ERP strings live in resources/lang-erp (FileLoader merges every registered path per group)
+        $this->app->make('translator')->getLoader()->addPath(resource_path('lang-erp'));
+        // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
+        Gate::define('erp.access', fn ($user) => method_exists($user, 'getAllPermissions')
+            && $user->getAllPermissions()->contains(fn ($p) => str_starts_with($p->name, 'erp.') && $p->guard_name === 'tenant'));
         Blade::if('growthFeature', fn (string $key) => app(GrowthFeatures::class)->active($key, current_tenant()));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
         // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).
@@ -77,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
 
         Event::subscribe(NotifyCustomerOfOrder::class);
         Event::subscribe(EmitGrowthEvents::class);
+        Event::subscribe(\App\Listeners\Erp\PostOrderEvents::class);
+        Event::subscribe(\App\Listeners\Erp\PostOperationsEvents::class);
         EmitGrowthEvents::hookModels();
         RateLimiter::for('integration-ip', fn (Request $r) => Limit::perMinute(300)->by('integration-ip|'.$r->ip()));
         require base_path('routes/channels.php');

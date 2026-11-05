@@ -55,20 +55,58 @@ class PurchaseService
     {
         $this->ensureDraft($po);
 
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen(now()->toDateString(), 'record');
+
         return DB::transaction(function () use ($po) {
-            foreach ($po->items()->get() as $i) {
-                $this->ledger->record($po->branch_id, $i->product_id, $i->product_variant_id, StockMovementType::PURCHASE_IN, $i->quantity, (string) $i->unit_cost, $po, $po->number);
+            $items = $po->items()->get();
+            $costs = $this->landedUnitCosts($po, $items);
+            foreach ($items as $i) {
+                $this->ledger->record($po->branch_id, $i->product_id, $i->product_variant_id, StockMovementType::PURCHASE_IN, $i->quantity, $costs[$i->id], $po, $po->number);
             }
 
-            return $this->orders->update($po, ['status' => PurchaseStatus::RECEIVED, 'received_at' => now()]);
+            $po = $this->orders->update($po, ['status' => PurchaseStatus::RECEIVED, 'received_at' => now()]);
+            event(new \App\Events\Erp\PurchaseReceived($po)); // ERP: Dr Inventory / Cr Payable
+
+            return $po;
         });
+    }
+
+    /**
+     * Received unit cost per item. ERP setting landed_costs = capitalise (IAS 2): PO shipping + other costs are allocated to the lines by value
+     * (last line takes the remainder) and included in the unit cost; default "expense" keeps the item cost (CALCULATIONS.md §Stock).
+     *
+     * @return array<int,string> item id => unit cost
+     */
+    private function landedUnitCosts(PurchaseOrder $po, $items): array
+    {
+        $out = $items->mapWithKeys(fn ($i) => [$i->id => (string) $i->unit_cost])->all();
+        $landed = \App\Support\Money::add((string) $po->shipping_cost, (string) $po->other_cost);
+        if (app(\App\Services\Erp\Equity\ErpSettings::class)->get('landed_costs') !== 'capitalise' || \App\Support\Money::cmp($landed, '0') <= 0) {
+            return $out;
+        }
+        $total = $items->reduce(fn ($c, $i) => \App\Support\Money::add($c, \App\Support\Money::mul((string) $i->unit_cost, $i->quantity)), '0');
+        if (\App\Support\Money::cmp($total, '0') <= 0) {
+            return $out;
+        }
+        $left = $landed;
+        foreach ($items->values() as $n => $i) {
+            $value = \App\Support\Money::mul((string) $i->unit_cost, $i->quantity);
+            $share = $n === $items->count() - 1 ? $left : \App\Support\Money::round(bcdiv(bcmul($landed, $value, 8), $total, 8));
+            $left = \App\Support\Money::sub($left, $share);
+            $out[$i->id] = \App\Support\Money::round(bcdiv(\App\Support\Money::add($value, $share), (string) $i->quantity, 8));
+        }
+
+        return $out;
     }
 
     public function cancel(PurchaseOrder $po): PurchaseOrder
     {
         $this->ensureDraft($po);
 
-        return $this->orders->update($po, ['status' => PurchaseStatus::CANCELLED]);
+        $po = $this->orders->update($po, ['status' => PurchaseStatus::CANCELLED]);
+        event(new \App\Events\Erp\PurchaseCancelled($po));
+
+        return $po;
     }
 
     public function delete(PurchaseOrder $po): void

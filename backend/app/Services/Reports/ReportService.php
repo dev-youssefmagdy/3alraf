@@ -129,6 +129,12 @@ class ReportService
         ];
     }
 
+    /** Net Profit report figures (revenue, cogs, returned_cogs, net, ...) for reconciliation with the ledger. */
+    public function netProfitFigures(ReportFilter $f): array
+    {
+        return $this->netProfitLines($f);
+    }
+
     /** Profit statement lines per CALCULATIONS.md: Σ order_net_profit − return reversal − return shipping − expenses. */
     private function netProfitLines(ReportFilter $f): array
     {

@@ -140,7 +140,13 @@ class PosController extends Controller implements HasMiddleware
 
     public function store(PosOrderRequest $r): JsonResponse
     {
+        if ($r->boolean('paid_at_counter') && (PaymentMethod::find((int) $r->input('payment_method_id'))?->type !== PaymentMethodType::COD || $r->filled('prepay_method_id'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['payment_method_id' => __('erp_acc.counter_sale_cod_only')]);
+        }
         $res = $this->placement->place($this->data($r), $this->lines($r));
+        if ($r->boolean('paid_at_counter')) { // walk-in sale paid in cash at the register: completed at once, cash into POS cash (ERP-014)
+            app(\App\Services\Orders\CounterSaleService::class)->complete($res['order']);
+        }
 
         return $this->ok(__('pos.order_created', ['number' => $res['order']->number]), route('tenant.orders.show', $res['order']->id));
     }

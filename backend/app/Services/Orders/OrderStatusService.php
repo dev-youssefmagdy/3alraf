@@ -68,21 +68,39 @@ class OrderStatusService
         }
     }
 
-    /** Deduct stock (sale_out at current avg cost) and drop the reservation. */
+    /**
+     * Deduct stock (sale_out at the branch's current avg cost) and drop the reservation. The order's cost snapshot is re-valued to the cost
+     * that actually left stock (CALCULATIONS.md §Definitions: unit_cost re-snapshotted at shipment), so COGS, returns and the ledger
+     * inventory all use the stock ledger's value. A line with an uncosted movement (avg 0, e.g. backorder) keeps its listing-cost snapshot.
+     */
     private function ship(Order $order): void
     {
+        $cogs = '0';
         foreach ($order->items->sortBy(fn ($i) => sprintf('%012d-%012d', $i->product_id, $i->product_variant_id)) as $i) {
-            $this->ledger->ship($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity, $order);
+            $m = $this->ledger->ship($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity, $order);
+            if (Money::cmp((string) $m->unit_cost, '0') > 0 && Money::cmp((string) $m->unit_cost, (string) $i->unit_cost) !== 0) {
+                $i->forceFill(['unit_cost' => Money::round((string) $m->unit_cost)])->save();
+            }
+            $cogs = Money::add($cogs, Money::mul((string) $i->unit_cost, $i->quantity));
         }
+        $order->cogs = $cogs;
         $order->stock_deducted = true;
         $order->save();
     }
 
-    /** Before shipping only: release reservations, flash counters, discount usage; whole paid amount (incl. shipping) is to be refunded. */
+    /**
+     * Cancel: release reservations, flash counters, discount usage; whole paid amount (incl. shipping) is to be refunded.
+     * After shipment (failed delivery / returned to sender) the goods come back into stock (return_in at the shipped cost) instead.
+     */
     private function cancel(Order $order): void
     {
+        $returned = (bool) $order->stock_deducted;
         foreach ($order->items->sortBy(fn ($i) => sprintf('%012d-%012d', $i->product_id, $i->product_variant_id)) as $i) {
-            $this->ledger->release($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity);
+            if ($returned) {
+                $this->ledger->record($order->branch_id, $i->product_id, $i->product_variant_id, \App\Enums\StockMovementType::RETURN_IN, $i->quantity, (string) $i->unit_cost, $order, __('erp_acc.rts_note'));
+            } else {
+                $this->ledger->release($order->branch_id, $i->product_id, $i->product_variant_id, $i->quantity);
+            }
             if ($i->flash_sale_item_id) {
                 FlashSaleItem::whereKey($i->flash_sale_item_id)->where('sold', '>=', $i->quantity)->decrement('sold', $i->quantity);
             }
@@ -94,7 +112,7 @@ class OrderStatusService
             }
         }
         $paid = (string) $order->paid_amount;
-        $order->fill(['cancelled_at' => now(), 'affiliate_commission' => 0]);
+        $order->fill(['cancelled_at' => now(), 'affiliate_commission' => 0] + ($returned ? ['stock_deducted' => false] : []));
         if (Money::cmp($paid, '0') > 0) {
             // online money goes back through the provider and is marked refunded ONLY on provider success; wallet money is moved manually
             $res = $this->refunds->refundOnline($order, $paid);

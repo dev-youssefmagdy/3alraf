@@ -54,7 +54,10 @@ class StockTransferService
                 $i->update(['unit_cost' => $m->unit_cost]);
             }
 
-            return $this->transfers->update($t, ['status' => TransferStatus::IN_TRANSIT, 'sent_at' => now()]);
+            $t = $this->transfers->update($t, ['status' => TransferStatus::IN_TRANSIT, 'sent_at' => now()]);
+            event(new \App\Events\Erp\StockTransferMoved($t, 'sent'));
+
+            return $t;
         });
     }
 
@@ -67,7 +70,10 @@ class StockTransferService
                 $this->ledger->record($t->to_branch_id, $i->product_id, $i->product_variant_id, StockMovementType::TRANSFER_IN, $i->quantity, (string) $i->unit_cost, $t, $t->number);
             }
 
-            return $this->transfers->update($t, ['status' => TransferStatus::RECEIVED, 'received_at' => now()]);
+            $t = $this->transfers->update($t, ['status' => TransferStatus::RECEIVED, 'received_at' => now()]);
+            event(new \App\Events\Erp\StockTransferMoved($t, 'received'));
+
+            return $t;
         });
     }
 

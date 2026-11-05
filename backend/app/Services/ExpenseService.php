@@ -13,6 +13,43 @@ class ExpenseService extends CrudService
         parent::__construct($repo);
     }
 
+    public function create(object $dto): Model
+    {
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen((string) $dto->date, 'expense_date');
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($dto) {
+            $e = parent::create($dto);
+            event(new \App\Events\Erp\ExpenseSaved($e)); // ERP: Dr expense / Cr cash or payable
+
+            return $e;
+        });
+    }
+
+    public function update(Model $model, object $dto): Model
+    {
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen((string) $dto->date, 'expense_date');
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen($model->expense_date->toDateString(), 'expense_date');
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen(now()->toDateString(), 'expense_date'); // the old entry is reversed today (QA-BUG-101)
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($model, $dto) {
+            $e = parent::update($model, $dto);
+            event(new \App\Events\Erp\ExpenseSaved($e));
+
+            return $e;
+        });
+    }
+
+    public function delete(Model $model): void
+    {
+        // QA-BUG-101: the deletion reverses the expense journal today - refuse while today's period is closed (no document gone with its journal left)
+        \App\Services\Erp\Accounting\PeriodGuard::assertOpen(now()->toDateString(), 'expense_date');
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($model) {
+            parent::delete($model);
+            event(new \App\Events\Erp\ExpenseDeleted($model));
+        });
+    }
+
     protected function payload(object $dto, ?Model $model = null): array
     {
         $data = $dto->toArray();

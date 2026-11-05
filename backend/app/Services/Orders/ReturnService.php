@@ -181,11 +181,15 @@ class ReturnService
             ->where('refund_shipping', true)->where('status', ReturnStatus::REFUNDED)->exists();
     }
 
-    public function refund(OrderReturn $ret, ?string $amount = null): OrderReturn
+    /** @param string|null $refundFrom account the manual (non-provider) part is paid from: cash|bank|pos_cash|wallet|gateway|carrier_receivable (ERP ledger) */
+    public function refund(OrderReturn $ret, ?string $amount = null, ?string $refundFrom = null): OrderReturn
     {
         $this->ensure($ret, ReturnStatus::APPROVED);
+        if ($refundFrom !== null && ! in_array($refundFrom, \App\Services\Erp\Posting\Poster::REFUND_ROLES, true)) {
+            throw ValidationException::withMessages(['refund_from' => __('validation.in', ['attribute' => 'refund_from'])]);
+        }
 
-        return DB::transaction(function () use ($ret, $amount) {
+        return DB::transaction(function () use ($ret, $amount, $refundFrom) {
             $order = Order::whereKey($ret->order_id)->lockForUpdate()->first();
             $ret = $this->lockFresh($ret, ReturnStatus::APPROVED); // fresh state under lock: the provider is never asked twice
             $ret->setRelation('order', $order);
@@ -206,7 +210,8 @@ class ReturnService
                 'refunded_amount' => $refunded,
                 'payment_status' => Money::cmp($refunded, (string) $order->paid_amount) >= 0 ? PaymentStatus::REFUNDED : PaymentStatus::PARTIALLY_REFUNDED,
             ]);
-            $ret->update(['status' => ReturnStatus::REFUNDED, 'refund_amount' => $amount, 'refunded_at' => now()]);
+            $online = $res !== null ? $this->refunds->onlinePortion($order, $amount, $this->shippingRefundable($ret)) : '0.00'; // what the provider actually returned
+            $ret->update(['status' => ReturnStatus::REFUNDED, 'refund_amount' => $amount, 'refund_from' => $refundFrom, 'refund_online' => $online, 'refunded_at' => now()]);
             event(new OrderReturnUpdated($ret, 'refunded'));
 
             return $ret->refresh();
