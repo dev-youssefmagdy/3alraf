@@ -29,13 +29,15 @@ use Illuminate\Support\Str;
  * stainless steel accessories, gadgets, home gifts, kids & toys, gift boxes, daily essentials). Bilingual names, EGP prices, a real product photo each.
  * Data: database/seeders/data/gift_catalog.json (built from Jumia Egypt listings, see the `source_url` of every row).
  * Idempotent: categories by slug, brands by slug, products by slug, listings by product. Listings + opening stock go to every EGP tenant.
+ * Two flavours (override withStock()): this class = dev, the whole catalog with the planned opening stock (hidden phase-2 products included);
+ * GiftCatalogNoStockSeeder = live, the whole catalog listed and active but with NO stock at all.
  */
 class GiftCatalogSeeder extends Seeder
 {
     /** Opening stock per product when a data row has no planned `opening_qty` (adjustment_in at the estimated cost). Set to 0 to skip. */
     public const OPENING_QTY = 25;
 
-    private const OPENING_NOTE = 'Opening stock (gift catalog seed)';
+    public const OPENING_NOTE = 'Opening stock (gift catalog seed)';
 
     /** slug => [ar, en, children[slug => [ar, en, children?]]] */
     public const TREE = [
@@ -130,9 +132,21 @@ class GiftCatalogSeeder extends Seeder
     /** How many top-ranked products to pin on the home page "Recommended" rail (only when the store has no pins of its own). */
     private const RECOMMENDED_PINS = 24;
 
+    /** Whether listings get opening stock (and the buying-plan visibility: phase-2 products hidden). false = live: every product listed and active, zero stock. */
+    protected function withStock(): bool
+    {
+        return true;
+    }
+
+    /** @return array<int,array> the data rows, best trend rank first */
+    protected function rows(): array
+    {
+        return json_decode((string) file_get_contents(database_path('seeders/data/gift_catalog.json')), true, flags: JSON_THROW_ON_ERROR);
+    }
+
     public function run(): void
     {
-        $rows = json_decode((string) file_get_contents(database_path('seeders/data/gift_catalog.json')), true, flags: JSON_THROW_ON_ERROR);
+        $rows = $this->rows();
 
         $cats = $this->categories();
         $tags = collect(self::TAGS)->mapWithKeys(fn ($t, $flag) => [$flag => Tag::firstOrCreate(['slug' => $t[0]], ['name' => ['ar' => $t[1], 'en' => $t[2]], 'is_active' => true])]);
@@ -375,6 +389,25 @@ class GiftCatalogSeeder extends Seeder
     }
 
     /**
+     * Live flavour on a store that already holds dev listings: the phase-2 products the dev seed hid become active (there is no stock plan to wait for).
+     * Same ownership rule as rebuildOutOfOrder: only listings nobody edited (no user change in the activity log, no custom wording) and never ordered.
+     */
+    private function activateHiddenListings(Tenant $t, Collection $rows, array $products): void
+    {
+        $hidden = TenantProduct::whereIn('product_id', $rows->map(fn ($r) => $products[$r['slug']]->id))->where('is_active', false)->whereNull('content')->get();
+        $edited = DB::table('activity_log')->where('subject_type', TenantProduct::class)->whereNotNull('causer_id')->whereIn('subject_id', $hidden->pluck('id'))->pluck('subject_id')->flip();
+        $ordered = DB::table('order_items')->whereIn('product_id', $hidden->pluck('product_id'))->distinct()->pluck('product_id')->flip();
+        $qr = app(QrCodeManager::class);
+        $n = 0;
+        foreach ($hidden->reject(fn ($tp) => isset($edited[$tp->id]) || isset($ordered[$tp->product_id])) as $tp) {
+            $tp->update(['is_active' => true]);
+            $qr->listingSaved($tp);
+            $n++;
+        }
+        $n && $this->command?->info("{$t->slug}: $n hidden listings activated (live: whole catalog, no stock)");
+    }
+
+    /**
      * Listings for an EGP store, in trend-rank order. The storefront lists newest listing first, so listings are created from the lowest to the
      * highest rank (the top product gets the newest listing). Steps: rebuild seed listings that are out of rank order, create missing ones through
      * the normal catalog service (QR codes etc.), apply the buying plan (opening stock / visibility), pin the Recommended rail.
@@ -390,7 +423,7 @@ class GiftCatalogSeeder extends Seeder
             if ($new->isNotEmpty()) {
                 app(TenantCatalogService::class)->enableBulk(new BulkEnableData($new->reverse()->map(fn ($r) => [
                     'product_id' => $products[$r['slug']]->id, 'price' => (string) $r['price'], 'sale_price' => $r['sale_price'] !== null ? (string) $r['sale_price'] : null,
-                    'cost' => (string) $r['cost'], 'is_active' => (bool) ($r['active'] ?? true),
+                    'cost' => (string) $r['cost'], 'is_active' => ! $this->withStock() || (bool) ($r['active'] ?? true),
                 ])->values()->all()));
                 $byProduct = TenantProduct::whereIn('product_id', $new->map(fn ($r) => $products[$r['slug']]->id))->get()->keyBy('product_id');
                 foreach ($new as $r) {
@@ -398,7 +431,7 @@ class GiftCatalogSeeder extends Seeder
                 }
                 $this->command?->info("{$t->slug}: {$new->count()} products listed");
             }
-            $this->reconcileOpeningStock($t, $rows, $products);
+            $this->withStock() ? $this->reconcileOpeningStock($t, $rows, $products) : $this->activateHiddenListings($t, $rows, $products);
             $this->pinRecommended($rows, $products);
         } finally {
             app()->forgetInstance('currentTenant');

@@ -4,7 +4,7 @@ namespace Database\Seeders\Support;
 
 use Illuminate\Support\Facades\Storage;
 
-/** Generates local gradient placeholder images (GD, no network) onto the media disk as webp. */
+/** Generates local gradient placeholder images (GD, no network) onto the media disk as AVIF + WebP fallback (SeedImage, same family as a real upload). */
 class PlaceholderImage
 {
     private const FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
@@ -12,28 +12,21 @@ class PlaceholderImage
     /** @return array{path:string,thumb_path:string} */
     public static function make(string $dir, string $key, string $label, int $w = 800, int $h = 800, int $seed = 0): array
     {
-        $path = "$dir/$key.webp";
-        $thumb = "$dir/{$key}_thumb.webp";
+        $path = "$dir/$key.avif";
+        $thumb = "$dir/{$key}_thumb.avif";
         $disk = Storage::disk(config('media.disk'));
         if ($disk->exists($path) && $disk->exists($thumb)) {
             return ['path' => $path, 'thumb_path' => $thumb];
         }
-        $hue = (crc32($key) + $seed * 47) % 360;
-        $img = self::render($w, $h, $hue, $label);
-        $disk->put($path, self::encode($img));
-        $t = imagecreatetruecolor(400, 400);
-        imagecopyresampled($t, $img, 0, 0, 0, 0, 400, 400, $w, $h);
-        $disk->put($thumb, self::encode($t));
 
-        return ['path' => $path, 'thumb_path' => $thumb];
+        return SeedImage::save(self::render($w, $h, (crc32($key) + $seed * 47) % 360, $label), $dir, $key);
     }
 
     public static function banner(string $dir, string $key, string $label, int $w = 1600, int $h = 500, int $seed = 0): string
     {
-        $path = "$dir/$key.webp";
-        $disk = Storage::disk(config('media.disk'));
-        if (! $disk->exists($path)) {
-            $disk->put($path, self::encode(self::render($w, $h, (crc32($key) + $seed * 61) % 360, $label)));
+        $path = "$dir/$key.avif";
+        if (! Storage::disk(config('media.disk'))->exists($path)) {
+            SeedImage::save(self::render($w, $h, (crc32($key) + $seed * 61) % 360, $label), $dir, $key, 'banner', thumb: false);
         }
 
         return $path;
@@ -68,14 +61,6 @@ class PlaceholderImage
         }
 
         return $img;
-    }
-
-    private static function encode(\GdImage $img): string
-    {
-        ob_start();
-        imagewebp($img, null, 80);
-
-        return (string) ob_get_clean();
     }
 
     private static function hsl(int $h, float $s, float $l): array

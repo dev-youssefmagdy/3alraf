@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Support;
 
+use App\Support\MediaPaths;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -9,15 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Seeds real product photos: downloads remote images (in parallel), stores them on the media disk as WebP main (<= 1000px) + 400px thumb.
+ * Seeds real product photos: downloads remote images (in parallel) and stores them on the media disk like a real upload (SeedImage): AVIF main + 400px AVIF thumb + WebP fallbacks.
  * Images that cannot be downloaded or decoded are left out of the result; the seeder then shows the product's name card instead.
  */
 class RemoteImage
 {
-    private const MAX = 1000;
-
-    private const THUMB = 400;
-
     private const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
     /**
@@ -30,8 +27,8 @@ class RemoteImage
         $out = [];
         $todo = [];
         foreach ($urls as $key => $url) {
-            $path = "$dir/$key.webp";
-            $thumb = "$dir/{$key}_thumb.webp";
+            $path = "$dir/$key.avif";
+            $thumb = "$dir/{$key}_thumb.avif";
             if ($disk->exists($path) && $disk->exists($thumb)) {
                 $out[$key] = ['path' => $path, 'thumb_path' => $thumb];
             } else {
@@ -58,23 +55,23 @@ class RemoteImage
         return $out;
     }
 
-    /** @return array{path:string,thumb_path:string}|null */
+    /** @return array{path:string,thumb_path:string}|null null when the bytes are not a decodable image */
     public static function store(string $dir, string $key, string $bytes): ?array
     {
         $img = @imagecreatefromstring($bytes);
         if (! $img) {
             return null;
         }
-        $disk = Storage::disk(config('media.disk'));
-        $path = "$dir/$key.webp";
-        $thumb = "$dir/{$key}_thumb.webp";
-        $disk->put($path, self::encode(self::fit($img, self::MAX), 80));
-        $disk->put($thumb, self::encode(self::fit($img, self::THUMB), 75));
+        try {
+            return SeedImage::save($img, $dir, $key);
+        } catch (\Throwable $e) {
+            Log::warning('seed.remote_image_encode_failed', ['key' => $key, 'error' => $e->getMessage()]);
 
-        return ['path' => $path, 'thumb_path' => $thumb];
+            return null;
+        }
     }
 
-    /** Copy an already stored image family under a new key (e.g. a category cover taken from one of its products). */
+    /** Copy an already stored image family under a new key (e.g. a category cover taken from one of its products): main + thumb, AVIF + WebP. */
     public static function copy(string $from, string $dir, string $key): ?string
     {
         $disk = Storage::disk(config('media.disk'));
@@ -84,41 +81,24 @@ class RemoteImage
         if (! $disk->exists($from)) {
             return null;
         }
-        $to = "$dir/$key.webp";
-        $disk->exists($to) || $disk->copy($from, $to);
+        $stem = MediaPaths::stem($from);
+        foreach (MediaPaths::EXTENSIONS as $ext) {
+            foreach (['', '_thumb'] as $suffix) {
+                $src = "$stem$suffix.$ext";
+                $dst = "$dir/$key$suffix.$ext";
+                $disk->exists($src) && ! $disk->exists($dst) && $disk->copy($src, $dst);
+            }
+        }
 
-        return $to;
+        return "$dir/$key.".pathinfo($from, PATHINFO_EXTENSION);
     }
 
-    /** Delete a stored main image and its thumb (remote URLs are left alone). */
+    /** Delete a stored main image and its whole family: thumb + AVIF/WebP siblings (remote URLs are left alone). */
     public static function deleteFamily(?string $path): void
     {
         if (! $path || preg_match('#^https?://#i', $path)) {
             return;
         }
-        Storage::disk(config('media.disk'))->delete([$path, preg_replace('/\.webp$/', '_thumb.webp', $path)]);
-    }
-
-    /** Scale down to fit a square box (never up), on a white background (product shots are usually transparent or white). */
-    private static function fit(\GdImage $src, int $box): \GdImage
-    {
-        $w = imagesx($src);
-        $h = imagesy($src);
-        $k = min(1, $box / max($w, $h));
-        $nw = max(1, (int) round($w * $k));
-        $nh = max(1, (int) round($h * $k));
-        $dst = imagecreatetruecolor($nw, $nh);
-        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
-        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
-
-        return $dst;
-    }
-
-    private static function encode(\GdImage $img, int $quality): string
-    {
-        ob_start();
-        imagewebp($img, null, $quality);
-
-        return (string) ob_get_clean();
+        Storage::disk(config('media.disk'))->delete(MediaPaths::family($path));
     }
 }

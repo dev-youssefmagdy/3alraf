@@ -1,3 +1,11 @@
+php artisan admin:provision-super --name="Youssef Magdy" --country=EG --phone=201558099183
+
+php artisan tenants:create egy "3alraf Egypt" \
+  --country=EG --currency=EGP --rate=1 \
+  --locale=ar --locales=ar,en --timezone=Africa/Cairo \
+  --owner-name="Youssef Magdy" --owner-phone=201558099183 --owner-password='Anaelejoe@1230'
+
+
 sudo -u www-data php artisan images:optimize-existing --retry-failed   # the 2 permission failures
 php artisan images:optimize-existing --apply                           # repoint references; back up the tables listed in docs/IMAGES.md first
 php artisan images:optimize-existing --rollback                        # undo
