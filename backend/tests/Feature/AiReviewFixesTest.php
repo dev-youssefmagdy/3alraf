@@ -84,7 +84,7 @@ it('feature switched off: every AI endpoint answers 403 JSON, pages render a dis
 });
 
 it('the AI diff does not break core admin pages (en + ar, AI on and off)', function () {
-    $pages = ['', 'orders', 'catalog', 'stock', 'customers', 'reports', 'roles', 'admins', 'expenses', 'banners', 'bundles', 'flash-sales', 'discount-codes', 'branches', 'notification-settings'];
+    $pages = ['', 'orders', 'products', 'stock', 'customers', 'reports', 'roles', 'admins', 'expenses', 'banners', 'bundles', 'flash-sales', 'discount-codes', 'branches', 'notification-settings'];
     foreach ([true, false] as $on) {
         AiSetting::query()->update(['ai_enabled' => $on]);
         app(\App\Services\Ai\AiAccess::class)->forget();

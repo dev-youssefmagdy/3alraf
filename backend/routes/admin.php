@@ -30,7 +30,6 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\BundleController;
-use App\Http\Controllers\Admin\CatalogController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CodFeeSettingsController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -122,6 +121,15 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');
         Route::post('languages/validate/{language?}', [LanguageController::class, 'validateForm'])->name('languages.validate');
         Route::resource('languages', LanguageController::class)->except('show');
+        // Products: activate-many, bulk, QR, take off sale (declared before the resource so `available` is not read as {product})
+        Route::get('products/available', [ProductController::class, 'available'])->name('products.available');
+        Route::post('products/bulk/validate', [ProductController::class, 'validateBulk'])->name('products.bulk.validate');
+        Route::post('products/bulk', [ProductController::class, 'bulkStore'])->name('products.bulk.store');
+        Route::get('products/{product}/qr', [ProductController::class, 'qr'])->whereNumber('product')->name('products.qr');
+        Route::post('products/{product}/qr/regenerate', [ProductController::class, 'regenerateQr'])->whereNumber('product')->name('products.qr.regenerate');
+        Route::post('products/{product}/unlist', [ProductController::class, 'unlist'])->whereNumber('product')->name('products.unlist');
+        // Old Catalog bookmarks: permanent redirect to the Products equivalents (still inside the admin auth group)
+        Route::get('catalog/{path?}', fn (\Illuminate\Http\Request $r, ?string $path = null) => redirect()->to('/admin/products'.($path ? '/'.$path : '').($r->getQueryString() ? '?'.$r->getQueryString() : ''), 301))->where('path', '.*');
         foreach (['brands' => [BrandController::class, 'brand'], 'tags' => [TagController::class, 'tag'], 'attributes' => [AttributeController::class, 'attribute'], 'products' => [ProductController::class, 'product']] as $name => [$ctl, $param]) {
             Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
             Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
@@ -146,17 +154,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('erp/anomalies', [ErpAnomalyController::class, 'anomalies'])->name('erp.anomalies');
         Route::get('erp/anomalies/export', [ErpAnomalyController::class, 'exportAnomalies'])->name('erp.anomalies.export');
 
-        // Catalog: selling fields of products (price / sale / cost / status / QR)
-        Route::get('catalog/datatable', [CatalogController::class, 'datatable'])->name('catalog.datatable');
-        Route::get('catalog/available', [CatalogController::class, 'available'])->name('catalog.available');
-        Route::post('catalog/bulk/validate', [CatalogController::class, 'validateBulk'])->name('catalog.bulk.validate');
-        Route::post('catalog/bulk', [CatalogController::class, 'bulkStore'])->name('catalog.bulk.store');
-        Route::get('catalog/{product}/qr', [CatalogController::class, 'qr'])->name('catalog.qr');
-        Route::post('catalog/{product}/qr/regenerate', [CatalogController::class, 'regenerateQr'])->name('catalog.qr.regenerate');
         Route::get('bundles/{id}/qr', [BundleController::class, 'qr'])->whereNumber('id')->name('bundles.qr');
         Route::post('bundles/{id}/qr/regenerate', [BundleController::class, 'regenerateQr'])->whereNumber('id')->name('bundles.qr.regenerate');
-        Route::post('catalog/validate/{product}', [CatalogController::class, 'validateForm'])->name('catalog.validate');
-        Route::resource('catalog', CatalogController::class)->only(['index', 'edit', 'update', 'destroy'])->parameters(['catalog' => 'product']);
 
         // Phase 3: simple CRUD modules (ResourceController): datatable + validate + resource (param {id})
         foreach ([

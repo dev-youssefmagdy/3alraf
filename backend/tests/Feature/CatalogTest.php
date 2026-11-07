@@ -133,11 +133,11 @@ it('activates catalog products in bulk with their prices (listing data lives on 
     auth('admin')->logout();
     $this->actingAs(Admin::query()->first(), 'admin');
 
-    $this->postJson("{$this->t}/catalog/bulk/validate", ['rows' => [$a->id => ['enabled' => 1, 'price' => '', 'cost' => '5']]])->assertJsonValidationErrors(["rows.{$a->id}.price"]);
-    $this->postJson("{$this->t}/catalog/bulk/validate", ['rows' => [$a->id => ['price' => '10']]])->assertJsonValidationErrors(['rows']);
-    $this->postJson("{$this->t}/catalog/bulk/validate", ['rows' => [$a->id => ['enabled' => 1, 'price' => '10', 'sale_price' => '12', 'cost' => '5']]])->assertJsonValidationErrors(["rows.{$a->id}.sale_price"]);
+    $this->postJson("{$this->t}/products/bulk/validate", ['rows' => [$a->id => ['enabled' => 1, 'price' => '', 'cost' => '5']]])->assertJsonValidationErrors(["rows.{$a->id}.price"]);
+    $this->postJson("{$this->t}/products/bulk/validate", ['rows' => [$a->id => ['price' => '10']]])->assertJsonValidationErrors(['rows']);
+    $this->postJson("{$this->t}/products/bulk/validate", ['rows' => [$a->id => ['enabled' => 1, 'price' => '10', 'sale_price' => '12', 'cost' => '5']]])->assertJsonValidationErrors(["rows.{$a->id}.sale_price"]);
 
-    $this->postJson("{$this->t}/catalog/bulk", ['rows' => [
+    $this->postJson("{$this->t}/products/bulk", ['rows' => [
         $a->id => ['enabled' => 1, 'price' => '100', 'sale_price' => '80', 'cost' => '50'],
         $v->id => ['enabled' => 1, 'price' => '200', 'cost' => '120'],
         $b->id => ['price' => '1', 'cost' => '1'], // unchecked -> ignored
@@ -149,17 +149,22 @@ it('activates catalog products in bulk with their prices (listing data lives on 
     expect($tpV->variants)->toHaveCount(2);
 
     // already-enabled products no longer offered; enabling twice is a no-op
-    $this->get("{$this->t}/catalog/available")->assertOk()->assertSee('B')->assertDontSee('>A<', false);
-    $this->postJson("{$this->t}/catalog/bulk", ['rows' => [$a->id => ['enabled' => 1, 'price' => '1', 'cost' => '1']]])->assertOk();
+    $this->get("{$this->t}/products/available")->assertOk()->assertSee('B')->assertDontSee('>A<', false);
+    $this->postJson("{$this->t}/products/bulk", ['rows' => [$a->id => ['enabled' => 1, 'price' => '1', 'cost' => '1']]])->assertOk();
     expect(Product::query()->whereNotNull('price')->count())->toBe(2);
 
-    $this->get("{$this->t}/catalog/{$tpV->id}/edit")->assertOk();
+    $this->get("{$this->t}/products/{$tpV->id}/edit")->assertOk();
     $tv = $tpV->variants[0];
-    $this->putJson("{$this->t}/catalog/{$tpV->id}", ['price' => '210', 'cost' => '125', 'is_active' => 1, 'variants' => [['id' => $tv->id, 'price' => '250', 'sale_price' => '240', 'is_active' => 0]]])->assertOk();
-    expect((string) $tv->fresh()->price)->toBe('250.00')->and($tv->fresh()->is_active)->toBeFalse();
-    $this->putJson("{$this->t}/catalog/{$tpV->id}", ['price' => '210', 'cost' => '1', 'variants' => [['id' => 999999]]])->assertStatus(422);
+    $base = ['type' => 'variable', 'name' => ['ar' => 'V'], 'sku' => 'V', 'category_ids' => [$cat->id], 'price' => '210', 'cost' => '125', 'is_active' => 1];
+    $rows = $tpV->variants->mapWithKeys(fn ($x) => [$x->id => ['id' => $x->id, 'values' => $x->values->pluck('id')->all(), 'sku' => $x->sku, 'is_active' => 1]])->all();
+    $rows[$tv->id] = array_merge($rows[$tv->id], ['price' => '250', 'sale_price' => '240', 'cost' => '90', 'min_stock_alert_qty' => '4', 'is_active' => 0]);
+    $this->putJson("{$this->t}/products/{$tpV->id}", $base + ['variants' => $rows])->assertOk();
+    expect((string) $tv->fresh()->price)->toBe('250.00')->and((string) $tv->fresh()->sale_price)->toBe('240.00')->and((string) $tv->fresh()->cost)->toBe('90.00')->and($tv->fresh()->min_stock_alert_qty)->toBe(4)->and($tv->fresh()->is_active)->toBeFalse();
+    $rows[$tv->id]['sale_price'] = '260'; // sale >= variant price
+    $this->putJson("{$this->t}/products/{$tpV->id}", $base + ['variants' => $rows])->assertStatus(422)->assertJsonValidationErrors(["variants.{$tv->id}.sale_price"]);
 
-    $this->getJson("{$this->t}/catalog/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 2);
-    $this->get("{$this->t}/catalog")->assertOk();
+    $this->getJson("{$this->t}/products/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 3);
+    $this->get("{$this->t}/products")->assertOk();
+    $this->get("{$this->t}/catalog/{$tpV->id}/edit?x=1")->assertStatus(301)->assertRedirect("/admin/products/{$tpV->id}/edit?x=1");
 
 });

@@ -6,7 +6,7 @@
     $ld = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->name, 'description' => $desc, 'sku' => $product->sku,
         'image' => $product->images->map->url->values()->all(), 'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
         'url' => url()->current(), 'mpn' => $product->sku,
-        'offers' => ['@type' => 'Offer', 'priceCurrency' => setting('currency_code'), 'price' => number_format((float) ($first['price'] ?? $tp->effectivePrice()), 2, '.', ''),
+        'offers' => ['@type' => 'Offer', 'priceCurrency' => setting('currency_code'), 'price' => number_format((float) ($first['price'] ?? $product->effectivePrice()), 2, '.', ''),
             'priceValidUntil' => now()->addYear()->toDateString(), 'itemCondition' => 'https://schema.org/NewCondition',
             'availability' => ($first['in_stock'] ?? false) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', 'url' => url()->current(),
             'seller' => ['@type' => 'Organization', 'name' => setting('name')]]];
@@ -39,7 +39,7 @@
             @if ($summary['count'])<p class="text-sm text-amber-500">{{ str_repeat('★', (int) round($summary['avg'])) }}<span class="text-slate-300">{{ str_repeat('★', 5 - (int) round($summary['avg'])) }}</span> <a href="#reviews" class="text-slate-500">{{ $summary['avg'] }} ({{ __('store.reviews_count', ['n' => $summary['count']]) }})</a></p>@endif
 
             <div class="flex flex-wrap items-baseline gap-3">
-                <span class="text-3xl font-extrabold text-brand-600" data-price>{{ number_format((float) ($first['price'] ?? $tp->effectivePrice()), 2) }}</span><span class="font-semibold text-brand-600">{{ $cur }}</span>
+                <span class="text-3xl font-extrabold text-brand-600" data-price>{{ number_format((float) ($first['price'] ?? $product->effectivePrice()), 2) }}</span><span class="font-semibold text-brand-600">{{ $cur }}</span>
                 <span class="text-base text-slate-400 line-through {{ ($first['old'] ?? null) ? '' : 'hidden' }}" data-old>{{ ($first['old'] ?? null) ? number_format((float) $first['old'], 2) : '' }}</span>
             </div>
             <p class="hidden text-sm text-brand-600" data-flash>{{ __('store.ends_in') }} <span data-flash-time class="font-mono font-bold"></span></p>
@@ -95,5 +95,5 @@
     </section>
 
     <x-rail :title="__('growth.related')" :items="$related" />
-    <script>window.sfTrack && sfTrack('view_item', {value: {{ (float) ($first['price'] ?? $tp->effectivePrice()) }}, items: [{id: @js((string) $product->id), name: @js($product->name), price: {{ (float) ($first['price'] ?? $tp->effectivePrice()) }}, brand: @js($product->brand?->name)}]});</script>
+    <script>window.sfTrack && sfTrack('view_item', {value: {{ (float) ($first['price'] ?? $product->effectivePrice()) }}, items: [{id: @js((string) $product->id), name: @js($product->name), price: {{ (float) ($first['price'] ?? $product->effectivePrice()) }}, brand: @js($product->brand?->name)}]});</script>
 </x-layouts.storefront>

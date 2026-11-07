@@ -20,7 +20,7 @@ class AiProductEditorController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         // generating needs the AI permission; writing storefront text additionally needs the same right as editing the catalog today
-        return [new Middleware('can:ai_editor.use'), new Middleware('can:catalog.edit', only: ['apply', 'undo'])];
+        return [new Middleware('can:ai_editor.use'), new Middleware('can:products.edit', only: ['apply', 'undo'])];
     }
 
     public function index()

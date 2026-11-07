@@ -54,6 +54,8 @@ final readonly class ProductData
                     isset($row['weight']) && $row['weight'] !== '' ? (string) $row['weight'] : null,
                     filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOL),
                     $r->file("variants.$key.image"),
+                    $n($row['price'] ?? null), $n($row['sale_price'] ?? null), $n($row['cost'] ?? null),
+                    $n($row['min_stock_alert_qty'] ?? null) === null ? null : (int) $row['min_stock_alert_qty'],
                 );
             }
         }

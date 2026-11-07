@@ -6,7 +6,6 @@
             ['admin.admins.index', 'access.admins', 'M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 10a4 4 0 100-8 4 4 0 000 8z', 'admins.view'],
             ['admin.audit.index', 'access.audit_log', 'M9 12h6M9 16h6M7 3h8l4 4v14H7z', 'audit.view'],
             ['admin.roles.index', 'access.roles', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', 'roles.view'],
-            ['admin.catalog.index', 'catalog', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', 'catalog.view'],
             ['admin.pos.index', 'pos.title', 'M3 7h18v10H3zM3 11h18M7 15h2', 'pos.use'],
             ['admin.orders.index', 'orders.orders', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', 'orders.view'],
             ['admin.returns.index', 'orders.returns', 'M9 14l-4-4 4-4M5 10h9a5 5 0 010 10h-3', 'returns.view'],
@@ -88,7 +87,7 @@
                 // sidebar groups: [title key, icon path, [route names]]
                 $groups = [
                     ['admin.nav.sales', 'M3 4h2l2 12h10l2-9H6M9 20h.01M17 20h.01', ['admin.pos.index', 'admin.orders.index', 'admin.returns.index', 'admin.customers.index', 'admin.whatsapp.chat.index', 'admin.discount-codes.index', 'admin.flash-sales.index', 'admin.bundles.index', 'admin.packaging.index']],
-                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['admin.products.index', 'admin.catalog.index', 'admin.categories.index', 'admin.brands.index', 'admin.tags.index', 'admin.attributes.index', 'admin.stock-requests.index', 'admin.stock.index', 'admin.stock.low', 'admin.stock.movements', 'admin.purchases.index', 'admin.stock-transfers.index', 'admin.stock-adjustments.index', 'admin.suppliers.index']],
+                    ['admin.nav.catalog_inventory', 'M20 7l-8-4-8 4m16 0v10l-8 4m8-14l-8 4m0 10L4 17V7m8 14V11', ['admin.products.index', 'admin.categories.index', 'admin.brands.index', 'admin.tags.index', 'admin.attributes.index', 'admin.stock-requests.index', 'admin.stock.index', 'admin.stock.low', 'admin.stock.movements', 'admin.purchases.index', 'admin.stock-transfers.index', 'admin.stock-adjustments.index', 'admin.suppliers.index']],
                     ['admin.nav.marketing', 'M12 3l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 21l1.2-6.5L2.5 9.9 9.1 9z', ['admin.affiliates.index', 'admin.affiliate-tiers.index', 'admin.affiliate-payouts.index', 'admin.product-lists.index', 'admin.reviews.index', 'admin.banners.index']],
                     ['admin.nav.content', 'M7 3h8l4 4v14H7zM14 3v5h5', ['admin.custom-pages.index', 'admin.static-pages.index', 'admin.blog-posts.index']],
                     ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['admin.erp.hub', 'admin.erp.anomalies', 'admin.expenses.index', 'admin.expense-categories.index', 'admin.cod-fees.edit', 'admin.payment-methods.index']],

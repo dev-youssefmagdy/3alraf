@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\DTOs\ActivateProductsData;
-use App\DTOs\CatalogItemData;
 use App\Models\Product;
 use App\Services\Qr\QrCodeManager;
 use Illuminate\Support\Facades\DB;
 
-/** Catalog page (selling side of products): price / sale price / cost / status (+ per-variant overrides), storefront wording, activation. */
+/** Selling side of products: "activate products" (first price), storefront wording overlay, take off sale. Editing prices happens in the product form (ProductService). */
 class CatalogService
 {
     public function __construct(private QrCodeManager $qr) {}
@@ -35,23 +34,6 @@ class CatalogService
             }
 
             return $n;
-        });
-    }
-
-    public function update(Product $p, CatalogItemData $dto): Product
-    {
-        return DB::transaction(function () use ($p, $dto) {
-            $p->update([
-                'price' => $dto->price, 'sale_price' => $dto->salePrice, 'cost' => $dto->cost, 'is_active' => $dto->isActive, 'min_stock_alert_qty' => $dto->minStockAlert,
-            ]);
-            foreach ($dto->variants as $row) {
-                $p->variants()->whereKey($row['id'])->update([
-                    'price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'min_stock_alert_qty' => $row['min_stock_alert_qty'], 'is_active' => $row['is_active'],
-                ]);
-            }
-            $this->qr->listingSaved($p);
-
-            return $p;
         });
     }
 

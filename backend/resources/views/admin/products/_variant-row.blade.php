@@ -20,6 +20,10 @@
         @if (! empty($v['image']))<img src="{{ $v['image'] }}" class="mb-1 size-10 rounded object-cover" alt="">@endif
         <input type="file" name="variants[{{ $i }}][image]" accept="image/*" class="w-40 text-xs">
     </td>
+    <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][price]" value="{{ $v['price'] ?? '' }}" class="form-control !w-24"></td>
+    <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][sale_price]" value="{{ $v['sale_price'] ?? '' }}" class="form-control !w-24"></td>
+    <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][cost]" value="{{ $v['cost'] ?? '' }}" class="form-control !w-24"></td>
+    <td class="px-1 py-2" data-field><input type="number" step="1" min="0" name="variants[{{ $i }}][min_stock_alert_qty]" value="{{ $v['min_stock_alert_qty'] ?? '' }}" class="form-control !w-20"></td>
     <td class="px-1 py-2">
         <input type="hidden" name="variants[{{ $i }}][is_active]" value="0">
         <input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" @checked($v['is_active'] ?? true) class="size-4 rounded border-slate-300 text-brand-600">

@@ -10,7 +10,6 @@ return [
     'admin' => [
         'admins' => $crud,
         'roles' => $crud,
-        'catalog' => ['view', 'create', 'edit', 'delete'],
         'settings' => ['view', 'edit'],
         'whatsapp' => ['view', 'manage'],
         'whatsapp.chat' => ['view', 'send', 'manage', 'media'],
@@ -71,7 +70,7 @@ return [
         // n8n growth system (feature flag `growth`)
         'growth' => ['view', 'manage', 'approve'],
         // master catalog: products, categories, brands, tags, attributes
-        'products' => $crud,
+        'products' => $crud, // products + selling fields + activate-many + QR (merged former catalog.*)
         'categories' => $crud,
         'brands' => $crud,
         'tags' => $crud,

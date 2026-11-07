@@ -147,7 +147,7 @@ try {
   const ap = await mk('admin');
   await adminLogin(ap, `${site}/admin/login`, '01000000001');
   ok(!/login/.test(ap.url()), 'super admin signed in (otp_exempt)');
-  for (const path of ['orders', 'catalog', 'cities', 'stock', 'audit']) {
+  for (const path of ['orders', 'products', 'cities', 'stock', 'audit']) {
     await ap.goto(`${site}/admin/${path}`, { waitUntil: 'networkidle' }); await ap.waitForTimeout(800);
     ok(await ap.locator('table tbody tr').count() > 0, `admin ${path} table has rows`);
   }

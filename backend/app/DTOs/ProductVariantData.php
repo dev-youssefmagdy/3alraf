@@ -14,5 +14,9 @@ final readonly class ProductVariantData
         public ?string $weight,
         public bool $isActive,
         public ?UploadedFile $image,
+        public ?string $price = null,
+        public ?string $salePrice = null,
+        public ?string $cost = null,
+        public ?int $minStockAlert = null,
     ) {}
 }

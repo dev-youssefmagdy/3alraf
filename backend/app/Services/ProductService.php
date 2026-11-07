@@ -95,7 +95,8 @@ class ProductService
         foreach ($dto->variants as $row) {
             $hash = ProductVariant::hashFor($row->valueIds);
             $variant = ($row->id ? $existing->get($row->id) : null) ?? $byHash->get($hash);
-            $data = ['combination_hash' => $hash, 'sku' => $row->sku, 'weight' => $row->weight, 'is_active' => $row->isActive];
+            $data = ['combination_hash' => $hash, 'sku' => $row->sku, 'weight' => $row->weight, 'is_active' => $row->isActive,
+                'price' => $row->price, 'sale_price' => $row->salePrice, 'cost' => $row->cost, 'min_stock_alert_qty' => $row->minStockAlert];
 
             if ($variant) {
                 $variant->trashed() && $variant->restore();

@@ -3,7 +3,7 @@
     $selectedCats = collect(old('category_ids', $editing ? $product->categories->pluck('id')->all() : []))->map(fn ($x) => (int) $x)->all();
     $variantRows = $editing ? $product->variants->map(fn ($pv) => [
         'id' => $pv->id, 'values' => $pv->values->pluck('id')->all(), 'label' => $pv->label(), 'sku' => $pv->sku, 'weight' => $pv->weight,
-        'is_active' => $pv->is_active, 'barcode' => $pv->barcode, 'hash' => $pv->combination_hash, 'image' => $pv->primaryImageUrl(),
+        'is_active' => $pv->is_active, 'price' => $pv->price, 'sale_price' => $pv->sale_price, 'cost' => $pv->cost, 'min_stock_alert_qty' => $pv->min_stock_alert_qty, 'barcode' => $pv->barcode, 'hash' => $pv->combination_hash, 'image' => $pv->primaryImageUrl(),
     ])->all() : [];
     $attrJson = $attributes->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'values' => $a->values->map(fn ($v) => ['id' => $v->id, 'name' => $v->value, 'color' => $v->color_hex])->all()])->values();
     $usedValueIds = collect($variantRows)->pluck('values')->flatten()->unique()->values();
@@ -29,9 +29,6 @@
                     <x-input name="cost" type="number" step="0.01" min="0" :label="__('admin.fields.cost')" :value="$product->cost" />
                     <x-input name="min_stock_alert_qty" type="number" step="1" min="0" :label="__('stock_requests.min_alert')" :value="$product->min_stock_alert_qty" :hint="__('stock_requests.min_alert_hint')" />
                 </div>
-                @if ($editing && $product->price !== null)
-                    @can('catalog.edit')<a href="{{ route('admin.catalog.edit', $product) }}" class="mt-3 inline-block text-sm text-brand-600 hover:underline">{{ __('admin.list_in_store') }} &rarr;</a>@endcan
-                @endif
             </x-card>
 
             <x-card :title="__('admin.gift')">
@@ -77,7 +74,7 @@
                     <table class="w-full text-sm">
                         <thead><tr class="text-start text-xs uppercase text-slate-500">
                             <th class="text-start">{{ __('admin.variant') }}</th><th class="text-start">{{ __('admin.fields.sku') }}</th><th class="text-start">{{ __('admin.fields.weight') }}</th>
-                            <th class="text-start">{{ __('admin.fields.barcode') }}</th><th class="text-start">{{ __('admin.fields.image') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th><th></th>
+                            <th class="text-start">{{ __('admin.fields.barcode') }}</th><th class="text-start">{{ __('admin.fields.image') }}</th><th class="text-start">{{ __('admin.fields.price') }}</th><th class="text-start">{{ __('admin.fields.sale_price') }}</th><th class="text-start">{{ __('admin.fields.cost') }}</th><th class="text-start">{{ __('stock_requests.min_alert') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th><th></th>
                         </tr></thead>
                         <tbody data-repeater-list>
                             @foreach ($variantRows as $i => $v)
@@ -90,6 +87,7 @@
                     </template>
                     <p data-empty class="py-3 text-sm text-slate-400">{{ __('admin.no_variants_yet') }}</p>
                 </div>
+                <p class="mt-2 text-xs text-slate-500">{{ __('admin.variant_override_hint') }}</p>
                 <div data-field data-variants-field></div>
             </x-card>
 
@@ -146,4 +144,29 @@
             <x-form-actions :cancel="route('admin.products.index')" />
         </div>
     </form>
+    @if ($editing && $product->price !== null)
+        @php($variants = $product->variants->filter(fn ($v) => ! $v->trashed() && $v->is_active))
+        @php($pq = $qrCodes->get(\App\Models\Product::class.':'.$product->id))
+        <x-card class="mt-5 max-w-4xl">
+            <h3 class="mb-1 font-semibold">{{ __('admin.qr_code') }}</h3>
+            <p class="mb-3 text-xs text-slate-500">{{ __('admin.qr_hint') }}</p>
+            <div class="flex flex-wrap gap-6">
+                <div class="text-center">
+                    <img src="{{ $pq?->file_url ?? route('admin.products.qr', $product) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
+                    <div class="mt-1 text-xs text-slate-500">{{ __('admin.qr_product') }}</div>
+                    <a href="{{ route('admin.products.qr', $product) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+                    @can('products.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('admin.products.qr.regenerate', $product) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
+                </div>
+                @foreach ($variants as $tv)
+                    @php($vq = $qrCodes->get(\App\Models\ProductVariant::class.':'.$tv->id))
+                    <div class="text-center">
+                        <img src="{{ $vq?->file_url ?? route('admin.products.qr', [$product, 'variant' => $tv->id]) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
+                        <div class="mt-1 text-xs text-slate-500">{{ $tv->label() }}</div>
+                        <a href="{{ route('admin.products.qr', [$product, 'variant' => $tv->id]) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+                        @can('products.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('admin.products.qr.regenerate', [$product, 'variant' => $tv->id]) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
+                    </div>
+                @endforeach
+            </div>
+        </x-card>
+    @endif
 </x-layouts.admin>

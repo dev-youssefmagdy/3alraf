@@ -4,7 +4,7 @@
         $inp = 'mt-1 block rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm';
     @endphp
     <div id="mk" class="space-y-4" data-data="{{ route('admin.ai.market-trends.data') }}" data-refresh="{{ route('admin.ai.market-trends.refresh') }}" data-dismiss="{{ route('admin.ai.market-trends.dismiss') }}"
-         data-export="{{ route('admin.ai.market-trends.export') }}" data-draft="{{ route('admin.ai.trends.draft') }}" data-edit="{{ url('admin/catalog') }}" data-studio="{{ route('admin.ai.studio.index') }}">
+         data-export="{{ route('admin.ai.market-trends.export') }}" data-draft="{{ route('admin.ai.trends.draft') }}" data-edit="{{ url('admin/products') }}" data-studio="{{ route('admin.ai.studio.index') }}">
         <p class="text-sm text-slate-600">{{ $m('subtitle') }} <span class="text-xs text-slate-500">{{ $m('estimate') }}</span></p>
 
         <form id="mk-form" class="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm" autocomplete="off">

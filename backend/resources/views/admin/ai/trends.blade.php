@@ -5,7 +5,7 @@
             'dismiss' => $t('dismiss'), 'conf' => $t('confidence'), 'src' => $t('sources'), 'price' => $t('price_range'), 'kw' => $t('keywords'), 'exists' => $t('exists_zero'), 'failed' => $t('job_failed'), 'needsup' => $t('need_supplier'), 'refreshing' => $t('refreshing')];
     @endphp
     <div id="tr" class="space-y-4" data-own="{{ route('admin.ai.trends.own') }}" data-market="{{ route('admin.ai.trends.market') }}" data-refresh="{{ route('admin.ai.trends.refresh') }}"
-         data-dismiss="{{ route('admin.ai.trends.dismiss') }}" data-draft="{{ route('admin.ai.trends.draft') }}" data-export="{{ route('admin.ai.trends.export') }}" data-edit="{{ url('admin/catalog') }}"
+         data-dismiss="{{ route('admin.ai.trends.dismiss') }}" data-draft="{{ route('admin.ai.trends.draft') }}" data-export="{{ route('admin.ai.trends.export') }}" data-edit="{{ url('admin/products') }}"
          data-t="{{ json_encode($tr, JSON_UNESCAPED_UNICODE) }}">
         <div class="flex flex-wrap items-center gap-2 border-b border-slate-200">
             <button type="button" data-tab="own" class="tr-tab -mb-px border-b-2 border-brand-600 px-3 py-2 text-sm font-medium text-brand-700">{{ __('ai.trends.tab_own') }}</button>

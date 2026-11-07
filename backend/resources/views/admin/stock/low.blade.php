@@ -15,7 +15,7 @@
                         <td>{{ $r['variant']?->label() ?? '—' }}</td>
                         <td><span class="badge {{ $r['available'] === 0 ? 'badge-danger' : 'badge-warn' }}">{{ $r['available'] === 0 ? __('store.out_of_stock') : $r['available'] }}</span></td>
                         <td>{{ $r['alert'] }}</td>
-                        <td class="text-end">@can('catalog.edit')<a href="{{ route('admin.catalog.edit', $r['product']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan</td>
+                        <td class="text-end">@can('products.edit')<a href="{{ route('admin.products.edit', $r['product']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="py-6 text-center text-slate-400">{{ __('stock_requests.low_stock_empty') }}</td></tr>

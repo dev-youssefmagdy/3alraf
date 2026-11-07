@@ -94,18 +94,27 @@ it('Settings → General saves the store profile into settings (validated, audit
     $this->getJson('/api/v1/app-config')->assertJsonPath('data.store.name', 'My Shop')->assertJsonPath('data.store.default_locale', 'en');
 });
 
-it('the Catalog page edits price/sale/cost/status directly on products and links to the product page', function () {
+it('the merged Products module lists/edit selling fields directly on products and redirects the old Catalog URLs', function () {
+    $cat = App\Models\Category::create(['name' => ['ar' => 'قسم', 'en' => 'Cat'], 'slug' => 'mg-cat', 'path' => '/', 'depth' => 0]);
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Item'], 'slug' => 'cat-item', 'sku' => 'CI1']);
     listProduct($p, ['price' => 100, 'cost' => 40]);
     $this->actingAs($this->owner, 'admin');
-    $this->getJson('/admin/catalog/datatable?draw=1&start=0&length=10')->assertOk()->assertJsonPath('recordsTotal', 1);
-    $this->get("/admin/catalog/{$p->id}/edit")->assertOk()->assertSee(url("/admin/products/{$p->id}/edit"), false);
-    $this->putJson("/admin/catalog/{$p->id}", ['price' => '150', 'sale_price' => '120', 'cost' => '50', 'is_active' => 1])->assertOk();
+    $this->getJson('/admin/products/datatable?draw=1&start=0&length=10')->assertOk()->assertJsonPath('recordsTotal', 1);
+    $this->get("/admin/products/{$p->id}/edit")->assertOk()->assertSee(route('admin.products.qr', $p), false)->assertSee('name="min_stock_alert_qty"', false);
+    $payload = ['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Item'], 'sku' => 'CI1', 'slug' => 'cat-item', 'category_ids' => [$cat->id], 'price' => '150', 'sale_price' => '120', 'cost' => '50', 'is_active' => 1];
+    $this->putJson("/admin/products/{$p->id}", $payload)->assertOk();
     $p->refresh();
     expect((string) $p->price)->toBe('150.00')->and((string) $p->sale_price)->toBe('120.00')->and((string) $p->effectivePrice())->toBe('120.00')->and($p->is_active)->toBeTrue();
-    $this->putJson("/admin/catalog/{$p->id}", ['price' => '150', 'cost' => '50', 'is_active' => 0])->assertOk();
+    $this->putJson("/admin/products/{$p->id}", ['is_active' => 0] + $payload)->assertOk();
     expect($p->fresh()->is_active)->toBeFalse();
-    $this->get('/admin/products')->assertOk()->assertSee(url('/admin/catalog'), false);
+    $this->get('/admin/products')->assertOk()->assertSee(route('admin.products.available'), false)->assertDontSee('/admin/catalog', false);
+    $this->get('/admin/catalog')->assertStatus(301)->assertRedirect('/admin/products');
+    $this->get("/admin/catalog/{$p->id}/edit")->assertStatus(301)->assertRedirect("/admin/products/{$p->id}/edit");
+    $this->postJson("/admin/products/{$p->id}/unlist")->assertOk();
+    expect($p->fresh()->price)->toBeNull();
+    auth('admin')->logout();
+    $this->get('/admin/catalog')->assertRedirect(); // still behind the admin login
+    expect(\Illuminate\Support\Facades\Route::has('admin.catalog.index'))->toBeFalse();
 });
 
 it('the Products CRUD saves a product without a cost (products.cost NOT NULL → 0) and keeps the cost on a blank edit (QC Phase 10)', function () {

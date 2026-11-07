@@ -131,19 +131,19 @@ it('keeps no orphan files: disabling a listing, a variant or an affiliate remove
 
 it('generates codes through the real flows: bulk enable, listing update, affiliate approval, product edit', function () {
     $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
-    $this->postJson("{$this->t}/catalog/bulk", ['rows' => [$this->simple->id => ['enabled' => 1, 'price' => '10', 'cost' => '5']]])->assertOk();
+    $this->postJson("{$this->t}/products/bulk", ['rows' => [$this->simple->id => ['enabled' => 1, 'price' => '10', 'cost' => '5']]])->assertOk();
     $tp = Product::whereKey($this->simple->id)->first();
     expect(QrCode::where('owner_id', $tp->id)->whereNull('affiliate_id')->count())->toBe(1)->and(QrCode::where('affiliate_id', $this->aff->id)->count())->toBe(1);
 
     // deactivating the listing removes its codes
-    $this->putJson("{$this->t}/catalog/{$tp->id}", ['price' => '10', 'cost' => '5', 'is_active' => 0])->assertOk();
+    $this->putJson("{$this->t}/products/{$tp->id}", ['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'sku' => $tp->sku, 'slug' => $tp->slug, 'category_ids' => [\App\Models\Category::firstOrCreate(['slug' => 'c'], ['name' => ['ar' => 'c'], 'path' => '1', 'depth' => 0])->id], 'price' => '10', 'cost' => '5', 'is_active' => 0])->assertOk();
     expect(QrCode::count())->toBe(0);
-    $this->putJson("{$this->t}/catalog/{$tp->id}", ['price' => '10', 'cost' => '5', 'is_active' => 1])->assertOk();
+    $this->putJson("{$this->t}/products/{$tp->id}", ['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'sku' => $tp->sku, 'slug' => $tp->slug, 'category_ids' => [\App\Models\Category::firstOrCreate(['slug' => 'c'], ['name' => ['ar' => 'c'], 'path' => '1', 'depth' => 0])->id], 'price' => '10', 'cost' => '5', 'is_active' => 1])->assertOk();
     expect(QrCode::count())->toBe(2);
 
     // a product slug change refreshes its codes (queued job, sync in tests)
     $old = QrCode::pluck('path')->all();
-    $cat = \App\Models\Category::create(['name' => ['ar' => 'c'], 'slug' => 'c', 'path' => '1', 'depth' => 0]);
+    $cat = \App\Models\Category::firstOrCreate(['slug' => 'c'], ['name' => ['ar' => 'c'], 'path' => '1', 'depth' => 0]);
     $this->actingAs(\App\Models\Admin::first(), 'admin');
     $this->putJson('/admin/products/'.$this->simple->id, ['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'slug' => 'qr-slug-2', 'sku' => 'QS', 'category_ids' => [$cat->id], 'is_active' => 1, 'price' => '10', 'cost' => '5'])->assertOk();
     expect(QrCode::pluck('url')->all())->each->toContain('qr-slug-2');
@@ -157,20 +157,20 @@ it('serves the admin download (self-healing) and affiliates only get their own s
     app(QrCodeManager::class)->syncProduct($tp, true);
     $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 
-    $this->get("{$this->t}/catalog/{$tp->id}/edit")->assertOk()->assertSee(__('admin.qr_download'))->assertSee(media_url(QrCode::whereNull('affiliate_id')->first()->path), false);
-    $r = $this->get("{$this->t}/catalog/{$tp->id}/qr")->assertOk()->assertHeader('Content-Type', 'image/png');
+    $this->get("{$this->t}/products/{$tp->id}/edit")->assertOk()->assertSee(__('admin.qr_download'))->assertSee(media_url(QrCode::whereNull('affiliate_id')->first()->path), false);
+    $r = $this->get("{$this->t}/products/{$tp->id}/qr")->assertOk()->assertHeader('Content-Type', 'image/png');
     expect($r->headers->get('Content-Disposition'))->toContain('qr-qr-var.png')->and(substr($r->getContent(), 1, 3))->toBe('PNG');
     $tv = $tp->variants()->first();
-    $this->get("{$this->t}/catalog/{$tp->id}/qr?variant={$tv->id}")->assertOk()->assertHeader('Content-Type', 'image/png');
-    $this->get("{$this->t}/catalog/{$tp->id}/qr?variant=999999")->assertNotFound();
+    $this->get("{$this->t}/products/{$tp->id}/qr?variant={$tv->id}")->assertOk()->assertHeader('Content-Type', 'image/png');
+    $this->get("{$this->t}/products/{$tp->id}/qr?variant=999999")->assertNotFound();
 
     // missing file is regenerated on demand (self healing)
     $q = QrCode::whereNull('affiliate_id')->where('owner_type', Product::class)->first();
     $this->media->delete($q->path);
-    $this->get("{$this->t}/catalog/{$tp->id}/qr")->assertOk();
+    $this->get("{$this->t}/products/{$tp->id}/qr")->assertOk();
     $this->media->assertExists($q->fresh()->path);
 
-    $this->get("{$this->t}/catalog/999999/qr")->assertNotFound();
+    $this->get("{$this->t}/products/999999/qr")->assertNotFound();
 });
 
 it('affiliate web + api return the stored png; affiliate of another listing state gets 404', function () {

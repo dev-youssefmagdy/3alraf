@@ -61,6 +61,10 @@ class ProductRequest extends FormRequest
                 'variants.*.values.*' => ['integer', 'exists:attribute_values,id'],
                 'variants.*.weight' => ['nullable', 'numeric', 'min:0'],
                 'variants.*.is_active' => ['nullable', 'boolean'],
+                'variants.*.price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+                'variants.*.sale_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+                'variants.*.cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+                'variants.*.min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
                 'variants.*.image' => ['nullable', 'image', 'max:4096'],
             ];
             foreach (array_keys($this->input('variants', [])) as $key) {
@@ -91,6 +95,10 @@ class ProductRequest extends FormRequest
                     $v->errors()->add("variants.$key.sku", __('validation.distinct', ['attribute' => 'sku']));
                 }
                 $skus[$sku] = true;
+                $price = ($row['price'] ?? '') !== '' ? $row['price'] : $this->input('price');
+                if (($row['sale_price'] ?? '') !== '' && is_numeric($price) && is_numeric($row['sale_price']) && bccomp((string) $row['sale_price'], (string) $price, 2) >= 0) {
+                    $v->errors()->add("variants.$key.sale_price", __('validation.lt.numeric', ['attribute' => __('admin.fields.sale_price'), 'value' => __('admin.fields.price')]));
+                }
             }
         }];
     }
