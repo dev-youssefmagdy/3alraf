@@ -122,7 +122,6 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::post('languages/validate/{language?}', [LanguageController::class, 'validateForm'])->name('languages.validate');
         Route::resource('languages', LanguageController::class)->except('show');
         // Products: activate-many, bulk, QR, take off sale (declared before the resource so `available` is not read as {product})
-        Route::get('products/available', [ProductController::class, 'available'])->name('products.available');
         Route::post('products/bulk/validate', [ProductController::class, 'validateBulk'])->name('products.bulk.validate');
         Route::post('products/bulk', [ProductController::class, 'bulkStore'])->name('products.bulk.store');
         Route::get('products/{product}/qr', [ProductController::class, 'qr'])->whereNumber('product')->name('products.qr');

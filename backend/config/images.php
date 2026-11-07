@@ -11,8 +11,8 @@ return [
     // Real content types accepted (checked from the bytes, never from the extension).
     'allowed_mimes' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/bmp'],
 
-    // New uploads also get a WebP sibling (name.webp) used as the <picture> fallback for browsers without AVIF.
-    'webp_fallback' => (bool) env('IMAGE_WEBP_FALLBACK', true),
+    // AVIF only by default. Set true to also write a WebP sibling (name.webp) as a fallback for browsers without AVIF.
+    'webp_fallback' => (bool) env('IMAGE_WEBP_FALLBACK', false),
 
     // Quality ladder tried (highest first) at each scale step; the first encode within the limit wins.
     // 65 → 40 keeps product labels readable; below the floor the image is flagged instead of degraded further.

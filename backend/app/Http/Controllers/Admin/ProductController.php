@@ -80,16 +80,6 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /** "Activate products": products without a price yet, with inline price inputs. */
-    public function available(Request $request)
-    {
-        $q = $request->string('q')->toString();
-        $products = $this->catalog->inactiveQuery()
-            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', "%$q%")->orWhere('sku', 'like', "%$q%")))
-            ->orderBy('name')->paginate(50)->withQueryString();
-
-        return view('admin.products.available', ['products' => $products, 'q' => $q]);
-    }
-
     public function validateBulk(ActivateProductsRequest $request): JsonResponse
     {
         return $this->ok();

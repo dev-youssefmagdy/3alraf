@@ -172,7 +172,7 @@ class GiftCatalogSeeder extends Seeder
                     $p = Product::create([
                         'brand_id' => $r['brand'] ? $brands[$r['brand']]->id : null, 'type' => 'simple',
                         'name' => $r['name'], 'description' => $r['description'], 'meta_title' => $r['name'], 'meta_description' => $r['meta_description'],
-                        'slug' => $r['slug'], 'sku' => $r['sku'], 'barcode' => $barcodes->generateUnique(), 'weight' => $r['weight'], 'is_active' => false, // on sale once priced (listings())
+                        'slug' => $r['slug'], 'sku' => $r['sku'], 'barcode' => $barcodes->generateUnique(), 'weight' => $r['weight'], 'is_active' => true, // every catalog product is shown in the storefront (out of stock = disabled + request button)
                     ]);
                     $p->categories()->sync([$cats[$r['category']]->id]);
                     $p->tags()->sync(collect(str_split($r['flags'] ?? ''))->filter(fn ($f) => isset($tags[$f]))->map(fn ($f) => $tags[$f]->id)->unique()->values()->all());
