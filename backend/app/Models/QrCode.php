@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-/** Stored QR PNG (media disk) for a tenant product / variant, optionally one affiliate's tracked link. */
+/** Stored QR PNG (media disk) for a store product / variant, optionally one affiliate's tracked link. */
 class QrCode extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['owner_type', 'owner_id', 'affiliate_id', 'affiliate_key', 'url', 'url_hash', 'path'];
 

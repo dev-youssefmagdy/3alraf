@@ -3,7 +3,7 @@
 namespace App\DTOs;
 
 use App\Enums\BannerPlacement;
-use App\Http\Requests\Tenant\BannerRequest;
+use App\Http\Requests\Admin\BannerRequest;
 
 final readonly class BannerData
 {

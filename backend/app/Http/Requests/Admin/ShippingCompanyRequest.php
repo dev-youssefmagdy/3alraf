@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 class ShippingCompanyRequest extends BaseRequest
 {
@@ -10,7 +10,7 @@ class ShippingCompanyRequest extends BaseRequest
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'rates' => ['nullable', 'array'],
-            'rates.*.city_id' => ['required', 'distinct', $this->tenantExists('cities', true)],
+            'rates.*.city_id' => ['required', 'distinct', $this->existsRule('cities', true)],
             'rates.*.price' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'rates.*.cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'rates.*.free_over' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],

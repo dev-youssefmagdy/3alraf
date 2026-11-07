@@ -27,7 +27,7 @@ class CustomerDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('name_link', fn (Customer $m) => '<a class="font-semibold text-brand-600" href="'.e(route('tenant.customers.show', $m->id)).'">'.e($m->name).'</a>')
+        $dt->addColumn('name_link', fn (Customer $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.customers.show', $m->id)).'">'.e($m->name).'</a>')
             ->filterColumn('name_link', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->editColumn('phone', fn (Customer $m) => $m->phone_display ?: $m->phone)
             ->editColumn('spent', fn (Customer $m) => $this->money($m->spent ?? 0))

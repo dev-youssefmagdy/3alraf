@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\LanguageDataTable;
 use App\DTOs\LanguageData;
 use App\Enums\TextDirection;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\LanguageRequest;
+use App\Http\Requests\Admin\LanguageRequest;
 use App\Models\Language;
 use App\Services\LanguageService;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +29,7 @@ class LanguageController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.languages.index', ['table' => new LanguageDataTable]);
+        return view('admin.languages.index', ['table' => new LanguageDataTable]);
     }
 
     public function datatable(LanguageDataTable $table): JsonResponse
@@ -39,26 +39,26 @@ class LanguageController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.languages.form', ['language' => new Language(['is_active' => true, 'direction' => TextDirection::LTR]), 'directions' => TextDirection::options()]);
+        return view('admin.languages.form', ['language' => new Language(['is_active' => true, 'direction' => TextDirection::LTR]), 'directions' => TextDirection::options()]);
     }
 
     public function store(LanguageRequest $request): JsonResponse
     {
         $this->service->create(LanguageData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.languages.index'));
+        return $this->ok(__('admin.saved'), route('admin.languages.index'));
     }
 
     public function edit(Language $language)
     {
-        return view('central.languages.form', ['language' => $language, 'directions' => TextDirection::options()]);
+        return view('admin.languages.form', ['language' => $language, 'directions' => TextDirection::options()]);
     }
 
     public function update(LanguageRequest $request, Language $language): JsonResponse
     {
         $this->service->update($language, LanguageData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.languages.index'));
+        return $this->ok(__('admin.saved'), route('admin.languages.index'));
     }
 
     public function destroy(Language $language): JsonResponse

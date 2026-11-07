@@ -7,8 +7,8 @@
     </div>
     <div data-repeater-list class="space-y-2">
         @foreach ($rows as $k => $r)
-            @include('tenant.stock._item-row', ['i' => $k, 'r' => $r, 'items' => $items, 'cost' => $cost])
+            @include('admin.stock._item-row', ['i' => $k, 'r' => $r, 'items' => $items, 'cost' => $cost])
         @endforeach
     </div>
-    <template data-repeater-template>@include('tenant.stock._item-row', ['i' => '__INDEX__', 'r' => null, 'items' => $items, 'cost' => $cost])</template>
+    <template data-repeater-template>@include('admin.stock._item-row', ['i' => '__INDEX__', 'r' => null, 'items' => $items, 'cost' => $cost])</template>
 </div>

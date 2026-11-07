@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware\Api;
 
-use App\Models\Tenant;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\IntegrationClientService;
@@ -15,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Route gate `integration.auth:{scope}` for the n8n API: bearer token + HMAC-SHA256(secret, "{X-Timestamp}.{raw body}"), 5-minute replay window,
- * scope check, per-client throttle. Failures are uniform (401) so tokens/clients cannot be probed. Sets the current tenant from the client.
+ * scope check, per-client throttle. Failures are uniform (401) so tokens/clients cannot be probed. The site timezone is set once at boot (AppServiceProvider).
  */
 class IntegrationAuth
 {
@@ -32,11 +31,10 @@ class IntegrationAuth
         if (! $client || ! $this->sig->withinWindow($ts) || $sigHeader === '' || ! $this->sig->verify($client->hmac_secret, $ts, $request->getContent(), $sigHeader)) {
             return $this->deny(401, 'unauthenticated');
         }
-        $tenant = Tenant::find($client->tenant_id);
-        if (! $tenant || ! $this->access->enabled($tenant)) {
+        if (! $this->access->enabled()) {
             return $this->deny(403, 'growth_disabled');
         }
-        if (! $this->features->active('integration_api', $tenant) || ($feature !== '' && ! $this->features->active($feature, $tenant))) {
+        if (! $this->features->active('integration_api') || ($feature !== '' && ! $this->features->active($feature))) {
             return $this->deny(403, 'feature_disabled');
         }
         if ($scope !== '' && ! $client->hasScope($scope)) {
@@ -48,9 +46,6 @@ class IntegrationAuth
         }
         RateLimiter::hit($key, 60);
 
-        app()->instance('currentTenant', $tenant);
-        config(['app.timezone' => $tenant->timezone]);
-        date_default_timezone_set($tenant->timezone);
         $request->attributes->set('integration_client', $client);
         if (! $client->last_used_at || $client->last_used_at->lt(now()->subMinute())) {
             $client->forceFill(['last_used_at' => now()])->saveQuietly();

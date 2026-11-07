@@ -5,12 +5,10 @@ namespace App\Jobs;
 use App\Enums\AiGenerationStatus;
 use App\Exceptions\AiException;
 use App\Models\AiGeneration;
-use App\Models\Tenant;
 use App\Enums\AiGenerationType;
 use App\Services\Ai\GeneratorService;
 use App\Services\Ai\ProductEditorService;
 use App\Services\Ai\StudioService;
-use App\Services\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +27,7 @@ class RunAiGenerationJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 600;
 
-    public function __construct(public int $generationId, public int $tenantId, public string $stage = 'main') {}
+    public function __construct(public int $generationId, public string $stage = 'main') {}
 
     public function backoff(): array
     {
@@ -43,33 +41,27 @@ class RunAiGenerationJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(StudioService $studio): void
     {
-        $tenant = Tenant::find($this->tenantId);
-        if (! $tenant) {
+        $g = AiGeneration::find($this->generationId);
+        if (! $g) {
             return;
         }
-        TenantContext::run($tenant, function () use ($studio) {
-            $g = AiGeneration::find($this->generationId);   // tenant scoped: another tenant's id is simply not found
-            if (! $g) {
-                return;
-            }
-            try {
-                if (in_array($g->type, GeneratorService::TYPES, true)) {
-                    if ($g->status === AiGenerationStatus::QUEUED) {
-                        app(GeneratorService::class)->generate($g);
-                    }
-                } elseif ($g->type === AiGenerationType::PRODUCT_EDIT) {
-                    if ($g->status === AiGenerationStatus::QUEUED) {
-                        app(ProductEditorService::class)->generate($g);
-                    }
-                } elseif ($this->stage === 'video') {
-                    $studio->generateVideo($g);
-                } elseif ($g->status === AiGenerationStatus::QUEUED) {
-                    $studio->generate($g);
+        try {
+            if (in_array($g->type, GeneratorService::TYPES, true)) {
+                if ($g->status === AiGenerationStatus::QUEUED) {
+                    app(GeneratorService::class)->generate($g);
                 }
-            } catch (AiException $e) {
-                $this->serviceFor($g)->fail($g, $e->getMessage());   // user-safe message; retrying would burn tokens again
+            } elseif ($g->type === AiGenerationType::PRODUCT_EDIT) {
+                if ($g->status === AiGenerationStatus::QUEUED) {
+                    app(ProductEditorService::class)->generate($g);
+                }
+            } elseif ($this->stage === 'video') {
+                $studio->generateVideo($g);
+            } elseif ($g->status === AiGenerationStatus::QUEUED) {
+                $studio->generate($g);
             }
-        });
+        } catch (AiException $e) {
+            $this->serviceFor($g)->fail($g, $e->getMessage());   // user-safe message; retrying would burn tokens again
+        }
     }
 
     private function serviceFor(AiGeneration $g): object
@@ -84,14 +76,9 @@ class RunAiGenerationJob implements ShouldBeUnique, ShouldQueue
     public function failed(\Throwable $e): void
     {
         report($e);
-        $tenant = Tenant::find($this->tenantId);
-        if ($tenant) {
-            TenantContext::run($tenant, function () {
-                $g = AiGeneration::find($this->generationId);
-                if ($g && $this->stage === 'main') {
-                    $this->serviceFor($g)->fail($g, __('ai.errors.provider'));
-                }
-            });
+        $g = AiGeneration::find($this->generationId);
+        if ($g && $this->stage === 'main') {
+            $this->serviceFor($g)->fail($g, __('ai.errors.provider'));
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\DiscountCodeRequest;
+use App\Http\Requests\Admin\DiscountCodeRequest;
 
 final readonly class DiscountCodeData
 {

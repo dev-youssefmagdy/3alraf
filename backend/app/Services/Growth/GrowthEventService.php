@@ -6,11 +6,10 @@ use App\Jobs\DispatchGrowthEventJob;
 use App\Models\GrowthEvent;
 use App\Repositories\Contracts\GrowthEventRepositoryInterface;
 use App\Repositories\Contracts\IntegrationClientRepositoryInterface;
-use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/** Outbox writer. Events are emitted only when the tenant has the growth flag on and at least one active client with a webhook. */
+/** Outbox writer. Events are emitted only when the growth flag is on and at least one active client with a webhook. */
 class GrowthEventService
 {
     public const TYPES = ['order.placed', 'order.cancelled', 'order.returned', 'stock.low', 'review.created', 'product.created', 'bundle.created', 'affiliate.order'];
@@ -22,35 +21,39 @@ class GrowthEventService
 
     public function __construct(private GrowthAccess $access, private GrowthFeatures $features, private GrowthEventRepositoryInterface $repo, private IntegrationClientRepositoryInterface $clients) {}
 
-    public function emit(string $type, array $data, ?Tenant $tenant = null): ?GrowthEvent
+    public function emit(string $type, array $data): ?GrowthEvent
     {
-        $tenant ??= current_tenant();
-        if (! $tenant || ! $this->access->enabled($tenant) || ! $this->features->active('events_outbox', $tenant) || ! in_array($type, self::TYPES, true)) {
+        if (! $this->access->enabled() || ! $this->features->active('events_outbox') || ! in_array($type, self::TYPES, true)) {
             return null;
         }
-        $hasTarget = $this->clients->webhookTargets($tenant->id)->isNotEmpty();
+        $hasTarget = $this->clients->webhookTargets()->isNotEmpty();
         if (! $hasTarget) {
             return null;
         }
         $id = (string) Str::uuid();
-        $event = $this->repo->createForTenant([
-            'tenant_id' => $tenant->id, 'event_id' => $id, 'type' => $type, 'status' => 'pending', 'next_attempt_at' => now(),
-            'payload' => ['event_id' => $id, 'type' => $type, 'tenant' => $tenant->slug, 'occurred_at' => now()->toIso8601String(), 'data' => PiiScrubber::scrub($data)],
+        $event = $this->repo->create([
+            'event_id' => $id, 'type' => $type, 'status' => 'pending', 'next_attempt_at' => now(),
+            'payload' => ['event_id' => $id, 'type' => $type, 'store' => self::store(), 'occurred_at' => now()->toIso8601String(), 'data' => PiiScrubber::scrub($data)],
         ]);
         DB::afterCommit(fn () => DispatchGrowthEventJob::dispatch($event->id));
 
         return $event;
     }
 
-    /** Emit at most once per $key per tenant-local day (model-event + scan safety net never double-fire). */
-    public function emitOnce(string $key, string $type, array $data, ?Tenant $tenant = null): ?GrowthEvent
+    /** Emit at most once per $key per shop-local day (model-event + scan safety net never double-fire). */
+    public function emitOnce(string $key, string $type, array $data): ?GrowthEvent
     {
-        $tenant ??= current_tenant();
-        if (! $tenant || ! \Illuminate\Support\Facades\Cache::add('growth:once:'.$tenant->id.':'.$key.':'.now($tenant->timezone ?: config('app.timezone'))->toDateString(), 1, now()->addHours(26))) {
+        if (! \Illuminate\Support\Facades\Cache::add('growth:once:'.$key.':'.now(setting('timezone') ?: config('app.timezone'))->toDateString(), 1, now()->addHours(26))) {
             return null;
         }
 
-        return $this->emit($type, $data, $tenant);
+        return $this->emit($type, $data);
+    }
+
+    /** Shop identity carried by every event: name, country, currency, default locale. */
+    public static function store(): array
+    {
+        return ['name' => setting('name'), 'country' => setting('country'), 'currency' => setting('currency_code'), 'locale' => setting('default_locale')];
     }
 
     /** Re-queue an event (dead or delivered) from the admin event log. */

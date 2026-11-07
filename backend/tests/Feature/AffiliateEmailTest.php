@@ -1,16 +1,13 @@
 <?php
 
 use App\Models\Affiliate;
-use App\Models\Tenant;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
+    $this->s = '/ar';
+    $this->api = '/api/v1';
     $this->form = fn (string $email) => ['name' => 'Aff', 'email' => $email, 'password' => 'password123', 'password_confirmation' => 'password123'];
 });
 
@@ -26,13 +23,10 @@ it('normalises e-mail on write and rejects case/space variants on web, pre-valid
     expect(Affiliate::where('email', 'new.aff@example.com')->count())->toBe(1);
 });
 
-it('the same e-mail is allowed in another tenant, and the model mutator normalises direct writes', function () {
-    $other = Tenant::create(['slug' => 'ksa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
+it('the model mutator normalises direct writes and the unique index refuses a case/space variant', function () {
     $a = Affiliate::create(['name' => 'A', 'email' => 'Shared@X.com', 'password' => 'password123']);
-    app()->instance('currentTenant', $other);
-    $b = Affiliate::create(['name' => 'B', 'email' => ' shared@x.COM', 'password' => 'password123']);
-    expect($a->email)->toBe('shared@x.com')->and($b->email)->toBe('shared@x.com')->and($b->tenant_id)->toBe($other->id);
-    expect(fn () => Affiliate::create(['name' => 'C', 'email' => 'SHARED@x.com', 'password' => 'password123']))->toThrow(\Illuminate\Database\QueryException::class);
+    expect($a->email)->toBe('shared@x.com');
+    expect(fn () => Affiliate::create(['name' => 'B', 'email' => ' shared@x.COM', 'password' => 'password123']))->toThrow(\Illuminate\Database\QueryException::class);
 });
 
 it('emailRules ignores the affiliate itself on update but not others', function () {
@@ -47,12 +41,3 @@ it('login keeps working with the normalised e-mail (any input casing)', function
     $this->postJson("{$this->api}/affiliate/login", ['email' => ' LOGIN@x.com ', 'password' => 'password123'])->assertSuccessful();
 });
 
-it('migration normalises stored e-mails and tombstones collisions deterministically (oldest wins)', function () {
-    DB::table('affiliates')->where('tenant_id', $this->tenant->id)->delete();
-    $row = fn (string $e) => DB::table('affiliates')->insertGetId(['tenant_id' => $this->tenant->id, 'uuid' => (string) \Illuminate\Support\Str::uuid(), 'name' => 'x', 'email' => $e, 'password' => 'x', 'created_at' => now(), 'updated_at' => now()]);
-    $old = $row('Dup@X.com');
-    $new = $row(' dup@x.com'); // leading space: not equal for the unique index, equal after normalising
-    (include base_path('database/migrations/2026_10_27_100001_affiliate_email_unique.php'))->up();
-    expect(DB::table('affiliates')->where('id', $old)->value('email'))->toBe('dup@x.com')
-        ->and(DB::table('affiliates')->where('id', $new)->value('email'))->toBe("dup+dup{$new}@x.com");
-});

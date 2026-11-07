@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Central\Ai;
+namespace App\Http\Requests\Admin\Ai;
 
 use App\Enums\AiModelKind;
 use Illuminate\Foundation\Http\FormRequest;

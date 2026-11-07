@@ -2,28 +2,27 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\AiTenantSetting;
-use App\Repositories\Contracts\AiTenantSettingRepositoryInterface;
+use App\Models\AiSetting;
+use App\Repositories\Contracts\AiSettingRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 
-class AiTenantSettingRepository extends BaseRepository implements AiTenantSettingRepositoryInterface
+class AiSettingRepository extends BaseRepository implements AiSettingRepositoryInterface
 {
-    protected string $model = AiTenantSetting::class;
+    protected string $model = AiSetting::class;
 
     public function query(): Builder
     {
-        return AiTenantSetting::withoutGlobalScopes();
+        return AiSetting::query();
     }
 
-    public function forTenant(int $tenantId): AiTenantSetting
+    public function current(): AiSetting
     {
-        return $this->query()->firstOrNew(['tenant_id' => $tenantId]);
+        return $this->query()->orderBy('id')->first() ?? new AiSetting;
     }
 
-    public function save(int $tenantId, array $data): AiTenantSetting
+    public function save(array $data): AiSetting
     {
-        $row = AiTenantSetting::withoutGlobalScopes()->firstOrNew(['tenant_id' => $tenantId]);
-        $row->tenant_id = $tenantId;
+        $row = $this->current();
         $row->fill($data)->save();
 
         return $row;

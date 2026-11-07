@@ -4,12 +4,11 @@ namespace App\Models;
 
 use App\Enums\PurchaseStatus;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseOrder extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected $fillable = ['number', 'supplier_id', 'branch_id', 'status', 'items_total', 'shipping_cost', 'other_cost', 'total_cost', 'ordered_at', 'received_at', 'note', 'created_by'];
 

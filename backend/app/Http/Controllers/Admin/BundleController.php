@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\BundleDataTable;
 use App\DTOs\BundleData;
-use App\Http\Requests\Tenant\BundleRequest;
+use App\Http\Requests\Admin\BundleRequest;
 use App\Models\Bundle;
 use App\Services\BundleService;
 use App\Services\Stock\StockItemCatalog;
@@ -16,8 +16,8 @@ use Illuminate\Routing\Controllers\Middleware;
 class BundleController extends ResourceController
 {
     protected static string $perm = 'bundles';
-    protected static string $routeBase = 'tenant.bundles';
-    protected static string $view = 'tenant.bundles';
+    protected static string $routeBase = 'admin.bundles';
+    protected static string $view = 'admin.bundles';
     protected static string $titleKey = 'orders.bundles';
     protected static string $requestClass = BundleRequest::class;
     protected static string $dtoClass = BundleData::class;

@@ -1,5 +1,7 @@
 # ERP Module – QA/QC functional test report (branch `ERP-MODULE`)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Tester role: senior QA/QC, black-box + grey-box, **through HTTP only** (forms/admin routes as a user would use them), both panels, both locales (en / ar-RTL).
 Scope complements the accounting audit in `docs/qa/ERP_AUDIT_FINDINGS.md` (ERP-001…ERP-031). Those findings are **not re-reported**; where a test touches one, it is referenced by ID.
 No application code was changed. Run date 2026-11-04, MySQL test DB `3alraf_test`, each file run alone.

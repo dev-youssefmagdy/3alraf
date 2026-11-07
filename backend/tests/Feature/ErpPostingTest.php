@@ -26,9 +26,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\ExpenseService;
 use App\Services\Erp\Accounting\PeriodService;
 use App\Services\Erp\Posting\PurchasePoster;
@@ -45,13 +43,11 @@ use Database\Seeders\FoundationSeeder;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // carrier collects the full total
-    $this->t = 'http://egy.3alraf.test/admin';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // carrier collects the full total
+    $this->t = '/admin';
     $this->branch = Branch::first();
     $mk = fn (string $slug, string $price, string $cost) => tap(Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => $slug], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]), function ($p) use ($price, $cost) {
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, 100, $cost);
     });
     $this->product = $mk('pa', '100', '60');
@@ -76,8 +72,8 @@ beforeEach(function () {
     $this->ship = fn (Order $o) => ($this->to)($o, S::CONFIRMED, S::PROCESSING, S::SHIPPED);   // revenue recognition point (default policy)
     $this->bal = fn (string $role) => (string) Account::where('role_key', $role)->value('current_balance');
     $this->reports = fn () => app(LedgerReports::class);
-    $this->admin = TenantAdmin::first();
-    $this->actingAs($this->admin, 'tenant');
+    $this->admin = Admin::first();
+    $this->actingAs($this->admin, 'admin');
 });
 
 /** Every posted entry is balanced and the trial balance agrees. */
@@ -148,13 +144,13 @@ it('keeps revenue net of the discount', function () {
 });
 
 it('books VAT as a liability, never revenue (exclusive and inclusive prices)', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => 14])]);
+    settings(['tax_rate' => 14]);
     $o = ($this->ship)(($this->place)());
     expect((float) $o->tax)->toBe(28.0)->and((float) ($this->bal)('vat_payable'))->toBe(28.0)->and((float) ($this->bal)('sales_revenue'))->toBe(200.0)
         ->and((float) ($this->bal)('receivable'))->toBe((float) $o->total);
     expect(ledgerNet())->toBe(number_format((float) $o->net_profit, 2));
 
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings, ['prices_include_tax' => true])]);
+    settings(['prices_include_tax' => true]);
     $i = ($this->ship)(($this->place)());
     expect($i->taxIncluded())->toBeTrue();
     $entry = JournalEntry::where('idempotency_key', 'order:'.$i->id.':confirm')->first();
@@ -352,7 +348,7 @@ it('logs a closed-period posting failure without breaking the business flow, and
     expect(JournalEntry::count())->toBe(1);
 });
 
-it('lazily seeds the chart of accounts for a tenant without one', function () {
+it('lazily seeds the chart of accounts when none exists yet', function () {
     Account::query()->delete();
     $o = ($this->ship)(($this->place)());
     expect(Account::count())->toBeGreaterThan(40)->and(JournalEntry::count())->toBe(1);

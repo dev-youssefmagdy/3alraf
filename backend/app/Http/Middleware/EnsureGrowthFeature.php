@@ -13,7 +13,7 @@ class EnsureGrowthFeature
 
     public function handle(Request $request, Closure $next, string $key)
     {
-        if ($this->features->active($key, current_tenant())) {
+        if ($this->features->active($key)) {
             return $next($request);
         }
         if ($request->expectsJson()) {

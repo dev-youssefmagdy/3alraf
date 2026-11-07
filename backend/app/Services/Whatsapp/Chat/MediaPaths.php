@@ -2,11 +2,11 @@
 
 namespace App\Services\Whatsapp\Chat;
 
-/** Private-disk layout: whatsapp-media/{owner}/{yyyy}/{mm}/ (owner = "central" or "tenant-N"). */
+/** Private-disk layout for new files: whatsapp-media/{yyyy}/{mm}/ (older rows keep their stored paths under the legacy per-session folder). */
 class MediaPaths
 {
-    public static function dir(int $ownerKey): string
+    public static function dir(): string
     {
-        return 'whatsapp-media/'.($ownerKey ? "tenant-$ownerKey" : 'central').'/'.now()->format('Y/m');
+        return 'whatsapp-media/'.now()->format('Y/m');
     }
 }

@@ -1,15 +1,15 @@
 @php
-    $cur = current_tenant()->currency_symbol;
+    $cur = setting('currency_symbol');
     $first = collect($picker['variants'])->firstWhere('in_stock', true) ?? ($picker['variants'][0] ?? null);
     $img = $product->images->first()?->url;
     $desc = \Illuminate\Support\Str::limit(strip_tags((string) ($product->meta_description ?: $product->description)), 160, '');
     $ld = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->name, 'description' => $desc, 'sku' => $product->sku,
         'image' => $product->images->map->url->values()->all(), 'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
         'url' => url()->current(), 'mpn' => $product->sku,
-        'offers' => ['@type' => 'Offer', 'priceCurrency' => current_tenant()->currency_code, 'price' => number_format((float) ($first['price'] ?? $tp->effectivePrice()), 2, '.', ''),
+        'offers' => ['@type' => 'Offer', 'priceCurrency' => setting('currency_code'), 'price' => number_format((float) ($first['price'] ?? $tp->effectivePrice()), 2, '.', ''),
             'priceValidUntil' => now()->addYear()->toDateString(), 'itemCondition' => 'https://schema.org/NewCondition',
             'availability' => ($first['in_stock'] ?? false) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', 'url' => url()->current(),
-            'seller' => ['@type' => 'Organization', 'name' => current_tenant()->name]]];
+            'seller' => ['@type' => 'Organization', 'name' => setting('name')]]];
     $bc = array_merge([[__('store.breadcrumb_home'), route('storefront.home')]], collect($crumbs)->map(fn ($c) => [$c->name, route('storefront.category.show', $c->slug)])->all(), [[$product->name, url()->current()]]);
     if ($summary['count']) { $ld['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $summary['avg'], 'reviewCount' => $summary['count']]; }
     $ld = array_filter($ld, fn ($v) => $v !== null);

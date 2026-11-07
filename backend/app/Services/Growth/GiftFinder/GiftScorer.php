@@ -3,7 +3,7 @@
 namespace App\Services\Growth\GiftFinder;
 
 use App\Models\SeasonalEvent;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Services\Growth\MetricsService;
 use Illuminate\Support\Collection;
 
@@ -25,13 +25,13 @@ class GiftScorer
         $w = config('gift_finder.weights');
         $eventCats = $occasion ? (array) (SeasonalEvent::where('key', $occasion)->orderByDesc('year')->value('category_ids') ?? []) : [];
         // Legacy stores (nothing tagged yet) keep working untagged; once a product is tagged, only tagged products are offered.
-        $useTags = TenantProduct::where('is_active', true)->where('gift_suitable', true)->exists();
+        $useTags = Product::where('is_active', true)->where('gift_suitable', true)->exists();
         $vel = $this->metrics->velocityRows(now())->keyBy('product_id');
         $maxSold = max(1, (int) $vel->max('sold'));
 
-        return TenantProduct::with('product.categories')->where('is_active', true)->get()->map(function ($tp) use ($vel, $categoryId, $eventCats, $words, $maxSold, $budget, $w, $useTags, $occasion, $recipient) {
-            $p = $tp->product;
-            if (! $p || $p->trashed() || (int) ($vel[$tp->product_id]['on_hand'] ?? 0) <= 0) {
+        return Product::with('categories')->where('is_active', true)->get()->map(function ($tp) use ($vel, $categoryId, $eventCats, $words, $maxSold, $budget, $w, $useTags, $occasion, $recipient) {
+            $p = $tp;
+            if (! $p || $p->trashed() || (int) ($vel[$tp->id]['on_hand'] ?? 0) <= 0) {
                 return null;
             }
             if ($useTags && ! $tp->gift_suitable) {
@@ -55,10 +55,10 @@ class GiftScorer
                 + ($recipientMatch ? $w['recipient'] : 0)
                 + ($occasionMatch || array_intersect($cats, $eventCats) ? $w['occasion'] : 0)
                 + ($price <= $budget ? $w['budget_use'] * ($price / $budget) : 0)
-                + $w['popularity'] * ((int) ($vel[$tp->product_id]['sold'] ?? 0) / $maxSold);
+                + $w['popularity'] * ((int) ($vel[$tp->id]['sold'] ?? 0) / $maxSold);
             $margin = (float) $tp->cost > 0 && $price > 0 ? ($price - (float) $tp->cost) / $price * 100 : null;
 
-            return ['product_id' => $tp->product_id, 'name' => (string) $p->name, 'names' => $p->getTranslations('name'), 'slug' => $p->slug, 'price' => $price,
+            return ['product_id' => $tp->id, 'name' => (string) $p->name, 'names' => $p->getTranslations('name'), 'slug' => $p->slug, 'price' => $price,
                 'fit' => round($fit, 1), 'bucket' => (int) round($fit / config('gift_finder.bucket_size')), 'margin' => $margin,
                 'category_match' => $categoryId ? in_array($categoryId, $cats) : null, 'recipient_match' => (bool) $recipientMatch, 'occasion_match' => (bool) $occasionMatch, 'simple' => ! $p->isVariable(), 'image' => $p->primaryImageUrl()];
         })->filter()->values();

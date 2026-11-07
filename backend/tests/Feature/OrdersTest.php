@@ -18,9 +18,7 @@ use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Orders\DiscountValidator;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
@@ -37,14 +35,12 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->t = '/admin';
+    $this->s = '/ar';
     $this->branch = Branch::first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'p1', 'sku' => 'P1', 'barcode' => '2000000000008']);
-    $this->tp = TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    $this->tp = listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     $this->ledger = app(StockLedger::class);
     $this->ledger->record($this->branch->id, $this->product->id, 0, T::PURCHASE_IN, 10, '60.00');
     $this->city = City::first();
@@ -71,7 +67,7 @@ function lvl(): StockLevel
 
 function actAsOwner(): void
 {
-    test()->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    test()->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 }
 
 it('resolves flash price, clamps by remaining quantity and falls back to the regular price', function () {

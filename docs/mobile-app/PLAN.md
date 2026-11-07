@@ -1,5 +1,11 @@
 # 3alraf Customer Mobile App — Master Plan & Agent Prompts
 
+> **Single store (2026-11-06, backend Phase 6 of `REMOVE_MULTI_TENANCY_PLAN.md`) — overrides every tenant/country statement below.**
+> The backend now serves ONE shop on one host (`APP_URL/api/v1`); there is no tenant, no country picker and no `X-Tenant` resolution.
+> - `GET /app-config` returns the switches **plus** `store` {name, country, currency{code,symbol}, default_locale, locales[{code,rtl}], timezone, base_url}; `GET /store` the full profile.
+> - Compat for builds already in the stores: `X-Tenant` is ignored (any value), old `{slug}.` hosts still answer `/api/*`, `GET /tenants` is deprecated and returns a one-item list in the old `Tenant.fromJson` shape with `slug` = `egy` (config `mobile.legacy_store_slug`) so saved sessions/carts keep working and the picker is skipped.
+> - **Phase 7 (Flutter) done (2026-11-07):** `features/tenant` removed (country selection/list/switcher, decision table, tenant list/repository/models); no `X-Tenant` interceptor, no central/tenant request split, one base URL. New `features/store` (`StoreInfo` = `app-config.store`, `StoreProfile` = `GET /store`, both cached; `StoreController`, `storeInfoProvider`, `storeProfileProvider`, `storeTextDirectionProvider`) and `features/startup` (startup controller, gate pages, first-run `LanguageSelectionPage` at `/language`, language sheet). Startup = splash -> legacy storage migration -> `app-config` -> language page only if never chosen (store locales/default) -> onboarding (first launch) -> Home. Storage keys are plain (`auth_token`, `affiliate_token`, `cart_token`, `locale`, `store_info`, `store_profile`, `recent_searches`); old `<key>:<slug>` values are moved once on first launch so sessions/carts/language survive. Contract: `backend/docs/MOBILE_API.md` §1; app details: `app/README.md`.
+
 Audience: an AI coding agent (Sonnet 5.5) executing phase by phase. Each phase is self-contained: read **§0–§3** once, then do only your phase prompt. Update `docs/mobile-app/PROGRESS.md` (append a short section) at the end of every phase; later phases read that file instead of re-exploring.
 
 ---

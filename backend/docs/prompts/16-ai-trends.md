@@ -1,3 +1,5 @@
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Working dir: /var/www/3alraf/backend (Laravel 13, MySQL). Read CLAUDE.md, docs/plans/ai-features.md (the contract: follow it exactly), docs/PROGRESS.md, and docs/CALCULATIONS.md if touching money/stock/reports. Follow layering/stack conventions strictly (Controller → FormRequest → DTO → Service → Repository → Model, enums, Blade components, tenant_id isolation, AR/EN lang files + RTL). Do only this sprint; reuse existing code, do not re-explore finished phases. Write Pest tests (Http::fake for providers; cross-tenant isolation); run vendor/bin/pest and php artisan route:list. Be token-efficient. At the end append <=15 lines to docs/PROGRESS.md and reply with a <=8 line summary. Do NOT commit.
 
 SPRINT AI-3 Trends (plan §2 Trends).

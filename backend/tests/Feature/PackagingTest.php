@@ -13,9 +13,7 @@ use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\BarcodeService;
 use App\Services\Orders\CartService;
 use App\Services\Orders\OrderPlacementService;
@@ -33,17 +31,15 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
+    codUpfront(false);
+    $this->t = '/admin';
+    $this->s = '/ar';
+    $this->api = '/api/v1';
     $this->city = City::first();
     $this->company = ShippingCompany::first();      // price 40, cost 30
     $this->cod = PaymentMethod::where('type', 'cod')->first();
     $this->p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Prod'], 'slug' => 'pk1', 'sku' => 'PK1', 'barcode' => app(BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['product_id' => $this->p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->p->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->opt = PackagingOption::create(['name' => ['ar' => 'هدية', 'en' => 'Gift box'], 'price' => 25, 'cost' => 8, 'is_active' => true]);
     $this->lines = [['product_id' => $this->p->id, 'variant_id' => 0, 'qty' => 2, 'bundle_id' => 0]];
@@ -58,7 +54,7 @@ beforeEach(function () {
 
         return $o->refresh();
     };
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 // Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
@@ -78,23 +74,20 @@ it('snapshots the option on the order with totals, profit and no discount on pac
     expect((string) $o->net_profit)->toBe('107.00');   // (200-120) + 40 - 30 + (25 - 8)
 });
 
-it('refuses inactive, foreign and unknown packaging options (422)', function () {
+it('refuses inactive and unknown packaging options (422)', function () {
     $this->opt->update(['is_active' => false]);
     expect(fn () => ($this->place)())->toThrow(ValidationException::class);
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $foreign = PackagingOption::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => ['ar' => 'x'], 'price' => 1, 'is_active' => true]);
-    expect(fn () => ($this->place)(['packagingOptionId' => $foreign->id]))->toThrow(ValidationException::class);
     expect(fn () => ($this->place)(['packagingOptionId' => 99999]))->toThrow(ValidationException::class);
     expect(Order::count())->toBe(0);
     // HTTP layer
     $res = $this->postJson("{$this->api}/cart/items", ['product_id' => $this->p->id, 'quantity' => 1])->assertSuccessful();
     $h = ['X-Cart-Token' => $res->headers->get('X-Cart-Token')];
     $this->postJson("{$this->api}/cart/quote", ['packaging_option_id' => $this->opt->id], $h)->assertStatus(422)->assertJsonValidationErrors('packaging_option_id');
-    $this->postJson("{$this->api}/cart/quote", ['packaging_option_id' => $foreign->id], $h)->assertStatus(422);
+    $this->postJson("{$this->api}/cart/quote", ['packaging_option_id' => 99999], $h)->assertStatus(422);
 });
 
 it('serves identical totals through quote, placement, invoice, admin and the mobile API (never the cost)', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => '14'])]);
+    settings(['tax_rate' => '14']);
     $this->getJson("{$this->api}/checkout/packaging")->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.price', '25.00')->assertJsonMissingPath('data.0.cost');
     $res = $this->postJson("{$this->api}/cart/items", ['product_id' => $this->p->id, 'quantity' => 2])->assertSuccessful();
     $h = ['X-Cart-Token' => $res->headers->get('X-Cart-Token')];
@@ -134,7 +127,7 @@ it('does not refund packaging on a partial return, but refunds it on cancel befo
 });
 
 it('keeps packaging out of an inclusive order partial-return refund and reverses only goods', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => '14', 'prices_include_tax' => true])]);
+    settings(['tax_rate' => '14', 'prices_include_tax' => true]);
     $o = ($this->place)();                                                      // total = 200 + 40 + 25 = 265, VAT inside
     expect((string) $o->total)->toBe('265.00')->and($o->taxIncluded())->toBeTrue();
     $o->update(['paid_amount' => $o->total]);
@@ -205,11 +198,11 @@ it('lets an authorised admin manage packaging options and rejects bad input', fu
 });
 
 it('enforces packaging.* permissions', function () {
-    $role = Role::create(['name' => 't'.$this->tenant->id.':viewer', 'guard_name' => 'tenant']);
+    $role = Role::create(['name' => 'viewer', 'guard_name' => 'admin']);
     $role->givePermissionTo('packaging.view');
-    $u = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
+    $u = Admin::query()->create(['name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
     $u->assignRole($role);
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $this->get("{$this->t}/packaging")->assertOk();
     $this->get("{$this->t}/packaging/create")->assertForbidden();
     $this->postJson("{$this->t}/packaging", ['name' => ['ar' => 'x'], 'price' => 1])->assertForbidden();
@@ -241,7 +234,7 @@ it('keeps soft-deleted options referenced by orders and purges unreferenced ones
     PackagingOption::withTrashed()->whereIn('id', [$kept->id, $free->id])->update(['deleted_at' => now()->subDays(90)]);
     $res = app(SoftDeletePurger::class)->run(60, false, ['packaging_option']);
     expect($res['packaging_option']['purged'])->toBe(1)->and($res['packaging_option']['retained'])->toBe(1);
-    expect(PackagingOption::withoutGlobalScopes()->withTrashed()->find($kept->id))->not->toBeNull()->and(PackagingOption::withoutGlobalScopes()->withTrashed()->find($free->id))->toBeNull();
+    expect(PackagingOption::query()->withTrashed()->find($kept->id))->not->toBeNull()->and(PackagingOption::query()->withTrashed()->find($free->id))->toBeNull();
 });
 
 it('shows the uploaded packaging picture on checkout and in the API', function () {

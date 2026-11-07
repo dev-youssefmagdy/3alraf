@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('stock_requests.low_stock')">
+<x-layouts.admin :title="__('stock_requests.low_stock')">
     <x-card>
         <p class="mb-4 text-sm text-slate-500">{{ __('stock_requests.low_stock_hint') }}</p>
         <div class="overflow-x-auto">
@@ -10,12 +10,12 @@
                 <tbody>
                 @forelse ($rows as $r)
                     <tr class="border-t border-slate-100">
-                        <td class="py-2"><div class="flex items-center gap-2">@if ($img = $r['tp']->product->primaryImageUrl())<img src="{{ $img }}" class="size-10 rounded object-cover" alt="">@endif
-                            <div><div class="font-semibold">{{ $r['tp']->product->name }}</div><div class="text-xs text-slate-400">{{ $r['variant']?->sku ?? $r['tp']->product->sku }}</div></div></div></td>
+                        <td class="py-2"><div class="flex items-center gap-2">@if ($img = $r['product']->primaryImageUrl())<img src="{{ $img }}" class="size-10 rounded object-cover" alt="">@endif
+                            <div><div class="font-semibold">{{ $r['product']->name }}</div><div class="text-xs text-slate-400">{{ $r['variant']?->sku ?? $r['product']->sku }}</div></div></div></td>
                         <td>{{ $r['variant']?->label() ?? '—' }}</td>
                         <td><span class="badge {{ $r['available'] === 0 ? 'badge-danger' : 'badge-warn' }}">{{ $r['available'] === 0 ? __('store.out_of_stock') : $r['available'] }}</span></td>
                         <td>{{ $r['alert'] }}</td>
-                        <td class="text-end">@can('catalog.edit')<a href="{{ route('tenant.catalog.edit', $r['tp']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan</td>
+                        <td class="text-end">@can('catalog.edit')<a href="{{ route('admin.catalog.edit', $r['product']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="py-6 text-center text-slate-400">{{ __('stock_requests.low_stock_empty') }}</td></tr>

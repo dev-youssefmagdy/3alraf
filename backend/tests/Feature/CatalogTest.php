@@ -3,11 +3,8 @@
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\CentralAdmin;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\BarcodeService;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Http\UploadedFile;
@@ -16,9 +13,9 @@ use Illuminate\Support\Facades\Storage;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
-    $this->c = 'http://3alraf.test/admin';
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->actingAs(CentralAdmin::first(), 'central');
+    $this->c = '/admin';
+    $this->t = '/admin';
+    $this->actingAs(Admin::first(), 'admin');
 });
 
 function mkAttr(string $code, array $vals): Attribute
@@ -76,7 +73,7 @@ it('creates a variable product with unique EAN-13 variant barcodes and syncs var
     foreach ($combos as $i => $ids) {
         $variants["n$i"] = ['values' => $ids, 'sku' => "TS-$i", 'is_active' => 1];
     }
-    $payload = ['type' => 'variable', 'name' => ['ar' => 'قميص', 'en' => 'Shirt'], 'sku' => 'TS', 'category_ids' => [$cat->id], 'is_active' => 1, 'variants' => $variants];
+    $payload = ['type' => 'variable', 'name' => ['ar' => 'قميص', 'en' => 'Shirt'], 'sku' => 'TS', 'category_ids' => [$cat->id], 'is_active' => 1, 'price' => '120', 'cost' => '50', 'variants' => $variants];   // an active product needs a price
 
     $this->postJson("{$this->c}/products", $payload)->assertOk();
     $p = Product::with('variants')->first();
@@ -109,7 +106,7 @@ it('creates a variable product with unique EAN-13 variant barcodes and syncs var
 it('creates a simple product with auto barcode and images, and lists datatable', function () {
     $cat = Category::create(['name' => ['ar' => 'c'], 'slug' => 'c', 'path' => '1', 'depth' => 0]);
     $res = $this->post("{$this->c}/products", [
-        'type' => 'simple', 'name' => ['ar' => 'سماعة'], 'sku' => 'HP-1', 'category_ids' => [$cat->id], 'is_active' => 1,
+        'type' => 'simple', 'name' => ['ar' => 'سماعة'], 'sku' => 'HP-1', 'category_ids' => [$cat->id], 'is_active' => 1, 'price' => '99', 'cost' => '40',
         'images' => [UploadedFile::fake()->image('a.jpg', 800, 600), UploadedFile::fake()->image('b.jpg', 300, 300)],
     ], ['Accept' => 'application/json'])->assertOk();
     $p = Product::with('images')->first();
@@ -122,7 +119,7 @@ it('creates a simple product with auto barcode and images, and lists datatable',
     $this->getJson("{$this->c}/brands/datatable?draw=1")->assertOk();
 });
 
-it('lets a tenant enable central products in bulk with isolated pricing', function () {
+it('activates catalog products in bulk with their prices (listing data lives on products)', function () {
     $cat = Category::create(['name' => ['ar' => 'c'], 'slug' => 'c', 'path' => '1', 'depth' => 0]);
     $a = Product::create(['type' => 'simple', 'name' => ['ar' => 'A'], 'slug' => 'a', 'sku' => 'A', 'barcode' => '2000000000008']);
     $b = Product::create(['type' => 'simple', 'name' => ['ar' => 'B'], 'slug' => 'b', 'sku' => 'B', 'barcode' => '2000000000015']);
@@ -133,8 +130,8 @@ it('lets a tenant enable central products in bulk with isolated pricing', functi
         $pv->values()->sync([$val->id]);
     }
 
-    auth('central')->logout();
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->first(), 'tenant');
+    auth('admin')->logout();
+    $this->actingAs(Admin::query()->first(), 'admin');
 
     $this->postJson("{$this->t}/catalog/bulk/validate", ['rows' => [$a->id => ['enabled' => 1, 'price' => '', 'cost' => '5']]])->assertJsonValidationErrors(["rows.{$a->id}.price"]);
     $this->postJson("{$this->t}/catalog/bulk/validate", ['rows' => [$a->id => ['price' => '10']]])->assertJsonValidationErrors(['rows']);
@@ -145,16 +142,16 @@ it('lets a tenant enable central products in bulk with isolated pricing', functi
         $v->id => ['enabled' => 1, 'price' => '200', 'cost' => '120'],
         $b->id => ['price' => '1', 'cost' => '1'], // unchecked -> ignored
     ]])->assertOk();
-    expect(TenantProduct::count())->toBe(2);
-    $tpA = TenantProduct::where('product_id', $a->id)->first();
-    expect($tpA->tenant_id)->toBe(Tenant::where('slug', 'egy')->value('id'))->and((string) $tpA->effectivePrice())->toBe('80.00');
-    $tpV = TenantProduct::where('product_id', $v->id)->first();
+    expect(Product::query()->whereNotNull('price')->count())->toBe(2);
+    $tpA = Product::whereKey($a->id)->first();
+    expect($tpA->is_active)->toBeTrue()->and((string) $tpA->effectivePrice())->toBe('80.00');
+    $tpV = Product::whereKey($v->id)->first();
     expect($tpV->variants)->toHaveCount(2);
 
     // already-enabled products no longer offered; enabling twice is a no-op
     $this->get("{$this->t}/catalog/available")->assertOk()->assertSee('B')->assertDontSee('>A<', false);
     $this->postJson("{$this->t}/catalog/bulk", ['rows' => [$a->id => ['enabled' => 1, 'price' => '1', 'cost' => '1']]])->assertOk();
-    expect(TenantProduct::count())->toBe(2);
+    expect(Product::query()->whereNotNull('price')->count())->toBe(2);
 
     $this->get("{$this->t}/catalog/{$tpV->id}/edit")->assertOk();
     $tv = $tpV->variants[0];
@@ -165,11 +162,4 @@ it('lets a tenant enable central products in bulk with isolated pricing', functi
     $this->getJson("{$this->t}/catalog/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 2);
     $this->get("{$this->t}/catalog")->assertOk();
 
-    // isolation: another tenant sees none of egy's listings and cannot edit them
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'SA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $owner = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => 'o', 'email' => 'o@sa.test', 'password' => 'password', 'is_active' => true]);
-    $owner->syncRoles('tenant-owner');
-    $this->actingAs($owner, 'tenant');
-    $this->getJson('http://sa.3alraf.test/admin/catalog/datatable?draw=1&start=0&length=10')->assertOk()->assertJsonPath('recordsTotal', 0);
-    $this->getJson("http://sa.3alraf.test/admin/catalog/{$tpA->id}/edit")->assertNotFound();
 });

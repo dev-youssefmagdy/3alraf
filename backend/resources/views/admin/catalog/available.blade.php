@@ -1,14 +1,15 @@
-<x-layouts.admin guard="tenant" :title="__('admin.add_products')">
+<x-layouts.admin :title="__('admin.activate_products')">
     <x-card>
         <x-slot:actions>
-            <x-button variant="secondary" :href="route('tenant.catalog.index')">{{ __('admin.cancel') }}</x-button>
+            <x-button variant="secondary" :href="route('admin.catalog.index')">{{ __('admin.cancel') }}</x-button>
         </x-slot:actions>
+        <p class="mb-3 text-sm text-slate-500">{{ __('admin.activate_products_hint') }}</p>
         <form method="GET" class="mb-4 flex gap-2">
             <input type="search" name="q" value="{{ $q }}" placeholder="{{ __('admin.search') }}" class="form-control max-w-xs">
             <button class="btn btn-secondary">{{ __('admin.search') }}</button>
         </form>
 
-        <form data-ajax-form data-validate-url="{{ route('tenant.catalog.bulk.validate') }}" action="{{ route('tenant.catalog.bulk.store') }}" method="POST" novalidate>
+        <form data-ajax-form data-validate-url="{{ route('admin.catalog.bulk.validate') }}" action="{{ route('admin.catalog.bulk.store') }}" method="POST" novalidate>
             @csrf
             <div class="mb-3 flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-3" id="bulk-defaults">
                 <span class="text-sm font-semibold">{{ __('admin.apply_to_selected') }}</span>
@@ -42,7 +43,7 @@
                 </table>
             </div>
             <div class="mt-4">{{ $products->links() }}</div>
-            <div class="mt-4 border-t border-slate-100 pt-4"><button type="submit" class="btn btn-primary">{{ __('admin.enable_selected') }}</button></div>
+            <div class="mt-4 border-t border-slate-100 pt-4"><button type="submit" class="btn btn-primary">{{ __('admin.activate_selected') }}</button></div>
         </form>
     </x-card>
 </x-layouts.admin>

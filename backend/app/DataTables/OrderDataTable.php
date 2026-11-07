@@ -38,13 +38,13 @@ class OrderDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('number_link', fn (Order $m) => '<a class="font-semibold text-brand-600" href="'.e(route('tenant.orders.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (Order $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.orders.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->editColumn('placed_at', fn (Order $m) => $m->placed_at?->format('Y-m-d H:i'))
             ->editColumn('total', fn (Order $m) => $this->money($m->total))
             ->addColumn('payment_label', fn (Order $m) => e($m->paymentMethod?->name).' <span class="badge '.($m->payment_status === PaymentStatus::PAID ? 'badge-success' : ($m->payment_status === PaymentStatus::REVIEW ? 'badge-warn' : 'badge-muted')).'">'.e($m->payment_status->label()).'</span>')
             ->addColumn('status_label', fn (Order $m) => '<span class="badge '.$m->status->color().'">'.e($m->status->label()).'</span>')
-            ->addColumn('actions', fn (Order $m) => '<a href="'.e(route('tenant.orders.show', $m->id)).'" class="btn-sm btn-secondary">'.e(__('orders.view')).'</a>');
+            ->addColumn('actions', fn (Order $m) => '<a href="'.e(route('admin.orders.show', $m->id)).'" class="btn-sm btn-secondary">'.e(__('orders.view')).'</a>');
     }
 
     protected function rawColumns(): array

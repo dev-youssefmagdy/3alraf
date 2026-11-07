@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\DTOs\BulkEnableData;
+use App\DTOs\ActivateProductsData;
 use App\Enums\ProductListType;
 use App\Enums\StockMovementType;
 use App\Models\Branch;
@@ -11,12 +11,10 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductListItem;
 use App\Models\Tag;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Services\BarcodeService;
 use App\Services\Qr\QrCodeManager;
 use App\Services\Stock\StockLedger;
-use App\Services\TenantCatalogService;
+use App\Services\CatalogService;
 use Database\Seeders\Support\PlaceholderImage;
 use Database\Seeders\Support\RemoteImage;
 use Illuminate\Database\Seeder;
@@ -28,7 +26,7 @@ use Illuminate\Support\Str;
  * Gift store catalog: trending / social-media-viral gifts available in the Egyptian market (beauty & cosmetics ~half, all <= 500 EGP and mostly local / popular brands, watches, wallets & bags,
  * stainless steel accessories, gadgets, home gifts, kids & toys, gift boxes, daily essentials). Bilingual names, EGP prices, a real product photo each.
  * Data: database/seeders/data/gift_catalog.json (built from Jumia Egypt listings, see the `source_url` of every row).
- * Idempotent: categories by slug, brands by slug, products by slug, listings by product. Listings + opening stock go to every EGP tenant.
+ * Idempotent: categories by slug, brands by slug, products by slug. Prices + opening stock are applied when the shop sells in EGP (setting `currency_code`).
  * Two flavours (override withStock()): this class = dev, the whole catalog with the planned opening stock (hidden phase-2 products included);
  * GiftCatalogNoStockSeeder = live, the whole catalog listed and active but with NO stock at all.
  */
@@ -144,31 +142,9 @@ class GiftCatalogSeeder extends Seeder
         return json_decode((string) file_get_contents(database_path('seeders/data/gift_catalog.json')), true, flags: JSON_THROW_ON_ERROR);
     }
 
-    /** Restrict the listings to one store (used when a tenant is created); null = every EGP store. */
-    private ?Tenant $only = null;
-
-    public function forTenant(Tenant $tenant): static
-    {
-        $this->only = $tenant;
-
-        return $this;
-    }
-
     public function run(): void
     {
         $rows = $this->rows();
-
-        // New store while the shared catalog already exists: only its listings are missing (no image downloads, no product writes).
-        if ($this->only) {
-            $existing = Product::withTrashed()->whereIn('slug', collect($rows)->pluck('slug'))->get()->keyBy('slug');
-            if ($existing->count() === count($rows)) {
-                if ($this->only->currency_code === 'EGP') {
-                    $this->listings($this->only, $rows, $existing->all());
-                }
-
-                return;
-            }
-        }
 
         $cats = $this->categories();
         $tags = collect(self::TAGS)->mapWithKeys(fn ($t, $flag) => [$flag => Tag::firstOrCreate(['slug' => $t[0]], ['name' => ['ar' => $t[1], 'en' => $t[2]], 'is_active' => true])]);
@@ -196,7 +172,7 @@ class GiftCatalogSeeder extends Seeder
                     $p = Product::create([
                         'brand_id' => $r['brand'] ? $brands[$r['brand']]->id : null, 'type' => 'simple',
                         'name' => $r['name'], 'description' => $r['description'], 'meta_title' => $r['name'], 'meta_description' => $r['meta_description'],
-                        'slug' => $r['slug'], 'sku' => $r['sku'], 'barcode' => $barcodes->generateUnique(), 'weight' => $r['weight'], 'is_active' => true,
+                        'slug' => $r['slug'], 'sku' => $r['sku'], 'barcode' => $barcodes->generateUnique(), 'weight' => $r['weight'], 'is_active' => false, // on sale once priced (listings())
                     ]);
                     $p->categories()->sync([$cats[$r['category']]->id]);
                     $p->tags()->sync(collect(str_split($r['flags'] ?? ''))->filter(fn ($f) => isset($tags[$f]))->map(fn ($f) => $tags[$f]->id)->unique()->values()->all());
@@ -231,8 +207,8 @@ class GiftCatalogSeeder extends Seeder
         $this->dropRetiredCategories();
         $this->categoryCovers($cats, $rows, $images);
 
-        foreach ($this->only ? collect([$this->only])->where('currency_code', 'EGP') : Tenant::where('currency_code', 'EGP')->get() as $t) {
-            $this->listings($t, $rows, $products);
+        if (setting('currency_code') === 'EGP') { // the data file carries EGP prices
+            $this->listings($rows, $products);
         }
     }
 
@@ -276,13 +252,7 @@ class GiftCatalogSeeder extends Seeder
                 continue;
             }
             DB::transaction(function () use ($p) {
-                foreach (TenantProduct::withoutGlobalScopes()->where('product_id', $p->id)->get() as $tp) {
-                    app()->instance('currentTenant', Tenant::find($tp->tenant_id));
-                    app(QrCodeManager::class)->deleteFor($tp);
-                    app()->forgetInstance('currentTenant');
-                    $tp->variants()->delete();
-                    $tp->delete();
-                }
+                app(QrCodeManager::class)->deleteFor($p);
                 foreach (['stock_movements', 'stock_levels', 'cart_items', 'wishlist_items', 'flash_sale_items', 'reviews', 'category_product', 'product_tag'] as $table) {
                     DB::table($table)->where('product_id', $p->id)->delete();
                 }
@@ -372,122 +342,119 @@ class GiftCatalogSeeder extends Seeder
     }
 
     /**
-     * Apply the buying plan to listings created by an earlier run: phase-1 products (opening_qty > 0) are active with that opening stock,
+     * Apply the buying plan to products priced by an earlier run: phase-1 products (opening_qty > 0) are active with that opening stock,
      * phase-2 products are hidden with no stock. Only touches products whose stock history is still just this seeder's opening entry and
      * that were never ordered (pre-launch seed data, nothing real to preserve); anything else is left exactly as it is.
      */
-    private function reconcileOpeningStock(Tenant $t, Collection $rows, array $products): void
+    private function reconcileOpeningStock(Collection $rows, array $products): void
     {
         $ledger = app(StockLedger::class);
         $qr = app(QrCodeManager::class);
         $branch = Branch::where('is_default', true)->first() ?? Branch::first();
-        $listings = TenantProduct::whereIn('product_id', $rows->map(fn ($r) => $products[$r['slug']]->id))->get()->keyBy('product_id');
+        $listed = Product::whereIn('id', $rows->map(fn ($r) => $products[$r['slug']]->id))->whereNotNull('price')->get()->keyBy('id');
         $n = 0;
         foreach ($rows as $r) {
             $pid = $products[$r['slug']]->id;
-            $tp = $listings[$pid] ?? null;
+            $p = $listed[$pid] ?? null;
             $want = (int) ($r['opening_qty'] ?? self::OPENING_QTY);
-            $moves = DB::table('stock_movements')->where('tenant_id', $t->id)->where('product_id', $pid)->get();
+            $moves = DB::table('stock_movements')->where('product_id', $pid)->get();
             $seedOnly = $moves->isEmpty() || ($moves->count() === 1 && $moves[0]->note === self::OPENING_NOTE);
             $have = $moves->isEmpty() ? 0 : (int) $moves[0]->quantity;
             $costOk = $moves->isEmpty() || bccomp((string) $moves[0]->unit_cost, (string) $r['cost'], 2) === 0;
-            if (! $tp || ! $branch || ! $seedOnly || ($have === $want && $costOk && $tp->is_active === ($want > 0)) || DB::table('order_items')->where('product_id', $pid)->exists()) {
+            if (! $p || ! $branch || ! $seedOnly || ($have === $want && $costOk && $p->is_active === ($want > 0)) || DB::table('order_items')->where('product_id', $pid)->exists()) {
                 continue;
             }
-            DB::transaction(function () use ($t, $tp, $moves, $want, $r, $ledger, $branch) {
+            DB::transaction(function () use ($p, $moves, $want, $r, $ledger, $branch) {
                 if ($moves->isNotEmpty()) {
                     DB::table('stock_movements')->where('id', $moves[0]->id)->delete();
-                    DB::table('stock_levels')->where('tenant_id', $t->id)->where('product_id', $tp->product_id)->where('product_variant_id', 0)->delete();
+                    DB::table('stock_levels')->where('product_id', $p->id)->where('product_variant_id', 0)->delete();
                 }
                 if ($want > 0) {
-                    $ledger->record($branch->id, $tp->product_id, 0, StockMovementType::ADJUSTMENT_IN, $want, (string) $r['cost'], null, self::OPENING_NOTE);
+                    $ledger->record($branch->id, $p->id, 0, StockMovementType::ADJUSTMENT_IN, $want, (string) $r['cost'], null, self::OPENING_NOTE);
                 }
-                $tp->update(['is_active' => $want > 0]);
+                $p->update(['is_active' => $want > 0]);
             });
-            $qr->listingSaved($tp);
+            $qr->listingSaved($p);
             $n++;
         }
-        $n && $this->command?->info("{$t->slug}: buying plan applied to $n existing listings (opening stock / visibility)");
+        $n && $this->command?->info("Buying plan applied to $n existing products (opening stock / visibility)");
     }
 
     /**
-     * Live flavour on a store that already holds dev listings: the phase-2 products the dev seed hid become active (there is no stock plan to wait for).
-     * Same ownership rule as rebuildOutOfOrder: only listings nobody edited (no user change in the activity log, no custom wording) and never ordered.
+     * Live flavour on a database that already holds dev data: the phase-2 products the dev seed hid become active (there is no stock plan to wait for).
+     * Same ownership rule as refreshSeedPrices: only products nobody edited (no user change in the activity log, no custom wording) and never ordered.
      */
-    private function activateHiddenListings(Tenant $t, Collection $rows, array $products): void
+    private function activateHiddenListings(Collection $rows, array $products): void
     {
-        $hidden = TenantProduct::whereIn('product_id', $rows->map(fn ($r) => $products[$r['slug']]->id))->where('is_active', false)->whereNull('content')->get();
-        $edited = DB::table('activity_log')->where('subject_type', TenantProduct::class)->whereNotNull('causer_id')->whereIn('subject_id', $hidden->pluck('id'))->pluck('subject_id')->flip();
-        $ordered = DB::table('order_items')->whereIn('product_id', $hidden->pluck('product_id'))->distinct()->pluck('product_id')->flip();
+        $hidden = Product::whereIn('id', $rows->map(fn ($r) => $products[$r['slug']]->id))->whereNotNull('price')->where('is_active', false)->whereNull('content')->get();
+        $edited = $this->editedByPeople($hidden->pluck('id'));
+        $ordered = DB::table('order_items')->whereIn('product_id', $hidden->pluck('id'))->distinct()->pluck('product_id')->flip();
         $qr = app(QrCodeManager::class);
         $n = 0;
-        foreach ($hidden->reject(fn ($tp) => isset($edited[$tp->id]) || isset($ordered[$tp->product_id])) as $tp) {
-            $tp->update(['is_active' => true]);
-            $qr->listingSaved($tp);
+        foreach ($hidden->reject(fn ($p) => isset($edited[$p->id]) || isset($ordered[$p->id])) as $p) {
+            $p->update(['is_active' => true]);
+            $qr->listingSaved($p);
             $n++;
         }
-        $n && $this->command?->info("{$t->slug}: $n hidden listings activated (live: whole catalog, no stock)");
+        $n && $this->command?->info("$n hidden products activated (live: whole catalog, no stock)");
     }
 
     /**
-     * Listings for an EGP store, in trend-rank order. The storefront lists newest listing first, so listings are created from the lowest to the
-     * highest rank (the top product gets the newest listing). Steps: rebuild seed listings that are out of rank order, create missing ones through
-     * the normal catalog service (QR codes etc.), apply the buying plan (opening stock / visibility), pin the Recommended rail.
+     * Prices for the gift products, in trend-rank order (lowest rank first, so the top product is the newest activation). Steps: refresh seed
+     * prices that changed in the data, price + activate the products that have no price yet through the normal catalog service (QR codes etc.),
+     * apply the buying plan (opening stock / visibility), pin the Recommended rail.
      */
-    private function listings(Tenant $t, array $rows, array $products): void
+    private function listings(array $rows, array $products): void
     {
-        app()->instance('currentTenant', $t);
-        try {
-            $rows = collect($rows)->values();                       // the data file is already in rank order (best first)
-            $this->rebuildOutOfOrder($t, $rows, $products);
-            $have = TenantProduct::pluck('product_id')->flip();
-            $new = $rows->reject(fn ($r) => isset($have[$products[$r['slug']]->id]));
-            if ($new->isNotEmpty()) {
-                app(TenantCatalogService::class)->enableBulk(new BulkEnableData($new->reverse()->map(fn ($r) => [
-                    'product_id' => $products[$r['slug']]->id, 'price' => (string) $r['price'], 'sale_price' => $r['sale_price'] !== null ? (string) $r['sale_price'] : null,
-                    'cost' => (string) $r['cost'], 'is_active' => ! $this->withStock() || (bool) ($r['active'] ?? true),
-                ])->values()->all()));
-                $byProduct = TenantProduct::whereIn('product_id', $new->map(fn ($r) => $products[$r['slug']]->id))->get()->keyBy('product_id');
-                foreach ($new as $r) {
-                    $byProduct[$products[$r['slug']]->id]?->update(['gift_suitable' => $r['gift']['suitable'], 'gift_recipients' => $r['gift']['recipients'], 'gift_occasions' => $r['gift']['occasions']]);
-                }
-                $this->command?->info("{$t->slug}: {$new->count()} products listed");
+        $rows = collect($rows)->values();                           // the data file is already in rank order (best first)
+        $this->refreshSeedPrices($rows, $products);
+        $have = Product::whereIn('id', $rows->map(fn ($r) => $products[$r['slug']]->id))->whereNotNull('price')->pluck('id')->flip();
+        $new = $rows->reject(fn ($r) => isset($have[$products[$r['slug']]->id]));
+        if ($new->isNotEmpty()) {
+            app(CatalogService::class)->enableBulk(new ActivateProductsData($new->reverse()->map(fn ($r) => [
+                'product_id' => $products[$r['slug']]->id, 'price' => (string) $r['price'], 'sale_price' => $r['sale_price'] !== null ? (string) $r['sale_price'] : null,
+                'cost' => (string) $r['cost'], 'is_active' => ! $this->withStock() || (bool) ($r['active'] ?? true),
+            ])->values()->all()));
+            $byId = Product::whereIn('id', $new->map(fn ($r) => $products[$r['slug']]->id))->get()->keyBy('id');
+            foreach ($new as $r) {
+                $byId[$products[$r['slug']]->id]?->update(['gift_suitable' => $r['gift']['suitable'], 'gift_recipients' => $r['gift']['recipients'], 'gift_occasions' => $r['gift']['occasions']]);
             }
-            $this->withStock() ? $this->reconcileOpeningStock($t, $rows, $products) : $this->activateHiddenListings($t, $rows, $products);
-            $this->pinRecommended($rows, $products);
-        } finally {
-            app()->forgetInstance('currentTenant');
+            $this->command?->info("{$new->count()} products priced and listed");
         }
+        $this->withStock() ? $this->reconcileOpeningStock($rows, $products) : $this->activateHiddenListings($rows, $products);
+        $this->pinRecommended($rows, $products);
     }
 
     /**
-     * Seed listings are deleted (and re-created from the data by the next step) when the store order no longer follows the trend rank or the
-     * data price changed. Only listings nobody has edited (no change by a user in the activity log, no custom wording) whose product was never
-     * ordered; stock is kept per product, so it is untouched. Anything a person changed keeps its listing exactly as it is.
+     * Seed prices follow the data file: products nobody has edited (no change by a user in the activity log, no custom wording) and never
+     * ordered get the current data price / sale price / cost. Anything a person changed keeps its values exactly as they are.
      */
-    private function rebuildOutOfOrder(Tenant $t, Collection $rows, array $products): void
+    private function refreshSeedPrices(Collection $rows, array $products): void
     {
-        $listings = TenantProduct::whereIn('product_id', $rows->map(fn ($r) => $products[$r['slug']]->id))->get()->keyBy('product_id');
+        $listed = Product::whereIn('id', $rows->map(fn ($r) => $products[$r['slug']]->id))->whereNotNull('price')->get()->keyBy('id');
         $byRow = $rows->keyBy(fn ($r) => $products[$r['slug']]->id);
-        $rank = $rows->mapWithKeys(fn ($r, $i) => [$products[$r['slug']]->id => $i])->all();
-        $edited = DB::table('activity_log')->where('subject_type', TenantProduct::class)->whereNotNull('causer_id')->whereIn('subject_id', $listings->pluck('id'))->pluck('subject_id')->flip();
-        $ordered = DB::table('order_items')->whereIn('product_id', $listings->keys())->distinct()->pluck('product_id')->flip();
-        $seedOwned = $listings->filter(fn ($tp, $pid) => $tp->content === null && ! isset($edited[$tp->id]) && ! isset($ordered[$pid]));
+        $edited = $this->editedByPeople($listed->keys());
+        $ordered = DB::table('order_items')->whereIn('product_id', $listed->keys())->distinct()->pluck('product_id')->flip();
         $same = fn ($a, $b) => ($a === null && $b === null) || ($a !== null && $b !== null && bccomp((string) $a, (string) $b, 2) === 0);
-        $stale = $seedOwned->contains(fn ($tp, $pid) => ! $same($tp->price, $byRow[$pid]['price']) || ! $same($tp->sale_price, $byRow[$pid]['sale_price']) || ! $same($tp->cost, $byRow[$pid]['cost']));
-        $inOrder = $listings->sortByDesc('id')->keys()->values()->map(fn ($pid) => $rank[$pid])->sliding(2)->every(fn ($pair) => $pair->first() < $pair->last());
-        if ($inOrder && ! $stale && $listings->count() === $rows->count()) {
-            return;
-        }
         $qr = app(QrCodeManager::class);
-        foreach ($seedOwned as $tp) {
-            DB::transaction(function () use ($tp, $qr) {
-                $qr->deleteFor($tp);
-                $tp->variants()->delete();
-                $tp->delete();
-            });
+        $n = 0;
+        foreach ($listed as $pid => $p) {
+            $r = $byRow[$pid];
+            if ($p->content !== null || isset($edited[$pid]) || isset($ordered[$pid])
+                || ($same($p->price, $r['price']) && $same($p->sale_price, $r['sale_price']) && $same($p->cost, $r['cost']))) {
+                continue;
+            }
+            $p->update(['price' => (string) $r['price'], 'sale_price' => $r['sale_price'] !== null ? (string) $r['sale_price'] : null, 'cost' => (string) $r['cost']]);
+            $qr->listingSaved($p);
+            $n++;
         }
-        $seedOwned->isNotEmpty() && $this->command?->info("{$t->slug}: {$seedOwned->count()} seed listings re-created in trend-rank order with current data");
+        $n && $this->command?->info("$n seed prices refreshed from the data file");
+    }
+
+    /** Products a person changed (activity log rows with a causer), as a flipped id set. */
+    private function editedByPeople($ids)
+    {
+        return DB::table('activity_log')->where('subject_type', Product::class)->whereNotNull('causer_id')->whereIn('subject_id', $ids)->pluck('subject_id')->flip();
     }
 
     /** Home page "Recommended" rail = the top-ranked launch products, unless the store already pinned its own picks. */
@@ -496,7 +463,7 @@ class GiftCatalogSeeder extends Seeder
         if (ProductListItem::where('list_type', ProductListType::RECOMMENDED->value)->exists()) {
             return;
         }
-        $active = TenantProduct::where('is_active', true)->pluck('product_id')->flip();
+        $active = Product::where('is_active', true)->pluck('id')->flip();
         $top = $rows->map(fn ($r) => $products[$r['slug']]->id)->filter(fn ($pid) => isset($active[$pid]))->take(self::RECOMMENDED_PINS)->values();
         foreach ($top as $i => $pid) {
             ProductListItem::create(['list_type' => ProductListType::RECOMMENDED->value, 'product_id' => $pid, 'sort_order' => $i]);

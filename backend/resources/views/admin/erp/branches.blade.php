@@ -1,5 +1,5 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.branches')[0]">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.cards.branches')[0]">
+    @include('admin.erp._flash')
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; @endphp
     <x-card class="mb-5">
         <form method="GET" class="flex flex-wrap items-end gap-3 text-sm">
@@ -7,7 +7,7 @@
             <label>{{ __('erp.f.to') }}<input type="date" name="to" value="{{ $f->to }}" class="{{ $in }}"></label>
             <x-button type="submit">{{ __('erp.f.filter') }}</x-button>
             @can('erp.reports.view')
-                <a class="text-brand-600" href="{{ route('tenant.erp.reports.show', ['report' => 'branch-profitability'] + $f->query()) }}">{{ __('erp_rep.t.branch-profitability') }}</a>
+                <a class="text-brand-600" href="{{ route('admin.erp.reports.show', ['report' => 'branch-profitability'] + $f->query()) }}">{{ __('erp_rep.t.branch-profitability') }}</a>
             @endcan
         </form>
     </x-card>
@@ -17,7 +17,7 @@
     </table></div></x-card>
     @if ($canTransfer)
     <x-card :title="__('erp_rep.bt.title')">
-        <form method="POST" action="{{ route('tenant.erp.branches.transfer') }}" class="grid gap-3 sm:grid-cols-3">@csrf<input type="hidden" name="ref" value="{{ \Illuminate\Support\Str::uuid() }}">
+        <form method="POST" action="{{ route('admin.erp.branches.transfer') }}" class="grid gap-3 sm:grid-cols-3">@csrf<input type="hidden" name="ref" value="{{ \Illuminate\Support\Str::uuid() }}">
             <label class="text-sm">{{ __('erp_rep.bt.from') }}<select name="from_branch" required class="{{ $in }}">@foreach ($branches as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('erp_rep.bt.to') }}<select name="to_branch" required class="{{ $in }}">@foreach ($branches as $b)<option value="{{ $b->id }}">{{ $b->name }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('erp.f.amount') }}<input name="amount" type="number" step="0.01" min="0.01" required class="{{ $in }}"></label>

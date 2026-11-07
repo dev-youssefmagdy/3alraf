@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StockRequestDataTable;
 use App\Enums\StockRequestStatus;
@@ -23,7 +23,7 @@ class StockRequestController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.stock-requests.index', ['table' => new StockRequestDataTable]);
+        return view('admin.stock-requests.index', ['table' => new StockRequestDataTable]);
     }
 
     public function datatable(): JsonResponse

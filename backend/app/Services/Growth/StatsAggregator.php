@@ -9,7 +9,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Builds growth_daily_stats for the CURRENT tenant (docs/CALCULATIONS.md "Growth system definitions"). Idempotent: rebuilding a day replaces its rows.
+ * Builds growth_daily_stats of the shop (docs/CALCULATIONS.md "Growth system definitions"). Idempotent: rebuilding a day replaces its rows.
  * Contribution margin (per order) = (subtotal - discount) - cogs - packaging_cost - shipping_subsidy - (payment_fee - payment_fee_charged - cod_fee).
  * Orders with a missing cost (item unit_cost null/<=0, shipping_cost null) never enter the margin; they are counted in missing_* instead.
  */

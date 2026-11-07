@@ -5,10 +5,7 @@ namespace App\Events\Whatsapp;
 /** Typing / online presence (not persisted): {jid, participant, state, last_seen}. */
 class ChatPresence extends ChatBroadcast
 {
-    public function __construct(?int $tenantId, public array $presence)
-    {
-        parent::__construct($tenantId);
-    }
+    public function __construct(public array $presence) {}
 
     public function broadcastAs(): string
     {

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/** Authorized media streaming. The file is looked up through ownedBy(): another owner's id is a plain 404. */
+/** Authorized media streaming. Unknown ids are a plain 404. */
 class ChatMediaController extends Controller implements HasMiddleware
 {
     use ResolvesChatOwner;
@@ -25,7 +25,7 @@ class ChatMediaController extends Controller implements HasMiddleware
     /** GET media/{id}?thumb=1&download=1 (supports a single Range). */
     public function show(Request $request, int $id)
     {
-        $media = WhatsappMedia::ownedBy($this->owner($request))->findOrFail($id);
+        $media = WhatsappMedia::query()->findOrFail($id);
         $thumb = $request->boolean('thumb');
         $path = $thumb ? $media->thumbnail_path : ($media->status === 'ready' ? $media->path : null);
         $disk = Storage::disk($media->disk);

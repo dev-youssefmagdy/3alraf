@@ -9,7 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../shell/presentation/shell_scaffold.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../store/application/store_controller.dart';
 import '../application/catalog_providers.dart';
 import '../data/catalog_models.dart';
 import '../data/product_models.dart';
@@ -78,7 +78,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final home = ref.watch(homeProvider);
-    final store = ref.watch(tenantControllerProvider).store;
+    final storeName = ref.watch(storeControllerProvider).name;
     ref.listen(homeProvider, (_, next) {
       final data = next.asData?.value;
       if (data != null) _maybePopup(data);
@@ -86,7 +86,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       appBar: AppBar(
         leading: const ShellMenuButton(),
-        title: Text(store?.name ?? l10n.appName),
+        title: Text(storeName.isEmpty ? l10n.appName : storeName),
         actions: [
           IconButton(
             tooltip: l10n.searchHint,
@@ -117,7 +117,7 @@ class _HomeContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final giftOn =
-        ref.watch(storeInfoProvider)?.features['gift_finder'] ?? false;
+        ref.watch(storeProfileProvider)?.features['gift_finder'] ?? false;
     final bundles =
         ref.watch(bundlesProvider).asData?.value ?? const <Bundle>[];
     final promos = [...data.strips, ...data.tiles];

@@ -28,20 +28,20 @@ void main() {
 
   late ApiContext context;
   late SessionStorage storage;
-  late List<String> unauthorized;
+  late int unauthorized;
 
   Dio build(FakeAdapter adapter) => buildDio(
     config: config,
     context: context,
     storage: storage,
-    onUnauthorized: unauthorized.add,
+    onUnauthorized: () => unauthorized++,
     adapter: adapter,
   );
 
   setUp(() {
-    context = ApiContext(tenantSlug: 'egy', locale: 'ar');
+    context = ApiContext(locale: 'ar');
     storage = SessionStorage(MemoryKeyValueStore());
-    unauthorized = [];
+    unauthorized = 0;
   });
 
   test('AppConfig builds a normalised /api/v1 base', () {
@@ -49,51 +49,35 @@ void main() {
   });
 
   group('headers', () {
-    test('tenant, locale, accept, cart token and bearer are sent', () async {
-      await storage.saveAuthToken('egy', 'tok');
-      await storage.saveCartToken('egy', 'cart-1');
+    test('locale, accept, cart token and bearer are sent (and nothing '
+        'store-specific)', () async {
+      await storage.saveAuthToken('tok');
+      await storage.saveCartToken('cart-1');
       final adapter = FakeAdapter(
         (_) => FakeAdapter.json({'success': true, 'data': {}}),
       );
       await build(adapter).get<dynamic>('/store');
       final h = adapter.requests.single.headers;
-      expect(h['X-Tenant'], 'egy');
       expect(h['Accept-Language'], 'ar');
       expect(h['Accept'], 'application/json');
       expect(h['X-Cart-Token'], 'cart-1');
       expect(h['Authorization'], 'Bearer tok');
+      expect(h.keys.where((k) => k.toLowerCase().startsWith('x-')).toList(), [
+        'X-Cart-Token',
+      ]);
     });
 
-    test('central requests carry no tenant, cart or auth headers', () async {
-      await storage.saveAuthToken('egy', 'tok');
-      await storage.saveCartToken('egy', 'cart-1');
-      final adapter = FakeAdapter(
-        (_) => FakeAdapter.json({'success': true, 'data': []}),
-      );
-      await build(adapter).get<dynamic>(
-        '/tenants',
-        options: Options(extra: {kCentralExtra: true}),
-      );
-      final h = adapter.requests.single.headers;
-      expect(h.containsKey('X-Tenant'), isFalse);
-      expect(h.containsKey('X-Cart-Token'), isFalse);
-      expect(h.containsKey('Authorization'), isFalse);
-      expect(h['Accept-Language'], 'ar');
-    });
-
-    test('tokens are namespaced per tenant', () async {
-      await storage.saveAuthToken('sa', 'sa-token');
+    test('no token stored -> no Authorization / X-Cart-Token', () async {
       final adapter = FakeAdapter(
         (_) => FakeAdapter.json({'success': true, 'data': {}}),
       );
-      await build(adapter).get<dynamic>('/store');
-      expect(
-        adapter.requests.single.headers.containsKey('Authorization'),
-        isFalse,
-      );
+      await build(adapter).get<dynamic>('/app-config');
+      final h = adapter.requests.single.headers;
+      expect(h.containsKey('Authorization'), isFalse);
+      expect(h.containsKey('X-Cart-Token'), isFalse);
     });
 
-    test('echoed X-Cart-Token is persisted for the tenant', () async {
+    test('echoed X-Cart-Token is persisted', () async {
       final adapter = FakeAdapter(
         (_) => FakeAdapter.json(
           {'success': true, 'data': {}},
@@ -103,8 +87,7 @@ void main() {
         ),
       );
       await build(adapter).get<dynamic>('/cart');
-      expect(await storage.cartToken('egy'), 'new-cart');
-      expect(await storage.cartToken('sa'), isNull);
+      expect(await storage.cartToken(), 'new-cart');
     });
   });
 
@@ -188,7 +171,7 @@ void main() {
     test(
       'clears the token and notifies when a bearer request is rejected',
       () async {
-        await storage.saveAuthToken('egy', 'tok');
+        await storage.saveAuthToken('tok');
         final adapter = FakeAdapter(
           (_) => FakeAdapter.json({
             'success': false,
@@ -199,8 +182,8 @@ void main() {
           () => build(adapter).get<dynamic>('/auth/me'),
         );
         expect(err!.kind, ApiErrorKind.unauthorized);
-        expect(await storage.authToken('egy'), isNull);
-        expect(unauthorized, ['egy']);
+        expect(await storage.authToken(), isNull);
+        expect(unauthorized, 1);
       },
     );
 
@@ -213,11 +196,11 @@ void main() {
           .get<dynamic>('/auth/me')
           .then((_) => null)
           .catchError((Object _) => null);
-      expect(unauthorized, isEmpty);
+      expect(unauthorized, 0);
     });
 
     test('skip flag keeps the token (e.g. wrong current password)', () async {
-      await storage.saveAuthToken('egy', 'tok');
+      await storage.saveAuthToken('tok');
       final adapter = FakeAdapter(
         (_) =>
             FakeAdapter.json({'success': false, 'message': 'x'}, status: 401),
@@ -229,8 +212,8 @@ void main() {
           )
           .then((_) => null)
           .catchError((Object _) => null);
-      expect(await storage.authToken('egy'), 'tok');
-      expect(unauthorized, isEmpty);
+      expect(await storage.authToken(), 'tok');
+      expect(unauthorized, 0);
     });
   });
 

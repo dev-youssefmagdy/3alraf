@@ -9,9 +9,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
 use App\Services\Stock\StockLedger;
@@ -23,23 +21,21 @@ beforeEach(function () {
     \Illuminate\Support\Facades\Storage::fake('private');
     Cache::flush();
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
-    app()->instance('currentTenant', $this->tenant);
+    $this->t = '/admin';
+    $this->s = '/ar';
+    $this->api = '/api/v1';
     $this->city = City::first();
     $this->company = ShippingCompany::first();                      // rate: price 40, cost 30
     $this->cod = PaymentMethod::where('type', 'cod')->first();
     $this->wallet = PaymentMethod::where('type', 'wallet')->first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'cf1', 'sku' => 'CF1', 'barcode' => '2000000000077']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
-    $this->setFee = fn (array $s) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '15'], $s)]);
+    $this->setFee = fn (array $s) => settings(array_merge(['cod_extra_fee_enabled' => true, 'cod_extra_fee_type' => 'fixed', 'cod_extra_fee_fixed' => '15'], $s));
     $this->place = fn (int $method, array $o = []) => app(OrderPlacementService::class)->place(new CheckoutData(...array_merge([
         'proof' => testProof(), 'name' => 'Ali', 'phone' => '01000000100', 'cityId' => $this->city->id, 'address' => 'St', 'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $method,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 $form = fn (array $o = []) => array_merge([
@@ -49,7 +45,7 @@ $form = fn (array $o = []) => array_merge([
 ], $o);
 
 it('validates and saves COD fee settings, keeping other settings keys', function () use ($form) {
-    $this->tenant->update(['settings' => ['tax_rate' => '14']]);
+    settings(['tax_rate' => '14']);
     ($this->owner)();
     $this->get("{$this->t}/cod-fees")->assertOk()->assertSee('cod_extra_fee_type', false);
     $this->postJson("{$this->t}/cod-fees/validate", $form(['cod_extra_fee_type' => 'bogus']))->assertStatus(422)->assertJsonValidationErrors('cod_extra_fee_type');
@@ -64,31 +60,29 @@ it('validates and saves COD fee settings, keeping other settings keys', function
 
     $this->putJson("{$this->t}/cod-fees", $form(['cod_extra_fee_city_fixed' => [$this->city->id => '25', 99999 => '']]))->assertStatus(422); // unknown city key (empty value still a key)
     $this->putJson("{$this->t}/cod-fees", $form(['cod_extra_fee_city_fixed' => [$this->city->id => '25']]))->assertOk();
-    $s = $this->tenant->fresh()->settings;
+    $s = allSettings();
     expect($s['tax_rate'])->toBe('14')->and($s['cod_extra_fee_enabled'])->toBeTrue()->and($s['cod_extra_fee_type'])->toBe('fixed_plus_percent')
         ->and($s['cod_extra_fee_max'])->toBe('50')->and($s['cod_extra_fee_label']['en'])->toBe('Handling')->and($s['cod_extra_fee_city_fixed'][$this->city->id])->toBe('25');
 });
 
-it('guards COD fee settings by permission and tenant', function () use ($form) {
-    $role = Role::create(['name' => 't'.$this->tenant->id.':viewer', 'guard_name' => 'tenant']);
+it('guards COD fee settings by permission and rejects unknown cities', function () use ($form) {
+    $role = Role::create(['name' => 'viewer', 'guard_name' => 'admin']);
     $role->givePermissionTo('settings.view');
-    $u = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
+    $u = Admin::query()->create(['name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
     $u->assignRole($role);
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $this->get("{$this->t}/cod-fees")->assertOk();
     $this->putJson("{$this->t}/cod-fees", $form())->assertForbidden();
     $this->postJson("{$this->t}/cod-fees/validate", $form())->assertForbidden();
-    expect($this->tenant->fresh()->settings['cod_extra_fee_enabled'] ?? false)->toBeFalse();
+    expect(allSettings()['cod_extra_fee_enabled'] ?? false)->toBeFalse();
 
-    // a city of ANOTHER tenant is not accepted, and saving never touches the other tenant's settings
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $other = City::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => ['ar' => 'الرياض'], 'is_active' => true, 'sort_order' => 0]);
+    // an unknown city id is not accepted
     ($this->owner)();
-    $this->putJson("{$this->t}/cod-fees", $form(['cod_extra_fee_city_fixed' => [$other->id => '9']]))->assertStatus(422);
+    $this->putJson("{$this->t}/cod-fees", $form(['cod_extra_fee_city_fixed' => [999999 => '9']]))->assertStatus(422);
     $this->putJson("{$this->t}/cod-fees", $form())->assertOk();
-    expect($sa->fresh()->settings['cod_extra_fee_enabled'] ?? null)->toBeNull();
-    // tenants without a session of their own cannot reach it
-    auth('tenant')->logout();
+    expect(allSettings()['cod_extra_fee_enabled'])->toBeTrue();
+    // guests cannot reach it
+    auth('admin')->logout();
     $this->get("{$this->t}/cod-fees")->assertRedirect();
 });
 
@@ -106,12 +100,10 @@ it('quote changes when switching COD vs online/wallet and re-quotes with the cus
 
 it('snapshots the fee on the order: total, cod_amount (collected by the carrier), label, profit and refund rules', function () {
     ($this->setFee)(['cod_extra_fee_label' => ['ar' => 'رسوم COD', 'en' => 'Handling'], 'cod_collect_shipping_upfront' => false]);
-    app()->instance('currentTenant', $this->tenant->fresh());
     $o = ($this->place)($this->cod->id);
     expect((string) $o->cod_fee)->toBe('15.00')->and((string) $o->total)->toBe('255.00')->and((string) $o->cod_amount)->toBe('255.00')->and($o->cod_fee_label['en'])->toBe('Handling');
     // later settings changes never rewrite the snapshot
     ($this->setFee)(['cod_extra_fee_fixed' => '99']);
-    app()->instance('currentTenant', $this->tenant->fresh());
     expect((string) $o->fresh()->cod_fee)->toBe('15.00');
     app(OrderStatusService::class)->change($o, S::CONFIRMED);
     $o->refresh();
@@ -120,7 +112,6 @@ it('snapshots the fee on the order: total, cod_amount (collected by the carrier)
     $w = ($this->place)($this->cod->id, []);                    // settings now 99 -> a fresh order uses them
     expect((string) $w->cod_fee)->toBe('99.00');
     ($this->setFee)(['cod_extra_fee_bearer' => 'merchant']);
-    app()->instance('currentTenant', $this->tenant->fresh());
     $m = ($this->place)($this->cod->id);
     expect((string) $m->cod_fee)->toBe('0.00')->and($m->cod_fee_label)->toBeNull()->and((string) $m->total)->toBe('240.00');
     app(OrderStatusService::class)->change($m, S::CONFIRMED);
@@ -132,7 +123,6 @@ it('snapshots the fee on the order: total, cod_amount (collected by the carrier)
 
 it('keeps the fee out of prepaid shipping when shipping is prepaid', function () {
     ($this->setFee)(['cod_collect_shipping_upfront' => true]);
-    app()->instance('currentTenant', $this->tenant->fresh());
     $o = ($this->place)($this->cod->id, ['prepayMethodId' => $this->wallet->id]);
     expect((string) $o->prepaid_shipping)->toBe('40.00')->and((string) $o->cod_amount)->toBe('215.00')->and((string) $o->total)->toBe('255.00');
 });
@@ -152,7 +142,6 @@ it('API quote/checkout/order resources expose the fee (parity with web) but no p
 
 it('shows the fee in the admin order, invoice and includes it in the cod-settlement report and net profit report', function () {
     ($this->setFee)(['cod_collect_shipping_upfront' => false, 'cod_extra_fee_label' => ['ar' => 'رسوم COD', 'en' => 'Handling']]);
-    app()->instance('currentTenant', $this->tenant->fresh());
     $o = ($this->place)($this->cod->id);
     foreach ([S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED] as $to) {
         app(OrderStatusService::class)->change($o, $to);
@@ -160,7 +149,7 @@ it('shows the fee in the admin order, invoice and includes it in the cod-settlem
     ($this->owner)();
     $this->get("{$this->t}/orders/{$o->id}")->assertOk()->assertSee('رسوم COD');
     $this->get("{$this->t}/orders/{$o->id}/invoice.pdf")->assertOk();
-    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), false, [$this->tenant->id]);
+    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString());
     $row = app(\App\Repositories\Contracts\ReportRepositoryInterface::class)->codSettlement($f)[0];
     expect((float) $row['collected'])->toBe(255.0)->and((float) $row['owed'])->toBe(225.0);        // 255 collected - 30 carrier fee
     $np = app(\App\Repositories\Contracts\ReportRepositoryInterface::class)->netProfit($f);

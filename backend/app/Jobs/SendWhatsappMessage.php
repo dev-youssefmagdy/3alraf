@@ -11,7 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 /**
- * Sends one pending chat message. Serialized per owner so a burst keeps its order and Node's per-session chain is not flooded.
+ * Sends one pending chat message. Serialized (one at a time) so a burst keeps its order and Node's per-session chain is not flooded.
  * Not retried on Node errors (a timeout may mean it was delivered): the row turns `failed` and the UI offers resend.
  */
 class SendWhatsappMessage implements ShouldQueue
@@ -22,7 +22,7 @@ class SendWhatsappMessage implements ShouldQueue
 
     public int $maxExceptions = 1;
 
-    public function __construct(public ?int $tenantId, public int $messageId) {}
+    public function __construct(public int $messageId) {}
 
     public function retryUntil(): \DateTimeInterface
     {
@@ -31,18 +31,18 @@ class SendWhatsappMessage implements ShouldQueue
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping('wa-chat-send:'.($this->tenantId ?? 'central')))->releaseAfter(3)->expireAfter(300)];
+        return [(new WithoutOverlapping('wa-chat-send'))->releaseAfter(3)->expireAfter(300)];
     }
 
     public function handle(ChatSendService $svc): void
     {
-        $svc->deliver($this->tenantId, $this->messageId);
+        $svc->deliver($this->messageId);
     }
 
     public function failed(\Throwable $e): void
     {
-        if ($msg = WhatsappMessage::ownedBy($this->tenantId)->find($this->messageId)) {
-            app(ChatSendService::class)->fail($this->tenantId, $msg, 'send_failed');
+        if ($msg = WhatsappMessage::query()->find($this->messageId)) {
+            app(ChatSendService::class)->fail($msg, 'send_failed');
         }
     }
 }

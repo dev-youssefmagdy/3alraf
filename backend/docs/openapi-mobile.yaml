@@ -1,29 +1,26 @@
 openapi: 3.1.0
 info:
   title: 3alraf Mobile API
-  version: 1.1.0
+  version: 1.2.0
   description: 'JSON API for the 3alraf customer mobile app. Full narrative contract (headers, envelope, pagination, errors, rate limits, flows):
     docs/MOBILE_API.md.
 
 
-    Tenant: call the central host with `X-Tenant: <slug>` (or the tenant subdomain). Central-only: /tenants, /app-config, /health.
+    Single store: one base URL (APP_URL/api/v1). GET /app-config returns the switches plus `store` (name, country, currency, locales, timezone);
+    GET /store the full profile. The `X-Tenant` header of old app builds is ignored and old `{slug}.` hosts still answer /api/* (URLs in responses
+    always use APP_URL). GET /tenants is deprecated (one-item list in the old shape).
 
     Envelope: {success, message, data, meta}; errors {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429. Money is
     a decimal string.
 
-    Auth: Sanctum bearer tokens; customer (ability `customer`) and affiliate (ability `affiliate`) tokens are not interchangeable and are tenant-scoped.
+    Auth: Sanctum bearer tokens; customer (ability `customer`) and affiliate (ability `affiliate`) tokens are not interchangeable.
 
     Guests: persist the `X-Cart-Token` response header and send it on cart/checkout calls.
 
     '
 servers:
 - url: https://example.com/api/v1
-  description: 'Central host. Send `X-Tenant: <slug>` (the mobile app always uses this one base URL).'
-- url: https://{tenant}.example.com/api/v1
-  description: Tenant host (alternative; the tenant comes from the subdomain).
-  variables:
-    tenant:
-      default: egy
+  description: Site host (APP_URL). The mobile app always uses this one base URL.
 paths:
   /addresses:
     get:
@@ -32,7 +29,6 @@ paths:
       tags:
       - addresses
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -69,7 +65,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -81,7 +77,6 @@ paths:
       tags:
       - addresses
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -129,7 +124,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -170,7 +165,6 @@ paths:
       tags:
       - addresses
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -223,7 +217,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -238,7 +232,6 @@ paths:
       tags:
       - addresses
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -264,7 +257,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -277,7 +270,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -308,7 +300,7 @@ paths:
                     channel: instagram
                     product_id: 1
                     clicks: 0
-                    url: http://egy.3alraf.test/l/0kcv8vr0
+                    url: http://3alraf.test/l/0kcv8vr0
                   report:
                     valid_orders: 0
                     pending_orders: 0
@@ -329,7 +321,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -343,7 +335,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -377,7 +368,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -407,7 +398,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -441,7 +431,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -460,7 +450,7 @@ paths:
                   channel: instagram
                   product_id: 1
                   clicks: 0
-                  url: http://egy.3alraf.test/l/0kcv8vr0
+                  url: http://3alraf.test/l/0kcv8vr0
                 meta: {}
       description: 'Create a per-channel tracked link for a product (404 when not enrolled). `url` is a short link on the store domain.
 
@@ -473,7 +463,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -528,7 +517,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -541,7 +530,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -604,7 +592,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -625,7 +612,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -638,7 +625,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -672,7 +658,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -685,7 +671,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -711,7 +696,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -723,7 +708,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -752,7 +736,7 @@ paths:
                 data: null
                 meta: {}
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -768,7 +752,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -791,8 +774,8 @@ paths:
                   name: P mid
                   image: null
                   price: '250.00'
-                  link: http://egy.3alraf.test/en/product/mid?utm_source=affiliate&aff=b898c8e1-9c85-4582-87da-cff21b70fb32
-                  qr_url: http://egy.3alraf.test/api/v1/affiliate/products/mid/qr
+                  link: http://3alraf.test/en/product/mid?utm_source=affiliate&aff=b898c8e1-9c85-4582-87da-cff21b70fb32
+                  qr_url: http://3alraf.test/api/v1/affiliate/products/mid/qr
                   variants: []
                 meta: {}
         '422':
@@ -802,7 +785,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -815,7 +798,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -842,7 +824,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -858,7 +840,6 @@ paths:
       tags:
       - affiliate
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -922,7 +903,7 @@ paths:
         Body (`*` required): `name`*, `email`*, `password`*, `password_confirmation`*, `phone`, `phone_country_code`'
   /app-config:
     get:
-      summary: Force-update and maintenance switches (config/mobile.php + env)
+      summary: Force-update and maintenance switches (config/mobile.php + env) + shop basics
       operationId: app-config_get
       tags:
       - app-config
@@ -956,13 +937,28 @@ paths:
                   maintenance_message: null
                   update_required: true
                   update_available: true
+                  store:
+                    name: 3alraf Egypt
+                    country: EG
+                    currency:
+                      code: EGP
+                      symbol: EGP
+                    default_locale: ar
+                    locales:
+                    - code: ar
+                      rtl: true
+                    - code: en
+                      rtl: false
+                    timezone: Africa/Cairo
+                    base_url: http://3alraf.test
         '422':
           description: Validation error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: 'Force-update and maintenance switches (config/mobile.php + env). `Accept-Language` selects the maintenance message (`ar`/`en`).
+      description: 'Force-update and maintenance switches (config/mobile.php + env) and the shop basics `store` (Settings > General: name, country,
+        currency {code, symbol}, default_locale, locales [{code, rtl}], timezone, base_url = APP_URL). `Accept-Language` selects the maintenance message (`ar`/`en`).
 
 
         Query/params: `version` (optional): the app version, e.g. `1.2.0`. When given, `update_required` (version < min_version) and `update_available`
@@ -971,9 +967,6 @@ paths:
 
         `min_version` / `latest_version` are `x.y.z`. Env: `MOBILE_MIN_VERSION`, `MOBILE_LATEST_VERSION`, `MOBILE_STORE_URL_IOS|ANDROID`, `MOBILE_MAINTENANCE`,
         `MOBILE_MAINTENANCE_MESSAGE_AR|EN`. Rate limit 120/min/IP. Never blocked by maintenance itself.'
-      servers:
-      - url: https://example.com/api/v1
-        description: Central host only
   /auth/email/verification-notification:
     post:
       summary: Send the e-mail verification code
@@ -981,7 +974,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1007,7 +999,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1023,7 +1015,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1054,7 +1045,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1070,7 +1061,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1118,7 +1108,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1147,7 +1136,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1213,7 +1201,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1239,7 +1226,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1252,7 +1239,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1286,7 +1272,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1298,7 +1284,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1354,7 +1339,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1372,7 +1357,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1398,7 +1382,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -1428,7 +1412,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1505,7 +1488,6 @@ paths:
       tags:
       - auth
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1551,7 +1533,6 @@ paths:
       tags:
       - blog
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1584,7 +1565,7 @@ paths:
                   excerpt: Summary
                   meta_description: null
                   published_at: '2026-10-31T21:51:44+02:00'
-                  url: http://egy.3alraf.test/en/blog/hello-world
+                  url: http://3alraf.test/en/blog/hello-world
                 meta:
                   pagination:
                     current_page: 1
@@ -1608,7 +1589,6 @@ paths:
       tags:
       - blog
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1637,7 +1617,7 @@ paths:
                   excerpt: Summary
                   meta_description: null
                   published_at: '2026-10-31T21:51:44+02:00'
-                  url: http://egy.3alraf.test/en/blog/hello-world
+                  url: http://3alraf.test/en/blog/hello-world
                   content: <p>Body</p>
                 meta: {}
         '422':
@@ -1654,7 +1634,6 @@ paths:
       tags:
       - brands
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1692,7 +1671,6 @@ paths:
       tags:
       - brands
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1736,7 +1714,6 @@ paths:
       tags:
       - bundles
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1770,7 +1747,6 @@ paths:
       tags:
       - bundles
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1804,7 +1780,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1868,7 +1843,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -1954,7 +1928,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2040,7 +2013,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2074,7 +2046,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2129,7 +2100,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -2142,7 +2113,6 @@ paths:
       tags:
       - cart
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2255,7 +2225,6 @@ paths:
       tags:
       - catalog
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2358,7 +2327,6 @@ paths:
       tags:
       - catalog
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2449,7 +2417,6 @@ paths:
       tags:
       - catalog
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2492,7 +2459,6 @@ paths:
       tags:
       - categories
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2543,7 +2509,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2700,7 +2665,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2736,7 +2700,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2770,7 +2733,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2815,7 +2777,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2859,7 +2820,6 @@ paths:
       tags:
       - checkout
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2972,7 +2932,6 @@ paths:
       tags:
       - custom-pages
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -2990,7 +2949,7 @@ paths:
                 data:
                 - slug: offers
                   title: Offers
-                  url: http://egy.3alraf.test/offers
+                  url: http://3alraf.test/offers
                 meta: {}
         '422':
           description: Validation error
@@ -3006,7 +2965,6 @@ paths:
       tags:
       - custom-pages
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3040,7 +2998,6 @@ paths:
       tags:
       - devices
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3107,7 +3064,6 @@ paths:
       tags:
       - devices
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3154,7 +3110,6 @@ paths:
       tags:
       - gift-finder
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3204,7 +3159,6 @@ paths:
       tags:
       - gift-finder
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3255,9 +3209,6 @@ paths:
         '503':
           description: A check failed
       description: Liveness/readiness probe (database, cache, storage, failed jobs). Not enveloped.
-      servers:
-      - url: https://example.com/api/v1
-        description: Central host only
   /home:
     get:
       summary: 'Home screen payload:'
@@ -3265,7 +3216,6 @@ paths:
       tags:
       - home
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3332,7 +3282,6 @@ paths:
       tags:
       - launch
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3388,7 +3337,6 @@ paths:
       tags:
       - launch
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3458,7 +3406,6 @@ paths:
       tags:
       - menu
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3498,7 +3445,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3557,7 +3503,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -3573,7 +3519,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3675,7 +3620,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3701,7 +3645,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -3717,7 +3661,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3756,7 +3699,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3790,7 +3732,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3832,7 +3773,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3884,7 +3824,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -3923,7 +3862,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -3955,7 +3894,6 @@ paths:
       tags:
       - orders
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4001,7 +3939,6 @@ paths:
       tags:
       - pages
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4034,7 +3971,6 @@ paths:
       tags:
       - pages
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4073,7 +4009,6 @@ paths:
       tags:
       - payments
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4177,7 +4112,6 @@ paths:
       tags:
       - products
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4266,7 +4200,6 @@ paths:
       tags:
       - products
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4309,7 +4242,6 @@ paths:
       tags:
       - products
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4347,7 +4279,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -4383,7 +4315,6 @@ paths:
       tags:
       - stock-requests
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4453,7 +4384,6 @@ paths:
       tags:
       - store
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4470,7 +4400,7 @@ paths:
                 message: null
                 data:
                   slug: egy
-                  name: Egypt Store
+                  name: 3alraf Egypt
                   country: EG
                   currency:
                     code: EGP
@@ -4482,8 +4412,8 @@ paths:
                     rtl: true
                   cod_collect_shipping_upfront: false
                   prices_include_tax: false
-                  logo_url: http://egy.3alraf.test/logo.png
-                  favicon_url: http://egy.3alraf.test/logo-192.png
+                  logo_url: http://3alraf.test/logo.png
+                  favicon_url: http://3alraf.test/logo-192.png
                   colors:
                     primary: '#A8456C'
                     primary_dark: '#8F3A5C'
@@ -4501,7 +4431,7 @@ paths:
                     warning: '#D99A36'
                     danger: '#C8384F'
                   contact:
-                    email: hello@egy.3alraf.com
+                    email: hello@3alraf.com
                     phone: +20 100 123 4567
                     whatsapp: '201001234567'
                   social:
@@ -4535,7 +4465,7 @@ paths:
         and feature switches for optional sections.
 
 
-        `colors` = tenant overrides (`settings.branding.colors`, hex only) merged over the 3alraf defaults (config/mobile.php), so every key is
+        `slug` = `mobile.legacy_store_slug` (compat only). `colors` = shop overrides (setting `branding.colors`, hex only) merged over the 3alraf defaults (config/mobile.php), so every key is
         always present. `social` only contains configured networks. `contact.whatsapp` = `settings.contact.whatsapp` else the organisation phone,
         digits only. `features.*` hide Gift finder / Small-batch launch / Ambassadors entry points when `false` (the matching endpoints answer
         403 `feature_disabled`).'
@@ -4546,7 +4476,6 @@ paths:
       tags:
       - tags
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4583,7 +4512,8 @@ paths:
       description: 'Tag page header. Its products: `GET /catalog?tag={slug}`.'
   /tenants:
     get:
-      summary: Active stores (countries) for the country picker
+      summary: DEPRECATED - the one shop as a one-item list (old app builds)
+      deprecated: true
       operationId: tenants_get
       tags:
       - tenants
@@ -4601,17 +4531,19 @@ paths:
                 message: null
                 data:
                 - slug: egy
-                  name: Egypt Store
+                  name: 3alraf Egypt
                   country: EG
                   flag: 🇪🇬
                   currency: EGP
                   default_locale: ar
                   locales:
                   - ar
+                  - en
                   languages:
                   - العربية
+                  - English
                   logo_url: http://3alraf.test/logo.png
-                  base_url: http://egy.3alraf.test/
+                  base_url: http://3alraf.test
                 meta: {}
         '422':
           description: Validation error
@@ -4619,14 +4551,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: 'Active stores (countries) for the country picker. Sorted by name. `languages` are native names of `locales`; `logo_url` is
-        the store logo (falls back to the 3alraf logo); `base_url` is informational: the app keeps using ONE base URL plus `X-Tenant`.
+      description: 'DEPRECATED, kept so old app builds (country picker) keep working. Always one item (the shop); response header `Deprecation: true`.
+        Fields = what old builds parse: `slug` (config `mobile.legacy_store_slug`, default `egy`, the slug old builds saved), `name`, `country`, `flag`,
+        `currency`, `default_locale`, `locales`, `languages` (native names), `logo_url`, `base_url` (= APP_URL). New builds use /app-config or /store.
 
 
         Rate limit 60/min/IP.'
-      servers:
-      - url: https://example.com/api/v1
-        description: Central host only
   /wishlist:
     get:
       summary: Wishlist products
@@ -4634,7 +4564,6 @@ paths:
       tags:
       - wishlist
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4671,7 +4600,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -4684,7 +4613,6 @@ paths:
       tags:
       - wishlist
       parameters:
-      - $ref: '#/components/parameters/XTenant'
       - $ref: '#/components/parameters/AcceptLanguage'
       - $ref: '#/components/parameters/XCartToken'
       - $ref: '#/components/parameters/XAffiliateRef'
@@ -4716,7 +4644,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Missing / wrong-type / other-tenant token
+          description: Missing / wrong-type / revoked token
           content:
             application/json:
               schema:
@@ -4737,7 +4665,8 @@ components:
       name: X-Tenant
       in: header
       required: false
-      description: Store slug when calling the central host
+      deprecated: true
+      description: Sent by old app builds only (former store slug). Ignored by the server (any value); not referenced by any operation.
       schema:
         type: string
         example: egy

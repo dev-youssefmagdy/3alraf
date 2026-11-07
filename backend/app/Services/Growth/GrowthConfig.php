@@ -2,10 +2,10 @@
 
 namespace App\Services\Growth;
 
-use App\Models\Tenant;
+use App\Models\Setting;
 use Illuminate\Validation\ValidationException;
 
-/** config/growth.php guardrails merged with tenant overrides (tenants.settings.growth.config). Only whitelisted, bounded keys are overridable. */
+/** config/growth.php guardrails merged with the shop's overrides (setting `growth.config`). Only whitelisted, bounded keys are overridable. */
 class GrowthConfig
 {
     /** key => [min, max]; lists are handled separately. */
@@ -16,13 +16,12 @@ class GrowthConfig
         'lab_min_days' => [1, 90], 'lab_min_clicks' => [0, 100000], 'lab_min_orders' => [0, 10000], 'lab_max_budget_increase_percent' => [1, 100],
     ];
 
-    /** Lab threshold keys (config growth.lab.*) that a tenant may override as lab_*. */
+    /** Lab threshold keys (config growth.lab.*) that may be overridden as lab_*. */
     public const LAB_KEYS = ['min_days', 'min_clicks', 'min_orders', 'max_budget_increase_percent'];
 
-    public function all(?Tenant $tenant = null): array
+    public function all(): array
     {
-        $tenant ??= current_tenant();
-        $over = (array) ((($tenant?->settings ?? [])['growth'] ?? [])['config'] ?? []);
+        $over = $this->overrides();
         $base = (array) config('growth.guardrails');
         foreach ($over as $k => $v) {
             if (array_key_exists($k, self::OVERRIDABLE) || $k === 'auto_reply_allowlist') {
@@ -33,21 +32,19 @@ class GrowthConfig
         return $base;
     }
 
-    public function get(string $key, mixed $default = null, ?Tenant $tenant = null): mixed
+    public function get(string $key, mixed $default = null): mixed
     {
-        return $this->all($tenant)[$key] ?? $default;
+        return $this->all()[$key] ?? $default;
     }
 
-    /** Overrides stored for the tenant (only what differs from defaults). */
-    public function overrides(?Tenant $tenant = null): array
+    /** Stored overrides (only what differs from defaults). */
+    public function overrides(): array
     {
-        $tenant ??= current_tenant();
-
-        return (array) ((($tenant?->settings ?? [])['growth'] ?? [])['config'] ?? []);
+        return (array) (((array) (setting('growth') ?? []))['config'] ?? []);
     }
 
     /** @param array<string,mixed> $input */
-    public function update(Tenant $tenant, array $input): array
+    public function update(array $input): array
     {
         $clean = [];
         $errors = [];
@@ -63,8 +60,8 @@ class GrowthConfig
             }
             $clean[$k] = $v + 0;
         }
-        $min = $clean['min_days_of_cover'] ?? $this->get('min_days_of_cover', 0, $tenant);
-        $max = $clean['max_days_of_cover'] ?? $this->get('max_days_of_cover', 0, $tenant);
+        $min = $clean['min_days_of_cover'] ?? $this->get('min_days_of_cover', 0);
+        $max = $clean['max_days_of_cover'] ?? $this->get('max_days_of_cover', 0);
         if ($min > $max) {
             $errors['min_days_of_cover'] = __('growth_hub.settings.cover_order');
         }
@@ -76,10 +73,10 @@ class GrowthConfig
         if ($errors) {
             throw ValidationException::withMessages($errors);
         }
-        $s = $tenant->settings ?? [];
-        $s['growth']['config'] = $clean;
-        $tenant->forceFill(['settings' => $s])->save();
+        $growth = (array) (setting('growth') ?? []);
+        $growth['config'] = $clean;
+        Setting::put('growth', $growth);
 
-        return $this->all($tenant);
+        return $this->all();
     }
 }

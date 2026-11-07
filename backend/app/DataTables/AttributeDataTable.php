@@ -26,11 +26,11 @@ class AttributeDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('central')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('name_label', fn (Attribute $a) => e($a->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('type_label', fn (Attribute $a) => e($a->type->label()))
-            ->addColumn('actions', fn (Attribute $a) => $this->actionButtons(route('central.attributes.edit', $a), route('central.attributes.destroy', $a), $u?->can('attributes.edit'), $u?->can('attributes.delete')))
+            ->addColumn('actions', fn (Attribute $a) => $this->actionButtons(route('admin.attributes.edit', $a), route('admin.attributes.destroy', $a), $u?->can('attributes.edit'), $u?->can('attributes.delete')))
             ->rawColumns($this->rawColumns());
     }
 

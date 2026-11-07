@@ -7,7 +7,7 @@ use App\Models\BlogPost;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Blog: only active, already published posts of the current tenant. */
+/** Blog: only active, already published posts. */
 class BlogController extends ApiController
 {
     /** GET blog?per_page=&page= (newest first; list items carry no `content`). */

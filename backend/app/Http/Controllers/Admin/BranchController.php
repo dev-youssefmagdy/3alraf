@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\BranchDataTable;
 use App\DTOs\BranchData;
-use App\Http\Requests\Tenant\BranchRequest;
+use App\Http\Requests\Admin\BranchRequest;
 use App\Models\Branch;
 use App\Services\BranchService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class BranchController extends ResourceController
 {
     protected static string $perm = 'branches';
-    protected static string $routeBase = 'tenant.branches';
-    protected static string $view = 'tenant.branches';
+    protected static string $routeBase = 'admin.branches';
+    protected static string $view = 'admin.branches';
     protected static string $titleKey = 'ops.branches';
     protected static string $requestClass = BranchRequest::class;
     protected static string $dtoClass = BranchData::class;

@@ -22,7 +22,6 @@ use App\Models\Category;
 use App\Models\Tag;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
-use App\Models\TenantProduct;
 use App\Services\Storefront\CardPresenter;
 use App\Services\Storefront\CatalogSearch;
 use App\Services\Storefront\CustomPageProducts;
@@ -38,7 +37,7 @@ class StoreController extends ApiController
 
     public function store(): JsonResponse
     {
-        return $this->respond(new StoreResource(current_tenant()));
+        return $this->respond(new StoreResource(null));
     }
 
     public function home(): JsonResponse
@@ -77,7 +76,7 @@ class StoreController extends ApiController
         $d = $detail->load($slug, auth('web')->user());
 
         return $this->respond(new ProductDetailResource([
-            'product' => $d['product'], 'tp' => $d['tp'], 'picker' => $d['picker'], 'summary' => $d['summary'], 'reviews' => $d['reviews'],
+            'product' => $d['product'], 'picker' => $d['picker'], 'summary' => $d['summary'], 'reviews' => $d['reviews'],
             'related' => $d['related'], 'in_wishlist' => $d['inWishlist'], 'can_review' => $d['canReview'],
         ]));
     }
@@ -162,11 +161,11 @@ class StoreController extends ApiController
         $scope = $this->search->scope($category, $filter->q);
         if ($request->filled('brand')) {
             $brand = Brand::where('slug', (string) $request->query('brand'))->where('is_active', true)->firstOrFail();
-            $scope->whereHas('product', fn ($p) => $p->where('brand_id', $brand->id));
+            $scope->where('brand_id', $brand->id);
         }
         if ($request->filled('tag')) {
             $tag = Tag::where('slug', (string) $request->query('tag'))->where('is_active', true)->firstOrFail();
-            $scope->whereHas('product', fn ($p) => $p->whereHas('tags', fn ($t) => $t->where('tags.id', $tag->id)));
+            $scope->whereHas('tags', fn ($t) => $t->where('tags.id', $tag->id));
         }
 
         return [$scope, $filter];
@@ -174,6 +173,6 @@ class StoreController extends ApiController
 
     private function sellable(): \Closure
     {
-        return fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+        return fn ($p) => $p->where('is_active', true)->whereNotNull('price');
     }
 }

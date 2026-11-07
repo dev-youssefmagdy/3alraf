@@ -10,7 +10,7 @@ it('rejects bad Egyptian numbers', function (string $in, string $err) {
     expect(Phone::normalize($in, 'EG'))->toBe([null, $err]);
 })->with([['+966501234567', 'wrong_country'], ['00966501234567', 'wrong_country'], ['0100848', 'invalid'], ['010084891833', 'invalid'], ['01a08489183', 'invalid'], ['0300848918', 'invalid']]);
 
-it('handles other tenant countries', function () {
+it('handles other store countries', function () {
     expect(Phone::normalize('0501234567', 'SA'))->toBe(['0501234567', null])
         ->and(Phone::normalize('+966501234567', 'SA'))->toBe(['0501234567', null])
         ->and(Phone::normalize('+201008489183', 'SA'))->toBe([null, 'wrong_country'])

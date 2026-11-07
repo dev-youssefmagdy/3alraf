@@ -5,14 +5,13 @@ namespace App\Models;
 use App\Enums\DiscountScope;
 use App\Enums\DiscountType;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\FreesUniqueOnDelete;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DiscountCode extends Model
 {
-    use Audited, BelongsToTenant, FreesUniqueOnDelete, SoftDeletes;
+    use Audited, FreesUniqueOnDelete, SoftDeletes;
 
     protected array $freedOnDelete = ['code'];
 

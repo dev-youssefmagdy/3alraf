@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class GrowthApproval extends Model
 {
-    use BelongsToTenant;
 
     public const PENDING = 'pending', APPROVED = 'approved', REJECTED = 'rejected', EXPIRED = 'expired';
 
@@ -27,7 +25,7 @@ class GrowthApproval extends Model
 
     public function decider(): BelongsTo
     {
-        return $this->belongsTo(TenantAdmin::class, 'decided_by');
+        return $this->belongsTo(Admin::class, 'decided_by');
     }
 
     public function isPending(): bool

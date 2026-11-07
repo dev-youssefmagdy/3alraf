@@ -188,7 +188,7 @@
         200
       ],
       "parameters": {},
-      "notes": "Feature switched off for this tenant (or master flag off): nothing to do. No retries."
+      "notes": "Feature switched off in Admin > Growth settings (or the Growth master switch is off): nothing to do. No retries."
     },
     {
       "parameters": {

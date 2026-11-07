@@ -4,11 +4,11 @@ namespace App\Services\Growth;
 
 use App\Models\ExperimentAdDay;
 use App\Models\GrowthActionLog;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Notifications\GrowthNotification;
 use Illuminate\Support\Facades\Gate;
 
-/** Daily ad spend (all experiments) above the tenant's ad_daily_budget_cap: one notification + one action-log row per day, and a Brief item. Advice only; nothing is paused. */
+/** Daily ad spend (all experiments) above the ad_daily_budget_cap guardrail: one notification + one action-log row per day, and a Brief item. Advice only; nothing is paused. */
 class AdCapService
 {
     public function __construct(private GrowthConfig $config, private ActionLogger $log) {}
@@ -32,11 +32,10 @@ class AdCapService
                 continue;
             }
             $this->log->log('ad_cap.daily_exceeded', 'system', null, 'day '.$b['day'], null, 'warning', $b);
-            $tenant = current_tenant();
             $note = new GrowthNotification('ad_cap_exceeded', $b + ['spend_f' => number_format($b['spend'], 2), 'cap_f' => number_format($b['cap'], 2)]);
-            $note->locale($tenant?->default_locale ?: config('app.locale'));
-            TenantAdmin::withoutGlobalScopes()->where('tenant_id', $tenant?->id)->where('is_active', true)->get()
-                ->filter(fn (TenantAdmin $a) => Gate::forUser($a)->allows('growth.view'))->each(fn (TenantAdmin $a) => $a->notify($note));
+            $note->locale(setting('default_locale') ?: config('app.locale'));
+            Admin::query()->where('is_active', true)->get()
+                ->filter(fn (Admin $a) => Gate::forUser($a)->allows('growth.view'))->each(fn (Admin $a) => $a->notify($note));
             $n++;
         }
 

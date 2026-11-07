@@ -10,6 +10,6 @@ class FeatureController extends Controller
 {
     public function index(GrowthFeatures $features): JsonResponse
     {
-        return response()->json(['success' => true, 'data' => ['features' => $features->states(current_tenant())]]);
+        return response()->json(['success' => true, 'data' => ['features' => $features->states()]]);
     }
 }

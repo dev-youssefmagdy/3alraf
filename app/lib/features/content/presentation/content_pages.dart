@@ -13,7 +13,7 @@ import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../catalog/presentation/catalog_widgets.dart';
 import '../../orders/presentation/order_widgets.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../store/application/store_controller.dart';
 import '../application/content_providers.dart';
 import '../data/content_models.dart';
 
@@ -456,7 +456,7 @@ class ContactPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final store = ref.watch(storeInfoProvider);
+    final store = ref.watch(storeProfileProvider);
     final whatsapp = store?.whatsapp;
     final phone = store?.phone;
     final email = store?.email;

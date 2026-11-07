@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Central\Ai;
+namespace App\Http\Controllers\Admin\Ai;
 
 use App\DataTables\AiProviderDataTable;
 use App\DTOs\Ai\AiProviderData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\Ai\AiProviderRequest;
+use App\Http\Requests\Admin\Ai\AiProviderRequest;
 use App\Models\AiProvider;
 use App\Services\Ai\AiProviderService;
 use Illuminate\Http\JsonResponse;
@@ -28,7 +28,7 @@ class ProviderController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.ai.providers.index', ['table' => new AiProviderDataTable]);
+        return view('admin.ai.providers.index', ['table' => new AiProviderDataTable]);
     }
 
     public function datatable(AiProviderDataTable $table): JsonResponse
@@ -38,26 +38,26 @@ class ProviderController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.ai.providers.form', ['provider' => new AiProvider(['is_active' => true])]);
+        return view('admin.ai.providers.form', ['provider' => new AiProvider(['is_active' => true])]);
     }
 
     public function store(AiProviderRequest $request): JsonResponse
     {
         $this->service->create(AiProviderData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.ai.providers.index'));
+        return $this->ok(__('admin.saved'), route('admin.ai.providers.index'));
     }
 
     public function edit(AiProvider $ai_provider)
     {
-        return view('central.ai.providers.form', ['provider' => $ai_provider]);
+        return view('admin.ai.providers.form', ['provider' => $ai_provider]);
     }
 
     public function update(AiProviderRequest $request, AiProvider $ai_provider): JsonResponse
     {
         $this->service->update($ai_provider, AiProviderData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.ai.providers.index'));
+        return $this->ok(__('admin.saved'), route('admin.ai.providers.index'));
     }
 
     public function destroy(AiProvider $ai_provider): JsonResponse

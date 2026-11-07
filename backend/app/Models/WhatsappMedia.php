@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToWhatsappOwner;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class WhatsappMedia extends Model
 {
-    use BelongsToWhatsappOwner, HasFactory;
+    use HasFactory;
 
     protected $table = 'whatsapp_media';
 

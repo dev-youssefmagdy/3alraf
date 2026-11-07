@@ -1,4 +1,4 @@
-# Production-like stack: nginx (wildcard + cdn vhosts) -> php-fpm app, queue worker, scheduler, redis, mysql.
+# Production-like stack: nginx (site + legacy-subdomain redirect + cdn vhosts) -> php-fpm app, queue worker, scheduler, redis, mysql.
 # Usage: cp .env.production.example .env  (fill secrets), then `docker compose up -d --build` and
 #        `docker compose exec app php artisan migrate --force && docker compose exec app php artisan db:seed --class=PermissionSeeder --force`.
 x-app: &app

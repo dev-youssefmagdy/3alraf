@@ -18,8 +18,7 @@ class SessionRevoker
     public const GUARDS = [
         \App\Models\Customer::class => 'web',
         \App\Models\Affiliate::class => 'affiliate',
-        \App\Models\TenantAdmin::class => 'tenant',
-        \App\Models\CentralAdmin::class => 'central',
+        \App\Models\Admin::class => 'admin',
     ];
 
     public static function guardFor(Model $user): ?string

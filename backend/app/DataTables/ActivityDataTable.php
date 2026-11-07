@@ -6,16 +6,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Spatie\Activitylog\Models\Activity;
 use Yajra\DataTables\EloquentDataTable;
 
-/** Audit log. Tenant panel: only the current tenant's rows; central panel: everything. */
+/** Audit log (every row). */
 class ActivityDataTable extends BaseDataTable
 {
-    public function __construct(private bool $central = false) {}
-
     public function query(): Builder
     {
-        $q = Activity::query()->with('causer')->latest('id');
-
-        return $this->central ? $q : $q->where('tenant_id', current_tenant()?->id);
+        return Activity::query()->with('causer')->latest('id');
     }
 
     public function columns(): array

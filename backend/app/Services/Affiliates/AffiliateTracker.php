@@ -58,6 +58,6 @@ class AffiliateTracker
     /** Unique product link for the affiliate dashboard. */
     public function productUrl(Affiliate $a, Product $p, ?string $locale = null): string
     {
-        return tenant_url(current_tenant(), '/'.($locale ?? app()->getLocale()).'/product/'.$p->slug.'?utm_source=affiliate&aff='.$a->uuid);
+        return url('/'.($locale ?? app()->getLocale()).'/product/'.$p->slug).'?utm_source=affiliate&aff='.$a->uuid;
     }
 }

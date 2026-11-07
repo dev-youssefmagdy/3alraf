@@ -1,5 +1,5 @@
 @props(['name' => 'phone', 'label' => null, 'value' => null, 'required' => false])
-@php($code = \App\Support\Phone::tenantCode())
+@php($code = \App\Support\Phone::shopCode())
 <div data-field {{ $attributes->only('class') }}>
     @if ($label)<label for="f-{{ $name }}" class="form-label">{{ $label }}@if ($code) <bdi dir="ltr" class="text-slate-500">({{ $code }})</bdi>@endif @if ($required)<span class="text-red-500">*</span>@endif</label>@endif
     <div class="flex items-stretch" dir="ltr">

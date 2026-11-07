@@ -1,12 +1,12 @@
 @php
-    $titleKey = ['central' => 'central_panel', 'tenant' => 'tenant_panel', 'web' => 'customer_login'][$guard];
+    $titleKey = $guard === 'web' ? 'customer_login' : 'admin_panel';
 @endphp
 <x-layouts.base :title="__('admin.login')" :lite="$guard === 'web'">
     <div class="grid min-h-screen place-items-center px-4">
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
-                <a href="{{ $guard === 'web' ? route('storefront.home') : url('/') }}" class="inline-block" aria-label="{{ current_tenant()?->name ?? config('app.name') }}">
-                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ current_tenant()?->name ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
+                <a href="{{ $guard === 'web' ? route('storefront.home') : url('/') }}" class="inline-block" aria-label="{{ setting('name') ?? config('app.name') }}">
+                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
                 </a>
                 <p class="text-sm text-slate-500">{{ __('admin.'.$titleKey) }}</p>
             </div>

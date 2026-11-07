@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Branch;
 use App\Models\Erp\FixedAsset;
@@ -19,7 +19,7 @@ class AssetController extends ErpController
         $this->allowAny('erp.assets.view', 'erp.assets.manage');
         $this->ensureSetup();
 
-        return view('tenant.erp.assets', ['rep' => $svc->report(), 'branches' => Branch::orderBy('id')->get(), 'suppliers' => Supplier::orderBy('name')->get(['id', 'name']), 'cashRoles' => PartyService::CASH_ROLES]);
+        return view('admin.erp.assets', ['rep' => $svc->report(), 'branches' => Branch::orderBy('id')->get(), 'suppliers' => Supplier::orderBy('name')->get(['id', 'name']), 'cashRoles' => PartyService::CASH_ROLES]);
     }
 
     public function store(Request $r, AssetService $svc)
@@ -27,7 +27,7 @@ class AssetController extends ErpController
         $this->allow('erp.assets.manage');
         $d = $r->validate(['name' => ['required', 'string', 'max:150'], 'category' => ['nullable', 'string', 'max:80'], 'acquisition_date' => ErpRules::date(), 'cost' => ErpRules::money(),
             'salvage_value' => ErpRules::money(false, false), 'useful_life_months' => ['required', 'integer', 'min:1', 'max:1200'], 'method' => ['required', 'in:straight_line,declining_balance'],
-            'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)], 'supplier_id' => ['nullable', 'integer', $this->tenantExists('suppliers', true)], 'paid_from' => ['required', 'in:payable,'.implode(',', PartyService::CASH_ROLES)],
+            'branch_id' => ['nullable', 'integer', $this->existsRule('branches', true)], 'supplier_id' => ['nullable', 'integer', $this->existsRule('suppliers', true)], 'paid_from' => ['required', 'in:payable,'.implode(',', PartyService::CASH_ROLES)],
             'note' => ['nullable', 'string', 'max:300'], 'ref' => ['nullable', 'string', 'max:60']]);
         if (! empty($d['ref']) && ! FormToken::claim('asset', $d['ref'])) { // QA-013: a double submit registers (and posts) the asset once
             return back()->with('status', __('erp_acc.already_submitted'));
@@ -52,7 +52,7 @@ class AssetController extends ErpController
         $a = FixedAsset::with('branch')->findOrFail($id);
         $entries = \App\Models\Erp\JournalEntry::where('source_type', 'fixed_asset')->where('source_id', $a->id)->orderBy('entry_date')->orderBy('id')->get();
 
-        return view('tenant.erp.asset-show', ['a' => $a, 'entries' => $entries, 'branches' => Branch::orderBy('id')->get(), 'cashRoles' => PartyService::CASH_ROLES]);
+        return view('admin.erp.asset-show', ['a' => $a, 'entries' => $entries, 'branches' => Branch::orderBy('id')->get(), 'cashRoles' => PartyService::CASH_ROLES]);
     }
 
     public function depreciate(Request $r, AssetService $svc, ?int $id = null)
@@ -88,7 +88,7 @@ class AssetController extends ErpController
     {
         $this->allow('erp.assets.manage');
         $a = FixedAsset::findOrFail($id);
-        $d = $r->validate(['branch_id' => ['required', 'integer', $this->tenantExists('branches', true)], 'date' => ErpRules::date(false)]);
+        $d = $r->validate(['branch_id' => ['required', 'integer', $this->existsRule('branches', true)], 'date' => ErpRules::date(false)]);
 
         return $this->guarded(function () use ($svc, $a, $d) {
             $svc->transfer($a, (int) $d['branch_id'], $d['date'] ?? null);

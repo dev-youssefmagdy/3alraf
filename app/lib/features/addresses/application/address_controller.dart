@@ -4,7 +4,6 @@ import '../../../core/error/api_exception.dart';
 import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/address_models.dart';
 import '../data/address_repository.dart';
 
@@ -14,7 +13,6 @@ final addressRepositoryProvider = Provider<AddressRepository>(
 
 /// Cities of the active store (address form + checkout).
 final citiesProvider = FutureProvider<List<City>>((ref) {
-  ref.watch(tenantSlugProvider);
   ref.watch(localeProvider);
   return ref.watch(addressRepositoryProvider).cities();
 });
@@ -44,14 +42,13 @@ final addressesProvider = NotifierProvider<AddressController, AddressesState>(
   AddressController.new,
 );
 
-/// Saved addresses of the signed-in customer; emptied on tenant switch,
-/// locale change and sign-out.
+/// Saved addresses of the signed-in customer; emptied on locale change and
+/// sign-out.
 class AddressController extends Notifier<AddressesState> {
   AddressRepository get _repo => ref.read(addressRepositoryProvider);
 
   @override
   AddressesState build() {
-    ref.watch(tenantSlugProvider);
     ref.watch(localeProvider);
     final signedIn = ref.watch(
       authControllerProvider.select((s) => s.signedIn),

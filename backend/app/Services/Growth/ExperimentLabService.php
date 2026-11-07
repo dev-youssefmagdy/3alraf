@@ -9,7 +9,7 @@ use App\Models\GrowthExperiment;
 use App\Models\GrowthExperimentResult;
 use App\Models\Order;
 use App\Models\StockLevel;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Models\TrackedLink;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
  * Marketing Experiment Lab (spec 5) on top of growth_experiments. Product pick is guarded by stock + margin, the angle needs a Truth Guard pass before
  * the experiment may run, ad results are imported per day (idempotent upsert), orders are linked through utm_campaign = exp{id}, and a recommendation
  * (stop / revise / retest / scale_candidate) exists ONLY after the minimum duration, clicks and orders (config growth.lab). ROAS is a ratio, never profit.
- * Budget increases are never applied directly: they become an approval bounded by growth.lab.max_budget_increase_percent and the tenant cap.
+ * Budget increases are never applied directly: they become an approval bounded by growth.lab.max_budget_increase_percent and the total budget cap.
  */
 class ExperimentLabService
 {
@@ -30,7 +30,7 @@ class ExperimentLabService
         return (float) ($this->labConfig()[$k] ?? 0);
     }
 
-    /** config('growth.lab') with the tenant's overrides (GrowthConfig keys lab_*). */
+    /** config('growth.lab') with the shop's overrides (GrowthConfig keys lab_*). */
     public function labConfig(): array
     {
         $c = (array) config('growth.lab');
@@ -46,14 +46,14 @@ class ExperimentLabService
     }
 
     /** Active, costed, in-stock, margin above the floor; else a validation error naming the reason. */
-    public function assertProduct(int $productId): TenantProduct
+    public function assertProduct(int $productId): Product
     {
-        $tp = TenantProduct::with('product')->where('product_id', $productId)->where('is_active', true)->first();
+        $tp = Product::query()->whereKey($productId)->where('is_active', true)->first();
         $price = (float) ($tp?->sale_price ?: $tp?->price);
         $onHand = (int) StockLevel::where('product_id', $productId)->sum('on_hand');
         $floor = (float) $this->config->get('min_margin_percent', 15);
         $reason = match (true) {
-            ! $tp || ! $tp->product => 'not_found', (float) $tp->cost <= 0 => 'missing_cost', $price <= 0 => 'no_price',
+            ! $tp => 'not_found', (float) $tp->cost <= 0 => 'missing_cost', $price <= 0 => 'no_price',
             $onHand <= (int) $this->config->get('low_stock_threshold', 5) => 'low_stock',
             ($price - (float) $tp->cost) / $price * 100 < $floor => 'margin_below_floor', default => null,
         };
@@ -251,11 +251,11 @@ class ExperimentLabService
     {
         $old = (float) $e->budget_cap;
         $max = $old * (1 + $this->cfg('max_budget_increase_percent') / 100);
-        $tenantCap = (float) $this->config->get('ad_total_budget_cap', 0);
+        $totalCap = (float) $this->config->get('ad_total_budget_cap', 0);
         $err = match (true) {
             $newCap <= $old => 'budget_not_increase',
             $newCap > $max + 0.0001 => 'budget_over_step',
-            $tenantCap > 0 && $newCap > $tenantCap => 'budget_over_cap',
+            $totalCap > 0 && $newCap > $totalCap => 'budget_over_cap',
             ($this->metrics($e)['recommendation']['action'] ?? null) !== 'scale_candidate' => 'budget_not_ready',
             default => null,
         };

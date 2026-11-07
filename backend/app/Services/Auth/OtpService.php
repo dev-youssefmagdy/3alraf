@@ -3,56 +3,45 @@
 namespace App\Services\Auth;
 
 use App\Models\AdminOtp;
-use App\Models\CentralAdmin;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Whatsapp\WhatsappService;
 use App\Services\Whatsapp\WhatsappUnavailable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/** Admin login OTPs delivered through the admin's OWN owner session (central, or that tenant). All limits come from AuthSettings. */
+/** Admin login OTPs delivered through the shop's WhatsApp session. All limits come from AuthSettings. */
 class OtpService
 {
+    private const GUARD = 'admin';
+
     public function __construct(private WhatsappService $wa) {}
 
-    private function tenantId(CentralAdmin|TenantAdmin $a): ?int
+    private function active(int $adminId): ?AdminOtp
     {
-        return $a instanceof TenantAdmin ? (int) $a->tenant_id : null;
-    }
-
-    private function guard(CentralAdmin|TenantAdmin $a): string
-    {
-        return $a instanceof TenantAdmin ? 'tenant' : 'central';
-    }
-
-    private function active(string $guard, int $adminId, ?int $tenantId): ?AdminOtp
-    {
-        return AdminOtp::where(['guard' => $guard, 'admin_id' => $adminId])->where('tenant_id', $tenantId)->whereNull('consumed_at')
+        return AdminOtp::where(['guard' => self::GUARD, 'admin_id' => $adminId])->whereNull('consumed_at')
             ->where('expires_at', '>', now())->latest('id')->first();
     }
 
     /** Seconds until the next resend is allowed (0 = now). */
-    public function cooldown(CentralAdmin|TenantAdmin $a): int
+    public function cooldown(Admin $a): int
     {
-        $otp = $this->active($this->guard($a), $a->getKey(), $this->tenantId($a));
+        $otp = $this->active($a->getKey());
 
         if (! $otp) {
             return 0;
         }
 
-        return max(0, $otp->last_sent_at->timestamp + (int) AuthSettings::for($this->tenantId($a))->get('otp.resend_cooldown_seconds') - now()->timestamp);
+        return max(0, $otp->last_sent_at->timestamp + (int) AuthSettings::for()->get('otp.resend_cooldown_seconds') - now()->timestamp);
     }
 
     /**
      * @throws OtpRefused when cooling down or out of resends
-     * @throws WhatsappUnavailable when the owner's WhatsApp cannot deliver
+     * @throws WhatsappUnavailable when WhatsApp cannot deliver
      */
-    public function issue(CentralAdmin|TenantAdmin $admin, ?string $ip): void
+    public function issue(Admin $admin, ?string $ip): void
     {
-        $tenantId = $this->tenantId($admin);
-        $guard = $this->guard($admin);
-        $set = AuthSettings::for($tenantId);
-        $otp = $this->active($guard, $admin->getKey(), $tenantId);
+        $set = AuthSettings::for();
+        $otp = $this->active($admin->getKey());
 
         if ($otp) {
             if (($wait = $this->cooldown($admin)) > 0) {
@@ -69,31 +58,22 @@ class OtpService
         $text = strtr((string) $set->get('otp.message'), ['{code}' => $code, '{minutes}' => (string) max(1, (int) ceil($ttl / 60))]);
 
         // fail before persisting: a failed delivery burns nothing. $admin->phone is E.164 digits (country code included).
-        // A tenant whose own WhatsApp is not connected (e.g. a new owner who must log in to connect it) falls back to the central session.
-        try {
-            $this->wa->sendText($tenantId, $admin->phone, $text);
-        } catch (WhatsappUnavailable $e) {
-            if ($tenantId === null) {
-                throw $e;
-            }
-            $this->wa->sendText(null, $admin->phone, $text);
-        }
+        $this->wa->sendText($admin->phone, $text);
 
         $fields = ['code_hash' => Hash::make($code), 'expires_at' => now()->addSeconds($ttl), 'last_sent_at' => now(), 'ip' => $ip];
         $otp
             ? $otp->update($fields + ['resend_count' => $otp->resend_count + 1]) // attempts deliberately NOT reset: resending cannot buy more guesses
-            : AdminOtp::create($fields + ['guard' => $guard, 'admin_id' => $admin->getKey(), 'tenant_id' => $tenantId]);
+            : AdminOtp::create($fields + ['guard' => self::GUARD, 'admin_id' => $admin->getKey()]);
     }
 
     /** @return 'ok'|'invalid'|'expired'|'locked' */
-    public function verify(CentralAdmin|TenantAdmin $admin, string $code): string
+    public function verify(Admin $admin, string $code): string
     {
-        $tenantId = $this->tenantId($admin);
-        $otp = $this->active($this->guard($admin), $admin->getKey(), $tenantId);
+        $otp = $this->active($admin->getKey());
         if (! $otp) {
             return 'expired';
         }
-        $max = (int) AuthSettings::for($tenantId)->get('otp.max_attempts');
+        $max = (int) AuthSettings::for()->get('otp.max_attempts');
         if ($otp->attempts >= $max) {
             return 'locked';
         }

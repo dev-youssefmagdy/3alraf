@@ -5,7 +5,7 @@ namespace App\DTOs;
 use App\Enums\FeeBearer;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentProvider;
-use App\Http\Requests\Tenant\PaymentMethodRequest;
+use App\Http\Requests\Admin\PaymentMethodRequest;
 
 final readonly class PaymentMethodData
 {

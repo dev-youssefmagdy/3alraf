@@ -29,11 +29,11 @@ class LanguageDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $user = auth('central')->user();
+        $user = auth('admin')->user();
         $dt->addColumn('direction_label', fn (Language $l) => $l->direction->label())
             ->addColumn('status', fn (Language $l) => $this->badge($l->is_active).($l->is_default ? ' '.$this->badge(true, __('admin.default')) : ''))
             ->addColumn('actions', fn (Language $l) => $this->actionButtons(
-                route('central.languages.edit', $l), route('central.languages.destroy', $l),
+                route('admin.languages.edit', $l), route('admin.languages.destroy', $l),
                 $user?->can('languages.edit'), $user?->can('languages.delete') && ! $l->is_default))
             ->rawColumns(['status', 'actions']);
     }

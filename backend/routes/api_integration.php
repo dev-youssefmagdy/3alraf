@@ -44,7 +44,7 @@ Route::middleware('integration.auth:read,brief')->controller(MetricsController::
 Route::get('brand-memory', [BrandMemoryController::class, 'index'])->middleware('integration.auth:read,brand_memory')->name('brand-memory.index');
 Route::post('truth-guard/check', [BrandMemoryController::class, 'check'])->middleware('integration.auth:read,truth_guard')->name('truth-guard.check');
 
-// Which Growth features are active for this tenant (n8n reads this to skip disabled flows).
+// Which Growth features are active (n8n reads this to skip disabled flows).
 Route::get('features', [FeatureController::class, 'index'])->middleware('integration.auth:read')->name('features.index');
 
 // N4 engagement (ingest = scope `ingest:write`; reads = `read`). Nothing here sends a message to a customer.

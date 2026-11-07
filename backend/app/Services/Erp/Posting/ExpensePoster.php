@@ -43,7 +43,7 @@ class ExpensePoster extends Poster
         $live = JournalEntry::where('source_type', 'expense')->where('source_id', $e->id)->where('status', 'posted')->where('type', 'auto')->get();
         foreach ($live as $old) {
             if ($old->idempotency_key !== $key) {
-                $this->journals->reverse($old, auth('tenant')->id(), $this->today(), 'expense changed');
+                $this->journals->reverse($old, auth('admin')->id(), $this->today(), 'expense changed');
             }
         }
         if ($live->contains('idempotency_key', $key)) {

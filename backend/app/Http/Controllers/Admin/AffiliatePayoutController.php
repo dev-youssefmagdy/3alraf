@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\AffiliatePayoutDataTable;
 use App\Http\Controllers\Controller;
@@ -26,7 +26,7 @@ class AffiliatePayoutController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.affiliate-payouts.index', ['table' => new AffiliatePayoutDataTable]);
+        return view('admin.affiliate-payouts.index', ['table' => new AffiliatePayoutDataTable]);
     }
 
     public function datatable(): JsonResponse

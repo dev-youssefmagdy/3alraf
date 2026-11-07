@@ -2,8 +2,8 @@
     <div class="grid min-h-screen place-items-center px-4 py-8">
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
-                <a href="{{ route('storefront.home') }}" class="inline-block" aria-label="{{ current_tenant()?->name ?? config('app.name') }}">
-                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ current_tenant()?->name ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
+                <a href="{{ route('storefront.home') }}" class="inline-block" aria-label="{{ setting('name') ?? config('app.name') }}">
+                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
                 </a>
                 <p class="text-sm text-slate-500">{{ __('store.register') }}</p>
             </div>

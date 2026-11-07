@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\TagDataTable;
 use App\DTOs\TagData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\TagRequest;
+use App\Http\Requests\Admin\TagRequest;
 use App\Models\Tag;
 use App\Models\Language;
 use App\Services\TagService;
@@ -29,7 +29,7 @@ class TagController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.tags.index', ['table' => new TagDataTable]);
+        return view('admin.tags.index', ['table' => new TagDataTable]);
     }
 
     public function datatable(TagDataTable $table): JsonResponse
@@ -39,26 +39,26 @@ class TagController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.tags.form', ['tag' => new Tag(['is_active' => true, 'sort_order' => 0]), 'languages' => Language::activeList()]);
+        return view('admin.tags.form', ['tag' => new Tag(['is_active' => true, 'sort_order' => 0]), 'languages' => Language::activeList()]);
     }
 
     public function store(TagRequest $request): JsonResponse
     {
         $this->service->create(TagData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.tags.index'));
+        return $this->ok(__('admin.saved'), route('admin.tags.index'));
     }
 
     public function edit(Tag $tag)
     {
-        return view('central.tags.form', ['tag' => $tag, 'languages' => Language::activeList()]);
+        return view('admin.tags.form', ['tag' => $tag, 'languages' => Language::activeList()]);
     }
 
     public function update(TagRequest $request, Tag $tag): JsonResponse
     {
         $this->service->update($tag, TagData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.tags.index'));
+        return $this->ok(__('admin.saved'), route('admin.tags.index'));
     }
 
     public function destroy(Tag $tag): JsonResponse

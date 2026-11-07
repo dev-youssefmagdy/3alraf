@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('growth_capital.inv.title')">
+<x-layouts.admin :title="__('growth_capital.inv.title')">
     @php $i = fn ($k, $r = []) => __('growth_capital.inv.'.$k, $r); $inp = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs'; $inv = $summary['inventory']; @endphp
     <div class="space-y-4">
         <p class="text-sm text-slate-600">{{ $i('hint') }}</p>
@@ -22,7 +22,7 @@
                             @if ($r['action'] === 'promo')<div>-{{ $r['scenarios']['promo']['discount_percent'] }}% | {{ $i('cash') }}: {{ $r['scenarios']['promo']['cash_released'] }}</div>@endif</td>
                         <td>{{ number_format($r['impact'], 2) }}</td>
                         <td>@can('growth.manage')@if ($r['action'] === 'reorder')
-                            <form data-ajax-form action="{{ route('tenant.growth.inventory.reorder') }}" method="POST" class="flex flex-wrap gap-1" novalidate>@csrf<input type="hidden" name="product_id" value="{{ $r['product_id'] }}">
+                            <form data-ajax-form action="{{ route('admin.growth.inventory.reorder') }}" method="POST" class="flex flex-wrap gap-1" novalidate>@csrf<input type="hidden" name="product_id" value="{{ $r['product_id'] }}">
                                 <select name="supplier_id" class="{{ $inp }}"><option value="">{{ $i('supplier') }}</option>@foreach ($suppliers as $sid => $sn)<option value="{{ $sid }}" @selected($r['supplier_id'] == $sid)>{{ $sn }}</option>@endforeach</select>
                                 <select name="branch_id" class="{{ $inp }}">@foreach ($branches as $bid => $bn)<option value="{{ $bid }}">{{ $bn }}</option>@endforeach</select>
                                 <x-button type="submit">{{ $i('reorder') }}</x-button></form>@endif @endcan
@@ -33,7 +33,7 @@
         </x-card>
         @can('growth.manage')
             <x-card :title="$i('terms')">
-                <form data-ajax-form action="{{ route('tenant.growth.inventory.terms') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
+                <form data-ajax-form action="{{ route('admin.growth.inventory.terms') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
                     <select data-search name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }} ({{ $r['lead_time_days'] }}d / {{ $r['moq'] }})</option>@endforeach</select>
                     <select name="supplier_id" class="{{ $inp }}"><option value="">{{ $i('supplier') }}</option>@foreach ($suppliers as $sid => $sn)<option value="{{ $sid }}">{{ $sn }}</option>@endforeach</select>
                     <input name="lead_time_days" type="number" min="0" value="14" class="{{ $inp }}" placeholder="{{ $i('lead') }}"><input name="moq" type="number" min="1" value="1" class="{{ $inp }}" placeholder="{{ $i('moq') }}">
@@ -41,7 +41,7 @@
                 </form>
             </x-card>
             <x-card :title="$i('prices')">
-                <form data-ajax-form action="{{ route('tenant.growth.inventory.prices.save') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
+                <form data-ajax-form action="{{ route('admin.growth.inventory.prices.save') }}" method="POST" class="grid gap-2 sm:grid-cols-6" novalidate>@csrf
                     <select data-search name="product_id" class="{{ $inp }}">@foreach ($rows as $r)<option value="{{ $r['product_id'] }}">{{ $r['name'] }}</option>@endforeach</select>
                     <select name="supplier_id" class="{{ $inp }}">@foreach ($suppliers as $sid => $sn)<option value="{{ $sid }}">{{ $sn }}</option>@endforeach</select>
                     <input name="unit_cost" type="number" step="0.01" min="0.01" class="{{ $inp }}" placeholder="{{ $i('unit_cost') }}"><input name="moq" type="number" min="1" value="1" class="{{ $inp }}" placeholder="{{ $i('moq') }}">
@@ -49,9 +49,9 @@
                     <label class="text-xs"><input type="checkbox" name="is_preferred" value="1"> {{ $i('preferred') }}</label><x-button type="submit">{{ __('admin.save') }}</x-button>
                 </form>
                 @foreach ($prices as $pr)<div class="mt-1 flex items-center gap-2 text-xs">{{ $pr->supplier?->name }} #{{ $pr->product_id }}: {{ number_format((float) $pr->unit_cost, 2) }} / {{ $pr->moq }} / {{ $pr->lead_time_days ?? '-' }}d @if ($pr->is_preferred)<b>*</b>@endif
-                    <form data-ajax-form action="{{ route('tenant.growth.inventory.prices.delete', $pr->id) }}" method="POST" novalidate>@csrf @method('DELETE')<button class="text-red-600">x</button></form></div>@endforeach
+                    <form data-ajax-form action="{{ route('admin.growth.inventory.prices.delete', $pr->id) }}" method="POST" novalidate>@csrf @method('DELETE')<button class="text-red-600">x</button></form></div>@endforeach
             </x-card>
-            <form data-ajax-form action="{{ route('tenant.growth.inventory.story') }}" method="POST" novalidate>@csrf<x-button type="submit">{{ __('growth_capital.story.scan') }}</x-button></form>
+            <form data-ajax-form action="{{ route('admin.growth.inventory.story') }}" method="POST" novalidate>@csrf<x-button type="submit">{{ __('growth_capital.story.scan') }}</x-button></form>
         @endcan
         <x-card :title="$i('stories')">
             @forelse ($tasks as $t)<p class="text-sm">{{ $t->title }} <span class="text-xs text-slate-500">({{ $t->status }})</span></p>@empty<p class="text-sm text-slate-500">{{ __('growth_capital.common.none') }}</p>@endforelse

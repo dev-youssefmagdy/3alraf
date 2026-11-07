@@ -16,10 +16,8 @@ use App\Http\Controllers\Api\V1\StoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Mobile JSON API (tenant scoped). Loaded twice by bootstrap/app.php:
-|   {tenant}.domain/api/v1/...        names api.v1.*     (tenant from the host)
-|   domain/api/v1/...  + X-Tenant     names api.v1.h.*   (tenant from the header)
-| `api.context` = tenant + Accept-Language + X-Cart-Token + X-Affiliate-Ref. Token types: customer (ability `customer`), affiliate (ability `affiliate`).
+| Mobile JSON API (one shop). Loaded once by bootstrap/app.php under /api/v1, names api.v1.*. A legacy shop-selection header of old app builds is ignored.
+| `api.context` = Accept-Language + X-Cart-Token + X-Affiliate-Ref. Token types: customer (ability `customer`), affiliate (ability `affiliate`).
 */
 Route::middleware('throttle:api')->group(function () {
     // ---- public

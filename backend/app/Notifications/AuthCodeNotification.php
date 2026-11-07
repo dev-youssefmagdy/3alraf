@@ -17,7 +17,7 @@ class AuthCodeNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject(__('store.api.mail_'.$this->type.'_subject', ['store' => current_tenant()?->name]))
+        return (new MailMessage)->subject(__('store.api.mail_'.$this->type.'_subject', ['store' => setting('name')]))
             ->line(__('store.api.mail_'.$this->type.'_line'))->line($this->code)->line(__('store.api.mail_expires', ['minutes' => $this->minutes]));
     }
 }

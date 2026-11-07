@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminLoginRequest;
-use App\Models\CentralAdmin;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Auth\AuthSettings;
 use App\Services\Auth\OtpRefused;
 use App\Services\Auth\OtpService;
@@ -19,8 +18,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Central + tenant panel login: phone + password, plus a WhatsApp OTP for everyone except the (single) super admin.
- * The session is created only after the OTP is verified; the guard comes from the route-name prefix (central./tenant.).
+ * Admin panel login (guard `admin`): phone + password, plus a WhatsApp OTP for every admin without `otp_exempt`.
+ * The session is created only after the OTP is verified.
  */
 class AdminLoginController extends Controller
 {
@@ -31,19 +30,16 @@ class AdminLoginController extends Controller
 
     public function __construct(private OtpService $otp) {}
 
+    private const GUARD = 'admin';
+
     private function guard(Request $r): string
     {
-        return str_starts_with($r->route()->getName(), 'central.') ? 'central' : 'tenant';
-    }
-
-    private function tenantId(string $guard): ?int
-    {
-        return $guard === 'tenant' ? current_tenant()?->id : null;
+        return self::GUARD;
     }
 
     private function route(string $guard, string $name): string
     {
-        return route("$guard.$name");
+        return route("admin.$name");
     }
 
     public function show(Request $request)
@@ -52,7 +48,7 @@ class AdminLoginController extends Controller
 
         return view('auth.admin-login', [
             'guard' => $guard, 'action' => $this->route($guard, 'login.submit'), 'validateUrl' => $this->route($guard, 'login.validate'),
-            'countries' => AdminPhone::countries(), 'defaultCountry' => $guard === 'tenant' ? (current_tenant()?->country ?? 'EG') : 'EG',
+            'countries' => AdminPhone::countries(), 'defaultCountry' => strtoupper((string) setting('country', 'EG')) ?: 'EG',
         ]);
     }
 
@@ -64,8 +60,7 @@ class AdminLoginController extends Controller
     public function login(AdminLoginRequest $request): JsonResponse
     {
         $guard = $this->guard($request);
-        $tenantId = $this->tenantId($guard);
-        $settings = AuthSettings::for($tenantId);
+        $settings = AuthSettings::for();
         $digits = AdminPhone::digits($request->input('country'), $request->input('phone'));
 
         $this->throttle($guard, $digits ?? 'invalid:'.$request->ip(), $settings);
@@ -80,7 +75,7 @@ class AdminLoginController extends Controller
         }
         $this->clearLoginFailures($guard, $digits);
 
-        if (($guard === 'central' && $admin->isSuperAdmin()) || $admin->otp_exempt) { // tenant owners are NOT exempt by default; otp_exempt is set per admin
+        if ($admin->otp_exempt) { // set per admin (OTP bypass flag on the admin row)
             return $this->finish($request, $guard, $admin, true, 'login.success');
         }
 
@@ -97,7 +92,7 @@ class AdminLoginController extends Controller
         }
 
         $request->session()->regenerate();
-        $request->session()->put('admin_otp', ['guard' => $guard, 'id' => $admin->getKey(), 'tenant' => $tenantId, 'remember' => true]);
+        $request->session()->put('admin_otp', ['guard' => $guard, 'id' => $admin->getKey(), 'remember' => true]);
         $this->audit($guard, 'otp.sent', $admin, $digits);
 
         return $this->ok(null, $this->route($guard, 'login.otp'));
@@ -113,7 +108,7 @@ class AdminLoginController extends Controller
 
         return view('auth.admin-otp', [
             'guard' => $guard, 'masked' => AdminPhone::mask($admin->phone), 'cooldown' => $this->otp->cooldown($admin),
-            'length' => (int) AuthSettings::for($this->tenantId($guard))->get('otp.length'),
+            'length' => (int) AuthSettings::for()->get('otp.length'),
             'action' => $this->route($guard, 'login.otp.verify'), 'resend' => $this->route($guard, 'login.otp.resend'), 'back' => $this->route($guard, 'login'),
         ]);
     }
@@ -168,22 +163,22 @@ class AdminLoginController extends Controller
         return redirect($this->route($guard, 'login'));
     }
 
-    private function finish(Request $request, string $guard, CentralAdmin|TenantAdmin $admin, bool $remember, string $event): JsonResponse
+    private function finish(Request $request, string $guard, Admin $admin, bool $remember, string $event): JsonResponse
     {
         Auth::guard($guard)->login($admin, true); // admin logins never expire (until logout / deactivation)
         $request->session()->regenerate();
         $this->audit($guard, $event, $admin, $admin->phone);
 
-        $home = route("$guard.dashboard");
+        $home = route('admin.dashboard');
 
         return $this->ok(__('admin.welcome_back'), redirect()->intended($home)->getTargetUrl());
     }
 
-    /** The admin that passed the password step in THIS session, for THIS guard and tenant; anything else is ignored. */
-    private function pending(Request $request, string $guard): CentralAdmin|TenantAdmin|null
+    /** The admin that passed the password step in THIS session; anything else is ignored. */
+    private function pending(Request $request, string $guard): ?Admin
     {
         $p = $request->session()->get('admin_otp');
-        if (! is_array($p) || ($p['guard'] ?? null) !== $guard || ($p['tenant'] ?? null) !== $this->tenantId($guard)) {
+        if (! is_array($p) || ($p['guard'] ?? null) !== $guard) {
             return null;
         }
 
@@ -192,7 +187,7 @@ class AdminLoginController extends Controller
 
     private function query(string $guard)
     {
-        return $guard === 'central' ? CentralAdmin::query() : TenantAdmin::query(); // TenantAdmin carries the tenant global scope
+        return Admin::query();
     }
 
     /** Failed-password lockout per phone (+ per IP via the route's throttle middleware), limits from the DB. */
@@ -213,7 +208,6 @@ class AdminLoginController extends Controller
         if ($admin) {
             $log->performedOn($admin)->causedBy($admin);
         }
-        $log->withProperties(['guard' => $guard, 'phone' => $phone ? AdminPhone::mask($phone) : null, 'ip' => request()->ip()])
-            ->tap(fn ($a) => $a->tenant_id = $guard === 'tenant' ? current_tenant()?->id : null)->log($event);
+        $log->withProperties(['guard' => $guard, 'phone' => $phone ? AdminPhone::mask($phone) : null, 'ip' => request()->ip()])->log($event);
     }
 }

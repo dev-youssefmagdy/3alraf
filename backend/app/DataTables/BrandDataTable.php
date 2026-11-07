@@ -27,12 +27,12 @@ class BrandDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('central')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('logo_html', fn (Brand $b) => $b->logo_url ? '<img src="'.e($b->logo_url).'" class="size-10 rounded object-contain" alt="">' : '')
             ->addColumn('name_label', fn (Brand $b) => e($b->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (Brand $b) => $this->badge($b->is_active))
-            ->addColumn('actions', fn (Brand $b) => $this->actionButtons(route('central.brands.edit', $b), route('central.brands.destroy', $b), $u?->can('brands.edit'), $u?->can('brands.delete')))
+            ->addColumn('actions', fn (Brand $b) => $this->actionButtons(route('admin.brands.edit', $b), route('admin.brands.destroy', $b), $u?->can('brands.edit'), $u?->can('brands.delete')))
             ->rawColumns($this->rawColumns());
     }
 

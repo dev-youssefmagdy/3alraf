@@ -12,6 +12,6 @@ class PingController extends Controller
     {
         $c = $r->attributes->get('integration_client');
 
-        return response()->json(['success' => true, 'data' => ['tenant' => current_tenant()->slug, 'client' => $c->name, 'scopes' => $c->scopes, 'server_time' => now()->toIso8601String()]]);
+        return response()->json(['success' => true, 'data' => ['store' => \App\Services\Growth\GrowthEventService::store(), 'client' => $c->name, 'scopes' => $c->scopes, 'server_time' => now()->toIso8601String()]]);
     }
 }

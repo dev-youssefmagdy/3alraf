@@ -1,8 +1,8 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.migration')[0]">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.cards.migration')[0]">
+    @include('admin.erp._flash')
     <x-card :title="__('erp.bf.auto_title')" class="mb-5">
         <p class="mb-3 text-sm text-slate-600">{{ __('erp.bf.auto_hint') }} @if ($openingDate)<span class="font-medium">{{ __('erp.bf.opening_date') }}: {{ $openingDate }}</span>@endif</p>
-        <form method="POST" action="{{ route('tenant.erp.migration.toggle') }}" class="flex items-center gap-3 text-sm" data-auto>@csrf @method('PUT')
+        <form method="POST" action="{{ route('admin.erp.migration.toggle') }}" class="flex items-center gap-3 text-sm" data-auto>@csrf @method('PUT')
             <span class="rounded-full px-2 py-0.5 text-xs {{ $auto ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">{{ $auto ? __('erp.bf.on') : __('erp.bf.off') }}</span>
             <input type="hidden" name="enabled" value="{{ $auto ? 0 : 1 }}">
             <x-button type="submit">{{ $auto ? __('erp.bf.disable') : __('erp.bf.enable') }}</x-button>
@@ -13,7 +13,7 @@
     <x-card :title="__('erp_acc.failures')" class="mb-5">
         <table class="w-full text-sm" data-posting-failures><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">{{ __('erp.f.date') }}</th><th class="text-start">{{ __('erp.f.source') }}</th><th class="text-start">{{ __('erp.f.description') }}</th><th></th></tr></thead><tbody>
         @foreach ($failures as $f)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $f->created_at }}</td><td>{{ $f->subject_type }} #{{ $f->subject_id }}</td><td class="text-xs">{{ $f->meta['event'] ?? '' }}: {{ \Illuminate\Support\Str::limit($f->meta['error'] ?? '', 160) }}</td>
-            <td class="text-end"><form method="POST" action="{{ route('tenant.erp.migration.retry', $f->id) }}">@csrf<x-button type="submit">{{ __('erp_acc.retry') }}</x-button></form></td></tr>@endforeach
+            <td class="text-end"><form method="POST" action="{{ route('admin.erp.migration.retry', $f->id) }}">@csrf<x-button type="submit">{{ __('erp_acc.retry') }}</x-button></form></td></tr>@endforeach
         </tbody></table>
     </x-card>
     @endif
@@ -28,7 +28,7 @@
     </x-card>
 
     <x-card :title="__('erp.bf.recon')" class="mb-5">
-        <form method="POST" action="{{ route('tenant.erp.migration.reconcile') }}" class="mb-3">@csrf<x-button type="submit">{{ __('erp.bf.rerun') }}</x-button></form>
+        <form method="POST" action="{{ route('admin.erp.migration.reconcile') }}" class="mb-3">@csrf<x-button type="submit">{{ __('erp.bf.rerun') }}</x-button></form>
         @if ($recon)
             <p data-mismatches="{{ $recon['mismatches'] }}" class="mb-2 text-sm {{ $recon['mismatches'] ? 'text-red-700' : 'text-emerald-700' }}" data-recon>{{ __('erp.bf.recon_result', ['n' => $recon['mismatches'], 'from' => $recon['from'], 'to' => $recon['to']]) }}</p>
             <table class="w-full text-sm"><thead><tr class="border-b text-slate-500"><th class="py-1 text-start">{{ __('erp.bf.check') }}</th><th class="text-end">{{ __('erp.bf.expected') }}</th><th class="text-end">{{ __('erp.bf.actual') }}</th><th class="text-end">{{ __('erp.bf.diff') }}</th><th></th></tr></thead>
@@ -41,8 +41,8 @@
     <x-card :title="__('erp.bf.missing')">
         <p class="mb-3 text-sm text-slate-600">{{ __('erp.bf.missing_hint') }}</p>
         <div class="mb-3 flex gap-3">
-            <form method="POST" action="{{ route('tenant.erp.migration.detect') }}">@csrf<x-button type="submit">{{ __('erp.bf.detect') }}</x-button></form>
-            <form method="POST" action="{{ route('tenant.erp.migration.post-missing') }}" onsubmit="return confirm('{{ __('erp.bf.confirm_post') }}')">@csrf<x-button type="submit">{{ __('erp.bf.post_missing') }}</x-button></form>
+            <form method="POST" action="{{ route('admin.erp.migration.detect') }}">@csrf<x-button type="submit">{{ __('erp.bf.detect') }}</x-button></form>
+            <form method="POST" action="{{ route('admin.erp.migration.post-missing') }}" onsubmit="return confirm('{{ __('erp.bf.confirm_post') }}')">@csrf<x-button type="submit">{{ __('erp.bf.post_missing') }}</x-button></form>
         </div>
         @if ($missing)
             <table class="w-full text-sm" data-missing><thead><tr class="border-b text-slate-500"><th class="py-1 text-start">{{ __('erp.bf.type') }}</th><th class="text-end">{{ __('erp.bf.n_missing') }}</th><th class="text-end">{{ __('erp.bf.amount') }}</th><th class="text-start ps-4">{{ __('erp.bf.sample') }}</th></tr></thead>

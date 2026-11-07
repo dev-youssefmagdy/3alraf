@@ -8,69 +8,7 @@ String _str(Object? v, [String fallback = '']) => v is String ? v : fallback;
 String? _strOrNull(Object? v) => v is String && v.isNotEmpty ? v : null;
 bool _bool(Object? v) => v is bool && v;
 
-/// One active store (= country) from `GET /tenants`.
-class Tenant {
-  const Tenant({
-    required this.slug,
-    required this.name,
-    required this.country,
-    required this.currency,
-    required this.defaultLocale,
-    required this.locales,
-    this.flag = '',
-    this.languages = const [],
-    this.logoUrl,
-    this.baseUrl,
-  });
-
-  factory Tenant.fromJson(Map<String, Object?> j) => Tenant(
-    slug: _str(j['slug']),
-    name: _str(j['name']),
-    country: _str(j['country']),
-    flag: _str(j['flag']),
-    currency: _str(j['currency']),
-    defaultLocale: _str(j['default_locale'], 'ar'),
-    locales: _list(j['locales']).whereType<String>().toList(),
-    languages: _list(j['languages']).whereType<String>().toList(),
-    logoUrl: _strOrNull(j['logo_url']),
-    baseUrl: _strOrNull(j['base_url']),
-  );
-
-  final String slug;
-  final String name;
-  final String country;
-  final String flag;
-  final String currency;
-  final String defaultLocale;
-  final List<String> locales;
-  final List<String> languages;
-  final String? logoUrl;
-
-  /// Public web address of the store (used for share links).
-  final String? baseUrl;
-
-  Map<String, Object?> toJson() => {
-    'slug': slug,
-    'name': name,
-    'country': country,
-    'flag': flag,
-    'currency': currency,
-    'default_locale': defaultLocale,
-    'locales': locales,
-    'languages': languages,
-    'logo_url': logoUrl,
-    'base_url': baseUrl,
-  };
-
-  @override
-  bool operator ==(Object other) =>
-      other is Tenant && other.slug == slug && other.name == name;
-
-  @override
-  int get hashCode => Object.hash(slug, name);
-}
-
-/// `GET /app-config` (central).
+/// `GET /app-config`: force update / maintenance switches + [store] basics.
 class AppConfigInfo {
   const AppConfigInfo({
     this.minVersion = '0.0.0',
@@ -81,10 +19,12 @@ class AppConfigInfo {
     this.maintenanceMessage,
     this.updateRequired = false,
     this.updateAvailable = false,
+    this.store,
   });
 
   factory AppConfigInfo.fromJson(Map<String, Object?> j) {
     final urls = _map(j['store_urls']);
+    final store = _map(j['store']);
     return AppConfigInfo(
       minVersion: _str(j['min_version'], '0.0.0'),
       latestVersion: _str(j['latest_version'], '0.0.0'),
@@ -94,6 +34,7 @@ class AppConfigInfo {
       maintenanceMessage: _strOrNull(j['maintenance_message']),
       updateRequired: _bool(j['update_required']),
       updateAvailable: _bool(j['update_available']),
+      store: store.isEmpty ? null : StoreInfo.fromJson(store),
     );
   }
 
@@ -105,6 +46,9 @@ class AppConfigInfo {
   final String? maintenanceMessage;
   final bool updateRequired;
   final bool updateAvailable;
+
+  /// Shop basics; `null` when an older server did not send them.
+  final StoreInfo? store;
 }
 
 class StoreLocale {
@@ -113,10 +57,102 @@ class StoreLocale {
   final bool rtl;
 }
 
-/// Store profile (`GET /store`): branding, currency, locales, contact...
+List<StoreLocale> _locales(Object? v) => _list(v)
+    .map(_map)
+    .where((m) => m['code'] is String)
+    .map((m) => StoreLocale(code: '${m['code']}', rtl: _bool(m['rtl'])))
+    .toList();
+
+List<Map<String, Object?>> _localesJson(List<StoreLocale> l) => [
+  for (final x in l) {'code': x.code, 'rtl': x.rtl},
+];
+
+/// Shop basics from `GET /app-config` `store`: everything needed before the
+/// first catalog call (name, country, currency, locales + RTL, timezone,
+/// public web address). Cached for offline starts.
 class StoreInfo {
   const StoreInfo({
-    required this.slug,
+    required this.name,
+    required this.currencyCode,
+    required this.currencySymbol,
+    required this.defaultLocale,
+    required this.locales,
+    this.country,
+    this.timezone,
+    this.baseUrl,
+  });
+
+  factory StoreInfo.fromJson(Map<String, Object?> j) {
+    final currency = _map(j['currency']);
+    return StoreInfo(
+      name: _str(j['name']),
+      country: _strOrNull(j['country']),
+      currencyCode: _str(currency['code']),
+      currencySymbol: _strOrNull(currency['symbol']) ?? _str(currency['code']),
+      defaultLocale: _strOrNull(j['default_locale']) ?? 'ar',
+      locales: _locales(j['locales']),
+      timezone: _strOrNull(j['timezone']),
+      baseUrl: _strOrNull(j['base_url']),
+    );
+  }
+
+  /// `null` when [raw] is not a valid cached payload.
+  static StoreInfo? tryDecode(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final m = _map(jsonDecode(raw));
+      return m.isEmpty ? null : StoreInfo.fromJson(m);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  final String name;
+  final String? country;
+  final String currencyCode;
+  final String currencySymbol;
+  final String defaultLocale;
+  final List<StoreLocale> locales;
+  final String? timezone;
+
+  /// Public web address of the store (share links).
+  final String? baseUrl;
+
+  List<String> get localeCodes => locales.map((l) => l.code).toList();
+
+  /// RTL flag of [code] from the store, `null` when the store does not list it.
+  bool? isRtl(String code) {
+    for (final l in locales) {
+      if (l.code == code) return l.rtl;
+    }
+    return null;
+  }
+
+  /// Web URL of a product page (`{base_url}/{locale}/product/{slug}`).
+  String? productUrl(String slug, String locale) {
+    final base = baseUrl;
+    if (base == null) return null;
+    final root = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    return '$root/$locale/product/$slug';
+  }
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'country': country,
+    'currency': {'code': currencyCode, 'symbol': currencySymbol},
+    'default_locale': defaultLocale,
+    'locales': _localesJson(locales),
+    'timezone': timezone,
+    'base_url': baseUrl,
+  };
+
+  String encode() => jsonEncode(toJson());
+}
+
+/// Full store profile (`GET /store`): branding, contact, social, features,
+/// app links.
+class StoreProfile {
+  const StoreProfile({
     required this.name,
     required this.country,
     required this.currencyCode,
@@ -135,21 +171,16 @@ class StoreInfo {
     this.hasBlog = true,
   });
 
-  factory StoreInfo.fromJson(Map<String, Object?> j) {
+  factory StoreProfile.fromJson(Map<String, Object?> j) {
     final currency = _map(j['currency']);
     final contact = _map(j['contact']);
-    return StoreInfo(
-      slug: _str(j['slug']),
+    return StoreProfile(
       name: _str(j['name']),
       country: _str(j['country']),
       currencyCode: _str(currency['code']),
       currencySymbol: _str(currency['symbol'], _str(currency['code'])),
       defaultLocale: _str(j['default_locale'], 'ar'),
-      locales: _list(j['locales'])
-          .map(_map)
-          .where((m) => m['code'] is String)
-          .map((m) => StoreLocale(code: '${m['code']}', rtl: _bool(m['rtl'])))
-          .toList(),
+      locales: _locales(j['locales']),
       logoUrl: _strOrNull(j['logo_url']),
       faviconUrl: _strOrNull(j['favicon_url']),
       colors: _map(j['colors']).map((k, v) => MapEntry(k, _str(v))),
@@ -168,12 +199,17 @@ class StoreInfo {
     );
   }
 
-  factory StoreInfo.decode(String raw) {
-    final decoded = jsonDecode(raw);
-    return StoreInfo.fromJson(_map(decoded));
+  /// `null` when [raw] is not a valid cached payload.
+  static StoreProfile? tryDecode(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final m = _map(jsonDecode(raw));
+      return m.isEmpty ? null : StoreProfile.fromJson(m);
+    } on FormatException {
+      return null;
+    }
   }
 
-  final String slug;
   final String name;
   final String country;
   final String currencyCode;
@@ -198,14 +234,11 @@ class StoreInfo {
   List<String> get localeCodes => locales.map((l) => l.code).toList();
 
   Map<String, Object?> toJson() => {
-    'slug': slug,
     'name': name,
     'country': country,
     'currency': {'code': currencyCode, 'symbol': currencySymbol},
     'default_locale': defaultLocale,
-    'locales': [
-      for (final l in locales) {'code': l.code, 'rtl': l.rtl},
-    ],
+    'locales': _localesJson(locales),
     'logo_url': logoUrl,
     'favicon_url': faviconUrl,
     'colors': colors,

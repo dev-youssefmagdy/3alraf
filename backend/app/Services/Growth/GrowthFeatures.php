@@ -2,11 +2,11 @@
 
 namespace App\Services\Growth;
 
-use App\Models\Tenant;
+use App\Models\Setting;
 
 /**
  * Per-feature switches (plan section 9). active = master flag ON + own switch ON + every depends_on active.
- * Switches live in tenants.settings.growth.features.{key}; absent = OFF. Switching never deletes data.
+ * Switches live in setting `growth.features.{key}`; absent = OFF. Switching never deletes data.
  */
 class GrowthFeatures
 {
@@ -17,22 +17,24 @@ class GrowthFeatures
         return collect(config('growth.features'))->when($builtOnly, fn ($c) => $c->filter(fn ($f) => $f['built'] ?? false))->all();
     }
 
-    public function switchedOn(string $key, ?Tenant $tenant = null): bool
+    public function switchedOn(string $key): bool
     {
-        $tenant ??= current_tenant();
-
-        return (bool) (((($tenant?->settings ?? [])['growth'] ?? [])['features'] ?? [])[$key] ?? false);
+        return (bool) (((array) (setting('growth.features') ?? []))[$key] ?? false);
     }
 
-    public function active(string $key, ?Tenant $tenant = null, array $seen = []): bool
+    public function active(string $key): bool
     {
-        $tenant ??= current_tenant();
+        return $this->activeChain($key, []);
+    }
+
+    private function activeChain(string $key, array $seen): bool
+    {
         $def = config('growth.features.'.$key);
-        if (! $def || in_array($key, $seen, true) || ! $this->access->enabled($tenant) || ! $this->switchedOn($key, $tenant)) {
+        if (! $def || in_array($key, $seen, true) || ! $this->access->enabled() || ! $this->switchedOn($key)) {
             return false;
         }
         foreach ($def['depends_on'] ?? [] as $dep) {
-            if (! $this->active($dep, $tenant, [...$seen, $key])) {
+            if (! $this->activeChain($dep, [...$seen, $key])) {
                 return false;
             }
         }
@@ -41,30 +43,28 @@ class GrowthFeatures
     }
 
     /** @return array<string,bool> effective state of every built feature */
-    public function states(?Tenant $tenant = null): array
+    public function states(): array
     {
-        return collect($this->registry())->map(fn ($f, $k) => $this->active($k, $tenant))->all();
+        return collect($this->registry())->map(fn ($f, $k) => $this->active($k))->all();
     }
 
-    /** Active tenants with the feature on (scheduled commands iterate these). */
-    public function tenantsWith(string ...$keys): \Illuminate\Support\Collection
+    /** True when any of the features is active (scheduled commands skip their work otherwise). */
+    public function anyActive(string ...$keys): bool
     {
-        return Tenant::query()->get()->filter(function (Tenant $t) use ($keys) {
-            foreach ($keys as $k) {
-                if ($this->active($k, $t)) {
-                    return true;
-                }
+        foreach ($keys as $k) {
+            if ($this->active($k)) {
+                return true;
             }
+        }
 
-            return false;
-        })->values();
+        return false;
     }
 
     /** @param array<string,bool> $switches key => on (unknown keys ignored). Audited. */
-    public function update(Tenant $tenant, array $switches, ?int $actorId = null): array
+    public function update(array $switches, ?int $actorId = null): array
     {
-        $s = $tenant->settings ?? [];
-        $features = $s['growth']['features'] ?? [];
+        $growth = (array) (setting('growth') ?? []);
+        $features = (array) ($growth['features'] ?? []);
         $changed = [];
         foreach ($this->registry() as $k => $_) {
             if (array_key_exists($k, $switches) && (bool) ($features[$k] ?? false) !== (bool) $switches[$k]) {
@@ -73,19 +73,16 @@ class GrowthFeatures
             }
         }
         if ($changed) {
-            $s['growth']['features'] = $features;
-            $tenant->forceFill(['settings' => $s])->save();
-            $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
-            app()->instance('currentTenant', $tenant);
-            $this->log->log('features.updated', 'admin', $actorId, null, $tenant, 'ok', ['changed' => $changed]);
-            $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
+            $growth['features'] = $features;
+            Setting::put('growth', $growth);
+            $this->log->log('features.updated', 'admin', $actorId, null, null, 'ok', ['changed' => $changed]);
         }
 
         return $changed;
     }
 
-    public function enableAll(Tenant $tenant): void
+    public function enableAll(): void
     {
-        $this->update($tenant, array_fill_keys(array_keys($this->registry()), true));
+        $this->update(array_fill_keys(array_keys($this->registry()), true));
     }
 }

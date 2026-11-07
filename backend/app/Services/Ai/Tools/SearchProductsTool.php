@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai\Tools;
 
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Services\Ai\AiContext;
 
 class SearchProductsTool extends AbstractTool
@@ -21,18 +21,17 @@ class SearchProductsTool extends AbstractTool
     protected function run(array $a, AiContext $ctx): array
     {
         $q = trim((string) ($a['query'] ?? ''));
-        $query = TenantProduct::query()->with('product')->whereHas('product', function ($p) use ($q) {
-            if ($q !== '') {
-                $like = '%'.addcslashes($q, '%_\\').'%';
-                $p->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('sku', 'like', $like)->orWhere('barcode', 'like', $like));
-            }
-        });
+        $query = Product::query()->whereNotNull('price');
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $query->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('sku', 'like', $like)->orWhere('barcode', 'like', $like));
+        }
         if (! empty($a['only_active'])) {
             $query->where('is_active', true);
         }
         $rows = $query->orderBy('id')->limit($this->limit($a) * (empty($a['in_stock_only']) ? 1 : 4))->get();
-        $stock = $this->stockByProduct($rows->pluck('product_id')->all());
-        $out = $rows->map(fn ($tp) => $this->productRow($tp, $stock, $ctx->currency));
+        $stock = $this->stockByProduct($rows->pluck('id')->all());
+        $out = $rows->map(fn ($p) => $this->productRow($p, $stock, $ctx->currency));
         if (! empty($a['in_stock_only'])) {
             $out = $out->filter(fn ($r) => $r['available'] > 0);
         }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Central AI vendor + credentials. The key is encrypted at rest, hidden from serialisation and excluded from the audit trail. */
+/** AI vendor + credentials. The key is encrypted at rest, hidden from serialisation and excluded from the audit trail. */
 class AiProvider extends Model
 {
     use Audited, SoftDeletes;

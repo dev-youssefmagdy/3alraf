@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\BrandDataTable;
 use App\DTOs\BrandData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\BrandRequest;
+use App\Http\Requests\Admin\BrandRequest;
 use App\Models\Brand;
 use App\Models\Language;
 use App\Services\BrandService;
@@ -29,7 +29,7 @@ class BrandController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.brands.index', ['table' => new BrandDataTable]);
+        return view('admin.brands.index', ['table' => new BrandDataTable]);
     }
 
     public function datatable(BrandDataTable $table): JsonResponse
@@ -39,26 +39,26 @@ class BrandController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.brands.form', ['brand' => new Brand(['is_active' => true, 'sort_order' => 0]), 'languages' => Language::activeList()]);
+        return view('admin.brands.form', ['brand' => new Brand(['is_active' => true, 'sort_order' => 0]), 'languages' => Language::activeList()]);
     }
 
     public function store(BrandRequest $request): JsonResponse
     {
         $this->service->create(BrandData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.brands.index'));
+        return $this->ok(__('admin.saved'), route('admin.brands.index'));
     }
 
     public function edit(Brand $brand)
     {
-        return view('central.brands.form', ['brand' => $brand, 'languages' => Language::activeList()]);
+        return view('admin.brands.form', ['brand' => $brand, 'languages' => Language::activeList()]);
     }
 
     public function update(BrandRequest $request, Brand $brand): JsonResponse
     {
         $this->service->update($brand, BrandData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.brands.index'));
+        return $this->ok(__('admin.saved'), route('admin.brands.index'));
     }
 
     public function destroy(Brand $brand): JsonResponse

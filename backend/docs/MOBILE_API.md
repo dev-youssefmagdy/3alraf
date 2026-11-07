@@ -2,25 +2,26 @@
 
 Source of truth for the customer app. Machine-readable twin: [`openapi-mobile.yaml`](openapi-mobile.yaml) (OpenAPI 3.1). Regenerate the route-derived skeleton with `php artisan api:docs`; this file and the YAML are curated on top of it. Verified by `tests/Feature/MobileApiTest.php` and `tests/Feature/MobileApiGapsTest.php`.
 
-## 1. Base URL, tenant (country/store)
+## 1. Base URL (single store)
 
-One shared database, one tenant per store = per country (`egy`, `sa`, ...). The app uses **one base URL** (the central host, e.g. `https://3alraf.com/api/v1`) and selects the store with the header **`X-Tenant: <slug>`**.
+One shop, one host: the app uses **one base URL** = `APP_URL` + `/api/v1` (e.g. `https://3alraf.com/api/v1`). There is no store selection.
 
-* `GET /tenants` (central) lists the active stores for the country picker.
-* A tenant subdomain host (`https://egy.3alraf.com/api/v1/...`) also works and needs no header (the host wins over the header). The app does not need it.
-* Unknown or inactive tenant, or a missing `X-Tenant` on the central host = **404** `Store not found.`
-* Tokens, carts, orders, wishlist, devices, blog posts, launches... are all scoped to the tenant: a token issued by `egy` is **401** on `sa`; the same e-mail can register in both.
-* Central-only endpoints (no tenant): `GET /tenants`, `GET /app-config`, `GET /health`.
+* `GET /app-config` returns the app switches **and** the shop basics (`store`: name, country, currency code/symbol, default_locale, locales + RTL, timezone, base_url). `GET /store` returns the full shop profile (branding, contact, footer, features).
+* **Compatibility with old app builds** (built for the former per-country stores):
+  * the `X-Tenant` header is **ignored** (any value, also unknown ones; it never causes a 404);
+  * old store hosts `https://{slug}.3alraf.com/api/v1/...` keep answering `/api/*` directly (no redirect); every URL in the responses (images, share links, payment return/webhook URLs) uses `APP_URL`;
+  * `GET /tenants` is **deprecated** and returns the one shop as a one-item list in the old picker shape (header `Deprecation: true`); its `slug` = config `mobile.legacy_store_slug` (env `MOBILE_LEGACY_STORE_SLUG`, default `egy`, the slug old builds saved) so they keep their stored session/cart and skip the country picker. `GET /store` returns the same `slug`.
+* Endpoints without customer context: `GET /tenants` (deprecated), `GET /app-config`, `GET /health`.
 
 ## 2. Request headers
 
 | Header | Required | Meaning |
 |---|---|---|
-| `X-Tenant` | yes on the central host | store slug |
+| `X-Tenant` | no (ignored) | sent by old app builds only; the server ignores it |
 | `Accept: application/json` | recommended | always send it |
 | `Accept-Language` | recommended | `ar` / `en` (first match among the store's `locales`, else the store default). Server content (names, messages, validation text) comes back localised; response header `Content-Language` confirms the choice |
 | `Authorization: Bearer <token>` | on protected routes | Sanctum token. Customer tokens carry ability `customer`, affiliate tokens `affiliate`; they are not interchangeable |
-| `X-Cart-Token` | guests | guest cart id. The first cart call returns it in the **response header `X-Cart-Token`**; persist it (per tenant) and send it on every call. Cleared on logout/country switch |
+| `X-Cart-Token` | guests | guest cart id. The first cart call returns it in the **response header `X-Cart-Token`**; persist it and send it on every call. Cleared on logout |
 | `X-Affiliate-Ref` | optional | affiliate uuid (`ref`) of a shared link, for commission attribution |
 | `X-Attribution` | optional | growth first-touch: base64url(JSON) of `{utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session, ab}`, max 1024 chars, malformed values ignored |
 
@@ -57,23 +58,23 @@ Stop infinite scroll when `current_page >= last_page`.
 
 | HTTP | When | Handling in the app |
 |---|---|---|
-| 401 | missing / wrong-type / revoked / other-tenant token (`Unauthenticated.`) | clear the session, go to login |
+| 401 | missing / wrong-type / revoked token (`Unauthenticated.`) | clear the session, go to login |
 | 403 | forbidden (e.g. return on someone else's order) | show `message` |
 | 403 `feature_disabled` | a growth feature is off for the store (`launch`, `affiliate/ambassador`, `gift-finder`). Shape: `{"success":false,"error":"feature_disabled","message":"..."}` | hide the section (see `GET /store` `features`) |
-| 404 | unknown route/slug/token or other store's resource (`Not found.`); unknown tenant | not-found state |
+| 404 | unknown route/slug/token or another customer's resource (`Not found.`) | not-found state |
 | 422 | validation: `message` = first error, `errors` = per field (map field names to inputs) | show inline |
 | 429 | rate limited; `Retry-After` (seconds) header | back off, show `message` |
 | 500 | `Something went wrong. Please try again.` | retry / error state |
 
 Failed logins (5) lock the e-mail temporarily and answer 422 even with the right password.
 
-## 5. Rate limits (per tenant + client IP, or per user when authenticated)
+## 5. Rate limits (per client IP, or per user when authenticated)
 
 Default `api`: 120 req/min. Stricter: auth 10/min per route (login, register, google, reset-password, verify, ambassador join); `forgot-password`, verification-notification, account deletion 5/min; `catalog*` 90/min; cart writes 90/min; `cart/quote` 60/min; `checkout/validate` 40/min; `checkout` 20/min; uploads (`proof`, invoice, proof file) 10/min; returns/cancel 10/min; addresses 30/min; devices 30/min; reviews 10/min; payout request 5/min; stock-requests 3/min and 15/hour; `GET /tenants` 60/min; `GET /app-config` & `/health` 120/min. Responses carry `X-RateLimit-Limit` / `X-RateLimit-Remaining`; a 429 adds `Retry-After`.
 
 ## 6. Core flows
 
-**Startup:** `GET /tenants` + `GET /app-config?version=<app version>` (central) -> choose/restore tenant -> `GET /store` (branding, locales, currency, features) -> `GET /home`.
+**Startup:** `GET /app-config?version=<app version>` (switches + `store` basics) -> `GET /store` (branding, locales, currency, features) -> `GET /home`. (Old builds: `GET /tenants` first; see section 1.)
 
 **Guest cart -> login:** add to cart without a token (persist the returned `X-Cart-Token`); on login/register the server adopts the guest cart when `X-Cart-Token` is sent with the request, or call `POST /cart/merge` (with both the bearer token and `X-Cart-Token`) afterwards.
 
@@ -88,7 +89,7 @@ Wallet/bank-transfer methods (`requires_proof`) and the prepay leg of COD (when 
 
 **Account deletion:** `DELETE /auth/me` then drop all local state (tokens, cart token, caches).
 
-**Push (store only for now):** `POST /devices` with the FCM token after login / token refresh; `DELETE /devices` on logout. The server stores `tenant, customer?, token, platform, locale, app_version` and exposes a `PushDispatcher` interface with a log-only no-op driver (`MOBILE_PUSH_DRIVER=log`). Actual sending (FCM) is a follow-up; no notification inbox endpoint exists.
+**Push (store only for now):** `POST /devices` with the FCM token after login / token refresh; `DELETE /devices` on logout. The server stores `customer?, token, platform, locale, app_version` and exposes a `PushDispatcher` interface with a log-only no-op driver (`MOBILE_PUSH_DRIVER=log`). Actual sending (FCM) is a follow-up; no notification inbox endpoint exists.
 
 **Authentication scope:** e-mail + password and Google ID-token only. Phone/OTP login for customers is out of scope (WhatsApp OTP is admin-only).
 
@@ -97,9 +98,9 @@ Wallet/bank-transfer methods (`requires_proof`) and the prepay leg of COD (when 
 
 | Method | Path | Auth | Summary |
 |---|---|---|---|
-| GET | `/tenants` | None (central host) | Active stores (countries) for the country picker. |
-| GET | `/app-config` | None (central host) | Force-update and maintenance switches (config/mobile.php + env). |
-| GET | `/health` | None (central host) | Liveness/readiness probe (database, cache, storage, failed jobs). |
+| GET | `/tenants` | None | DEPRECATED (old app builds): the one shop as a one-item list in the old picker shape. |
+| GET | `/app-config` | None | Force-update and maintenance switches (config/mobile.php + env) + shop basics `store`. |
+| GET | `/health` | None | Liveness/readiness probe (database, cache, storage, failed jobs). |
 | GET | `/store` | None | Store profile for the UI: |
 | GET | `/pages` | None | Static pages (terms, privacy, about...). |
 | GET | `/pages/{slug}` | None | One static page. |
@@ -183,14 +184,14 @@ Wallet/bank-transfer methods (`requires_proof`) and the prepay leg of COD (when 
 
 ---
 
-## Bootstrap (central host)
+## Bootstrap
 
 ### `GET /tenants`
 
-**Auth:** None (central host)  
-**Host:** central host `https://<central>/api/v1`
+**Auth:** None  
+**Host:** `APP_URL/api/v1`
 
-Active stores (countries) for the country picker. Sorted by name. `languages` are native names of `locales`; `logo_url` is the store logo (falls back to the 3alraf logo); `base_url` is informational: the app keeps using ONE base URL plus `X-Tenant`.
+**DEPRECATED** - kept only so old app builds (country picker) keep working. Always a one-item list (the shop, values from Settings > General); response header `Deprecation: true`. Fields = exactly what old builds parse (`Tenant.fromJson`): `slug` (= `mobile.legacy_store_slug`, default `egy`), `name`, `country`, `flag`, `currency` (code), `default_locale`, `locales`, `languages` (native names of `locales`), `logo_url` (falls back to the 3alraf logo), `base_url` (= `APP_URL`, used by old builds for share links). New builds use `GET /app-config` / `GET /store`.
 
 **Notes:** Rate limit 60/min/IP.
 
@@ -203,19 +204,21 @@ Active stores (countries) for the country picker. Sorted by name. `languages` ar
   "data": [
     {
       "slug": "egy",
-      "name": "Egypt Store",
+      "name": "3alraf Egypt",
       "country": "EG",
       "flag": "🇪🇬",
       "currency": "EGP",
       "default_locale": "ar",
       "locales": [
-        "ar"
+        "ar",
+        "en"
       ],
       "languages": [
-        "العربية"
+        "العربية",
+        "English"
       ],
       "logo_url": "http://3alraf.test/logo.png",
-      "base_url": "http://egy.3alraf.test/"
+      "base_url": "http://3alraf.test"
     }
   ],
   "meta": {}
@@ -224,10 +227,10 @@ Active stores (countries) for the country picker. Sorted by name. `languages` ar
 
 ### `GET /app-config`
 
-**Auth:** None (central host)  
-**Host:** central host `https://<central>/api/v1`
+**Auth:** None  
+**Host:** `APP_URL/api/v1`
 
-Force-update and maintenance switches (config/mobile.php + env). `Accept-Language` selects the maintenance message (`ar`/`en`).
+Force-update and maintenance switches (config/mobile.php + env) and the shop basics `store` (from Settings > General: `name`, `country`, `currency {code, symbol}`, `default_locale`, `locales [{code, rtl}]`, `timezone`, `base_url` = `APP_URL`). `Accept-Language` selects the maintenance message (`ar`/`en`).
 
 **Query / params:** `version` (optional): the app version, e.g. `1.2.0`. When given, `update_required` (version < min_version) and `update_available` (version < latest_version) are filled, otherwise `null`.
 
@@ -250,15 +253,36 @@ Force-update and maintenance switches (config/mobile.php + env). `Accept-Languag
     "maintenance": false,
     "maintenance_message": null,
     "update_required": true,
-    "update_available": true
+    "update_available": true,
+    "store": {
+      "name": "3alraf Egypt",
+      "country": "EG",
+      "currency": {
+        "code": "EGP",
+        "symbol": "EGP"
+      },
+      "default_locale": "ar",
+      "locales": [
+        {
+          "code": "ar",
+          "rtl": true
+        },
+        {
+          "code": "en",
+          "rtl": false
+        }
+      ],
+      "timezone": "Africa/Cairo",
+      "base_url": "http://3alraf.test"
+    }
   }
 }
 ```
 
 ### `GET /health`
 
-**Auth:** None (central host)  
-**Host:** central host `https://<central>/api/v1`
+**Auth:** None  
+**Host:** `APP_URL/api/v1`
 
 Liveness/readiness probe (database, cache, storage, failed jobs). Not enveloped.
 
@@ -285,11 +309,11 @@ Liveness/readiness probe (database, cache, storage, failed jobs). Not enveloped.
 ### `GET /store`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon, colours), contact (email/phone/WhatsApp digits for `wa.me/<digits>`), social links, app-store links, footer data (static pages, whether a blog exists, accepted payment methods) and feature switches for optional sections.
 
-**Notes:** `colors` = tenant overrides (`settings.branding.colors`, hex only) merged over the 3alraf defaults (config/mobile.php), so every key is always present. `social` only contains configured networks. `contact.whatsapp` = `settings.contact.whatsapp` else the organisation phone, digits only. `features.*` hide Gift finder / Small-batch launch / Ambassadors entry points when `false` (the matching endpoints answer 403 `feature_disabled`).
+**Notes:** `slug` = `mobile.legacy_store_slug` (compat only; there is one shop). `colors` = shop overrides (setting `branding.colors`, hex only) merged over the 3alraf defaults (config/mobile.php), so every key is always present. `social` only contains configured networks. `contact.whatsapp` = `settings.contact.whatsapp` else the organisation phone, digits only. `features.*` hide Gift finder / Small-batch launch / Ambassadors entry points when `false` (the matching endpoints answer 403 `feature_disabled`).
 
 **Example response (200):**
 
@@ -299,7 +323,7 @@ Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon
   "message": null,
   "data": {
     "slug": "egy",
-    "name": "Egypt Store",
+    "name": "3alraf Egypt",
     "country": "EG",
     "currency": {
       "code": "EGP",
@@ -315,8 +339,8 @@ Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon
     ],
     "cod_collect_shipping_upfront": false,
     "prices_include_tax": false,
-    "logo_url": "http://egy.3alraf.test/logo.png",
-    "favicon_url": "http://egy.3alraf.test/logo-192.png",
+    "logo_url": "http://3alraf.test/logo.png",
+    "favicon_url": "http://3alraf.test/logo-192.png",
     "colors": {
       "primary": "#A8456C",
       "primary_dark": "#8F3A5C",
@@ -335,7 +359,7 @@ Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon
       "danger": "#C8384F"
     },
     "contact": {
-      "email": "hello@egy.3alraf.com",
+      "email": "hello@3alraf.com",
       "phone": "+20 100 123 4567",
       "whatsapp": "201001234567"
     },
@@ -376,7 +400,7 @@ Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon
 ### `GET /pages`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Static pages (terms, privacy, about...).
 
@@ -399,7 +423,7 @@ Static pages (terms, privacy, about...).
 ### `GET /pages/{slug}`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 One static page. `content` is plain text / light HTML.
 
@@ -421,7 +445,7 @@ One static page. `content` is plain text / light HTML.
 ### `GET /custom-pages`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Active custom landing pages.
 
@@ -435,7 +459,7 @@ Active custom landing pages.
     {
       "slug": "offers",
       "title": "Offers",
-      "url": "http://egy.3alraf.test/offers"
+      "url": "http://3alraf.test/offers"
     }
   ],
   "meta": {}
@@ -445,7 +469,7 @@ Active custom landing pages.
 ### `GET /custom-pages/{slug}`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Custom page + its product grid (pinned first).
 
@@ -459,7 +483,7 @@ Custom page + its product grid (pinned first).
 ### `GET /home`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Home screen payload: banners (hero/strips/tiles/popup), category rail, flash sale, product rails, brands.
 
@@ -522,7 +546,7 @@ Home screen payload: banners (hero/strips/tiles/popup), category rail, flash sal
 ### `GET /menu`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Category tree (nested `children`).
 
@@ -549,7 +573,7 @@ Category tree (nested `children`).
 ### `GET /catalog`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Product listing / search. One endpoint for category, brand, tag and search pages (combine freely).
 
@@ -592,7 +616,7 @@ Product listing / search. One endpoint for category, brand, tag and search pages
 ### `GET /catalog/facets`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Filter-sheet data for the same scope (accepts the same `category`/`brand`/`tag`/`q` params): brands, tags, attributes with values, price range, sort keys.
 
@@ -627,7 +651,7 @@ Filter-sheet data for the same scope (accepts the same `category`/`brand`/`tag`/
 ### `GET /catalog/suggest`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Live search suggestions (products + categories). `q` shorter than 2 chars returns empty lists.
 
@@ -657,7 +681,7 @@ Live search suggestions (products + categories). `q` shorter than 2 chars return
 ### `GET /categories/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Category page header: name, image, icon, description, breadcrumbs (root to self), active children. Its products: `GET /catalog?category={slug}`.
 
@@ -691,7 +715,7 @@ Category page header: name, image, icon, description, breadcrumbs (root to self)
 ### `GET /brands`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Brands that have at least one sellable product.
 
@@ -716,7 +740,7 @@ Brands that have at least one sellable product.
 ### `GET /brands/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Brand page header (`products_count` = sellable products). Its products: `GET /catalog?brand={slug}`.
 
@@ -740,7 +764,7 @@ Brand page header (`products_count` = sellable products). Its products: `GET /ca
 ### `GET /tags/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Tag page header. Its products: `GET /catalog?tag={slug}`.
 
@@ -762,7 +786,7 @@ Tag page header. Its products: `GET /catalog?tag={slug}`.
 ### `GET /products/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Product detail: gallery, variants with exact prices/stock, options, rating, reviews, related, `in_wishlist`, `can_review`.
 
@@ -842,7 +866,7 @@ Product detail: gallery, variants with exact prices/stock, options, rating, revi
 ### `GET /products/{slug}/reviews`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Approved reviews (paginated).
 
@@ -867,7 +891,7 @@ Approved reviews (paginated).
 ### `GET /bundles`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Live fixed-price bundles. Add one with `POST /cart/items {bundle_id, quantity}`.
 
@@ -885,14 +909,14 @@ Live fixed-price bundles. Add one with `POST /cart/items {bundle_id, quantity}`.
 ### `GET /bundles/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 One bundle.
 
 ### `POST /gift-finder`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Gift finder search (feature `gift_finder`).
 
@@ -901,7 +925,7 @@ Gift finder search (feature `gift_finder`).
 ### `POST /gift-finder/{token}/cart`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Add the suggested gift set from a search to the cart (feature `gift_finder`).
 
@@ -913,7 +937,7 @@ Add the suggested gift set from a search to the cart (feature `gift_finder`).
 ### `GET /blog`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Published blog posts of the store, newest first. List items carry no `content`.
 
@@ -932,7 +956,7 @@ Published blog posts of the store, newest first. List items carry no `content`.
       "excerpt": "Summary",
       "meta_description": null,
       "published_at": "2026-10-31T21:51:44+02:00",
-      "url": "http://egy.3alraf.test/en/blog/hello-world"
+      "url": "http://3alraf.test/en/blog/hello-world"
     }
   ],
   "meta": {
@@ -949,7 +973,7 @@ Published blog posts of the store, newest first. List items carry no `content`.
 ### `GET /blog/{slug}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 One post; `content` is HTML (sanitised server side; render with a safe HTML widget, never a WebView with JS).
 
@@ -965,7 +989,7 @@ One post; `content` is HTML (sanitised server side; render with a safe HTML widg
     "excerpt": "Summary",
     "meta_description": null,
     "published_at": "2026-10-31T21:51:44+02:00",
-    "url": "http://egy.3alraf.test/en/blog/hello-world",
+    "url": "http://3alraf.test/en/blog/hello-world",
     "content": "<p>Body</p>"
   },
   "meta": {}
@@ -975,7 +999,7 @@ One post; `content` is HTML (sanitised server side; render with a safe HTML widg
 ### `POST /stock-requests`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 "Notify me when back in stock" (works for guests; a bearer token links the request to the customer). Same rules and de-duplication as the web form: the same phone asking twice for the same item while the first is open is a no-op (still 201).
 
@@ -997,7 +1021,7 @@ One post; `content` is HTML (sanitised server side; render with a safe HTML widg
 ### `GET /launch/{code}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Small-batch launch page (interest / survey / limited stock / pre-order). Feature `small_batch_lab`. `code` = 6-12 lowercase alphanumerics; draft or other-store tests = 404.
 
@@ -1033,7 +1057,7 @@ Small-batch launch page (interest / survey / limited stock / pre-order). Feature
 ### `POST /launch/{code}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Join a launch (idempotent per contact: a repeat returns `created:false`, HTTP 200). 422 when the test is closed, sold out, consent/terms missing.
 
@@ -1060,7 +1084,7 @@ Join a launch (idempotent per contact: a repeat returns `created:false`, HTTP 20
 ### `POST /auth/register`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Create an account and sign in. Sends an e-mail verification code. A guest cart sent in `X-Cart-Token` is adopted.
 
@@ -1098,7 +1122,7 @@ Create an account and sign in. Sends an e-mail verification code. A guest cart s
 ### `POST /auth/login`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 E-mail + password sign in. 5 failures lock the e-mail for a while (422). Adopts the guest cart.
 
@@ -1136,7 +1160,7 @@ E-mail + password sign in. 5 failures lock the e-mail for a while (422). Adopts 
 ### `POST /auth/google`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Google sign-in with an ID token from the Google SDK (verified server side).
 
@@ -1145,7 +1169,7 @@ Google sign-in with an ID token from the Google SDK (verified server side).
 ### `POST /auth/logout`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Revoke the current token.
 
@@ -1163,7 +1187,7 @@ Revoke the current token.
 ### `GET /auth/me`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Current customer.
 
@@ -1190,7 +1214,7 @@ Current customer.
 ### `PUT /auth/me`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Update profile and change password in-app. `name` and `email` are always required. To change the password send `password` + `password_confirmation` + `current_password`; changing the e-mail also needs `current_password` (and resets verification). All other tokens of the customer are revoked on a credential change; the calling token stays valid.
 
@@ -1219,7 +1243,7 @@ Update profile and change password in-app. `name` and `email` are always require
 ### `DELETE /auth/me`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Delete the account (App Store / Play requirement). Irreversible: personal data is anonymised, addresses/wishlist/push tokens removed, all tokens revoked, the e-mail becomes free to register again. Orders are kept (anonymous customer) for accounting.
 
@@ -1241,7 +1265,7 @@ Delete the account (App Store / Play requirement). Irreversible: personal data i
 ### `POST /auth/forgot-password`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Send a 6-digit reset code by e-mail. Always 200 (does not reveal whether the e-mail exists).
 
@@ -1263,7 +1287,7 @@ Send a 6-digit reset code by e-mail. Always 200 (does not reveal whether the e-m
 ### `POST /auth/reset-password`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Reset with the code (single use, expires). Revokes every existing session.
 
@@ -1272,7 +1296,7 @@ Reset with the code (single use, expires). Revokes every existing session.
 ### `POST /auth/email/verification-notification`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Send the e-mail verification code. 422 when already verified.
 
@@ -1292,7 +1316,7 @@ Send the e-mail verification code. 422 when already verified.
 ### `POST /auth/email/verify`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Verify the e-mail with the code. Returns the customer.
 
@@ -1306,7 +1330,7 @@ Verify the e-mail with the code. Returns the customer.
 ### `GET /cart`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Current cart (customer cart when signed in, else the guest cart of `X-Cart-Token`). Totals are computed by the server; display them, never recompute.
 
@@ -1358,7 +1382,7 @@ Current cart (customer cart when signed in, else the guest cart of `X-Cart-Token
 ### `POST /cart/items`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Add a line (`product_id` + `variant_id` (0 = simple product)) or a bundle (`bundle_id`). Quantities add up. Returns the cart. The first guest call returns the `X-Cart-Token` response header: persist it and send it on every call.
 
@@ -1414,7 +1438,7 @@ Add a line (`product_id` + `variant_id` (0 = simple product)) or a bundle (`bund
 ### `PUT /cart/items/{item}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Set the quantity of a line.
 
@@ -1468,14 +1492,14 @@ Set the quantity of a line.
 ### `DELETE /cart/items/{item}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Remove a line. Returns the cart.
 
 ### `POST /cart/quote`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Priced totals for the current selections; every field is optional (city, shipping company, payment method, prepay method, `discount_code`, `packaging_option_id`). Use it for the cart screen and each checkout step.
 
@@ -1531,7 +1555,7 @@ Priced totals for the current selections; every field is optional (city, shippin
 ### `POST /cart/merge`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 After login: merge the guest cart (`X-Cart-Token`) into the customer cart (quantities add up) and consume the guest cart.
 
@@ -1588,7 +1612,7 @@ After login: merge the guest cart (`X-Cart-Token`) into the customer cart (quant
 ### `GET /checkout/cities`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Cities for the address form.
 
@@ -1611,7 +1635,7 @@ Cities for the address form.
 ### `GET /checkout/shipping`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Shipping options for a city with the order total per option.
 
@@ -1641,7 +1665,7 @@ Shipping options for a city with the order total per option.
 ### `GET /checkout/packaging`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Special-packaging options (price only).
 
@@ -1659,7 +1683,7 @@ Special-packaging options (price only).
 ### `GET /checkout/payment-methods`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Usable payment methods. `meta.cod_collect_shipping_upfront=true` means COD needs a prepaid shipping leg (`prepay_method_id` + proof).
 
@@ -1691,7 +1715,7 @@ Usable payment methods. `meta.cod_collect_shipping_upfront=true` means COD needs
 ### `POST /checkout/validate`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Full quote with the strict checkout rules (stock, discount, shipping, payment, proof). 200 = placeable; 422 with field `errors` otherwise. Send multipart when a `proof` file is included.
 
@@ -1747,7 +1771,7 @@ Full quote with the strict checkout rules (stock, discount, shipping, payment, p
 ### `POST /checkout`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Place the order from the cart. Guests need `name`, `phone`, `city_id`, `address`; signed-in customers may send `address_id` instead. The order always waits for admin confirmation. Follow `meta.next_action`: `none` (COD), `redirect_to_payment` (open `meta.payment_url` in a WebView, then poll `GET /payments/return/{token}`), `retry_payment` (`POST /orders/{token}/pay`), `upload_proof`.
 
@@ -1849,7 +1873,7 @@ Place the order from the cart. Guests need `name`, `phone`, `city_id`, `address`
 ### `GET /orders`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 The customer's orders, newest first (no items).
 
@@ -1909,7 +1933,7 @@ The customer's orders, newest first (no items).
 ### `GET /orders/{token}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Order detail by its unguessable public token (guest-safe): items, customer, timeline, returns, payment state, `can_pay_online`, `can_upload_proof`.
 
@@ -1999,7 +2023,7 @@ Order detail by its unguessable public token (guest-safe): items, customer, time
 ### `GET /orders/{token}/track`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Compact tracking: number, status, payment status, timeline.
 
@@ -2028,7 +2052,7 @@ Compact tracking: number, status, payment status, timeline.
 ### `GET /orders/{token}/invoice`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Invoice as a PDF download (`Content-Type: application/pdf`, `Content-Disposition: attachment`). Rendered in the request locale. Binary response, not enveloped; 404 for an unknown token or another store's order.
 
@@ -2037,7 +2061,7 @@ Invoice as a PDF download (`Content-Type: application/pdf`, `Content-Disposition
 ### `GET /orders/{token}/proof`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 The uploaded transfer proof (image/PDF stream from the private disk, `Cache-Control: private, no-store`). 404 when nothing was uploaded.
 
@@ -2046,7 +2070,7 @@ The uploaded transfer proof (image/PDF stream from the private disk, `Cache-Cont
 ### `POST /orders/{token}/proof`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Upload or replace the wallet-transfer proof (multipart field `proof`: jpg, png, webp, pdf). Returns the order. The admin approval is what confirms payment.
 
@@ -2057,14 +2081,14 @@ Upload or replace the wallet-transfer proof (multipart field `proof`: jpg, png, 
 ### `POST /orders/{token}/pay`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 New gateway link for an unpaid online order: `data.payment_url`.
 
 ### `GET /payments/return/{token}`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Call when the in-app browser returns from the gateway. NOT authoritative: only the signed webhook marks an order paid, so poll until `meta.paid` is true.
 
@@ -2157,7 +2181,7 @@ Call when the in-app browser returns from the gateway. NOT authoritative: only t
 ### `POST /orders/{token}/cancel`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Cancel with a structured reason (feature `return_intel`; 404 when off).
 
@@ -2166,7 +2190,7 @@ Cancel with a structured reason (feature `return_intel`; 404 when off).
 ### `POST /orders/{token}/return`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Request a return for a delivered order (owner only; 403 otherwise, 422 when not delivered or quantities exceed what was bought).
 
@@ -2197,7 +2221,7 @@ Request a return for a delivered order (owner only; 403 otherwise, 422 when not 
 ### `GET /addresses`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Saved addresses (default first).
 
@@ -2229,7 +2253,7 @@ Saved addresses (default first).
 ### `POST /addresses`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Create an address (the first one becomes default).
 
@@ -2263,7 +2287,7 @@ Create an address (the first one becomes default).
 ### `PUT /addresses/{id}`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Update an address (another customer's id = 404).
 
@@ -2272,14 +2296,14 @@ Update an address (another customer's id = 404).
 ### `DELETE /addresses/{id}`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Delete an address.
 
 ### `GET /wishlist`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Wishlist products.
 
@@ -2311,7 +2335,7 @@ Wishlist products.
 ### `POST /wishlist/{product}/toggle`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Add/remove a product (`{product}` = numeric product id). Returns `in_wishlist`.
 
@@ -2331,7 +2355,7 @@ Add/remove a product (`{product}` = numeric product id). Returns `in_wishlist`.
 ### `POST /products/{slug}/reviews`
 
 **Auth:** Customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Write a review (delivered purchase only, one per product; goes to moderation).
 
@@ -2360,7 +2384,7 @@ Write a review (delivered purchase only, one per product; goes to moderation).
 ### `POST /devices`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Register/refresh a push token (FCM). Upsert by token within the store; with a bearer token the device is bound to the customer. Call after login and whenever FCM rotates the token. Sending is not implemented yet (see Push).
 
@@ -2387,7 +2411,7 @@ Register/refresh a push token (FCM). Upsert by token within the store; with a be
 ### `DELETE /devices`
 
 **Auth:** Optional customer bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Unregister a push token (call on logout / opt-out). Idempotent.
 
@@ -2412,7 +2436,7 @@ Unregister a push token (call on logout / opt-out). Idempotent.
 ### `POST /affiliate/register`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Apply as an affiliate. No token until an admin approves.
 
@@ -2441,7 +2465,7 @@ Apply as an affiliate. No token until an admin approves.
 ### `POST /affiliate/login`
 
 **Auth:** None  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Sign in (approved affiliates only).
 
@@ -2477,14 +2501,14 @@ Sign in (approved affiliates only).
 ### `POST /affiliate/logout`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Revoke the token.
 
 ### `GET /affiliate/me`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Profile; `ref` is the uuid used in share links / `X-Affiliate-Ref`.
 
@@ -2511,7 +2535,7 @@ Profile; `ref` is the uuid used in share links / `X-Affiliate-Ref`.
 ### `GET /affiliate/dashboard`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Stats, tier, commissions, payouts.
 
@@ -2564,7 +2588,7 @@ Stats, tier, commissions, payouts.
 ### `GET /affiliate/products`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Sellable products with the affiliate share `link` and `qr_url`.
 
@@ -2581,8 +2605,8 @@ Sellable products with the affiliate share `link` and `qr_url`.
       "name": "P mid",
       "image": null,
       "price": "250.00",
-      "link": "http://egy.3alraf.test/en/product/mid?utm_source=affiliate&aff=b898c8e1-9c85-4582-87da-cff21b70fb32",
-      "qr_url": "http://egy.3alraf.test/api/v1/affiliate/products/mid/qr",
+      "link": "http://3alraf.test/en/product/mid?utm_source=affiliate&aff=b898c8e1-9c85-4582-87da-cff21b70fb32",
+      "qr_url": "http://3alraf.test/api/v1/affiliate/products/mid/qr",
       "variants": []
     }
   ],
@@ -2593,7 +2617,7 @@ Sellable products with the affiliate share `link` and `qr_url`.
 ### `GET /affiliate/products/{slug}/qr`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 PNG QR of the share link (binary).
 
@@ -2602,7 +2626,7 @@ PNG QR of the share link (binary).
 ### `GET /affiliate/payouts`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Payout history.
 
@@ -2620,7 +2644,7 @@ Payout history.
 ### `POST /affiliate/payouts`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Request a payout of the approved balance. 422 when nothing is available.
 
@@ -2645,7 +2669,7 @@ Request a payout of the approved balance. 422 when nothing is available.
 ### `GET /affiliate/ambassador`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `channels`, idea library, own tracked links and a 30-day report (valid/pending/excluded orders, new-customer share, CAC; no margins).
 
@@ -2672,7 +2696,7 @@ Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `c
         "channel": "instagram",
         "product_id": 1,
         "clicks": 0,
-        "url": "http://egy.3alraf.test/l/0kcv8vr0"
+        "url": "http://3alraf.test/l/0kcv8vr0"
       }
     ],
     "report": {
@@ -2698,7 +2722,7 @@ Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `c
 ### `POST /affiliate/ambassador/join`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Opt in as an ambassador (disclosure + terms). Idempotent re-join updates the disclosure.
 
@@ -2722,7 +2746,7 @@ Opt in as an ambassador (disclosure + terms). Idempotent re-join updates the dis
 ### `POST /affiliate/ambassador/links`
 
 **Auth:** Affiliate bearer token  
-**Host:** tenant API (`X-Tenant` + central base URL)
+**Host:** `APP_URL/api/v1`
 
 Create a per-channel tracked link for a product (404 when not enrolled). `url` is a short link on the store domain.
 
@@ -2739,7 +2763,7 @@ Create a per-channel tracked link for a product (404 when not enrolled). `url` i
     "channel": "instagram",
     "product_id": 1,
     "clicks": 0,
-    "url": "http://egy.3alraf.test/l/0kcv8vr0"
+    "url": "http://3alraf.test/l/0kcv8vr0"
   },
   "meta": {}
 }
@@ -2752,6 +2776,7 @@ Create a per-channel tracked link for a product (404 when not enrolled). `url` i
 
 Added: `GET /blog`, `GET /blog/{slug}`; `GET /categories/{slug}`, `GET /brands/{slug}`, `GET /tags/{slug}`; `brand` and `tag` filters on `catalog` and `catalog/facets`; `POST /stock-requests`; `GET|POST /launch/{code}`; `GET /affiliate/ambassador`, `POST /affiliate/ambassador/join`, `POST /affiliate/ambassador/links`; `GET /orders/{token}/invoice`, `GET /orders/{token}/proof`; `DELETE /auth/me`; `POST|DELETE /devices`; `GET /app-config`.
 Extended: `GET /store` (logo, favicon, colours, contact, social, app links, footer, features); `GET /tenants` (`flag`, `languages`, `logo_url`, enveloped).
+Single store (2026-11): `X-Tenant` ignored, legacy store hosts served directly, `GET /app-config` gained `store`, `GET /tenants` deprecated (one-item list, old shape, `Deprecation` header), no per-store token/cart scoping.
 Fixed: the `store.api.*` translation group was missing, so API messages such as logout / reset / verification returned raw keys; ar/en strings added. 404 messages no longer expose model class names.
 
 ## Appendix B - Known limits / not in this API
@@ -2759,4 +2784,4 @@ Fixed: the `store.api.*` translation group was missing, so API messages such as 
 * Notifications inbox, push sending (FCM), customer phone/OTP login: not provided.
 * `DELETE /auth/me` anonymises the account but keeps order rows (their name/phone/address snapshots) for accounting; purge policy follows the store's retention job.
 * Change password is `PUT /auth/me` (there is no separate endpoint).
-* `GET /store` `colors` can be overridden per store through `tenants.settings.branding.colors` and contact WhatsApp through `settings.contact.whatsapp`; there is no admin UI for these two keys yet.
+* `GET /store` `colors` can be overridden through setting `branding.colors` and contact WhatsApp through setting `contact.whatsapp`; there is no admin UI for these two keys yet.

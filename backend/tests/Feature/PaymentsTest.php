@@ -17,9 +17,7 @@ use App\Models\PaymentEvent;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
@@ -28,6 +26,7 @@ use App\Services\Payments\Drivers\FawryPayGateway;
 use App\Services\Payments\Drivers\PaymobGateway;
 use App\Services\Payments\PaymentGatewayFactory;
 use App\Services\Stock\StockLedger;
+use App\Models\Setting;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Http\Client\Factory;
@@ -41,14 +40,12 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
     Storage::fake('media');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->t = '/admin';
+    $this->s = '/ar';
     $branch = Branch::first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'pp1', 'sku' => 'PP1', 'barcode' => '2000000000015']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($branch->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->city = City::first();
     $this->company = ShippingCompany::first();             // rate for first city: price 40, cost 30
@@ -62,8 +59,8 @@ beforeEach(function () {
         'proof' => testProof(), 'name' => 'Ali', 'phone' => '01000000100', 'email' => 'ali@x.test', 'cityId' => $this->city->id, 'address' => 'St 1',
         'shippingCompanyId' => $this->company->id, 'paymentMethodId' => $this->cod->id,
     ], $o)), [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => $qty]]);
-    $this->setUpfront = fn (bool $on) => $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['cod_collect_shipping_upfront' => $on])]);
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->setUpfront = fn (bool $on) => settings(['cod_collect_shipping_upfront' => $on]);
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 // Web checkout is signed-in-only (commit 21780b3, REQUIREMENTS.md): run these flows as a logged-in customer.
@@ -95,7 +92,7 @@ function paymobHook(Order $o, array $over = [], ?array $requery = null, string $
     ]);
     $hmac = PaymobGateway::hmac($obj, $secret);
 
-    return test()->call('POST', 'http://egy.3alraf.test/webhooks/payments/'.test()->paymob->id.'?hmac='.$hmac, [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['type' => 'TRANSACTION', 'obj' => $obj]));
+    return test()->call('POST', '/webhooks/payments/'.test()->paymob->id.'?hmac='.$hmac, [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['type' => 'TRANSACTION', 'obj' => $obj]));
 }
 
 function fawryBody(Order $o, array $over = []): array
@@ -117,7 +114,7 @@ function fawryHook(Order $o, array $over = [], bool $badSig = false, ?array $sta
     // Fawry status/v2 re-query answers with the same facts as the (legit) webhook unless a test passes $statusReply
     fakeHttp(['*/payments/status/v2*' => Http::response($statusReply ?? ['orderStatus' => $p['orderStatus'], 'paymentAmount' => $p['paymentAmount'], 'fawryRefNumber' => $p['fawryRefNumber']])]);
 
-    return test()->postJson('http://egy.3alraf.test/webhooks/payments/'.test()->fawry->id, $p);
+    return test()->postJson('/webhooks/payments/'.test()->fawry->id, $p);
 }
 
 // ------------------------------------------------------------------ Paymob
@@ -173,7 +170,7 @@ it('rejects Paymob webhooks with a bad signature, wrong amount/currency/status o
 });
 
 it('auto-confirms a paid online order only when settings.auto_confirm_paid_online is on', function () {
-    $this->tenant->update(['settings' => ['auto_confirm_paid_online' => true]]);
+    settings(['auto_confirm_paid_online' => true]);
     $order = ($this->place)(1, ['paymentMethodId' => $this->paymob->id])['order'];
     paymobHook($order)->assertOk();
     expect($order->fresh()->status)->toBe(S::CONFIRMED)->and((float) $order->fresh()->net_profit)->toBeGreaterThan(0);
@@ -217,15 +214,14 @@ it('re-queries FawryPay and rejects a webhook the provider does not confirm', fu
     expect($order->fresh()->payment_status)->toBe(PaymentStatus::PAID);
     $b = ($this->place)(1, ['paymentMethodId' => $this->fawry->id])['order'];
     fakeHttp(['*/payments/status/v2*' => Http::response([], 500)]);
-    $this->postJson('http://egy.3alraf.test/webhooks/payments/'.$this->fawry->id, fawryBody($b))->assertStatus(422);   // provider unreachable => rejected, Fawry retries
+    $this->postJson('/webhooks/payments/'.$this->fawry->id, fawryBody($b))->assertStatus(422);   // provider unreachable => rejected, Fawry retries
     expect($b->fresh()->payment_status)->toBe(PaymentStatus::UNPAID);
 });
 
-it('does not accept another tenant\'s webhook / method id and stubs unimplemented gateways', function () {
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'Saudi', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 2, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $foreign = PaymentMethod::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'type' => 'online', 'provider' => 'fawrypay', 'name' => ['ar' => 'x'], 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer', 'credentials' => ['merchant_code' => 'M', 'secure_key' => 's'], 'is_active' => true]);
-    $this->postJson("http://egy.3alraf.test/webhooks/payments/{$foreign->id}", ['x' => 1])->assertNotFound();
-    // checkout with a foreign payment method / prepay method id is a validation error, never an order
+it('does not accept an unknown webhook / method id and stubs unimplemented gateways', function () {
+    $foreign = (object) ['id' => 999999];
+    $this->postJson("/webhooks/payments/{$foreign->id}", ['x' => 1])->assertNotFound();
+    // checkout with an unknown payment method / prepay method id is a validation error, never an order
     $this->postJson("{$this->s}/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->assertOk();
     $payload = withSavedAddress(['name' => 'Sara', 'phone' => '01100000111', 'city_id' => $this->city->id, 'address' => 'St 2', 'shipping_company_id' => $this->company->id]);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $foreign->id])->assertStatus(422)->assertJsonValidationErrors(['payment_method_id']);
@@ -234,7 +230,7 @@ it('does not accept another tenant\'s webhook / method id and stubs unimplemente
     $stripe = PaymentMethod::create(['type' => 'online', 'provider' => 'stripe', 'name' => ['ar' => 's'], 'fee_percent' => 0, 'fee_fixed' => 0, 'fee_bearer' => 'customer', 'credentials' => ['publishable_key' => 'a', 'secret_key' => 'b', 'webhook_secret' => 'c'], 'is_active' => true]);
     expect(PaymentMethod::available()->pluck('id'))->not->toContain($stripe->id);
     $this->postJson("{$this->s}/checkout/validate", $payload + ['payment_method_id' => $stripe->id])->assertStatus(422);
-    $this->postJson("http://egy.3alraf.test/webhooks/payments/{$stripe->id}", [])->assertStatus(501);
+    $this->postJson("/webhooks/payments/{$stripe->id}", [])->assertStatus(501);
     expect(app(PaymentGatewayFactory::class)->make($stripe)->refund('x', '1.00')->status)->toBe('failed');
 });
 
@@ -322,8 +318,8 @@ it('toggles methods independently, keeps COD undeletable but deactivatable, and 
     $this->postJson("{$this->t}/payment-methods/validate", ['type' => 'cod', 'provider' => 'cod'] + $base)->assertStatus(422)->assertJsonValidationErrors(['type']);
     $this->postJson("{$this->t}/payment-methods", ['type' => 'wallet', 'provider' => 'etisalat_cash', 'account_number' => '01100000111', 'is_active' => 1] + $base)->assertOk();
     expect(PaymentMethod::where('provider', 'etisalat_cash')->first()->requires_proof)->toBeTrue();
-    // every new tenant gets a COD method
-    expect(PaymentMethod::ensureDefaultCod($this->tenant->id)->id)->toBe($this->cod->id);
+    // the store always has exactly one COD method
+    expect(PaymentMethod::ensureDefaultCod()->id)->toBe($this->cod->id);
 });
 
 // ------------------------------------------------------------------ COD split + proofs + profit
@@ -364,7 +360,7 @@ it('prepays COD shipping through Paymob for the shipping amount only', function 
     expect($order->fresh()->status)->toBe(S::CONFIRMED);
 });
 
-it('keeps proofs on the private disk, served only to tenant admins and the order token', function () {
+it('keeps proofs on the private disk, served only to admins and the order token', function () {
     $order = ($this->place)(1, ['paymentMethodId' => $this->wallet->id])['order'];
     $bad = fn ($f) => $this->postJson("{$this->s}/order/{$order->public_token}/proof", ['proof' => $f]);
     $bad(UploadedFile::fake()->create('x.txt', 10, 'text/plain'))->assertStatus(422);
@@ -387,11 +383,9 @@ it('keeps proofs on the private disk, served only to tenant admins and the order
     ($this->owner)();
     $this->get("{$this->t}/orders/{$order->id}/proof")->assertOk();
     $this->get("{$this->t}/orders/{$order->id}")->assertOk()->assertSee("orders/{$order->id}/proof", false)->assertDontSee('/storage/payment-proofs');
-    // an admin of ANOTHER tenant cannot read it
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'Saudi', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 2, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $other = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => 'S', 'email' => 's@sa.test', 'password' => 'password', 'is_active' => true]);
-    // the session guard re-resolves admins through the tenant scope: an admin of another tenant is nobody on this host
-    expect(auth('tenant')->getProvider()->retrieveById($other->id))->toBeNull();
+    // an admin without orders.view cannot read it
+    $other = Admin::query()->create(['name' => 'S', 'email' => 's@x.test', 'phone' => '201000000444', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($other, 'admin')->get("{$this->t}/orders/{$order->id}/proof")->assertForbidden();
 });
 
 it('computes net_profit only when an admin confirms and reduces it on returns', function () {
@@ -408,7 +402,7 @@ it('computes net_profit only when an admin confirms and reduces it on returns', 
     $ret = $rs->request($order->refresh(), ReturnRequestData::fromArray(['items' => [$order->items->first()->id => ['quantity' => 1]], 'restock' => true, 'return_shipping_cost' => '5']));
     $rs->approve($ret);
     expect((string) $order->fresh()->net_profit)->toBe('45.00');                            // 90 - (100 - 60) - 5 return shipping
-    $rep = $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant')->get("{$this->t}/reports/sales")->assertOk()->viewData('data');
+    $rep = $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin')->get("{$this->t}/reports/sales")->assertOk()->viewData('data');
     expect(collect($rep['cards'])->firstWhere('label', __('reports.card.net_profit'))['value'])->toBe('45.00');
     $c = ($this->place)(1)['order'];
     app(OrderStatusService::class)->change($c, S::CONFIRMED);
@@ -438,25 +432,33 @@ it('queues the admin notification listeners', function () {
 
 // ------------------------------------------------------------------ COD upfront: the REAL default (no phpunit override)
 
-it('defaults COD shipping prepay to UPFRONT when the tenant has no setting, honours an explicit false and the env fallback', function () {
-    $this->tenant->update(['settings' => []]);                                      // pristine tenant: no cod_collect_shipping_upfront key
-    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeTrue()
+/** The effective COD shipping-prepay rule, exactly as checkout reads it. */
+function codCollectsUpfront(): bool
+{
+    \App\Models\Setting::flush();
+
+    return (bool) setting('cod_collect_shipping_upfront', config('payments.cod_upfront_default', true));
+}
+
+it('defaults COD shipping prepay to UPFRONT when the setting is absent, honours an explicit false and the env fallback', function () {
+    Setting::query()->where('key', 'cod_collect_shipping_upfront')->delete();   // pristine store: no cod_collect_shipping_upfront key
+    expect(codCollectsUpfront())->toBeTrue()
         ->and(config('payments.cod_upfront_default'))->toBeTrue();                  // phpunit.xml no longer overrides it
     expect(fn () => ($this->place)(2))->toThrow(ValidationException::class);        // prepay method now required by default
     $o = ($this->place)(2, ['prepayMethodId' => $this->wallet->id])['order'];
     expect((string) $o->prepaid_shipping)->toBe('40.00')->and((string) $o->cod_amount)->toBe('200.00');
 
-    codUpfront($this->tenant, false);                                               // explicit false: carrier collects the full total
+    codUpfront(false);                                               // explicit false: carrier collects the full total
     $full = ($this->place)(2)['order'];
-    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeFalse()
+    expect(codCollectsUpfront())->toBeFalse()
         ->and((string) $full->prepaid_shipping)->toBe('0.00')->and((string) $full->cod_amount)->toBe((string) $full->total);
 
-    $this->tenant->update(['settings' => []]);                                      // env fallback is only used when the setting is absent
+    Setting::query()->where('key', 'cod_collect_shipping_upfront')->delete();   // env fallback is only used when the setting is absent
     config(['payments.cod_upfront_default' => false]);
-    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeFalse();
+    expect(codCollectsUpfront())->toBeFalse();
     expect((string) ($this->place)(2)['order']->cod_amount)->toBe('240.00');
-    codUpfront($this->tenant, true);                                                // an explicit setting beats the env fallback
-    expect($this->tenant->refresh()->codCollectsShippingUpfront())->toBeTrue();
+    codUpfront(true);                                                // an explicit setting beats the env fallback
+    expect(codCollectsUpfront())->toBeTrue();
 });
 
 // ------------------------------------------------------------------ refund shipping only once
@@ -486,7 +488,7 @@ it('refunds shipping only once when a second return also asks for refund_shippin
 it('releases the unique code / e-mail of soft-deleted discount codes and customers', function () {
     $mk = fn () => DiscountCode::create(['code' => 'SAVE10', 'type' => 'percent', 'value' => 10, 'scope' => 'all', 'is_active' => true]);
     $mk()->delete();
-    $again = $mk();                                                                  // would violate unique(tenant_id, code) without the tombstone
+    $again = $mk();                                                                  // would violate unique(code) without the tombstone
     expect($again->exists)->toBeTrue()->and(DiscountCode::withTrashed()->where('code', 'SAVE10')->count())->toBe(1);
     $c = Customer::create(['name' => 'A', 'email' => 'dup@x.test', 'password' => 'secret123', 'is_active' => true]);
     $c->delete();

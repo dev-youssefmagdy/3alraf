@@ -5,7 +5,7 @@ abstract final class AppRoutes {
   static const cart = '/cart';
   static const wishlist = '/wishlist';
   static const account = '/account';
-  static const selectCountry = '/select-country';
+  static const chooseLanguage = '/language';
   static const onboarding = '/onboarding';
   static const updateRequired = '/update-required';
   static const maintenance = '/maintenance';
@@ -80,7 +80,7 @@ abstract final class AppRoutes {
     'cart',
     'wishlist',
     'account',
-    'select-country',
+    'language',
     'onboarding',
     'update-required',
     'maintenance',
@@ -114,10 +114,10 @@ abstract final class AppRoutes {
   /// Screens that make no sense once signed in.
   static const guestOnly = [login, register, forgotPassword, resetPassword];
 
-  /// Routes reachable before a tenant is chosen.
-  static const preTenant = [
+  /// Startup screens (reachable while/after startup, never protected).
+  static const startupRoutes = [
     splash,
-    selectCountry,
+    chooseLanguage,
     onboarding,
     updateRequired,
     maintenance,

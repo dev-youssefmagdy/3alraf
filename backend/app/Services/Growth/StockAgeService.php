@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Stock age by FIFO layering over the append-only stock ledger (no schema change). Incoming layers = purchase_in / return_in / adjustment_in; outgoing
- * (sale_out, adjustment_out) consumes the OLDEST layers first. Transfers move stock between branches and do not change the tenant total, so they are ignored.
+ * (sale_out, adjustment_out) consumes the OLDEST layers first. Transfers move stock between branches and do not change the shop total, so they are ignored.
  * The surviving layers are the NEWEST receipts that add up to the current on-hand; on-hand that no receipt explains (opening stock) is `unknown_qty` and
  * is never given an invented age. See docs/CALCULATIONS.md "Stock age (FIFO)".
  */

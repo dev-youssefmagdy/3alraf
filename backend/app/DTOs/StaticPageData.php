@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\StaticPageRequest;
+use App\Http\Requests\Admin\StaticPageRequest;
 
 final readonly class StaticPageData
 {

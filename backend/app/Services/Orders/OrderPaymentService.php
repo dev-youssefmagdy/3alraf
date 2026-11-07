@@ -65,7 +65,7 @@ class OrderPaymentService
         if (! $file) {
             throw ValidationException::withMessages(['proof' => __('orders.proof_required')]);
         }
-        app(OfflineCheckoutThrottle::class)->attemptValidate(request()); // decoding files + the reuse oracle are bounded per IP/tenant
+        app(OfflineCheckoutThrottle::class)->attemptValidate(request()); // decoding files + the reuse oracle are bounded per IP
         $this->files->assertNotReused($this->files->inspect($file)['hash']);
     }
 
@@ -77,7 +77,7 @@ class OrderPaymentService
         $info = $this->files->inspect($file);
         $this->files->assertNotReused($info['hash'], $order->id);
         $old = $order->payment_proof;
-        $path = $this->files->store($file, $order->tenant_id, $info);
+        $path = $this->files->store($file, $info);
         try {
             $order->update(['payment_proof' => $path, 'payment_proof_hash' => $info['hash'], 'proof_status' => ProofStatus::PENDING, 'payment_status' => PaymentStatus::REVIEW]);
         } catch (\Throwable $e) {
@@ -95,7 +95,7 @@ class OrderPaymentService
         return $order;
     }
 
-    /** Streams the proof from the private disk. Callers MUST have authorised the request (tenant admin perm / order token). */
+    /** Streams the proof from the private disk. Callers MUST have authorised the request (admin perm / order token). */
     public function proofResponse(Order $order): Response
     {
         abort_unless($order->payment_proof && Storage::disk(self::PROOF_DISK)->exists($order->payment_proof), 404);
@@ -113,7 +113,7 @@ class OrderPaymentService
             'proof_status' => ProofStatus::APPROVED, 'paid_amount' => $order->payableNow(),
             'payment_status' => $order->prepay_method_id ? PaymentStatus::PARTIALLY_PAID : PaymentStatus::PAID,
         ]);
-        $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.proof_approved_note'), 'user_id' => auth('tenant')->id()]);
+        $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.proof_approved_note'), 'user_id' => auth('admin')->id()]);
         event(new OrderPaymentUpdated($order, 'proof_approved'));
 
         return $order->refresh();
@@ -123,7 +123,7 @@ class OrderPaymentService
     {
         $this->ensureReview($order);
         $order->update(['proof_status' => ProofStatus::REJECTED, 'payment_status' => PaymentStatus::UNPAID]);
-        $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => trim(__('orders.proof_rejected_note').' '.$reason), 'user_id' => auth('tenant')->id()]);
+        $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => trim(__('orders.proof_rejected_note').' '.$reason), 'user_id' => auth('admin')->id()]);
         event(new OrderPaymentUpdated($order, 'proof_rejected'));
 
         return $order;
@@ -144,12 +144,13 @@ class OrderPaymentService
         }
         $reference = $attempt === 0 ? $order->number : $order->number.'-R'.($attempt + 1); // providers reject duplicate merchant refs
         $order->update(['payment_attempts' => $attempt + 1]); // count the attempt up front: a half-done attempt may already own the merchant ref at the provider
+        $site = rtrim((string) config('app.url'), '/'); // gateways always call back the main host (never a legacy store subdomain)
         try {
             $payment = $this->gateways->make($method)->createPayment(new PaymentIntentData(
                 $reference, $order->payableNow(), (string) $order->currency,
                 ['name' => $order->customer_name, 'email' => $order->customer_email, 'phone' => $order->customer_phone],
-                tenant_url(current_tenant(), '/'.app()->getLocale().'/payments/return/'.$order->public_token),
-                tenant_url(current_tenant(), '/webhooks/payments/'.$method->id),
+                $site.'/'.app()->getLocale().'/payments/return/'.$order->public_token,
+                $site.'/webhooks/payments/'.$method->id,
             ));
         } catch (GatewayException|GatewayNotImplementedException $e) {
             Log::warning('Payment start failed', ['order' => $order->number, 'provider' => $method->provider->value, 'error' => $e->getMessage()]);
@@ -174,6 +175,9 @@ class OrderPaymentService
      */
     public function handleWebhook(PaymentMethod $pm, Request $request): array
     {
+        if ($pm->type !== PaymentMethodType::ONLINE) {
+            return [404, ['success' => false, 'message' => 'not an online payment method']]; // COD / wallet / bank transfer never receive gateway callbacks
+        }
         if (! $pm->provider->implemented()) {
             return [501, ['success' => false, 'message' => 'not implemented']];
         }
@@ -204,7 +208,7 @@ class OrderPaymentService
 
         $duplicate = DB::transaction(function () use ($pm, $order, $result) {
             $inserted = DB::table('payment_events')->insertOrIgnore([
-                'tenant_id' => $order->tenant_id, 'provider' => $pm->provider->value, 'event_id' => (string) $result->eventId, 'payment_method_id' => $pm->id,
+                'provider' => $pm->provider->value, 'event_id' => (string) $result->eventId, 'payment_method_id' => $pm->id,
                 'order_id' => $order->id, 'status' => $result->status, 'outcome' => in_array($result->status, ['pending', 'refunded'], true) ? 'ignored' : 'applied',
                 'created_at' => now(), 'updated_at' => now(),
             ]);
@@ -230,7 +234,7 @@ class OrderPaymentService
             ]);
             if ($order->status === OrderStatus::CANCELLED) {
                 $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.paid_after_cancel_note')]);
-            } elseif ($order->status === OrderStatus::PENDING && ! $order->prepay_method_id && ($order->tenant->settings['auto_confirm_paid_online'] ?? false)) {
+            } elseif ($order->status === OrderStatus::PENDING && ! $order->prepay_method_id && setting('auto_confirm_paid_online', false)) {
                 $this->status->change($order, OrderStatus::CONFIRMED, __('orders.gateway_paid_note'), null);
             } else {
                 $order->histories()->create(['from_status' => $order->status->value, 'to_status' => $order->status->value, 'note' => __('orders.gateway_paid_note')]);

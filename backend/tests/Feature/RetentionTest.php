@@ -18,8 +18,6 @@ use App\Models\QrCode;
 use App\Models\ShippingCompany;
 use App\Models\Supplier;
 use App\Models\Tag;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Reports\ReportService;
 use App\Services\Retention\SoftDeletePurger;
@@ -33,9 +31,7 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    codUpfront($this->tenant, false);
+    codUpfront(false);
     $this->media = Storage::disk('media');
     // age a soft-deleted row: sets deleted_at N days ago without model events
     $this->age = fn (string $table, int $id, int $days) => DB::table($table)->where('id', $id)->update(['deleted_at' => now()->subDays($days)]);
@@ -71,23 +67,23 @@ it('dry run changes nothing but reports the same counts as a real run', function
     expect($real)->toEqual($dry)->and(Brand::withTrashed()->find($b->id))->toBeNull();
 });
 
-it('artisan retention:purge works, rejects tenants, logs an audit entry; schedule registered', function () {
+it('artisan retention:purge works, rejects unknown models, logs an audit entry; schedule registered', function () {
     $this->artisan('retention:purge --dry-run')->assertExitCode(0);
-    $this->artisan('retention:purge --model=tenant')->assertExitCode(2);
+    $this->artisan('retention:purge --model=nope')->assertExitCode(2);   // not a purgeable model
     $this->artisan('retention:purge --model=brand')->assertExitCode(0);
     expect(DB::table('activity_log')->where('log_name', 'retention')->count())->toBe(1);
     $this->artisan('retention:purge --days=10')->assertExitCode(0);
     expect(collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())->contains(fn ($e) => str_contains($e->command, 'retention:purge') && $e->withoutOverlapping && $e->onOneServer))->toBeTrue();
 });
 
-it('unreferenced product is purged with images, variants, listings and QR files; unique-tombstone rows purge fine', function () {
+it('unreferenced product is purged with images, variants and QR files; unique-tombstone rows purge fine', function () {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'م'], 'slug' => 'gone', 'sku' => 'G1', 'barcode' => '2000000000111']);
-    $tp = TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 50, 'is_active' => true]);
+    $tp = listProduct($p, ['price' => 100, 'cost' => 50, 'is_active' => true]);
     $this->media->put('catalog/products/a.webp', 'x');
     $this->media->put('catalog/products/a_thumb.webp', 'x');
     $p->images()->create(['path' => 'catalog/products/a.webp', 'thumb_path' => 'catalog/products/a_thumb.webp']);
-    $this->media->put("tenants/{$this->tenant->id}/qr/products/p1-a.png", 'png');
-    QrCode::create(['owner_type' => TenantProduct::class, 'owner_id' => $tp->id, 'url' => 'u', 'url_hash' => sha1('u'), 'path' => "tenants/{$this->tenant->id}/qr/products/p1-a.png"]);
+    $this->media->put('qr/products/p1-a.png', 'png');
+    QrCode::create(['owner_type' => Product::class, 'owner_id' => $tp->id, 'url' => 'u', 'url_hash' => sha1('u'), 'path' => 'qr/products/p1-a.png']);
     $p->delete();
     ($this->age)('products', $p->id, 70);
 
@@ -98,9 +94,8 @@ it('unreferenced product is purged with images, variants, listings and QR files;
     $r = ($this->purge)();
     expect($r['product']['purged'])->toBe(1)->and($r['discount_code']['purged'])->toBe(1)
         ->and(Product::withTrashed()->find($p->id))->toBeNull()
-        ->and(DB::table('tenant_products')->where('product_id', $p->id)->count())->toBe(0)
         ->and(DB::table('images')->count())->toBe(0)
-        ->and(QrCode::withoutGlobalScopes()->count())->toBe(0);
+        ->and(QrCode::query()->count())->toBe(0);
     expect($this->media->allFiles())->toBe([]);
 });
 
@@ -110,14 +105,14 @@ it('a product/variant/branch/method/city/company/code referenced by a retained o
     $cod = PaymentMethod::where('type', 'cod')->first();
     $branch = Branch::first();
     $product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'ret1', 'sku' => 'R1', 'barcode' => '2000000000222']);
-    TenantProduct::create(['product_id' => $product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($branch->id, $product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $order = app(OrderPlacementService::class)->place(new CheckoutData(
         name: 'Ali', phone: '01000000100', cityId: $city->id, address: 'St', shippingCompanyId: $company->id, paymentMethodId: $cod->id,
     ), [['product_id' => $product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
     DB::table('orders')->where('id', $order->id)->update(['status' => 'confirmed']);
 
-    $filter = new ReportFilter(now()->subDay()->toDateString(), now()->addDay()->toDateString(), false, [$this->tenant->id]);
+    $filter = new ReportFilter(now()->subDay()->toDateString(), now()->addDay()->toDateString());
     $reports = fn () => collect(ReportService::KEYS)->mapWithKeys(fn ($k) => [$k => app(ReportService::class)->run($k, $filter)])->all();
     $before = $reports();
 
@@ -148,15 +143,15 @@ it('variant referenced by order items is kept, an unreferenced one is purged', f
         ->and(ProductVariant::withTrashed()->find($b->id))->toBeNull();
 });
 
-it('customer with orders is anonymised (order totals untouched), customer without is purged, other tenants and live rows untouched', function () {
+it('customer with orders is anonymised (order totals untouched), customer without is purged, live rows untouched', function () {
     $withOrder = Customer::create(['name' => 'Real Name', 'email' => 'real@x.test', 'phone' => '01100000111', 'password' => 'secret123']);
     $plain = Customer::create(['name' => 'Plain', 'email' => 'plain@x.test', 'password' => 'secret123']);
     $live = Customer::create(['name' => 'Live', 'email' => 'live@x.test', 'password' => 'secret123']);
     $withOrder->addresses()->create(['name' => 'Real', 'phone' => '1', 'city_id' => City::first()->id, 'address' => 'a', 'label' => 'home']);
-    $order = Order::withoutGlobalScopes()->first() ?? null;
+    $order = Order::query()->first() ?? null;
     $city = City::first();
     DB::table('orders')->insert([
-        'tenant_id' => $this->tenant->id, 'number' => 'RET-1', 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_id' => $withOrder->id,
+        'number' => 'RET-1', 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_id' => $withOrder->id,
         'customer_name' => 'Real Name', 'customer_phone' => '01100000111', 'address' => 'St', 'city_id' => $city->id, 'branch_id' => Branch::first()->id,
         'status' => 'delivered', 'subtotal' => 100, 'total' => 100, 'created_at' => now(), 'updated_at' => now(),
     ]);
@@ -178,17 +173,17 @@ it('customer with orders is anonymised (order totals untouched), customer withou
 
 it('soft-deleted order is purged with its proof; one with returns/commission is kept and anonymised (report-safe)', function () {
     $mk = fn (string $n) => DB::table('orders')->insertGetId([
-        'tenant_id' => $this->tenant->id, 'number' => $n, 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'Secret '.$n,
-        'customer_phone' => '01000000100', 'customer_email' => 'x@y.z', 'address' => 'Home', 'payment_proof' => "tenants/{$this->tenant->id}/payment-proofs/$n.jpg",
+        'number' => $n, 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'Secret '.$n,
+        'customer_phone' => '01000000100', 'customer_email' => 'x@y.z', 'address' => 'Home', 'payment_proof' => "payment-proofs/$n.jpg",
         'city_id' => City::first()->id, 'branch_id' => Branch::first()->id, 'status' => 'cancelled', 'subtotal' => 50, 'total' => 50,
         'deleted_at' => now()->subDays(100), 'created_at' => now()->subDays(100), 'updated_at' => now(),
     ]);
     $free = $mk('O-FREE');
     $held = $mk('O-HELD');
-    Storage::disk('private')->put("tenants/{$this->tenant->id}/payment-proofs/O-FREE.jpg", 'p');
-    Storage::disk('private')->put("tenants/{$this->tenant->id}/payment-proofs/O-HELD.jpg", 'p');
+    Storage::disk('private')->put("payment-proofs/O-FREE.jpg", 'p');
+    Storage::disk('private')->put("payment-proofs/O-HELD.jpg", 'p');
     $aff = Affiliate::first();
-    DB::table('affiliate_commissions')->insert(['tenant_id' => $this->tenant->id, 'affiliate_id' => $aff->id, 'order_id' => $held, 'base' => 50, 'percent' => 5, 'amount' => 2.5, 'status' => 'voided', 'created_at' => now(), 'updated_at' => now()]);
+    DB::table('affiliate_commissions')->insert(['affiliate_id' => $aff->id, 'order_id' => $held, 'base' => 50, 'percent' => 5, 'amount' => 2.5, 'status' => 'voided', 'created_at' => now(), 'updated_at' => now()]);
 
     $r = ($this->purge)();
     expect($r['order'])->toMatchArray(['purged' => 1, 'anonymized' => 1])
@@ -196,8 +191,8 @@ it('soft-deleted order is purged with its proof; one with returns/commission is 
         ->and(DB::table('orders')->where('id', $held)->value('customer_name'))->toBe('Anonymized')
         ->and(DB::table('orders')->where('id', $held)->value('address'))->toBe('-')
         ->and(DB::table('affiliate_commissions')->where('order_id', $held)->count())->toBe(1);
-    Storage::disk('private')->assertMissing("tenants/{$this->tenant->id}/payment-proofs/O-FREE.jpg");
-    Storage::disk('private')->assertMissing("tenants/{$this->tenant->id}/payment-proofs/O-HELD.jpg");
+    Storage::disk('private')->assertMissing("payment-proofs/O-FREE.jpg");
+    Storage::disk('private')->assertMissing("payment-proofs/O-HELD.jpg");
 });
 
 it('brand/category/tag/supplier rules: kept while referenced, purged (with files) when free', function () {
@@ -210,7 +205,7 @@ it('brand/category/tag/supplier rules: kept while referenced, purged (with files
     $tag = Tag::create(['name' => ['ar' => 't'], 'slug' => 't']);
     $sup = Supplier::create(['name' => 'S']);
     $supUsed = Supplier::create(['name' => 'S2']);
-    DB::table('purchase_orders')->insert(['tenant_id' => $this->tenant->id, 'supplier_id' => $supUsed->id, 'branch_id' => Branch::first()->id, 'number' => 'PO-R', 'status' => 'received', 'ordered_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+    DB::table('purchase_orders')->insert(['supplier_id' => $supUsed->id, 'branch_id' => Branch::first()->id, 'number' => 'PO-R', 'status' => 'received', 'ordered_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
     foreach ([[$brandUsed, 'brands'], [$brandFree, 'brands'], [$catFree, 'categories'], [$tag, 'tags'], [$sup, 'suppliers'], [$supUsed, 'suppliers']] as [$m, $t]) {
         DB::table($t)->where('id', $m->id)->update(['deleted_at' => now()->subDays(70)]);
     }
@@ -221,13 +216,10 @@ it('brand/category/tag/supplier rules: kept while referenced, purged (with files
     expect($this->media->allFiles())->toBe([]);
 });
 
-it('--model limits the run and tenants are never purged', function () {
+it('--model limits the run', function () {
     $b = ($this->brand)('lim');
-    $t = Tenant::create(['slug' => 'dead', 'name' => 'D', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'EGP', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Africa/Cairo', 'is_active' => true]);
     DB::table('brands')->where('id', $b->id)->update(['deleted_at' => now()->subDays(99)]);
-    DB::table('tenants')->where('id', $t->id)->update(['deleted_at' => now()->subDays(999)]);
     $r = ($this->purge)(['only' => ['city']]);
     expect(array_keys($r))->toBe(['city'])->and(Brand::withTrashed()->find($b->id))->not->toBeNull();
-    ($this->purge)();
-    expect(Tenant::withTrashed()->find($t->id))->not->toBeNull()->and(config('retention.models'))->not->toHaveKey('tenant');
+    expect(config('retention.models'))->toHaveKey('brand');
 });

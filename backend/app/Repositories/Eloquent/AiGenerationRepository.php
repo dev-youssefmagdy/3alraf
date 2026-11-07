@@ -6,7 +6,6 @@ use App\Models\AiGeneration;
 use App\Repositories\Contracts\AiGenerationRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-/** Tenant scoped through the BelongsToTenant global scope. */
 class AiGenerationRepository implements AiGenerationRepositoryInterface
 {
     public function create(array $data): AiGeneration

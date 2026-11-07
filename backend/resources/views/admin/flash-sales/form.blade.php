@@ -18,9 +18,9 @@
         </div>
         <div data-repeater-list class="space-y-2">
             @foreach ($rows as $k => $r)
-                @include('tenant.flash-sales._row', ['i' => $k, 'r' => $r, 'opts' => $opts])
+                @include('admin.flash-sales._row', ['i' => $k, 'r' => $r, 'opts' => $opts])
             @endforeach
         </div>
-        <template data-repeater-template>@include('tenant.flash-sales._row', ['i' => '__INDEX__', 'r' => null, 'opts' => $opts])</template>
+        <template data-repeater-template>@include('admin.flash-sales._row', ['i' => '__INDEX__', 'r' => null, 'opts' => $opts])</template>
     </div>
 </x-resource-form>

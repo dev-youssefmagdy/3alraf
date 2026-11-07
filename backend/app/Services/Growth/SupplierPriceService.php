@@ -10,7 +10,7 @@ use App\Models\SupplierProductPrice;
 
 /**
  * Supplier price comparison for reorder drafts. Two layers: (1) derived from RECEIVED purchase orders (last / avg / min unit_cost per supplier),
- * (2) explicit supplier_product_prices (valid today). Explicit wins over history for the same supplier. Never writes tenant_products.cost.
+ * (2) explicit supplier_product_prices (valid today). Explicit wins over history for the same supplier. Never writes products.cost.
  * Unit cost only: PO shipping/other costs are not allocated into unit cost (CALCULATIONS.md, purchases).
  */
 class SupplierPriceService
@@ -19,7 +19,6 @@ class SupplierPriceService
     public function history(int $productId): array
     {
         $rows = PurchaseOrderItem::query()->join('purchase_orders as po', 'po.id', '=', 'purchase_order_items.purchase_order_id')
-            ->where('po.tenant_id', current_tenant()?->id)
             ->where('purchase_order_items.product_id', $productId)->where('po.status', PurchaseStatus::RECEIVED->value)
             ->orderBy('po.received_at')->orderBy('po.id')
             ->get(['po.supplier_id', 'purchase_order_items.unit_cost', 'po.received_at']);

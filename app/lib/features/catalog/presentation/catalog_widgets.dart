@@ -9,17 +9,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../store/application/store_controller.dart';
 import '../../wishlist/application/wishlist_controller.dart';
 import '../data/catalog_models.dart';
 
 /// Currency label of the active store (server provides the symbol).
-final currencyLabelProvider = Provider<String>((ref) {
-  final store = ref.watch(storeInfoProvider);
-  return store?.currencySymbol ??
-      ref.watch(tenantControllerProvider).tenant?.currency ??
-      '';
-});
+final currencyLabelProvider = Provider<String>(
+  (ref) => ref.watch(storeControllerProvider).currencyLabel,
+);
 
 /// Identifies one product image across a list -> detail Hero flight. The
 /// [scope] keeps tags unique when the same product appears in two rails.

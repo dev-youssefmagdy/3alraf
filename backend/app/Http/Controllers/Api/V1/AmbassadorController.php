@@ -52,6 +52,6 @@ class AmbassadorController extends ApiController
 
     private function linkRow(TrackedLink $l): array
     {
-        return ['id' => $l->id, 'channel' => $l->channel, 'product_id' => $l->product_id, 'clicks' => (int) $l->clicks, 'url' => tenant_url(current_tenant(), 'l/'.$l->code)];
+        return ['id' => $l->id, 'channel' => $l->channel, 'product_id' => $l->product_id, 'clicks' => (int) $l->clicks, 'url' => url('l/'.$l->code)];
     }
 }

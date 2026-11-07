@@ -2,14 +2,15 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\BulkEnableRequest;
+use App\Http\Requests\Admin\ActivateProductsRequest;
 
-final readonly class BulkEnableData
+/** Catalog "activate products": price + put on sale the selected products that have no price yet. */
+final readonly class ActivateProductsData
 {
     /** @param array<int,array{product_id:int,price:string,sale_price:?string,cost:string,is_active:bool}> $rows */
     public function __construct(public array $rows) {}
 
-    public static function fromRequest(BulkEnableRequest $r): self
+    public static function fromRequest(ActivateProductsRequest $r): self
     {
         $rows = [];
         foreach ($r->input('rows', []) as $productId => $row) {

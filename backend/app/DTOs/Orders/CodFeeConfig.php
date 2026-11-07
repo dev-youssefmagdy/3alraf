@@ -2,10 +2,10 @@
 
 namespace App\DTOs\Orders;
 
-use App\Http\Requests\Tenant\CodFeeSettingsRequest;
+use App\Http\Requests\Admin\CodFeeSettingsRequest;
 
 /**
- * Per-tenant COD extra fee settings (tenants.settings.cod_extra_fee_*), see docs/CALCULATIONS.md "COD extra fee".
+ * COD extra fee settings (setting keys cod_extra_fee_*), see docs/CALCULATIONS.md "COD extra fee".
  * Used by the settings form (DTO), the quote (CalculatorInput) and the order snapshot.
  */
 final readonly class CodFeeConfig
@@ -55,7 +55,7 @@ final readonly class CodFeeConfig
         );
     }
 
-    /** @return array<string,mixed> the keys merged into tenants.settings */
+    /** @return array<string,mixed> the keys written to the settings table */
     public function toSettings(): array
     {
         return ['cod_extra_fee_enabled' => $this->enabled, 'cod_extra_fee_type' => $this->type, 'cod_extra_fee_fixed' => $this->fixed,
@@ -64,7 +64,7 @@ final readonly class CodFeeConfig
             'cod_extra_fee_label' => $this->label];
     }
 
-    /** Label translations with the built-in default when the tenant set none. */
+    /** Label translations with the built-in default when none is set. */
     public function labels(): array
     {
         return $this->label ?: ['ar' => __('orders.cod_fee_default', [], 'ar'), 'en' => __('orders.cod_fee_default', [], 'en')];

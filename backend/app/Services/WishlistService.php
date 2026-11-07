@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Repositories\Contracts\WishlistItemRepositoryInterface;
 
 class WishlistService
@@ -29,12 +29,12 @@ class WishlistService
         return $this->items->query()->where('customer_id', $c->id)->where('product_id', $productId)->exists();
     }
 
-    /** Active tenant products in the wishlist, newest first. */
+    /** Active products in the wishlist, newest first. */
     public function products(Customer $c)
     {
         $ids = $this->items->query()->where('customer_id', $c->id)->latest('id')->pluck('product_id');
 
-        return TenantProduct::query()->where('is_active', true)->whereIn('product_id', $ids)->with('product.images')->get()
-            ->sortBy(fn ($tp) => $ids->search($tp->product_id))->values();
+        return Product::query()->where('is_active', true)->whereNotNull('price')->whereIn('id', $ids)->with('images')->get()
+            ->sortBy(fn ($p) => $ids->search($p->id))->values();
     }
 }

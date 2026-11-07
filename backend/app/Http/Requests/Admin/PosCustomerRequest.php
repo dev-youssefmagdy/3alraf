@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use App\Models\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 /** Quick "new customer" form of the POS: name + phone, e-mail optional. A phone already on file is refused (pick that customer instead). */
 class PosCustomerRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     protected function prepareForValidation(): void
     {
@@ -34,7 +34,7 @@ class PosCustomerRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user('tenant')?->can('pos.use') ?? false;
+        return $this->user('admin')?->can('pos.use') ?? false;
     }
 
     public function rules(): array
@@ -43,7 +43,7 @@ class PosCustomerRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:30'],
             ...$this->phoneCodeRule(),
-            'email' => ['nullable', 'email', 'max:190', Rule::unique('customers', 'email')->where('tenant_id', current_tenant()->id)],
+            'email' => ['nullable', 'email', 'max:190', Rule::unique('customers', 'email')],
         ];
     }
 

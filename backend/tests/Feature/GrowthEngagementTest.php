@@ -9,9 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ReputationAlert;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Models\TrackedLink;
 use App\Services\BarcodeService;
 use App\Services\Growth\BrandMemoryService;
@@ -36,26 +34,14 @@ beforeEach(function () {
     config(['growth.classifier.require_real_eval' => false]); // the real-data gate has its own tests (GrowthOpenItemsTest)
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-        app(GrowthFeatures::class)->enableAll($t);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
-    $this->off = function (string $key) {
-        $t = current_tenant();
-        $s = $t->settings;
-        $s['growth']['features'][$key] = false;
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->base = '';
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
     $this->level = fn (int $l) => app(InteractionService::class)->setReplyLevel($l, null);
     $this->product = function (string $slug = 'serum', string $price = '100.00') {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => 50, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => 50, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, 10, 50);
 
         return $pr;
@@ -63,12 +49,9 @@ beforeEach(function () {
     $this->ix = fn (array $o = []) => app(InteractionService::class)->ingest($o + ['channel' => 'whatsapp', 'external_id' => uniqid('e'), 'text' => 'hello', 'received_at' => now()->toDateTimeString()])[0];
 });
 
-function engClient(array $scopes, ?Tenant $tenant = null): array
+function engClient(array $scopes): array
 {
-    $prev = current_tenant();
-    app()->instance('currentTenant', $tenant ?? $prev);
     $r = app(IntegrationClientService::class)->create('n8n', $scopes, null, null);
-    app()->instance('currentTenant', $prev);
 
     return $r;
 }
@@ -83,7 +66,7 @@ function engCall($test, string $method, string $path, ?array $body, array $c, ar
         $server['HTTP_'.strtoupper(str_replace('-', '_', $k))] = $v;
     }
 
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
+    return $test->call($method, '/api/integration/v1/'.$path, [], [], [], $server, $raw);
 }
 
 it('ingests idempotently, masks PII before storage and validates classification', function () {
@@ -101,21 +84,12 @@ it('ingests idempotently, masks PII before storage and validates classification'
     engCall($this, 'POST', 'interactions', $body, $ro, ['Idempotency-Key' => 'k4'])->assertStatus(403); // scope
 });
 
-it('isolates tenants: other tenant cannot see or reply to my interactions', function () {
-    $i = ($this->ix)(['text' => 'price?']);
-    $c2 = engClient(['read', 'ingest:write'], $this->other);
-    engCall($this, 'GET', "interactions/{$i->id}/suggested-reply", null, $c2)->assertStatus(404);
-    engCall($this, 'POST', "interactions/{$i->id}/responded", null, $c2)->assertStatus(404);
-    app()->instance('currentTenant', $this->other);
-    expect(Interaction::count())->toBe(0)->and(app(InteractionService::class)->unanswered()->count())->toBe(0);
-});
-
 it('every N4 surface is gated by its switch (API 403, admin 404, short link 404) and dependencies cascade', function () {
     $c = engClient(['read', 'ingest:write']);
     $p = ($this->product)();
     $l = app(TrackedLinkService::class)->create($p->id, 'facebook', null, null);
-    $owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($owner, 'tenant');
+    $owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($owner, 'admin');
     foreach (['interactions', 'voc', 'reputation', 'missed'] as $pg) {
         $this->get("{$this->base}/admin/growth/$pg")->assertOk();
     }
@@ -124,17 +98,17 @@ it('every N4 surface is gated by its switch (API 403, admin 404, short link 404)
     $this->get("{$this->base}/l/{$l->code}")->assertNotFound();
     engCall($this, 'POST', 'tracked-links', ['product_id' => $p->id], $c, ['Idempotency-Key' => 'x'])->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
     ($this->off)('reputation_radar');
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/reputation")->assertNotFound();
     engCall($this, 'GET', 'reputation/alerts', null, $c)->assertStatus(403);
     ($this->off)('missed_opportunities');
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/missed")->assertNotFound();
     expect(MissedOpportunity::count())->toBe(0);
     ($this->off)('interactions'); // voc depends on interactions
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/voc")->assertNotFound();
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/interactions")->assertNotFound();
     engCall($this, 'POST', 'interactions', ['channel' => 'whatsapp', 'external_id' => 'z', 'text' => 'x'], $c, ['Idempotency-Key' => 'y'])->assertStatus(403);
     expect(app(GrowthFeatures::class)->active('voc'))->toBeFalse();
@@ -181,9 +155,7 @@ it('auto-reply only for allowlisted FAQs at L3 with the feature on and no reputa
     $svc = app(SuggestedReplyService::class);
     ($this->level)(3);
     expect($svc->suggest($i)['mode'])->toBe('suggest')->and($svc->suggest($i)['faq_key'])->toBe('faq'.$faq->id); // not allowlisted
-    $t = current_tenant();
-    app(GrowthConfig::class)->update($t, ['auto_reply_allowlist' => 'faq'.$faq->id]);
-    app()->instance('currentTenant', $t->refresh());
+    app(GrowthConfig::class)->update(['auto_reply_allowlist' => 'faq'.$faq->id]);
     expect($svc->suggest($i)['mode'])->toBe('auto');
     ReputationAlert::create(['product_id' => $p->id, 'topic' => 'shipping', 'rate' => 50, 'baseline_rate' => 5, 'z_score' => 5, 'sample' => 10, 'status' => 'open', 'detected_on' => now()]);
     expect($svc->suggest($i)['mode'])->toBe('suggest'); // paused
@@ -191,7 +163,7 @@ it('auto-reply only for allowlisted FAQs at L3 with the feature on and no reputa
     ($this->off)('auto_reply');
     expect($svc->suggest($i)['mode'])->toBe('suggest');
     ($this->level)(2);
-    app(GrowthFeatures::class)->update(current_tenant(), ['auto_reply' => true]);
+    app(GrowthFeatures::class)->update(['auto_reply' => true]);
     expect($svc->suggest($i)['mode'])->toBe('suggest'); // level too low
 });
 
@@ -231,11 +203,9 @@ it('voc aggregates, detects recurring objections and creates one task per produc
     expect($t->before_value)->toEqual(3)->and($t->topic)->toBe('price');
     $v->updateTask($t->id, ['status' => 'done'], null);
     expect($t->fresh()->after_value)->toEqual(3)->and($t->fresh()->status)->toBe('done');
-    app()->instance('currentTenant', $this->other);
-    expect(ImprovementTask::count())->toBe(0)->and($v->aggregate()['total'])->toBe(0);
 });
 
-it('missed opportunities: rule with evidence + one experiment, idempotent per week, tenant isolated, weekly endpoint', function () {
+it('missed opportunities: rule with evidence + one experiment, idempotent per week, weekly endpoint', function () {
     $p = ($this->product)();
     for ($k = 0; $k < 6; $k++) {
         ($this->ix)(['product_id' => $p->id, 'text' => 'price? '.$k, 'category' => 'price', 'intent' => 'purchase_intent']);
@@ -253,8 +223,6 @@ it('missed opportunities: rule with evidence + one experiment, idempotent per we
     expect($svc->scan())->toBe(0)->and(MissedOpportunity::find($m->id)->owner)->toBe('Mona');
     $c = engClient(['read']);
     engCall($this, 'GET', 'missed-opportunities/weekly', null, $c)->assertOk()->assertJsonPath('data.items.0.confidence', 'high');
-    app()->instance('currentTenant', $this->other);
-    expect($svc->weekly()['items'])->toBe([]);
 });
 
 it('missed opportunities: orders satisfy the inquiry rule so it is not raised', function () {
@@ -271,7 +239,7 @@ it('missed opportunities: orders satisfy the inquiry rule so it is not raised', 
     expect(MissedOpportunity::where('rule', 'inquiries_gt_orders')->count())->toBe(0);
 });
 
-it('tracked link redirects with UTM, counts human clicks only, attributes orders and is tenant scoped', function () {
+it('tracked link redirects with UTM, counts human clicks only, attributes orders and refuses unknown products', function () {
     $p = ($this->product)('lip');
     $svc = app(TrackedLinkService::class);
     $l = $svc->create($p->id, 'instagram', null, 'eid post');
@@ -284,10 +252,7 @@ it('tracked link redirects with UTM, counts human clicks only, attributes orders
     $o = new Order;
     $o->forceFill(['number' => 'TL1', 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid', 'subtotal' => 80, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 0, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => 80, 'cogs' => 40, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => now(), 'channel' => 'social', 'attribution' => ['utm_content' => 'tl'.$l->code]])->save();
     expect($svc->stats($l->fresh()))->toBe(['clicks' => 1, 'orders' => 1, 'revenue' => 80.0]);
-    app()->instance('currentTenant', $this->other);
-    expect(TrackedLink::count())->toBe(0);
-    $this->call('GET', 'http://sa.3alraf.test/l/'.$l->code)->assertNotFound();
-    expect(fn () => $svc->create($p->id, null, null, null))->toThrow(ValidationException::class); // not this tenant's product
+    expect(fn () => $svc->create(999999, null, null, null))->toThrow(ValidationException::class); // unknown product
 });
 
 it('owner brief conversations section: not available when off, real numbers when on', function () {

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StaticPageDataTable;
 use App\DTOs\StaticPageData;
-use App\Http\Requests\Tenant\StaticPageRequest;
+use App\Http\Requests\Admin\StaticPageRequest;
 use App\Models\StaticPage;
 use App\Services\StaticPageService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class StaticPageController extends ResourceController
 {
     protected static string $perm = 'static_pages';
-    protected static string $routeBase = 'tenant.static-pages';
-    protected static string $view = 'tenant.static-pages';
+    protected static string $routeBase = 'admin.static-pages';
+    protected static string $view = 'admin.static-pages';
     protected static string $titleKey = 'growth.static_pages';
     protected static string $requestClass = StaticPageRequest::class;
     protected static string $dtoClass = StaticPageData::class;

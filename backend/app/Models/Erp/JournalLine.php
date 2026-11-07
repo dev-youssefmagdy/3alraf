@@ -3,13 +3,11 @@
 namespace App\Models\Erp;
 
 use App\Models\Branch;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
 class JournalLine extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'erp_journal_lines';
 

@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 interface AiTrendRepositoryInterface
 {
     /**
-     * Per product sales over the last $days and the $days before (confirmed-set orders, net of returns), tenant scoped.
+     * Per product sales over the last $days and the $days before (confirmed-set orders, net of returns).
      *
      * @return Collection<int,object> product_id, qty, prev_qty, revenue, cost
      */
@@ -17,15 +17,15 @@ interface AiTrendRepositoryInterface
     /** @return array<int,int> product_id => available (on hand - reserved, all branches) */
     public function availableByProduct(?array $productIds = null): array;
 
-    /** Listed (tenant) products with identity fields for matching. @return Collection<int,object> product_id, tp_id, sku, barcode, names(array), cost */
+    /** Listed products (with a store price) with identity fields for matching. @return Collection<int,object> product_id, tp_id, sku, barcode, names(array), cost */
     public function listedProducts(): Collection;
 
-    /** @return array{categories:array<int,string>,brands:array<int,string>} top names in the tenant's catalog */
+    /** @return array{categories:array<int,string>,brands:array<int,string>} top names in the shop's catalog */
     public function catalogMix(int $limit = 8): array;
 
     public function latestSnapshot(string $kind, ?string $country): ?AiTrendSnapshot;
 
-    /** Latest snapshot of a kind whose `period` column holds the given cache key (tenant scoped). */
+    /** Latest snapshot of a kind whose `period` column holds the given cache key. */
     public function snapshotByKey(string $kind, string $key): ?AiTrendSnapshot;
 
     public function saveSnapshot(string $kind, ?string $country, ?string $period, array $items): AiTrendSnapshot;

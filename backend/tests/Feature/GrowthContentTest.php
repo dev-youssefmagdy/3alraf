@@ -6,7 +6,7 @@ use App\Enums\StockMovementType as T;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 use App\Models\BlogPost;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
@@ -16,9 +16,7 @@ use App\Models\Bundle;
 use App\Models\DiscountCode;
 use App\Models\FlashSale;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Ai\GeneratorService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -38,13 +36,9 @@ use App\Services\Growth\TruthGuardService;
 use App\Services\Growth\IntegrationClientService;
 use App\Services\Growth\SignatureService;
 
-function ncClient(array $scopes = ['read'], ?string $webhook = null, ?Tenant $tenant = null): array
+function ncClient(array $scopes = ['read'], ?string $webhook = null): array
     {
-        $tenant ??= current_tenant();
-        $prev = current_tenant();
-        app()->instance('currentTenant', $tenant);
         $r = app(IntegrationClientService::class)->create('n8n', $scopes, $webhook, null);
-        app()->instance('currentTenant', $prev);
 
         return $r;
     }
@@ -56,32 +50,26 @@ function ncClient(array $scopes = ['read'], ?string $webhook = null, ?Tenant $te
         $h = ['Authorization' => 'Bearer '.$token, 'X-Timestamp' => (string) $ts, 'X-Signature' => app(SignatureService::class)->sign($secret, $ts, $raw), 'Accept' => 'application/json', 'CONTENT_TYPE' => 'application/json'] + $headers;
         $server = collect($h)->mapWithKeys(fn ($v, $k) => [$k === 'CONTENT_TYPE' ? $k : 'HTTP_'.strtoupper(str_replace('-', '_', $k)) => $v])->all();
 
-        return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
+        return $test->call($method, '/api/integration/v1/'.$path, [], [], [], $server, $raw);
     }
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    RateLimiter::clear('ai:1');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->tenant);
-    app(GrowthAccess::class)->set($this->other, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->other);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    RateLimiter::clear('ai:shop');
+    app(GrowthAccess::class)->set(true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll();
     $p = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'oa-gen', 'api_key' => 'sk-test-1234567', 'is_active' => true]);
     $this->text = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'gpt-gen', 'label' => 'T', 'kind' => 'text', 'capabilities' => ['json_mode' => true], 'is_active' => true]);
     $this->image = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'img-gen', 'label' => 'I', 'kind' => 'image', 'is_active' => true]);
-    AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => $this->tenant->id], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
+    AiSetting::query()->updateOrCreate([], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
         'default_ai_model_id' => $this->text->id, 'monthly_token_quota' => null, 'monthly_image_quota' => null, 'brand_voice' => null, 'forbidden_words' => []]);
     app(\App\Services\Ai\AiAccess::class)->forget();
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin/ai/generators';
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->base = '/admin/ai/generators';
     $this->product = function (string $slug, string $price = '100.00', string $cost = '50', int $stock = 20) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         if ($stock > 0) {
             app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, $cost);
         }
@@ -154,9 +142,6 @@ it('content package: generated unsupported claims are removed, approve creates a
     $n = ContentAsset::count();
     ($this->owner)()->postJson("{$this->base}/{$g->id}/approve")->assertStatus(422);
     expect(ContentAsset::count())->toBe($n);
-    // tenant isolation
-    app()->instance('currentTenant', $this->other);
-    expect(ContentAsset::count())->toBe(0)->and(ApprovedProductClaim::count())->toBe(0);
 });
 
 it('content package: a conflict with product facts blocks approval until edited', function () {
@@ -177,20 +162,19 @@ it('content package needs the growth flag, growth.manage and exactly one product
     $p = claimProduct($this, 'aloe3');
     $body = ['kind' => 'content_package', 'goal' => 'x', 'product_ids' => [$p->id]];
     ($this->owner)()->postJson($this->base.'/generate', array_merge($body, ['product_ids' => []]))->assertStatus(422);
-    app(GrowthAccess::class)->set($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    app(GrowthAccess::class)->set(false);
     ($this->owner)()->postJson($this->base.'/generate', $body)->assertStatus(422);
     expect(AiGeneration::count())->toBe(0);
 });
 
-it('truth guard also runs on other generators when products are attached (growth tenants)', function () {
+it('truth guard also runs on other generators when products are attached', function () {
     $p = claimProduct($this, 'aloe4');
     $r = ($this->gen)('blog_post', ['slug' => 'aloe-post', 'title' => ['en' => 'Aloe'], 'content' => ['en' => '<p>A daily cleanser. It cures acne in 3 days.</p>']], ['kind' => 'blog_post', 'product_ids' => [$p->id]]);
     $g = AiGeneration::find($r->json('data.id'));
     expect($g->output['draft']['content']['en'])->not->toContain('cures')->and(collect($g->output['warnings'])->pluck('code')->all())->toContain('claims_removed');
 });
 
-it('brand memory: edits are versioned, API is tenant scoped and read-only, truth check endpoint works', function () {
+it('brand memory: edits are versioned, API is read-only, truth check endpoint works', function () {
     $p = claimProduct($this, 'aloe5');
     $e = app(BrandMemoryService::class)->save(['kind' => 'voice', 'title' => 'Voice', 'body' => 'Warm, Egyptian'], null, 1);
     app(BrandMemoryService::class)->save(['title' => 'Voice', 'body' => 'Warm and short'], $e->id, 1);
@@ -199,23 +183,19 @@ it('brand memory: edits are versioned, API is tenant scoped and read-only, truth
     $res = ncCall($this, 'GET', 'brand-memory?product_id='.$p->id, null, $tok, $sec)->assertOk();
     expect($res->json('data.entries.0.body'))->toBe('Warm and short')->and($res->json('data.approved_claims.0.claim'))->toBe('Contains aloe vera');
     ncCall($this, 'POST', 'truth-guard/check', ['text' => 'Cures acne fast. Nice bottle.', 'product_id' => $p->id], $tok, $sec)->assertOk()->assertJsonPath('data.ok', false)->assertJsonPath('data.removed.0.type', 'benefit');
-    // another tenant's client sees nothing of ours and cannot query our product
-    [, $t2, $s2] = ncClient(['read'], null, $this->other);
-    expect(ncCall($this, 'GET', 'brand-memory', null, $t2, $s2)->assertOk()->json('data.entries'))->toBe([]);
-    ncCall($this, 'GET', 'brand-memory?product_id='.$p->id, null, $t2, $s2)->assertNotFound();
     // facts endpoint carries approved claims
     expect(ncCall($this, 'GET', 'products/'.$p->id.'/facts', null, $tok, $sec)->json('data.approved_claims.0.claim'))->toBe('Contains aloe vera');
     // admin UI renders
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/brand-memory')->assertOk()->assertSee('Voice');
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/content')->assertOk();
+    ($this->owner)()->get('/admin/growth/brand-memory')->assertOk()->assertSee('Voice');
+    ($this->owner)()->get('/admin/growth/content')->assertOk();
 });
 
-it('content calendar: schedule, manual publish is idempotent, other tenant assets rejected', function () {
+it('content calendar: schedule, manual publish is idempotent, unknown assets rejected', function () {
     $p = claimProduct($this, 'aloe6');
     $r = ($this->gen)('content_package', pkgDraft($p->id), ['kind' => 'content_package', 'product_ids' => [$p->id]]);
     ($this->owner)()->postJson("{$this->base}/{$r->json('data.id')}/approve")->assertOk();
     $asset = ContentAsset::where('type', 'story')->first();
-    $url = 'http://egy.3alraf.test/admin/growth/content';
+    $url = '/admin/growth/content';
     ($this->owner)()->postJson("$url/schedule", ['content_asset_id' => $asset->id, 'channel' => 'instagram', 'scheduled_for' => now()->addDay()->format('Y-m-d H:i')])->assertOk();
     $item = ContentCalendarItem::first();
     ($this->owner)()->postJson("$url/{$item->id}/publish")->assertOk();
@@ -223,6 +203,4 @@ it('content calendar: schedule, manual publish is idempotent, other tenant asset
     ($this->owner)()->postJson("$url/{$item->id}/publish")->assertOk();
     expect($item->fresh()->status)->toBe('published')->and($item->fresh()->published_at->eq($at))->toBeTrue()->and($asset->fresh()->status)->toBe('published');
     ($this->owner)()->postJson("$url/schedule", ['content_asset_id' => 999999, 'channel' => 'instagram', 'scheduled_for' => now()->addDay()->format('Y-m-d H:i')])->assertStatus(422);
-    app()->instance('currentTenant', $this->other);
-    expect(ContentCalendarItem::count())->toBe(0);
 });

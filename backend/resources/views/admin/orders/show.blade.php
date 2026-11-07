@@ -4,14 +4,14 @@
     $canReturn = $order->status === OrderStatus::DELIVERED;
     $money = fn ($v) => \App\Support\Money::format((string) $v, $order->currency);
 @endphp
-<x-layouts.admin guard="tenant" :title="__('orders.order').' '.$order->number">
+<x-layouts.admin :title="__('orders.order').' '.$order->number">
     <div class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
             <x-card :title="__('orders.items')">
                 <x-slot:actions>
                     <span class="badge {{ $order->status->color() }}">{{ $order->status->label() }}</span>
-                    <a href="{{ route('tenant.orders.invoice', $order->id) }}" target="_blank" class="btn-sm btn-secondary">{{ __('orders.invoice') }}</a>
-                    <a href="{{ route('tenant.orders.invoice.pdf', $order->id) }}" class="btn-sm btn-secondary">PDF</a>
+                    <a href="{{ route('admin.orders.invoice', $order->id) }}" target="_blank" class="btn-sm btn-secondary">{{ __('orders.invoice') }}</a>
+                    <a href="{{ route('admin.orders.invoice.pdf', $order->id) }}" class="btn-sm btn-secondary">PDF</a>
                 </x-slot:actions>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -26,13 +26,13 @@
                         </tbody>
                     </table>
                 </div>
-                @include('tenant.orders._totals', ['order' => $order])
+                @include('admin.orders._totals', ['order' => $order])
             </x-card>
 
             @if ($canReturn)
                 @can('returns.create')
                 <x-card :title="__('orders.create_return')">
-                    <form data-ajax-form data-validate-url="{{ route('tenant.orders.returns.validate', $order->id) }}" action="{{ route('tenant.orders.returns.store', $order->id) }}" method="POST" class="space-y-3" novalidate>
+                    <form data-ajax-form data-validate-url="{{ route('admin.orders.returns.validate', $order->id) }}" action="{{ route('admin.orders.returns.store', $order->id) }}" method="POST" class="space-y-3" novalidate>
                         @csrf
                         @foreach ($order->items as $i)
                             @continue($i->quantity - $i->returned_qty <= 0)
@@ -62,7 +62,7 @@
                 <x-card :title="__('orders.returns')">
                     @foreach ($order->returns as $r)
                         <div class="flex items-center justify-between border-t border-slate-100 py-2 text-sm first:border-0">
-                            <a class="font-semibold text-brand-600" href="{{ route('tenant.returns.show', $r->id) }}">{{ $r->number }}</a>
+                            <a class="font-semibold text-brand-600" href="{{ route('admin.returns.show', $r->id) }}">{{ $r->number }}</a>
                             <span>{{ $money($r->return_value) }}</span><span class="badge badge-muted">{{ $r->status->label() }}</span>
                         </div>
                     @endforeach
@@ -74,7 +74,7 @@
             @if ($next)
                 @can('orders.edit')
                 <x-card :title="__('orders.change_status')">
-                    <form data-ajax-form data-validate-url="{{ route('tenant.orders.status.validate', $order->id) }}" action="{{ route('tenant.orders.status', $order->id) }}" method="POST" class="space-y-3" novalidate>
+                    <form data-ajax-form data-validate-url="{{ route('admin.orders.status.validate', $order->id) }}" action="{{ route('admin.orders.status', $order->id) }}" method="POST" class="space-y-3" novalidate>
                         @csrf
                         <x-select name="status" :options="collect($next)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" />
                         <x-input name="note" :placeholder="__('ops.fields.note')" />
@@ -86,7 +86,7 @@
 
             <x-card :title="__('orders.fields.customer')">
                 <div class="space-y-1 text-sm">
-                    <div class="font-semibold">{{ $order->customer_name }}@if ($order->customer) <a class="text-xs text-brand-600" href="{{ route('tenant.customers.show', $order->customer_id) }}">#{{ $order->customer_id }}</a>@endif</div>
+                    <div class="font-semibold">{{ $order->customer_name }}@if ($order->customer) <a class="text-xs text-brand-600" href="{{ route('admin.customers.show', $order->customer_id) }}">#{{ $order->customer_id }}</a>@endif</div>
                     <div><bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi></div><div>{{ $order->customer_email }}</div>
                     <div class="text-slate-600">{{ $order->city?->name }} - {{ $order->address }}</div>
                     @if ($order->notes)<div class="text-slate-500">{{ $order->notes }}</div>@endif
@@ -103,21 +103,21 @@
                         <div class="text-slate-600">{{ __('orders.cod_amount') }}: <b>{{ number_format((float) $order->cod_amount, 2) }}</b></div>
                     @endif
                     @if ($order->payment_proof)
-                        <a href="{{ route('tenant.orders.proof.file', $order->id) }}" target="_blank" class="text-brand-600 underline">{{ __('orders.view_proof') }}</a>
+                        <a href="{{ route('admin.orders.proof.file', $order->id) }}" target="_blank" class="text-brand-600 underline">{{ __('orders.view_proof') }}</a>
                         <span class="badge badge-muted">{{ $order->proof_status?->label() }}</span>
                         @if ($sharedProof->isNotEmpty())
                             <div class="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800" role="alert">
                                 <b>{{ __('orders.proof_shared_warning') }}</b>
                                 @foreach ($sharedProof as $other)
-                                    <a href="{{ route('tenant.orders.show', $other->id) }}" class="underline">{{ $other->number }}</a>@if (! $loop->last), @endif
+                                    <a href="{{ route('admin.orders.show', $other->id) }}" class="underline">{{ $other->number }}</a>@if (! $loop->last), @endif
                                 @endforeach
                             </div>
                         @endif
                         @if ($order->payment_status === PaymentStatus::REVIEW)
                             @can('orders.payments')
                             <div class="flex gap-2 pt-1">
-                                <button type="button" class="btn-sm btn-primary" data-post-action="{{ route('tenant.orders.proof.approve', $order->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('orders.approve') }}</button>
-                                <button type="button" class="btn-sm btn-danger" data-post-action="{{ route('tenant.orders.proof.reject', $order->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('orders.reject') }}</button>
+                                <button type="button" class="btn-sm btn-primary" data-post-action="{{ route('admin.orders.proof.approve', $order->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('orders.approve') }}</button>
+                                <button type="button" class="btn-sm btn-danger" data-post-action="{{ route('admin.orders.proof.reject', $order->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('orders.reject') }}</button>
                             </div>
                             @endcan
                         @endif
@@ -136,7 +136,7 @@
                     @endforeach
                 </ol>
             </x-card>
-            @isset($activities)@include('tenant._activity', ['activities' => $activities])@endisset
+            @isset($activities)@include('admin._activity', ['activities' => $activities])@endisset
         </div>
     </div>
 </x-layouts.admin>

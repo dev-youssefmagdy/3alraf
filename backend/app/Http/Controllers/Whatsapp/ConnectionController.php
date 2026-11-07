@@ -15,8 +15,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
 /**
- * WhatsApp connection management for BOTH panels. The owner is always taken from the authenticated panel
- * (central, or the current tenant), never from request input, so one tenant can never reach another's session.
+ * WhatsApp connection management (the shop's single session, guard `admin`).
  */
 class ConnectionController extends Controller implements HasMiddleware
 {
@@ -32,12 +31,7 @@ class ConnectionController extends Controller implements HasMiddleware
 
     private function guard(Request $r): string
     {
-        return str_starts_with($r->route()->getName(), 'central.') ? 'central' : 'tenant';
-    }
-
-    private function owner(Request $r): ?int
-    {
-        return $this->guard($r) === 'tenant' ? current_tenant()->id : null;
+        return 'admin';
     }
 
     private function payload(WhatsappSession $s): array
@@ -51,34 +45,33 @@ class ConnectionController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         $guard = $this->guard($request);
-        $owner = $this->owner($request);
-        $s = $this->wa->refresh($owner);
+        $s = $this->wa->refresh();
 
         return view('whatsapp.connection', [
             'guard' => $guard, 'session' => $s,
-            'settings' => AuthSettings::for($owner)->all(),
-            'sentToday' => $this->wa->sent($s, 'daily'), 'sentHour' => $this->wa->sent($s, 'hourly'), 'channel' => SessionUpdated::channelName($owner),
+            'settings' => AuthSettings::for()->all(),
+            'sentToday' => $this->wa->sent($s, 'daily'), 'sentHour' => $this->wa->sent($s, 'hourly'), 'channel' => SessionUpdated::channelName(),
         ]);
     }
 
     public function status(Request $request): JsonResponse
     {
-        return response()->json($this->payload($this->wa->refresh($this->owner($request))));
+        return response()->json($this->payload($this->wa->refresh()));
     }
 
     public function connect(Request $request): JsonResponse
     {
-        return $this->run($request, fn ($o) => $this->wa->connect($o), 'whatsapp.connecting');
+        return $this->run($request, fn () => $this->wa->connect(), 'whatsapp.connecting');
     }
 
     public function reconnect(Request $request): JsonResponse
     {
-        return $this->run($request, fn ($o) => $this->wa->reconnect($o), 'whatsapp.connecting');
+        return $this->run($request, fn () => $this->wa->reconnect(), 'whatsapp.connecting');
     }
 
     public function disconnect(Request $request): JsonResponse
     {
-        return $this->run($request, fn ($o) => $this->wa->disconnect($o), 'whatsapp.disconnected');
+        return $this->run($request, fn () => $this->wa->disconnect(), 'whatsapp.disconnected');
     }
 
     public function sendTest(Request $request): JsonResponse
@@ -89,10 +82,10 @@ class ConnectionController extends Controller implements HasMiddleware
             return response()->json(['success' => false, 'message' => __('whatsapp.invalid_phone')], 422);
         }
 
-        return $this->run($request, function ($owner) use ($digits) {
-            $this->wa->sendText($owner, $digits, __('whatsapp.test_message'), throttled: true);
+        return $this->run($request, function () use ($digits) {
+            $this->wa->sendText($digits, __('whatsapp.test_message'), throttled: true);
 
-            return $this->wa->session($owner);
+            return $this->wa->session();
         }, 'whatsapp.test_sent');
     }
 
@@ -114,7 +107,7 @@ class ConnectionController extends Controller implements HasMiddleware
             'login_lockout_seconds' => ['required', 'integer', 'between:60,86400'],
         ], ['otp_message.regex' => __('whatsapp.message_needs_code')], trans('whatsapp.fields'));
 
-        $s = AuthSettings::for($this->owner($request));
+        $s = AuthSettings::for();
         foreach ([
             'whatsapp.enabled' => (bool) ($v['whatsapp_enabled'] ?? false), 'whatsapp.daily_limit' => (int) $v['daily_limit'],
             'whatsapp.hourly_limit' => (int) $v['hourly_limit'], 'whatsapp.min_gap' => (int) $v['min_gap'], 'whatsapp.max_gap' => (int) $v['max_gap'], 'otp.length' => (int) $v['otp_length'], 'otp.ttl_seconds' => (int) $v['otp_ttl_seconds'],
@@ -131,7 +124,7 @@ class ConnectionController extends Controller implements HasMiddleware
     private function run(Request $request, \Closure $fn, string $messageKey): JsonResponse
     {
         try {
-            $s = $fn($this->owner($request));
+            $s = $fn();
         } catch (WhatsappUnavailable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

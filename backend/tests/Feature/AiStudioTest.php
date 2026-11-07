@@ -7,12 +7,10 @@ use App\Jobs\RunAiGenerationJob;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 use App\Models\AiUsageLog;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Ai\AiGateway;
 use App\Services\Ai\Studio\MarketingCalendar;
 use App\Services\Ai\StudioService;
@@ -29,21 +27,18 @@ const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8B
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    RateLimiter::clear('ai:1');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
+    RateLimiter::clear('ai:shop');
     $p = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'oa-studio', 'api_key' => 'sk-test-1234567', 'is_active' => true]);
     $this->text = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'gpt-st', 'label' => 'T', 'kind' => 'text', 'capabilities' => ['json_mode' => true], 'is_active' => true]);
     $this->image = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'img-st', 'label' => 'I', 'kind' => 'image', 'is_active' => true]);
-    $this->setup = fn (array $extra = [], ?array $allowed = null) => tap(AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => $this->tenant->id], $extra + ['ai_enabled' => true, 'features' => ['studio' => true],
+    $this->setup = fn (array $extra = [], ?array $allowed = null) => tap(AiSetting::query()->updateOrCreate([], $extra + ['ai_enabled' => true, 'features' => ['studio' => true],
         'allowed_model_ids' => $allowed ?? [$this->text->id, $this->image->id], 'default_ai_model_id' => $this->text->id, 'monthly_image_quota' => null, 'monthly_video_quota' => null, 'brand_voice' => null, 'forbidden_words' => []]), fn () => app(\App\Services\Ai\AiAccess::class)->forget());
     ($this->setup)();
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin/ai/studio';
-    $this->product = function (Tenant $t, string $slug) {
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->base = '/admin/ai/studio';
+    $this->product = function (string $slug) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Gold Watch', 'ar' => 'ساعة'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $t->id, 'product_id' => $pr->id, 'price' => '99.00', 'cost' => '20', 'is_active' => true]);
+        listProduct($pr, ['price' => '99.00', 'cost' => '20', 'is_active' => true]);
 
         return $pr;
     };
@@ -76,8 +71,8 @@ it('removes forbidden words from copy, CTA and hashtags (post-check) and reports
         ->and($o['variants'][0]['text'])->not->toContain('rubbish')->and(collect($o['warnings'])->pluck('code'))->toContain('forbidden_removed');
 });
 
-it('only accepts tenant locales and drops answers in other languages', function () {
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant')
+it('only accepts the site locales and drops answers in other languages', function () {
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin')
         ->postJson($this->base.'/generate', ($this->payload)(['languages' => ['fr']]))->assertStatus(422)->assertJsonValidationErrors('languages.0');
     Http::fake(['api.openai.com/v1/chat/completions' => Http::response(($this->llm)([($this->v)('en', 'English text'), ($this->v)('de', 'Deutsch'), ($this->v)('ar', 'نص عربي')]))]);
     ($this->owner)()->postJson($this->base.'/generate', ($this->payload)(['languages' => ['en', 'ar'], 'platform' => 'facebook']))->assertCreated();
@@ -98,7 +93,7 @@ it('generates an image saved with ImageUploadService and keeps the draft when th
     ($this->owner)()->postJson($this->base.'/generate', ($this->payload)(['format' => 'image', 'platform' => 'instagram']))->assertCreated();
     $g = AiGeneration::latest('id')->first();
     $m = $g->media[0];
-    expect($m['state'])->toBe('ready')->and($m['path'])->toStartWith('tenants/'.$this->tenant->id.'/ai-studio/')->and(\App\Services\ImageUploadService::disk()->exists($m['path']))->toBeTrue()
+    expect($m['state'])->toBe('ready')->and($m['path'])->toStartWith('catalog/ai-studio/')->and(\App\Services\ImageUploadService::disk()->exists($m['path']))->toBeTrue()
         ->and($m['aspect'])->toBe('4:5');
     \App\Services\ImageUploadService::disk()->delete([$m['path'], $m['thumb']]);
 
@@ -110,7 +105,6 @@ it('generates an image saved with ImageUploadService and keeps the draft when th
 it('enforces the monthly image quota up front and inside the job', function () {
     ($this->setup)(['monthly_image_quota' => 1]);
     $log = new AiUsageLog(['feature' => 'studio', 'ai_model_id' => $this->image->id, 'images' => 1, 'status' => 'ok']);
-    $log->tenant_id = $this->tenant->id;
     $log->save();
     ($this->owner)()->postJson($this->base.'/generate', ($this->payload)(['format' => 'image']))->assertStatus(422)->assertJsonPath('reason', 'quota_images');
     expect(AiGeneration::count())->toBe(0);
@@ -125,7 +119,7 @@ it('runs video as an async stage with polling states and a hidden option without
     ($this->owner)()->postJson($this->base.'/generate', ($this->payload)(['format' => 'video', 'platform' => 'tiktok']))->assertCreated()->assertJsonPath('data.pending', true);
     Queue::assertPushed(RunAiGenerationJob::class, fn ($j) => $j->stage === 'main');
     $g = AiGeneration::latest('id')->first();
-    app(RunAiGenerationJob::class, ['generationId' => $g->id, 'tenantId' => $this->tenant->id])->handle(app(StudioService::class));
+    app(RunAiGenerationJob::class, ['generationId' => $g->id])->handle(app(StudioService::class));
     Queue::assertPushed(RunAiGenerationJob::class, fn ($j) => $j->stage === 'video');
     $g->refresh();
     expect($g->media[0]['state'])->toBe('pending');
@@ -149,7 +143,7 @@ it('runs video as an async stage with polling states and a hidden option without
 });
 
 it('marketing mode builds UTM links, A/B variants and country calendar events', function () {
-    $p = ($this->product)($this->tenant, 'gold-watch');
+    $p = ($this->product)('gold-watch');
     Http::fake(['api.openai.com/v1/chat/completions' => Http::response(($this->llm)([($this->v)('en', 'A'), ($this->v)('en', 'B', ['label' => 'B'])], [['day' => 'Fri', 'time' => '20:00', 'reason' => 'Evening']]))]);
     ($this->owner)()->postJson($this->base.'/generate', ($this->payload)(['mode' => 'marketing', 'platform' => 'facebook', 'brief' => null, 'product_ids' => [$p->id], 'campaign_type' => 'seasonal', 'event' => 'black_friday', 'variants' => 2]))->assertCreated();
     $g = AiGeneration::latest('id')->first();
@@ -180,22 +174,15 @@ it('regenerates from a previous generation, lists history and deletes', function
     expect(AiGeneration::count())->toBe(1);
 });
 
-it('isolates tenants: other tenant generations, products and models are unreachable', function () {
-    $foreign = ($this->product)($this->other, 'foreign-prod');
-    $g = AiGeneration::withoutGlobalScopes()->create(['tenant_id' => $this->other->id, 'type' => 'social_post', 'status' => 'draft', 'inputs' => ['platform' => 'x'], 'output' => ['variants' => []]]);
+it('unknown generations and products and models outside the allow-list are unreachable', function () {
     $c = ($this->owner)();
-    $c->getJson($this->base.'/generations/'.$g->id)->assertNotFound();
-    $c->postJson($this->base.'/generations/'.$g->id.'/regenerate')->assertNotFound();
-    $c->deleteJson($this->base.'/generations/'.$g->id)->assertNotFound();
-    expect($g->fresh())->not->toBeNull();
-    $c->postJson($this->base.'/generate', ($this->payload)(['product_ids' => [$foreign->id]]))->assertStatus(422)->assertJsonValidationErrors('product_ids.0');
+    $c->getJson($this->base.'/generations/999999')->assertNotFound();
+    $c->postJson($this->base.'/generations/999999/regenerate')->assertNotFound();
+    $c->deleteJson($this->base.'/generations/999999')->assertNotFound();
+    $c->postJson($this->base.'/generate', ($this->payload)(['product_ids' => [999999]]))->assertStatus(422)->assertJsonValidationErrors('product_ids.0');
     $otherModel = AiModel::create(['ai_provider_id' => $this->text->ai_provider_id, 'model_id' => 'not-allowed', 'label' => 'N', 'kind' => 'text', 'is_active' => true]);
     $c->postJson($this->base.'/generate', ($this->payload)(['ai_model_id' => $otherModel->id]))->assertStatus(422)->assertJsonValidationErrors('ai_model_id');
     $c->getJson($this->base.'/history')->assertJsonCount(0, 'data');
-    // job under another tenant context can not see this tenant's generation
-    $mine = AiGeneration::create(['type' => 'social_post', 'status' => 'queued', 'inputs' => ($this->payload)(['languages' => ['en'], 'platform' => 'x'])]);
-    app(RunAiGenerationJob::class, ['generationId' => $mine->id, 'tenantId' => $this->other->id])->handle(app(StudioService::class));
-    expect($mine->fresh()->status->value)->toBe('queued');
 });
 
 it('gates the studio behind the feature flag and the permission, and never exposes keys', function () {

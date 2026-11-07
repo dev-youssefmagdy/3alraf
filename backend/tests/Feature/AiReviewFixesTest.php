@@ -5,9 +5,8 @@ use App\Models\AiConversation;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\AiSetting;
+use App\Models\Admin;
 use App\Services\Ai\AiGateway;
 use App\Services\Ai\Support\AiRequest;
 use Database\Seeders\FoundationSeeder;
@@ -17,17 +16,14 @@ use Illuminate\Support\Facades\RateLimiter;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    RateLimiter::clear('ai:1');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
+    RateLimiter::clear('ai:shop');
     $this->provider = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'rv', 'api_key' => 'sk-secret-ABCDEFGH12345', 'is_active' => true]);
     $this->model = AiModel::create(['ai_provider_id' => $this->provider->id, 'model_id' => 'gpt-rv', 'label' => 'RV', 'kind' => 'text', 'capabilities' => ['tools' => true], 'is_active' => true]);
-    AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => $this->tenant->id], ['ai_enabled' => true, 'features' => ['chat' => true, 'studio' => true, 'editor' => true, 'generators' => true, 'trends' => true],
+    AiSetting::query()->updateOrCreate([], ['ai_enabled' => true, 'features' => ['chat' => true, 'studio' => true, 'editor' => true, 'generators' => true, 'trends' => true],
         'allowed_model_ids' => null, 'default_ai_model_id' => $this->model->id, 'monthly_token_quota' => null]);
     app(\App\Services\Ai\AiAccess::class)->forget();
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin';
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->base = '/admin';
 });
 
 it('gateway refuses a deactivated model or provider without calling the vendor', function () {
@@ -63,47 +59,37 @@ it('chat stream ends with a clean error event when something non-AI crashes', fu
     expect($c->messages()->where('role', 'assistant')->where('status', 'error')->count())->toBe(1);
 });
 
-it('conversations and generations of another tenant or user are invisible (404)', function () {
-    $mine = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $c = new AiConversation(['user_id' => $mine->id + 999, 'title' => 'not yours']);
-    $c->tenant_id = $this->tenant->id;
-    $c->save();
-    $o = new AiConversation(['user_id' => $mine->id, 'title' => 'other tenant']);
-    $o->tenant_id = $this->other->id;
-    $o->save();
-    foreach ([$c->id, $o->id] as $id) {
+it('conversations of another admin and unknown generations are invisible (404)', function () {
+    $mine = Admin::query()->where('email', 'owner@egy.test')->first();
+    $c = AiConversation::create(['user_id' => $mine->id + 999, 'title' => 'not yours']);
+    foreach ([$c->id, 999999] as $id) {
         ($this->owner)()->getJson($this->base."/ai/chat/conversations/$id")->assertNotFound();
         ($this->owner)()->deleteJson($this->base."/ai/chat/conversations/$id")->assertNotFound();
     }
     foreach (['social_post' => 'studio/generations', 'banner' => 'generators', 'product_edit' => 'editor/generations'] as $type => $path) {
-        $g = new AiGeneration(['type' => $type, 'status' => 'draft', 'inputs' => [], 'output' => []]);
-        $g->tenant_id = $this->other->id;
-        $g->save();
-        ($this->owner)()->getJson($this->base."/ai/$path/{$g->id}".($type === 'banner' ? '/json' : ''))->assertNotFound();
+        ($this->owner)()->getJson($this->base."/ai/$path/999999".($type === 'banner' ? '/json' : ''))->assertNotFound();
     }
-    // right tenant, wrong feature: a studio draft is not reachable through the generators or editor routes
-    $s = new AiGeneration(['type' => 'social_post', 'status' => 'draft', 'inputs' => [], 'output' => []]);
-    $s->tenant_id = $this->tenant->id;
-    $s->save();
+    // wrong feature: a studio draft is not reachable through the generators or editor routes
+    $s = AiGeneration::create(['type' => 'social_post', 'status' => 'draft', 'inputs' => [], 'output' => []]);
     ($this->owner)()->getJson($this->base."/ai/generators/{$s->id}/json")->assertNotFound();
     ($this->owner)()->getJson($this->base."/ai/editor/generations/{$s->id}")->assertNotFound();
 });
 
 it('feature switched off: every AI endpoint answers 403 JSON, pages render a disabled state', function () {
-    AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->update(['ai_enabled' => false]);
+    AiSetting::query()->update(['ai_enabled' => false]);
     app(\App\Services\Ai\AiAccess::class)->forget();
     ($this->owner)()->getJson($this->base.'/ai/generators/datatable')->assertForbidden();
     ($this->owner)()->get($this->base.'/ai/chat')->assertForbidden();
     ($this->owner)()->get($this->base.'/ai/studio')->assertForbidden()->assertDontSee('Illuminate\\');
 });
 
-it('the AI diff does not break core tenant admin pages (en + ar, AI on and off)', function () {
+it('the AI diff does not break core admin pages (en + ar, AI on and off)', function () {
     $pages = ['', 'orders', 'catalog', 'stock', 'customers', 'reports', 'roles', 'admins', 'expenses', 'banners', 'bundles', 'flash-sales', 'discount-codes', 'branches', 'notification-settings'];
     foreach ([true, false] as $on) {
-        AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->update(['ai_enabled' => $on]);
+        AiSetting::query()->update(['ai_enabled' => $on]);
         app(\App\Services\Ai\AiAccess::class)->forget();
         foreach (['en', 'ar'] as $loc) {
-            $this->tenant->update(['default_locale' => $loc]);
+            settings(['default_locale' => $loc]);
             foreach ($pages as $p) {
                 $r = ($this->owner)()->get(rtrim($this->base.'/'.$p, '/'));
                 expect($r->status())->toBeIn([200, 302], "$p [$loc, ai=".(int) $on.'] -> '.$r->status());
@@ -114,14 +100,13 @@ it('the AI diff does not break core tenant admin pages (en + ar, AI on and off)'
             }
         }
     }
-    $this->tenant->update(['default_locale' => 'en']);
 });
 
-it('api keys never appear on tenant or central AI screens', function () {
+it('api keys never appear on any AI screen', function () {
     ($this->owner)()->get($this->base.'/ai/settings')->assertOk()->assertDontSee('sk-secret-ABCDEFGH12345')->assertDontSee('ABCDEFGH12345');
-    $this->actingAs(\App\Models\CentralAdmin::where('email', 'admin@3alraf.test')->first(), 'central');
-    foreach (['providers', 'models', 'tenants', 'usage'] as $p) {
-        $this->get("http://3alraf.test/admin/ai/$p")->assertOk()->assertDontSee('sk-secret-ABCDEFGH12345');
+    $this->actingAs(\App\Models\Admin::where('email', 'admin@3alraf.test')->first(), 'admin');
+    foreach (['providers', 'models', 'usage', 'settings'] as $p) {
+        $this->get("/admin/ai/$p")->assertOk()->assertDontSee('sk-secret-ABCDEFGH12345');
     }
     expect(json_encode($this->provider->fresh()->toArray()))->not->toContain('sk-secret');
 });

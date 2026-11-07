@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\Http\Controllers\Controller;
 use App\Services\SeoSettingsService;
 
-/** `/robots.txt` per tenant host: blocks private/transactional paths, advertises the sitemap (or blocks everything while indexing is off). */
+/** `/robots.txt` (main host): blocks private/transactional paths, advertises the sitemap (or blocks everything while indexing is off). */
 class RobotsController extends Controller
 {
     public function __invoke(SeoSettingsService $seo)

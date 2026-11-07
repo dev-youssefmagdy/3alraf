@@ -1,6 +1,6 @@
-<x-layouts.storefront :title="$tenant->name" :description="__('store.seo_default_desc')" :preload-image="$hero->first()?->imageUrl()" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $tenant->name, 'url' => url('/'.app()->getLocale()),
+<x-layouts.storefront :title="setting('name')" :description="__('store.seo_default_desc')" :preload-image="$hero->first()?->imageUrl()" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => setting('name'), 'url' => url('/'.app()->getLocale()),
     'potentialAction' => ['@type' => 'SearchAction', 'target' => route('storefront.search').'?q={q}', 'query-input' => 'required name=q']]">
-    <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: $tenant->name }}</h1>
+    <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: setting('name') }}</h1>
     {{-- hero slider --}}
     @if ($hero->isNotEmpty())
         <section class="relative cursor-grab select-none overflow-hidden rounded-2xl bg-slate-200 active:cursor-grabbing" data-slider aria-roledescription="carousel" aria-label="{{ __('store.featured_offers') }}">

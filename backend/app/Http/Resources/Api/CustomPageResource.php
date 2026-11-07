@@ -10,6 +10,6 @@ class CustomPageResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        return ['slug' => $this->slug, 'title' => $this->title, 'url' => tenant_url(current_tenant(), '/'.$this->slug)];
+        return ['slug' => $this->slug, 'title' => $this->title, 'url' => url('/'.$this->slug)];
     }
 }

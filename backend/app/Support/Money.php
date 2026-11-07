@@ -59,7 +59,7 @@ final class Money
 
     public static function format(string|int|float $v, ?string $symbol = null): string
     {
-        $symbol ??= current_tenant()?->currency_symbol ?? '';
+        $symbol ??= \App\Models\Setting::get('currency_symbol') ?? '';
 
         return trim(number_format((float) self::round($v), 2).' '.$symbol);
     }

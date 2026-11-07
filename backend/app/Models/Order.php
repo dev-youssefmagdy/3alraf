@@ -6,14 +6,13 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ProofStatus;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
-    use Audited, BelongsToTenant, SoftDeletes, \App\Models\Concerns\HasStorefrontPhone;
+    use Audited, SoftDeletes, \App\Models\Concerns\HasStorefrontPhone;
 
     protected function phoneColumn(): string
     {

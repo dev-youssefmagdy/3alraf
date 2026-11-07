@@ -1,5 +1,7 @@
 # 3alraf — Gap Analysis & Roadmap (2026-10-21)
 
+> **Note (2026-11, single store).** Written for the multi-tenant era. §1 "Central website" (country landing page, "store unavailable" page) is obsolete: the project is now one shop on `APP_URL` and old country subdomains 301 to it (`LegacyHostRedirect`). Tenant-scoping items (tenant-leading indexes, `branch.tenant_id` checks, tenant resolution by header) no longer apply: `tenant_id` was dropped everywhere. See `docs/REQUIREMENTS.md` §2.
+
 Source: team review of `REQUIREMENTS.md`, `CALCULATIONS.md`, `PROGRESS.md` plus a static code audit (no tests were run; `vendor/` not installed).
 Roles: Team Leader/PM/BA (this doc), Senior Fullstack, DB Designer/Optimizer, QA, Problem Solver.
 

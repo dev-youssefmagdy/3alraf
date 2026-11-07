@@ -3,7 +3,7 @@ import toastr from 'toastr';
 import TomSelect from 'tom-select';
 import { clearErrors, showErrors } from './ajax-form';
 
-// Point of sale (tenant admin): product finder -> cart -> live quote -> place order. Server stays the only source of prices/totals.
+// Point of sale (admin panel): product finder -> cart -> live quote -> place order. Server stays the only source of prices/totals.
 const $pos = $('#pos');
 if ($pos.length) {
     const t = $pos.data('i18n');

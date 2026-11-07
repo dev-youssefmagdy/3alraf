@@ -5,7 +5,7 @@ namespace App\Services\Erp\Accounting;
 use App\Exceptions\AccountingException;
 use App\Models\Erp\Account;
 
-/** Resolves a system role key ("sales_revenue", "cogs", ...) to the tenant's account. Never hardcode account ids. */
+/** Resolves a system role key ("sales_revenue", "cogs", ...) to its account. Never hardcode account ids. */
 class AccountResolver
 {
     /** @var array<string,int> */
@@ -13,10 +13,7 @@ class AccountResolver
 
     public function id(string $roleKey): int
     {
-        $tenantId = current_tenant()?->id ?? 0;
-        $k = $tenantId.':'.$roleKey;
-
-        return $this->cache[$k] ??= Account::where('role_key', $roleKey)->where('is_active', true)->value('id')
+        return $this->cache[$roleKey] ??= Account::where('role_key', $roleKey)->where('is_active', true)->value('id')
             ?? throw new AccountingException(__('erp.errors.role_missing', ['role' => $roleKey]));
     }
 

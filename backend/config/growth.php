@@ -1,15 +1,15 @@
 <?php
 
 /**
- * n8n Growth system guardrails (docs/plans/n8n-growth-system.md). Defaults here; tenants override a whitelisted subset
+ * n8n Growth system guardrails (docs/plans/n8n-growth-system.md). Defaults here; the shop overrides a whitelisted subset
  * (see Growth\GrowthConfig::OVERRIDABLE) from the admin Growth settings page. Money rules stay in Laravel, never in n8n.
  */
 return [
-    // Platform default of the per-tenant `growth` feature flag (tenants.settings.growth.enabled overrides).
+    // Default of the `growth` master flag (setting `growth.enabled` overrides; switched on Settings → General).
     'enabled_default' => env('GROWTH_ENABLED_DEFAULT', false),
 
     // Per-feature switches (plan section 9). A feature is active only if the master flag is on, its own switch is on
-    // (tenants.settings.growth.features.{key}, default OFF) and every depends_on feature is active. built=false = not yet implemented (hidden in UI).
+    // (setting `growth.features.{key}`, default OFF) and every depends_on feature is active. built=false = not yet implemented (hidden in UI).
     'features' => [
         'integration_api' => ['ar' => 'واجهة التكامل (n8n)', 'en' => 'Integration API (n8n)', 'group' => 'foundation', 'depends_on' => [], 'built' => true],
         'events_outbox' => ['ar' => 'إرسال الأحداث (Webhooks)', 'en' => 'Event outbox (webhooks)', 'group' => 'foundation', 'depends_on' => ['integration_api'], 'built' => true],
@@ -70,7 +70,7 @@ return [
     // growth:prune retention windows (days). Personal data (interactions, small-batch contacts) is kept the shortest.
     'retention' => ['interactions_days' => 180, 'small_batch_days' => 180, 'ad_days_days' => 730, 'action_log_days' => 730, 'integration_requests_days' => 30],
 
-    // Guardrails (tenant-overridable). Percentages are 0-100.
+    // Guardrails (overridable on Growth settings). Percentages are 0-100.
     'guardrails' => [
         'min_margin_percent' => 15,
         'max_discount_percent' => 30,
@@ -80,7 +80,7 @@ return [
         'reorder_cash_cap' => 50000,
         'ad_daily_budget_cap' => 500,
         'ad_total_budget_cap' => 5000,
-        'lab_min_days' => 7, 'lab_min_clicks' => 100, 'lab_min_orders' => 10, 'lab_max_budget_increase_percent' => 30, // mirror of lab.* (tenant-overridable)
+        'lab_min_days' => 7, 'lab_min_clicks' => 100, 'lab_min_orders' => 10, 'lab_max_budget_increase_percent' => 30, // mirror of lab.* (overridable)
         'auto_reply_allowlist' => [], // FAQ keys that may be answered automatically (N4); empty = nothing automatic
     ],
 

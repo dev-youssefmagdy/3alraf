@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ShippingRate extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['shipping_company_id', 'city_id', 'price', 'cost', 'free_over', 'eta_min_days', 'eta_max_days', 'supports_cod'];
 

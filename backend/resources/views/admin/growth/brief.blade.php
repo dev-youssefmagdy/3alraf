@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.brief.title')">
+<x-layouts.admin :title="__('growth_hub.brief.title')">
     @php $t = __('growth_hub.brief'); @endphp
     <x-card>
         <form id="brief-form" class="flex flex-wrap items-end gap-3">
@@ -12,7 +12,7 @@
     <div id="brief-out" class="mt-4 space-y-4"></div>
     <script>
     (function () {
-        const T = @json($t), url = @json(route('tenant.growth.brief.data')), decideUrl = @json(route('tenant.growth.brief.decision')), canManage = @json(auth('tenant')->user()?->can('growth.manage') ?? false);
+        const T = @json($t), url = @json(route('admin.growth.brief.data')), decideUrl = @json(route('admin.growth.brief.decision')), canManage = @json(auth('admin')->user()?->can('growth.manage') ?? false);
         const out = document.getElementById('brief-out');
         const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined && text !== null) e.textContent = text; if (cls) e.className = cls; return e; };
         const metric = (m) => { if (!m) return '-'; if (m.value === null) return T.insufficient + (m.missing && m.missing.length ? ' (' + T.missing + ': ' + m.missing.join(', ') + ')' : ''); return m.value + ' [' + T[m.confidence] + ']'; };

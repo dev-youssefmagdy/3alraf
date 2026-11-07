@@ -7,13 +7,13 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Admin panels: locale kept in session (switchable), default = tenant default or app locale. */
+/** Admin panels: locale kept in session (switchable), default = site default locale (setting) or app locale. */
 class SetAdminLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
         $codes = Language::activeList()->pluck('code')->all();
-        $locale = $request->session()->get('admin_locale') ?: current_tenant()?->default_locale ?: config('app.locale');
+        $locale = $request->session()->get('admin_locale') ?: setting('default_locale') ?: config('app.locale');
         if ($codes && ! in_array($locale, $codes, true)) {
             $locale = $codes[0];
         }

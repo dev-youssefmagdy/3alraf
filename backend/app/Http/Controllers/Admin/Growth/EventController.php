@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\DataTables\GrowthEventDataTable;
 use App\Http\Controllers\Controller;
@@ -22,7 +22,7 @@ class EventController extends Controller implements HasMiddleware
 
     public function index(GrowthEventDataTable $table)
     {
-        return view('tenant.growth.events', ['table' => $table]);
+        return view('admin.growth.events', ['table' => $table]);
     }
 
     public function datatable(GrowthEventDataTable $table)
@@ -33,7 +33,7 @@ class EventController extends Controller implements HasMiddleware
     public function replay(int $id): JsonResponse
     {
         $e = $this->events->replay($this->events->find($id));
-        $this->log->log('event.replayed', 'admin', auth('tenant')->id(), null, $e);
+        $this->log->log('event.replayed', 'admin', auth('admin')->id(), null, $e);
 
         return $this->ok(__('growth_hub.events.replayed'));
     }

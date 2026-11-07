@@ -54,14 +54,14 @@ class ExpenseService extends CrudService
     {
         $data = $dto->toArray();
         if ($dto->attachment) {
-            $data['attachment'] = $dto->attachment->store('tenants/'.current_tenant()?->id.'/expenses', config('media.private_disk'));
+            $data['attachment'] = $dto->attachment->store('expenses', config('media.private_disk'));
             $model?->attachment && Storage::disk(config('media.private_disk'))->delete($model->attachment); // new stored first
         } elseif ($dto->removeAttachment && $model?->attachment) {
             Storage::disk(config('media.private_disk'))->delete($model->attachment);
             $data['attachment'] = null;
         }
         if (! $model) {
-            $data['created_by'] = auth('tenant')->id();
+            $data['created_by'] = auth('admin')->id();
         }
 
         return $data;

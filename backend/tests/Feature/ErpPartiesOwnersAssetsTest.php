@@ -8,8 +8,7 @@ use App\Models\Erp\FixedAsset;
 use App\Models\Erp\JournalEntry;
 use App\Models\Erp\Owner;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Assets\AssetService;
@@ -21,14 +20,12 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(CoaTemplate::class)->seed($this->tenant);
+    app(CoaTemplate::class)->seed();
     $this->je = app(JournalService::class);
     $this->parties = app(PartyService::class);
     $this->ledger = app(PartyLedger::class);
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($this->owner, 'tenant');
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->owner, 'admin');
     $this->sup = Supplier::create(['name' => 'Sup', 'is_active' => true]);
     $this->cust = Customer::create(['name' => 'Cus', 'email' => 'c@x.test', 'phone' => '01000000555', 'password' => 'secret123']);
     $this->bal = fn (string $role) => (string) Account::where('role_key', $role)->value('current_balance');
@@ -38,9 +35,9 @@ beforeEach(function () {
     $this->invoice = fn (string $amt, ?string $date = null) => $this->je->post(['entry_date' => $date ?? now()->toDateString(), 'description' => 'inv'], [
         ['account' => 'receivable', 'debit' => $amt, 'party_type' => 'customer', 'party_id' => $this->cust->id], ['account' => 'sales_revenue', 'credit' => $amt]]);
     $this->asOwner = function () {
-        $this->actingAs($this->owner->fresh(), 'tenant');
+        $this->actingAs($this->owner->fresh(), 'admin');
 
-        return 'http://egy.3alraf.test/admin/erp';
+        return '/admin/erp';
     };
 });
 
@@ -138,7 +135,7 @@ it('depreciates straight-line down to salvage, idempotently', function () {
     expect($a->accumulated_depreciation)->toBe('1000.0000')->and($a->book_value)->toBe('200.0000')->and(($this->bal)('accumulated_depreciation'))->toBe('-1000.0000')->and(($this->bal)('depreciation_expense'))->toBe('1000.0000');
     expect($svc->depreciate($a, '2027-06'))->toBe(0)->and(JournalEntry::where('idempotency_key', 'like', 'asset:'.$a->id.':dep:%')->count())->toBe(10);
     // the artisan command reuses the same idempotency
-    $this->artisan('erp:depreciate', ['--tenant' => 'egy', '--period' => '2026-12'])->assertSuccessful();
+    $this->artisan('erp:depreciate', ['--period' => '2026-12'])->assertSuccessful();
     expect(JournalEntry::where('idempotency_key', 'like', 'asset:'.$a->id.':dep:%')->count())->toBe(10);
     expect($svc->report()['reconciled'])->toBeTrue();
 });
@@ -160,7 +157,7 @@ it('books gain or loss on disposal and moves assets between branches', function 
     expect($c->fresh()->branch_id)->toBe($other->id)->and(\App\Models\Erp\JournalLine::where('branch_id', $other->id)->whereHas('account', fn ($q) => $q->where('role_key', 'fixed_assets'))->sum('debit'))->toEqual(600);
 });
 
-it('serves every new page and enforces tenant isolation and permissions', function () {
+it('serves every new page and 404s unknown ids and enforces permissions', function () {
     $base = ($this->asOwner)();
     ($this->bill)('100');
     $o = app(OwnerService::class)->save(['name' => 'Ali', 'ownership_percent' => 50]);
@@ -169,27 +166,23 @@ it('serves every new page and enforces tenant isolation and permissions', functi
         "$base/owners", "$base/owners/{$o->id}", "$base/assets", "$base/assets/{$a->id}"] as $url) {
         $this->get($url)->assertOk();
     }
-    $this->get("$base")->assertSee(route('tenant.erp.owners.index'))->assertSee(route('tenant.erp.assets.index'))->assertSee(route('tenant.erp.parties.index', 'customer'));
+    $this->get("$base")->assertSee(route('admin.erp.owners.index'))->assertSee(route('admin.erp.assets.index'))->assertSee(route('admin.erp.parties.index', 'customer'));
     $this->get("$base/parties/other")->assertNotFound();
     $this->post("$base/parties/supplier/{$this->sup->id}/settle", ['amount' => 40, 'account' => 'cash', 'ref' => 'h1'])->assertRedirect();
     expect($this->ledger->position('supplier', $this->sup->id)['outstanding'])->toBe('60.0000');
     $this->post("$base/owners/{$o->id}/transactions", ['type' => 'contribution', 'amount' => 10, 'date' => now()->toDateString(), 'account' => 'cash', 'ref' => 'h2'])->assertRedirect();
     $this->post("$base/assets/{$a->id}/depreciate", ['period' => now()->format('Y-m')])->assertRedirect();
 
-    // another tenant's ids are invisible on every page / action
-    $other = Tenant::create(['slug' => 'oth', 'name' => 'O', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'E', 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'UTC', 'is_active' => true]);
-    $fs = Supplier::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => 'FS', 'is_active' => true]);
-    $fo = Owner::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => 'FO', 'ownership_percent' => 10]);
-    $fa = FixedAsset::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => 'FA', 'acquisition_date' => '2026-01-01', 'cost' => 10, 'useful_life_months' => 5]);
-    $this->get("$base/parties/supplier/{$fs->id}")->assertNotFound();
-    $this->post("$base/parties/supplier/{$fs->id}/settle", ['amount' => 5, 'account' => 'cash', 'ref' => 'x'])->assertNotFound();
-    $this->post("$base/parties/supplier/{$fs->id}/opening", ['amount' => 5, 'ref' => 'x'])->assertNotFound();
-    $this->get("$base/owners/{$fo->id}")->assertNotFound();
-    $this->put("$base/owners/{$fo->id}", ['name' => 'Z', 'ownership_percent' => 1])->assertNotFound();
-    $this->post("$base/owners/{$fo->id}/transactions", ['type' => 'contribution', 'amount' => 5, 'date' => now()->toDateString(), 'account' => 'cash', 'ref' => 'x'])->assertNotFound();
-    $this->get("$base/assets/{$fa->id}")->assertNotFound();
-    $this->post("$base/assets/{$fa->id}/dispose", ['date' => now()->toDateString(), 'into' => 'cash'])->assertNotFound();
-    $this->post("$base/assets/{$fa->id}/transfer", ['branch_id' => Branch::first()->id])->assertNotFound();
+    // unknown ids are 404 on every page / action
+    $this->get("$base/parties/supplier/999999")->assertNotFound();
+    $this->post("$base/parties/supplier/999999/settle", ['amount' => 5, 'account' => 'cash', 'ref' => 'x'])->assertNotFound();
+    $this->post("$base/parties/supplier/999999/opening", ['amount' => 5, 'ref' => 'x'])->assertNotFound();
+    $this->get("$base/owners/999999")->assertNotFound();
+    $this->put("$base/owners/999999", ['name' => 'Z', 'ownership_percent' => 1])->assertNotFound();
+    $this->post("$base/owners/999999/transactions", ['type' => 'contribution', 'amount' => 5, 'date' => now()->toDateString(), 'account' => 'cash', 'ref' => 'x'])->assertNotFound();
+    $this->get("$base/assets/999999")->assertNotFound();
+    $this->post("$base/assets/999999/dispose", ['date' => now()->toDateString(), 'into' => 'cash'])->assertNotFound();
+    $this->post("$base/assets/999999/transfer", ['branch_id' => Branch::first()->id])->assertNotFound();
     expect($this->ledger->balances('supplier'))->toHaveCount(1)->and(Owner::count())->toBe(1)->and(FixedAsset::count())->toBe(1);
 
     // permission gates
@@ -198,7 +191,7 @@ it('serves every new page and enforces tenant isolation and permissions', functi
     }
     app(PermissionRegistrar::class)->forgetCachedPermissions();
     $this->owner->unsetRelation('permissions')->unsetRelation('roles');
-    $this->actingAs($this->owner->fresh(), 'tenant');
+    $this->actingAs($this->owner->fresh(), 'admin');
     $this->get("$base/owners")->assertForbidden();
     $this->post("$base/owners", ['name' => 'N', 'ownership_percent' => 1])->assertForbidden();
     $this->get("$base/assets")->assertForbidden();

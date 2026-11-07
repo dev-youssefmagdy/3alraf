@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Tag;
-use App\Models\TenantProduct;
 use App\Services\Storefront\CatalogSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,7 +26,7 @@ class CatalogController extends Controller
     /** All brands that have at least one sellable product. */
     public function brands()
     {
-        $sellable = fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+        $sellable = fn ($p) => $p->where('is_active', true)->whereNotNull('price');
         $brands = Brand::query()->where('is_active', true)
             ->withCount(['products as sellable_count' => $sellable])
             ->whereHas('products', $sellable)
@@ -70,7 +69,7 @@ class CatalogController extends Controller
         $filter = CatalogFilter::fromRequest($request);
         $scope = $this->search->scope($category, $q === null ? null : ($filter->q ?: null));
         if ($narrow) {
-            $scope->whereHas('product', $narrow);
+            $narrow($scope);
         }
         if ($q !== null && $filter->q === null) {
             $scope->whereRaw('1 = 0');

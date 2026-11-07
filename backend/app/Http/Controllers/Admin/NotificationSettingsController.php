@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\NotificationSettingsRequest;
+use App\Http\Requests\Admin\NotificationSettingsRequest;
 use App\Services\NotificationSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -20,13 +20,13 @@ class NotificationSettingsController extends Controller implements HasMiddleware
 
     public function edit()
     {
-        return view('tenant.settings.notifications', ['flags' => $this->service->get(current_tenant())]);
+        return view('admin.settings.notifications', ['flags' => $this->service->get()]);
     }
 
     public function update(NotificationSettingsRequest $request): JsonResponse
     {
-        $this->service->update(current_tenant(), $request->validated());
+        $this->service->update($request->validated());
 
-        return $this->ok(__('admin.saved'), route('tenant.notification-settings.edit'));
+        return $this->ok(__('admin.saved'), route('admin.notification-settings.edit'));
     }
 }

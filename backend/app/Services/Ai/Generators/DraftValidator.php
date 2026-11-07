@@ -5,7 +5,7 @@ namespace App\Services\Ai\Generators;
 use App\Enums\BannerPlacement;
 use App\Enums\FlashDiscountType;
 use App\Models\DiscountCode;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Repositories\Contracts\AiGenerationRepositoryInterface;
 use App\Services\Orders\PriceResolver;
 use App\Services\Stock\StockItemCatalog;
@@ -129,7 +129,7 @@ class DraftValidator
         $scope = ($in['scope'] ?? 'all') === 'products' ? 'products' : 'all';
         $pids = [];
         if ($scope === 'products') {
-            $pids = TenantProduct::whereIn('product_id', array_map('intval', (array) ($in['product_ids'] ?? [])))->where('is_active', true)->pluck('product_id')->all();
+            $pids = Product::whereIn('id', array_map('intval', (array) ($in['product_ids'] ?? [])))->where('is_active', true)->pluck('id')->all();
             if (! $pids) {
                 $this->err($r, 'scope_products');
             }
@@ -165,9 +165,9 @@ class DraftValidator
      */
     private function headroom(float $floor, ?array $pids): array
     {
-        $q = TenantProduct::where('is_active', true)->where('cost', '>', 0);
+        $q = Product::where('is_active', true)->where('cost', '>', 0);
         if ($pids !== null) {
-            $q->whereIn('product_id', $pids);
+            $q->whereIn('id', $pids);
         }
         $frac = 1.0;
         $abs = PHP_FLOAT_MAX;
@@ -229,7 +229,7 @@ class DraftValidator
             $this->err($r, 'price_invalid');
         } elseif ($items) {
             $m = $this->margin($price, $sumCost);
-            $this->marginCheck($r, $name[current_tenant()->default_locale] ?? (array_values(array_filter($name))[0] ?? ''), $m, $floor, $sumCost);
+            $this->marginCheck($r, $name[setting('default_locale')] ?? (array_values(array_filter($name))[0] ?? ''), $m, $floor, $sumCost);
             if ($price >= $sumPrice) {
                 $this->warn($r, 'no_saving');
             }
@@ -248,13 +248,13 @@ class DraftValidator
         }
         [$pid, $vid] = $this->catalog->split($key);
 
-        return $this->prices->item($pid, $vid);   // tenant scoped, active + listed only
+        return $this->prices->item($pid, $vid);   // active + listed only
     }
 
     /** Branch-summed on_hand - reserved, null = unlimited (backorder allowed). */
     private function available(string $key): ?int
     {
-        if (current_tenant()?->settings['allow_backorder'] ?? false) {
+        if (setting('allow_backorder', false)) {
             return null;
         }
         [$pid, $vid] = $this->catalog->split($key);
@@ -264,10 +264,9 @@ class DraftValidator
 
     private function net(float $price): float
     {
-        $s = (array) current_tenant()->settings;
-        $rate = (float) ($s['tax_rate'] ?? 0);
+        $rate = (float) setting('tax_rate', 0);
 
-        return ! empty($s['prices_include_tax']) && $rate > 0 ? $price / (1 + $rate / 100) : $price;
+        return setting('prices_include_tax') && $rate > 0 ? $price / (1 + $rate / 100) : $price;
     }
 
     private function margin(float $sell, float $cost): ?float
@@ -286,10 +285,10 @@ class DraftValidator
         }
     }
 
-    /** @return array{0:?string,1:?string} Y-m-d H:i:s in the tenant timezone */
+    /** @return array{0:?string,1:?string} Y-m-d H:i:s in the shop timezone */
     private function period(array $in, array &$r, bool $required): array
     {
-        $tz = current_tenant()->timezone ?: config('app.timezone');
+        $tz = setting('timezone') ?: config('app.timezone');
         $parse = function ($v) use ($tz) {
             try {
                 return $v ? Carbon::parse((string) $v, $tz) : null;
@@ -320,11 +319,11 @@ class DraftValidator
         return [$s?->format('Y-m-d H:i:s'), $e?->format('Y-m-d H:i:s')];
     }
 
-    /** Tenant locales only, tags stripped, trimmed. */
+    /** Shop locales only, tags stripped, trimmed. */
     private function translated(mixed $v, int $max): array
     {
         $out = [];
-        foreach ((array) current_tenant()->locales as $l) {
+        foreach ((array) setting('locales', []) as $l) {
             $t = is_array($v) ? ($v[$l] ?? null) : null;
             $out[$l] = is_string($t) ? Str::limit(trim(strip_tags($t)), $max, '') : '';
         }

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\PackagingOptionDataTable;
 use App\DTOs\PackagingOptionData;
-use App\Http\Requests\Tenant\PackagingOptionRequest;
+use App\Http\Requests\Admin\PackagingOptionRequest;
 use App\Models\PackagingOption;
 use App\Services\PackagingOptionService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class PackagingOptionController extends ResourceController
 {
     protected static string $perm = 'packaging';
-    protected static string $routeBase = 'tenant.packaging';
-    protected static string $view = 'tenant.packaging';
+    protected static string $routeBase = 'admin.packaging';
+    protected static string $view = 'admin.packaging';
     protected static string $titleKey = 'orders.packaging.title';
     protected static string $requestClass = PackagingOptionRequest::class;
     protected static string $dtoClass = PackagingOptionData::class;

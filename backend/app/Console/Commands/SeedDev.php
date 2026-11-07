@@ -10,7 +10,7 @@ class SeedDev extends Command
 {
     protected $signature = 'seed:dev {--force : run even when APP_ENV=production (creates accounts with the password "password")}';
 
-    protected $description = 'Seed fake data for everything (demo accounts, demo stores, gift catalog with stock) for local / staging use';
+    protected $description = 'Seed fake data for everything (demo accounts, demo operations, gift catalog with stock) for local / staging use';
 
     public function handle(): int
     {

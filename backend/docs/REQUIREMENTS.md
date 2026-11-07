@@ -1,4 +1,4 @@
-# Multi-Tenant Marketplace — Requirements & Architecture
+# 3alraf Store — Requirements & Architecture
 
 Laravel 13 / PHP 8.3 / MySQL (db `3alraf`) in `/var/www/3alraf/backend`. Design reference: raneen.com/ar (RTL-first, mega-menu, sliders, category tiles, product rails, red/white palette).
 
@@ -11,46 +11,45 @@ Laravel 13 / PHP 8.3 / MySQL (db `3alraf`) in `/var/www/3alraf/backend`. Design 
 - Money: integer minor units? NO — use `decimal(14,2)`; all math through `App\Support\Money` / `OrderCalculator` per `docs/CALCULATIONS.md`.
 - Strings via lang files (`lang/{locale}/*.php`) for static text; DB translations for dynamic data (see §6).
 
-## 2. Tenancy model (single DB, `tenant_id` scoping)
-- Central domain `domain.com` (config `APP_CENTRAL_DOMAIN`); tenants = subdomains `egy.domain.com`, `sa.domain.com` (`tenants` table: slug/subdomain, name, country, currency code+symbol+rate, default_locale, locales[], timezone, is_active, settings JSON).
-- `BelongsToTenant` trait: global scope + auto-set `tenant_id` on create. Middleware `ResolveTenant` resolves by host; binds `current_tenant()`. Central requests have no tenant.
-- Local dev: use `*.localhost` / hosts entries (`egy.3alraf.test`).
-- **Central-only** (no tenant_id): attributes, attribute values, products, variants, barcodes base data, categories tree (global), languages, translations, tenants, super admins, global static content defaults.
-- **Tenant-owned**: branches, stock, stock transfers, adjustments, banners, shipping companies + city price lists, payment methods (+fees), orders, customers, affiliates, flash sales, discount codes, recommended/most-sold/most-reviewed lists, custom pages, static pages, expenses, cities, reviews, tenant admins, notifications, tenant product listing (`tenant_products`: tenant enables a central product, sets price, sale price, cost, status; variants priced via `tenant_product_variants`).
-- Central admin (`domain.com/admin`): CRUD tenants + config; manages central modules; **manager view**: dashboards/reports for all tenants with a tenant switcher / "all tenants" aggregation (currency-normalized via tenant rate to base currency).
-- Tenant admin (`egy.domain.com/admin`): manages every tenant-owned module. Separate auth guards: `central` (admins) and `tenant` (admins scoped by tenant_id); customers guard `web`, tenant-scoped.
-- Tenant storefront URLs: always prefixed `/{language}` (e.g. `egy.domain.com/ar/...`); `/` redirects to default locale. RTL for `ar`.
+## 2. Single-store model (one host, one panel, one database)
+- One shop on one host = `APP_URL` (local `http://3alraf.loc`, production `https://domain.com`). Admin panel `/admin`, storefront `/{locale}/...` (`/` → `/{default_locale}`), mobile API `/api/v1`, integration API (n8n) `/api/integration/v1`, payment webhooks `/webhooks/*`. No subdomains, no country picker.
+- **Shop settings** (name, country, currency code + symbol, default_locale, locales[], timezone, payment credentials, COD, SEO, AI / Growth master switches, …) live in the key-value `settings` table (`App\Models\Setting`, helper `setting($key, $default)`, secrets encrypted; defaults in `config/settings.php`). Admin page: **Settings → General**. The timezone is applied once at boot.
+- **Catalog**: `products` / `product_variants` hold both the master data and the selling data (price, sale price, cost, min stock alert, gift fields, active flag). There is no separate listing table.
+- **One admin account type**: `admins` (`App\Models\Admin`, guard + provider `admin`, login by phone + OTP); roles/permissions (Spatie) all on guard `admin` (`config/permissions.php`, `PermissionSeeder`; Super Admin gets everything). Customers guard `web`, affiliates guard `affiliate`.
+- **Legacy hosts**: old shop subdomains `{any}.APP_HOST` answer a permanent 301 to `APP_URL` (same path + query) via the global middleware `LegacyHostRedirect` (the only subdomain-aware code); `webhooks/*` and `api/*` are served directly there so gateways and old app builds keep working. `GET /api/v1/tenants` is a deprecated alias returning the one shop for old app builds (`slug` = `MOBILE_LEGACY_STORE_SLUG`, default `egy`).
+- Storefront URLs are always prefixed `/{language}`; RTL for `ar`.
+- **History (2026-11 conversion)**: until 2026-11 the project was multi-tenant (central domain + one subdomain per country store, rows scoped by `tenant_id`, separate central/tenant admin panels and guards). The conversion migration `database/migrations/2026_12_31_000000_convert_to_single_store.php` merged everything into one shop; the plan and log are in `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md` and `docs/plans/single-store/`. Older docs in `docs/prompts/`, `docs/plans/` and `docs/qa/` describe the multi-tenant era and are marked historical.
 
 ## 3. Catalog
-- **Attributes** (central): name (translatable), type (select/color/text), values (translatable, color hex optional).
-- **Products** (central): translatable name/description/meta, slug, brand, category (many), images, type `simple|variable`, base sku, base barcode (simple).
+- **Attributes**: name (translatable), type (select/color/text), values (translatable, color hex optional).
+- **Products**: translatable name/description/meta, slug, brand, category (many), images, type `simple|variable`, base sku, base barcode (simple).
 - **Variants** (variable products): combination of attribute values, own sku, **unique barcode (EAN-13 generated, Code128 render)**, images, weight.
 - **Categories**: unlimited-depth tree (nested set or `parent_id`+`path`), translatable, image, icon, sort, active; breadcrumbs; mega menu.
-- Tenant listing: price/sale price/cost per product or variant, active flag; stock per branch.
+- Selling data on the product / variant itself: price, sale price, cost, active flag (Catalog page = quick price/status editor over `products`); stock per branch.
 
-## 4. Commerce modules (tenant)
+## 4. Commerce modules
 - **Branches**, **Stock** (per branch × product/variant), **Stock Transfer** (branch→branch, statuses draft/in-transit/received, movement ledger), **Stock Adjustment** (increase/decrease with reason). All changes write `stock_movements` ledger.
 - **Orders**: cart (open to guests) → checkout (web: signed-in customer only, guests are redirected to login and the cart is kept; `/api/v1` checkout still accepts guests), items snapshot (name, sku, barcode, unit price, cost), totals computed ONLY by `OrderCalculator` following `docs/CALCULATIONS.md`. Statuses enum with history log; fires notification events. Returns & refunds sub-flows. Invoice (printable/PDF), wallet payment proof upload.
 - **Flash sales**: start/end datetime, products/variants with sale price or %, qty limit, countdown on storefront.
 - **Discount codes**: percent/fixed, min order, max discount cap, usage limit total/per customer, date range, scope (all/products/categories), free-shipping option.
 - **Customers**: addresses (city), order history, wishlist, reviews.
-- **Affiliates** (tenant-scoped accounts): own login/dashboard; **tier commission** (tiers by monthly/lifetime sales or order count → percentage; defined per tenant); every product in dashboard shows a **barcode/QR image of its unique link**: `https://{tenant}.domain.com/{locale}/product/{slug}?utm_source=affiliate&aff={aff_uuid}`; click tracking (cookie 30d), conversion → commission record (pending→approved→paid after return window), payout requests, stats.
+- **Affiliates** (own accounts, guard `affiliate`): own login/dashboard; **tier commission** (tiers by monthly/lifetime sales or order count → percentage); every product in dashboard shows a **barcode/QR image of its unique link**: `APP_URL/{locale}/product/{slug}?utm_source=affiliate&aff={aff_uuid}`; click tracking (cookie 30d), conversion → commission record (pending→approved→paid after return window), payout requests, stats.
 - **Recommended / Most sold / Most reviewed** lists: admin pins products manually (ordered, shown FIRST), remaining slots filled by algorithm (recommended: same-category/co-purchase/popularity; most sold: sum qty delivered orders; most reviewed: review count/avg), de-duplicated, limit configurable. One reusable `ProductListResolver`.
 - **Custom pages** `domain/{slug}`: admin defines filters (categories, attributes, price range, brand, flash-sale, tags, sort) + optional manually added products (pinned first); renders product grid with filters. Route registered AFTER static routes; reserved-slug validation.
-- **Static pages** (privacy-policy, terms, about…): translatable, tenant-scoped, slug under `/{lang}/page/{slug}`.
+- **Static pages** (privacy-policy, terms, about…): translatable, slug under `/{lang}/page/{slug}`.
 - **Banners**: placement (home hero slider, strip, category tile, popup), image per locale, link, schedule, sort.
 - **Expenses**: category, amount, date, branch, note, attachment — feeds net profit.
-- **Cities** (tenant), **Shipping companies** (price list per city: price, optional free-over threshold, ETA, COD flag).
-- **Payment methods**: `wallet` (vodafone cash, instapay; customer uploads transfer proof; admin approves → invoice) and `online` gateways (paymob, fawrypay, paypal, paytabs, stripe) behind a `PaymentGatewayInterface` + factory; each method has fee (percent + fixed) and who bears it (customer/merchant) per CALCULATIONS.md; credentials in encrypted tenant settings. Implement drivers as sandbox-ready skeletons with webhook endpoint + signature verification stubs.
+- **Cities**, **Shipping companies** (price list per city: price, optional free-over threshold, ETA, COD flag).
+- **Payment methods**: `wallet` (vodafone cash, instapay; customer uploads transfer proof; admin approves → invoice) and `online` gateways (paymob, fawrypay, paypal, paytabs, stripe) behind a `PaymentGatewayInterface` + factory; each method has fee (percent + fixed) and who bears it (customer/merchant) per CALCULATIONS.md; credentials in encrypted shop settings (`setting()`). Implement drivers as sandbox-ready skeletons with webhook endpoint + signature verification stubs.
 - **Reviews**: rating+text on purchased products, moderation.
-- **Notifications** (tenant admins): DB + realtime-ish (polling every 15s endpoint; optional broadcasting) bell dropdown with toastr pop for new orders and status changes; mark read.
+- **Notifications** (admins): DB + realtime-ish (polling every 15s endpoint; optional broadcasting) bell dropdown with toastr pop for new orders and status changes; mark read.
 
-## 5. Reports (tenant, plus central aggregated, date-range filters, stat cards + datatable + CSV export)
+## 5. Reports (date-range filters, stat cards + datatable + CSV export; one currency, no conversion)
 Purchases (total cost + cards), Sales (total | costs | discounts | shipping | net profit), Discounts, Shipping costs, Payment fees, Net profit (sales − COGS − discounts-as-applied − shipping cost − fees − expenses − refunds), Returns, Refunds, Expenses, Stock valuation & low stock, Top products / categories, Affiliate commissions & payouts, Flash-sale performance, Customers (new/repeat/LTV), Branch performance, Payment-method breakdown. Every formula defined in CALCULATIONS.md §Reports.
 Purchases module: purchase orders from suppliers (suppliers table) that increase stock + record cost (needed for purchases report).
 
 ## 6. Languages
-- `languages` (central): code, name, native name, direction, active, default.
+- `languages`: code, name, native name, direction, active, default.
 - Dynamic data: `translations` via a `HasTranslations` trait (JSON columns per translatable field OR `*_translations` table — use JSON columns `name`, `description` keyed by locale). Admin forms render a tab per active language.
 - Static UI: `lang/{code}/*.php` files; `ar` + `en` shipped. Language switcher keeps URL prefix.
 
@@ -58,15 +57,15 @@ Purchases module: purchase orders from suppliers (suppliers table) that increase
 RTL Arabic default, top promo bar, header (logo, search with suggestions, account, cart, language), category mega menu, hero slider, category icon row, promo banners, flash-sale countdown rail, "Recommended for you / Most sold / Most reviewed" rails, per-category product rails, brand strip, footer (columns, app badges, payment icons). Pages: home, category (filters/sort/pagination via AJAX), product (gallery, variant picker, stock, reviews, related), cart, checkout, order success/tracking, account (orders, addresses, wishlist), custom/static pages, affiliate login/dashboard.
 
 ## 8. Quality
-- Seeders: central admin, 2 tenants (egy EGP ar/en, sa SAR ar/en), sample categories/attributes/products(+variants), branches, cities, shippers, payment methods.
-- Pest/PHPUnit feature tests for: tenant isolation, OrderCalculator (every CALCULATIONS.md example), stock ledger, discount rules, affiliate commission tiers, list resolver.
+- Seeders: one shop (settings), Super Admin, sample categories/attributes/products(+variants), branches, cities, shippers, payment methods.
+- Pest/PHPUnit feature tests for: single-store smoke (admin panel, storefront, APIs), OrderCalculator (every CALCULATIONS.md example), stock ledger, discount rules, affiliate commission tiers, list resolver.
 - Policies/permissions per module. Rate limits on auth/checkout. CSRF everywhere. Escape output.
-- Added by senior review: audit log, soft deletes on core entities, queue for notifications/emails, sitemap per tenant, SEO meta, image upload service with thumbnails, activity log, role/permission UI, tenant-aware cache keys, `php artisan` commands for tenant creation, health seeding.
+- Added by senior review: audit log, soft deletes on core entities, queue for notifications/emails, sitemap, SEO meta, image upload service with thumbnails, activity log, role/permission UI, cache keys, `php artisan` seed commands (`seed:live`, demo), health seeding.
 
 ## 9. Owner decisions (2026-10-21)
-- **Central site**: public landing on the central domain; visitor CHOOSES a country (no geo auto-suggest); choice remembered in a cookie; links to `{slug}.domain.com`. Unknown/inactive tenant → Arabic "store unavailable" page linking back to central.
-- **Payments**: online = Paymob + FawryPay first (Egypt), others later. Offline = wallets (Vodafone Cash, E& Cash, InstaPay, …) requiring a proof-of-payment FILE upload + admin approval. COD always exists by default and collects the delivery fee upfront; the carrier collects the remaining amount. Each method independently active/inactive per tenant.
+- ~~Central site / country picker~~: superseded by the 2026-11 single-store conversion (§2): `/` redirects to the default locale of the one shop; old country subdomains 301 to `APP_URL`.
+- **Payments**: online = Paymob + FawryPay first (Egypt), others later. Offline = wallets (Vodafone Cash, E& Cash, InstaPay, …) requiring a proof-of-payment FILE upload + admin approval. COD always exists by default and collects the delivery fee upfront; the carrier collects the remaining amount. Each method independently active/inactive.
 - **Profit/sales** count on order date, only for orders confirmed by an admin (customer-submitted `pending` orders never count). Returns reduce affiliate commission and tier sales.
 - **Media/CDN**: all images and files live on a separate system/subdomain (`cdn.domain.com` or object storage behind a CDN), never served by the app servers. Payment proofs go to a PRIVATE disk (signed URLs), not the CDN.
 See `docs/CALCULATIONS.md` (updated) and `docs/GAP_ANALYSIS.md`; build prompts in `docs/prompts/09..13`.
-- **Storefront phones (docs/plans/phone-country-code.md)**: every storefront phone input is locked to the tenant's dial code (`tenants.country` -> `config/phone.php`, e.g. EG +20, SA +966). Customers type the national number only; the server normalises it and stores the code in a separate `phone_country_code` column (customers, customer_addresses, orders snapshot, affiliates); a client-sent code is ignored. Display/tel/notifications use `phone_full` / `phone_display`. Admin forms (branches, suppliers) are out of scope.
+- **Storefront phones (docs/plans/phone-country-code.md)**: every storefront phone input is locked to the shop's dial code (`setting('country')` -> `config/phone.php`, e.g. EG +20, SA +966). Customers type the national number only; the server normalises it and stores the code in a separate `phone_country_code` column (customers, customer_addresses, orders snapshot, affiliates); a client-sent code is ignored. Display/tel/notifications use `phone_full` / `phone_display`. Admin forms (branches, suppliers) are out of scope.

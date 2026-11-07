@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\Ai\ChatMessageData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\AiChatMessageRequest;
-use App\Http\Requests\Tenant\AiConversationRequest;
+use App\Http\Requests\Admin\AiChatMessageRequest;
+use App\Http\Requests\Admin\AiConversationRequest;
 use App\Services\Ai\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -23,12 +23,12 @@ class AiChatController extends Controller implements HasMiddleware
 
     private function userId(): int
     {
-        return (int) auth('tenant')->id();
+        return (int) auth('admin')->id();
     }
 
     public function index()
     {
-        return view('tenant.ai.chat', [
+        return view('admin.ai.chat', [
             'models' => $this->chat->models(), 'current' => $this->chat->resolveModel(null), 'quota' => $this->chat->quota(),
             'conversations' => $this->chat->conversations($this->userId())->map(fn ($c) => ['id' => $c->id, 'title' => $c->title ?: __('ai.chat.new_chat')])->all(),
         ]);

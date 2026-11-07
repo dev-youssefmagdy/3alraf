@@ -1,57 +1,12 @@
 <?php
 
-use App\Models\Tenant;
+use App\Models\Setting;
 
-if (! function_exists('current_tenant')) {
-    function current_tenant(): ?Tenant
+if (! function_exists('setting')) {
+    /** Site-wide setting (table `settings`, cached per request): exact key, or a dot path into an array value ("growth.enabled"). */
+    function setting(string $key, mixed $default = null): mixed
     {
-        return app()->bound('currentTenant') ? app('currentTenant') : null;
-    }
-}
-
-if (! function_exists('central_domain')) {
-    function central_domain(): string
-    {
-        return config('app.central_domain');
-    }
-}
-
-if (! function_exists('tenant_url')) {
-    function tenant_url(Tenant|string $tenant, string $path = '/'): string
-    {
-        $slug = $tenant instanceof Tenant ? $tenant->slug : $tenant;
-        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
-        $port = parse_url(config('app.url'), PHP_URL_PORT);
-
-        return $scheme.'://'.$slug.'.'.central_domain().($port ? ':'.$port : '').'/'.ltrim($path, '/');
-    }
-}
-
-if (! function_exists('selected_tenant_id')) {
-    /** Tenant picked in the central admin switcher (null = all tenants). */
-    function selected_tenant_id(): ?int
-    {
-        return current_tenant()?->id ?? (session('central_tenant_id') ?: null);
-    }
-}
-
-if (! function_exists('tenant_slug_from_host')) {
-    function tenant_slug_from_host(\Illuminate\Http\Request $request): ?string
-    {
-        $suffix = '.'.central_domain();
-        $host = $request->getHost();
-
-        return str_ends_with($host, $suffix) ? substr($host, 0, -strlen($suffix)) : null;
-    }
-}
-
-if (! function_exists('central_url')) {
-    function central_url(string $path = '/'): string
-    {
-        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
-        $port = parse_url(config('app.url'), PHP_URL_PORT);
-
-        return $scheme.'://'.central_domain().($port ? ':'.$port : '').'/'.ltrim($path, '/');
+        return Setting::get($key, $default);
     }
 }
 
@@ -84,24 +39,22 @@ if (! function_exists('media_url')) {
 }
 
 if (! function_exists('private_url')) {
-    /** Signed, expiring URL for a file on the private disk (served only to authenticated tenant admins). */
+    /** Signed, expiring URL for a file on the private disk (served only to authenticated admins). */
     function private_url(?string $path, ?int $minutes = null): ?string
     {
         if (! $path) {
             return null;
         }
 
-        return \Illuminate\Support\Facades\URL::temporarySignedRoute('tenant.files.private', now()->addMinutes($minutes ?? config('media.signed_ttl_minutes')), ['tenant' => current_tenant()?->slug, 'path' => $path]);
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute('admin.files.private', now()->addMinutes($minutes ?? config('media.signed_ttl_minutes')), ['path' => $path]);
     }
 }
 
 if (! function_exists('api_route')) {
-    /** URL of a mobile API route by its short name, in the same flavour (subdomain host / X-Tenant header) as the current request. */
+    /** URL of a mobile API route by its short name (`api.v1.{name}`). */
     function api_route(string $name, array $params = []): string
     {
-        $header = str_starts_with((string) request()->route()?->getName(), 'api.v1.h.');
-
-        return route('api.v1.'.($header ? 'h.' : '').$name, $params);
+        return route('api.v1.'.$name, $params);
     }
 }
 
@@ -110,5 +63,23 @@ if (! function_exists('array_sum_bc')) {
     function array_sum_bc(array $values): string
     {
         return array_reduce($values, fn ($c, $v) => bcadd($c, (string) $v, 0), '0');
+    }
+}
+
+if (! function_exists('storefront_url')) {
+    /** Absolute storefront URL in the default locale: storefront_url('product/x') → APP_URL/ar/product/x. */
+    function storefront_url(string $path = '/'): string
+    {
+        $path = trim($path, '/');
+
+        return url('/'.(setting('default_locale') ?: config('app.locale')).($path !== '' ? '/'.$path : ''));
+    }
+}
+
+if (! function_exists('locale_is_rtl')) {
+    /** Whether a language (default: the current locale) is written right-to-left (active languages table). */
+    function locale_is_rtl(?string $locale = null): bool
+    {
+        return (bool) \App\Models\Language::activeList()->firstWhere('code', $locale ?? app()->getLocale())?->isRtl();
     }
 }

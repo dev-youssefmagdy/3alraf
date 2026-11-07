@@ -27,7 +27,7 @@ class GrowthClientDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $can = (bool) auth('tenant')->user()?->can('growth.manage');
+        $can = (bool) auth('admin')->user()?->can('growth.manage');
         $dt->addColumn('scopes_label', fn (IntegrationClient $c) => e(implode(', ', $c->scopes ?? [])))
             ->editColumn('webhook_url', fn (IntegrationClient $c) => e($c->webhook_url ?? '—'))
             ->editColumn('last_used_at', fn (IntegrationClient $c) => $c->last_used_at?->format('Y-m-d H:i') ?? '—')
@@ -37,10 +37,10 @@ class GrowthClientDataTable extends BaseDataTable
                     return '';
                 }
 
-                $edit = e(json_encode(['url' => route('tenant.growth.clients.update', $c->id), 'name' => $c->name, 'webhook_url' => $c->webhook_url, 'scopes' => $c->scopes ?? []]));
+                $edit = e(json_encode(['url' => route('admin.growth.clients.update', $c->id), 'name' => $c->name, 'webhook_url' => $c->webhook_url, 'scopes' => $c->scopes ?? []]));
 
-                return '<div class="flex gap-2"><button type="button" class="btn-sm btn-secondary" data-edit-client="'.$edit.'">'.e(__('admin.edit')).'</button><button type="button" class="btn-sm btn-secondary" data-gpost="'.e(route('tenant.growth.clients.rotate', $c->id)).'" data-confirm="'.e(__('growth_hub.clients.rotate_confirm')).'" data-secret="1">'.e(__('growth_hub.clients.rotate')).'</button>'
-                    .'<button type="button" class="btn-sm btn-danger" data-gpost="'.e(route('tenant.growth.clients.revoke', $c->id)).'" data-confirm="'.e(__('growth_hub.clients.revoke_confirm')).'">'.e(__('growth_hub.clients.revoke')).'</button></div>';
+                return '<div class="flex gap-2"><button type="button" class="btn-sm btn-secondary" data-edit-client="'.$edit.'">'.e(__('admin.edit')).'</button><button type="button" class="btn-sm btn-secondary" data-gpost="'.e(route('admin.growth.clients.rotate', $c->id)).'" data-confirm="'.e(__('growth_hub.clients.rotate_confirm')).'" data-secret="1">'.e(__('growth_hub.clients.rotate')).'</button>'
+                    .'<button type="button" class="btn-sm btn-danger" data-gpost="'.e(route('admin.growth.clients.revoke', $c->id)).'" data-confirm="'.e(__('growth_hub.clients.revoke_confirm')).'">'.e(__('growth_hub.clients.revoke')).'</button></div>';
             });
     }
 }

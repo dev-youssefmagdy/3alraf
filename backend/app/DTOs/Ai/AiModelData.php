@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Central\Ai\AiModelRequest;
+use App\Http\Requests\Admin\Ai\AiModelRequest;
 
 final readonly class AiModelData
 {

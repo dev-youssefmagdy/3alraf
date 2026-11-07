@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/routing/app_routes.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../cart/application/cart_controller.dart';
 import '../../cart/presentation/cart_badge.dart';
-import '../../tenant/application/startup_controller.dart';
-import '../../tenant/domain/tenant_decision.dart';
+import '../../startup/application/startup_controller.dart';
 import 'app_drawer.dart';
 
 /// Lets tab pages open the shell drawer from their own AppBar.
@@ -49,15 +47,8 @@ class ShellScaffold extends ConsumerWidget {
               leading: const Icon(Icons.wifi_off_rounded),
               actions: [
                 TextButton(
-                  onPressed: () async {
-                    final router = GoRouter.of(context);
-                    final decision = await ref
-                        .read(startupControllerProvider.notifier)
-                        .recheck();
-                    if (decision is ShowSelection) {
-                      router.go(AppRoutes.selectCountry);
-                    }
-                  },
+                  onPressed: () =>
+                      ref.read(startupControllerProvider.notifier).recheck(),
                   child: Text(l10n.retry),
                 ),
               ],

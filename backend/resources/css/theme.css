@@ -55,7 +55,7 @@
     .side-link.active { @apply bg-brand-600 text-white; }
 }
 
-/* storefront horizontal rows: slim scrollbar themed by the tenant brand colours */
+/* storefront horizontal rows: slim scrollbar themed by the shop brand colours */
 [data-scroll-row] {
     scrollbar-width: thin;
     scrollbar-color: var(--color-brand-500) var(--color-brand-100);

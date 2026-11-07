@@ -10,7 +10,6 @@ use App\Services\Growth\GiftFinder\GiftScorer;
 use App\Services\Orders\CartService;
 use App\Services\Storefront\BundleCatalog;
 use App\Services\Storefront\ProductPageData;
-use App\Models\TenantProduct;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -56,7 +55,7 @@ class GiftFinderService
     private function picker(int $productId): ?array
     {
         $product = Product::with(['variants.values', 'variants.images', 'images'])->find($productId);
-        $tp = TenantProduct::where('product_id', $productId)->first();
+        $tp = Product::whereKey($productId)->first();
         if (! $product || ! $tp) {
             return null;
         }

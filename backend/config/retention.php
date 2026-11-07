@@ -21,8 +21,7 @@ return [
     'soft_delete_days' => (int) env('SOFT_DELETE_RETENTION_DAYS', 60),
 
     // key => model, in PROCESSING ORDER (orders first: purging them frees customers, codes, methods, branches...).
-    // Tenants are deliberately NOT here: a tenant owns ~50 tables, media dirs and QR files; purging one is an explicit,
-    // manual operation, never automatic. Per-model rules: see App\Services\Retention\SoftDeletePurger and docs/PROGRESS.md.
+    // Per-model rules: see App\Services\Retention\SoftDeletePurger and docs/PROGRESS.md.
     'models' => [
         'order' => Order::class,
         'customer' => Customer::class,

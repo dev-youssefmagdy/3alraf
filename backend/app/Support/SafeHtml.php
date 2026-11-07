@@ -17,6 +17,14 @@ class SafeHtml
         return trim(str_ireplace('javascript:', '', $v));
     }
 
+    /** Plain text of rich text (meta descriptions, excerpts): script/style bodies dropped, tags stripped, whitespace collapsed. */
+    public static function text(?string $value): string
+    {
+        $v = preg_replace('#<(script|style|iframe|object|embed)\b.*?(</\1\s*>|$)#is', ' ', (string) $value);
+
+        return trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($v), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    }
+
     /** Safe HTML for output: plain text becomes paragraphs, markup is whitelisted. */
     public static function render(?string $value): string
     {

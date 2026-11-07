@@ -10,7 +10,8 @@ document.querySelectorAll('input[data-intl-phone]').forEach((el) => {
         strictMode: false,
         countryOrder: ['eg', 'sa', 'ae'],
     });
-    const sync = () => { if (iso) iso.value = (iti.getSelectedCountryData().iso2 || '').toUpperCase(); };
+    // intl-tel-input v29: getSelectedCountry() (getSelectedCountryData() no longer exists)
+    const sync = () => { if (iso) iso.value = (iti.getSelectedCountry()?.iso2 || '').toUpperCase(); };
     el.addEventListener('countrychange', sync);
     sync();
 });

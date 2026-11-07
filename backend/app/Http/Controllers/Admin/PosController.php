@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\Orders\CheckoutData;
 use App\Enums\PaymentMethodType;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\PosCustomerRequest;
-use App\Http\Requests\Tenant\PosOrderRequest;
+use App\Http\Requests\Admin\PosCustomerRequest;
+use App\Http\Requests\Admin\PosOrderRequest;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
 use App\Models\ShippingRate;
 use App\Models\StockLevel;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderQuoteService;
@@ -25,7 +25,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Str;
 
-/** Point of sale: staff build an order for a customer (searchable / quick-created) from the tenant catalog and place it through the storefront pipeline. */
+/** Point of sale: staff build an order for a customer (searchable / quick-created) from the catalog and place it through the storefront pipeline. */
 class PosController extends Controller implements HasMiddleware
 {
     public function __construct(private OrderQuoteService $quotes, private OrderPlacementService $placement, private PriceResolver $prices, private OrderPaymentService $payments) {}
@@ -39,12 +39,12 @@ class PosController extends Controller implements HasMiddleware
     {
         $methods = PaymentMethod::available()->whereIn('type', [PaymentMethodType::COD->value, PaymentMethodType::WALLET->value])->orderBy('sort_order')->get();
 
-        return view('tenant.pos.index', [
+        return view('admin.pos.index', [
             'cities' => City::where('is_active', true)->orderBy('sort_order')->get()->mapWithKeys(fn ($c) => [$c->id => $c->name])->all(),
             'methods' => $methods->mapWithKeys(fn ($m) => [$m->id => $m->name])->all(),
             'prepayMethods' => $methods->where('type', PaymentMethodType::WALLET)->mapWithKeys(fn ($m) => [$m->id => $m->name])->all(),
             'packaging' => PackagingOption::active()->get()->mapWithKeys(fn ($p) => [$p->id => $p->name])->all(),
-            'phoneCode' => Phone::tenantCode(),
+            'phoneCode' => Phone::shopCode(),
         ]);
     }
 
@@ -52,9 +52,8 @@ class PosController extends Controller implements HasMiddleware
     public function products(Request $r): JsonResponse
     {
         $q = trim((string) $r->query('q', ''));
-        $tps = TenantProduct::with(['product.variants.values'])->where('is_active', true)
-            ->whereHas('product', function ($p) use ($q) {
-                $p->where('is_active', true);
+        $tps = Product::with(['variants.values'])->where('is_active', true)->whereNotNull('price')
+            ->where(function ($p) use ($q) {
                 if ($q !== '') {
                     $like = '%'.addcslashes($q, '%_\\').'%';
                     $p->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('sku', 'like', $like)->orWhere('barcode', 'like', $like)
@@ -63,8 +62,7 @@ class PosController extends Controller implements HasMiddleware
             })->latest('id')->limit(24)->get();
 
         $rows = [];
-        foreach ($tps as $tp) {
-            $p = $tp->product;
+        foreach ($tps as $p) {
             foreach ($p->isVariable() ? $p->variants->where('is_active', true)->pluck('id') : [0] as $vid) {
                 if ($item = $this->prices->item($p->id, (int) $vid)) {
                     $rows[] = ['product_id' => $p->id, 'variant_id' => (int) $vid, 'key' => $p->id.'-'.$vid, 'name' => $item['name'], 'sku' => $item['sku'],
@@ -148,7 +146,7 @@ class PosController extends Controller implements HasMiddleware
             app(\App\Services\Orders\CounterSaleService::class)->complete($res['order']);
         }
 
-        return $this->ok(__('pos.order_created', ['number' => $res['order']->number]), route('tenant.orders.show', $res['order']->id));
+        return $this->ok(__('pos.order_created', ['number' => $res['order']->number]), route('admin.orders.show', $res['order']->id));
     }
 
     /** @return array<int,array{product_id:int,variant_id:int,qty:int}> same product/variant rows merged */

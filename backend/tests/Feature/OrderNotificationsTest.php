@@ -5,7 +5,6 @@ use App\Enums\OrderStatus as S;
 use App\Enums\StockMovementType;
 use App\Events\OrderReturnUpdated;
 use App\Models\Branch;
-use App\Models\CentralAdmin;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\Order;
@@ -13,12 +12,9 @@ use App\Models\OrderReturn;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Notifications\CustomerOrderNotification;
 use App\Notifications\OrderNotification;
-use App\Notifications\TenantNotification;
 use App\Services\ActivityTimeline;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
@@ -34,12 +30,10 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);
     $this->branch = Branch::first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'p1', 'sku' => 'P1', 'barcode' => '2000000000008']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($this->branch->id, $this->product->id, 0, StockMovementType::PURCHASE_IN, 10, '60.00');
     $this->place = function (array $o = []) {
         $d = new CheckoutData(...array_merge([
@@ -49,8 +43,8 @@ beforeEach(function () {
 
         return app(OrderPlacementService::class)->place($d, [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 2]])['order'];
     };
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->clerk = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'Clerk', 'email' => 'clerk@egy.test', 'password' => 'secret-123', 'is_active' => true]);
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->clerk = Admin::query()->create(['name' => 'Clerk', 'email' => 'clerk@egy.test', 'password' => 'secret-123', 'is_active' => true]);
     $this->clerk->givePermissionTo('orders.view');
 });
 
@@ -66,14 +60,14 @@ it('notifies admins in DB + realtime, and by e-mail only those holding the permi
 it('does not e-mail the staff member who made the change, but still pushes to the bell', function () {
     $order = ($this->place)();
     Notification::fake();
-    $this->actingAs($this->owner, 'tenant');
-    app(ReturnService::class); // actor resolved from auth('tenant')
+    $this->actingAs($this->owner, 'admin');
+    app(ReturnService::class); // actor resolved from auth('admin')
     event(new OrderReturnUpdated(OrderReturn::create(['order_id' => $order->id, 'number' => 'RET-1', 'status' => 'requested', 'return_value' => 0, 'returned_cogs' => 0, 'return_shipping_cost' => 0]), 'requested'));
 
     Notification::assertSentTo($this->owner, OrderNotification::class, fn ($n, $ch) => $ch === ['database', 'broadcast']);
 });
 
-it('e-mails the customer on placement, status change, payment and return - and respects the tenant switches', function () {
+it('e-mails the customer on placement, status change, payment and return - and respects the notification switches', function () {
     Notification::fake();
     $order = ($this->place)();
     Notification::assertSentOnDemand(CustomerOrderNotification::class, fn ($n, $ch, $notifiable) => array_key_exists('ali@example.com', (array) $notifiable->routes['mail']));
@@ -82,14 +76,14 @@ it('e-mails the customer on placement, status change, payment and return - and r
     Notification::assertSentOnDemandTimes(CustomerOrderNotification::class, 2);
 
     // switches
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['notifications' => ['placed' => false, 'status' => false, 'payment' => true, 'return' => true]])]);
+    settings(['notifications' => ['placed' => false, 'status' => false, 'payment' => true, 'return' => true]]);
     Notification::fake();
     $o2 = ($this->place)();
     app(OrderStatusService::class)->change($o2, S::CONFIRMED);
     Notification::assertSentOnDemandTimes(CustomerOrderNotification::class, 0);
 
     // no address on the order -> nothing to send
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['notifications' => ['placed' => true, 'status' => true]])]);
+    settings(['notifications' => ['placed' => true, 'status' => true]]);
     Notification::fake();
     ($this->place)(['email' => null]);
     Notification::assertNotSentTo($this->owner, CustomerOrderNotification::class);
@@ -113,7 +107,7 @@ it('audits notifications sent, customers (masked PII) and returns', function () 
     $log = Activity::where('log_name', 'notification')->where('subject_id', $order->id)->get();
     expect($log->pluck('description')->all())->toContain('customer.placed.mail', 'staff.new_order.database');
     $cust = $log->firstWhere('description', 'customer.placed.mail');
-    expect($cust->properties['to'])->toBe('a***@example.com')->and($cust->tenant_id)->toBe($this->tenant->id);
+    expect($cust->properties['to'])->toBe('a***@example.com');
 
     $c = Customer::create(['name' => 'Mona Hassan', 'email' => 'mona@example.com', 'phone' => '01111111111', 'password' => 'secret-123', 'is_active' => true]);
     $c->update(['is_active' => false, 'phone' => '01222222222']);
@@ -128,13 +122,14 @@ it('audits notifications sent, customers (masked PII) and returns', function () 
     expect($tl->pluck('log_name')->unique()->all())->toContain('order', 'notification', 'orderreturn');
 });
 
-it('shows the activity card to staff with audit.view and bells central admins', function () {
+it('shows the activity card to staff with audit.view and the bell lists unread admin notifications', function () {
     $order = ($this->place)();
-    $this->actingAs($this->owner, 'tenant');
-    $this->get("http://egy.3alraf.test/admin/orders/{$order->id}")->assertOk()->assertSee(__('orders.activity'));
+    $this->actingAs($this->owner, 'admin');
+    $this->get("/admin/orders/{$order->id}")->assertOk()->assertSee(__('orders.activity'));
 
-    $central = CentralAdmin::first();
-    $central->notify(new TenantNotification($this->tenant, 'tenant_created'));
-    $this->actingAs($central, 'central');
-    $this->getJson('http://3alraf.test/admin/notifications')->assertOk()->assertJsonPath('unread', 1)->assertJsonPath('items.0.title', __('notifications.admin.tenant_created', ['name' => $this->tenant->name]));
+    $super = Admin::query()->where('email', 'admin@3alraf.test')->first();
+    $before = $super->unreadNotifications()->count();
+    $super->notify(new OrderNotification($order, 'new_order'));
+    $this->actingAs($super, 'admin');
+    $this->getJson('/admin/notifications')->assertOk()->assertJsonPath('unread', $before + 1);
 });

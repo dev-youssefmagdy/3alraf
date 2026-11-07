@@ -1,7 +1,6 @@
+import 'package:app/features/store/application/store_controller.dart';
 import 'package:app/features/content/application/content_providers.dart';
 import 'package:app/features/content/data/content_models.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/harness.dart';
@@ -66,9 +65,7 @@ void main() {
       },
     );
     final c = await env.container();
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
 
     c.listen(blogControllerProvider, (_, _) {});
     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -104,23 +101,21 @@ void main() {
     });
   });
 
-  test('content providers refetch on tenant switch', () async {
+  test('content providers refetch on language change', () async {
     final env = TestEnv(
-      tenants: [tenantJson('egy'), tenantJson('sa')],
       extra: (o) {
         if (o.path == '/pages') {
           return envelope([
-            {'slug': 'terms-${o.headers['X-Tenant']}', 'title': 'T'},
+            {'slug': 'terms-${o.headers['Accept-Language']}', 'title': 'T'},
           ]);
         }
         return null;
       },
     );
     final c = await env.container();
-    final t = c.read(tenantControllerProvider.notifier);
-    await t.select(Tenant.fromJson(tenantJson('egy')));
-    expect((await c.read(pagesProvider.future)).single.slug, 'terms-egy');
-    await t.switchTo(Tenant.fromJson(tenantJson('sa')));
-    expect((await c.read(pagesProvider.future)).single.slug, 'terms-sa');
+    await bootStore(c);
+    expect((await c.read(pagesProvider.future)).single.slug, 'terms-ar');
+    await c.read(storeControllerProvider.notifier).chooseLocale('en');
+    expect((await c.read(pagesProvider.future)).single.slug, 'terms-en');
   });
 }

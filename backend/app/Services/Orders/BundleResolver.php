@@ -8,20 +8,20 @@ use App\Support\Money;
 
 /**
  * Bundles (docs/CALCULATIONS.md "Bundles"): purchasability, stock availability and the cent-exact expansion of a bundle
- * line into ordinary component lines. Component prices/costs always come from PriceResolver (tenant scoped), never flash.
+ * line into ordinary component lines. Component prices/costs always come from PriceResolver, never flash.
  */
 class BundleResolver
 {
     public function __construct(private PriceResolver $prices) {}
 
-    /** Bundle of the current tenant that is active, inside its window and not deleted; null otherwise. */
+    /** Bundle that is active, inside its window and not deleted; null otherwise. */
     public function live(int $bundleId): ?Bundle
     {
         return Bundle::query()->with('items')->live()->find($bundleId);
     }
 
     /**
-     * Resolved components, or null when the bundle is empty or ANY component is not purchasable for this tenant.
+     * Resolved components, or null when the bundle is empty or ANY component is not purchasable.
      *
      * @return array<int,array{item:array,per:int}>|null
      */
@@ -59,7 +59,7 @@ class BundleResolver
 
     public function allowsBackorder(): bool
     {
-        return (bool) (current_tenant()?->settings['allow_backorder'] ?? false);
+        return (bool) setting('allow_backorder', false);
     }
 
     /** Whole bundles that can be sold now: min floor(available/qty_per); null = unlimited (backorder allowed); 0 when not purchasable. */

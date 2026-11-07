@@ -12,7 +12,8 @@ import '../../../core/utils/context_ext.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../../core/l10n/locale_provider.dart';
+import '../../store/application/store_controller.dart';
 import '../../wishlist/application/wishlist_controller.dart';
 import '../../cart/application/cart_controller.dart';
 import '../application/catalog_providers.dart';
@@ -93,10 +94,9 @@ class _ProductViewState extends ConsumerState<ProductView> {
   }
 
   Future<void> _share() async {
-    final base = ref.read(tenantControllerProvider).tenant?.baseUrl;
-    final url = base == null
-        ? null
-        : '${base.endsWith('/') ? base : '$base/'}product/${_p.slug}';
+    final url = ref
+        .read(storeInfoProvider)
+        ?.productUrl(_p.slug, ref.read(localeProvider).languageCode);
     await SharePlus.instance.share(
       ShareParams(text: url == null ? _p.name : '${_p.name}\n$url'),
     );

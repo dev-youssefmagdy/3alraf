@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\CustomerDataTable;
 use App\Http\Controllers\Controller;
@@ -21,7 +21,7 @@ class CustomerController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.crud.index', ['table' => new CustomerDataTable, 'title' => __('orders.customers'), 'route' => 'tenant.customers', 'perm' => 'customers']);
+        return view('admin.crud.index', ['table' => new CustomerDataTable, 'title' => __('orders.customers'), 'route' => 'admin.customers', 'perm' => 'customers']);
     }
 
     public function datatable(): JsonResponse
@@ -33,8 +33,8 @@ class CustomerController extends Controller implements HasMiddleware
     {
         $c = $this->customers->query()->with(['addresses.city', 'orders' => fn ($q) => $q->latest('id')->limit(20)])->findOrFail($id);
 
-        $activities = auth('tenant')->user()->can('audit.view') ? app(ActivityTimeline::class)->forCustomer($c) : null;
+        $activities = auth('admin')->user()->can('audit.view') ? app(ActivityTimeline::class)->forCustomer($c) : null;
 
-        return view('tenant.customers.show', ['customer' => $c, 'activities' => $activities]);
+        return view('admin.customers.show', ['customer' => $c, 'activities' => $activities]);
     }
 }

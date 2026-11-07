@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
-class BulkEnableRequest extends FormRequest
+class ActivateProductsRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,7 +19,8 @@ class BulkEnableRequest extends FormRequest
             if ($on->isEmpty()) {
                 return $fail(__('admin.select_at_least_one'));
             }
-            if (Product::whereIn('id', $on->keys())->where('is_active', true)->count() !== $on->count()) {
+            // unknown ids are refused; products that already have a price are skipped by CatalogService::enableBulk (double submit = no-op)
+            if (Product::whereIn('id', $on->keys())->count() !== $on->count()) {
                 $fail(__('admin.invalid_products'));
             }
         }]];

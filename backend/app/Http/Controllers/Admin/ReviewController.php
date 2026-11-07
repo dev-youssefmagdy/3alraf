@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\ReviewDataTable;
 use App\Enums\ReviewStatus;
@@ -25,7 +25,7 @@ class ReviewController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.reviews.index', ['table' => new ReviewDataTable]);
+        return view('admin.reviews.index', ['table' => new ReviewDataTable]);
     }
 
     public function datatable(): JsonResponse

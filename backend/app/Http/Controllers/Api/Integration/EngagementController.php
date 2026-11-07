@@ -33,7 +33,7 @@ class EngagementController extends Controller
 
     public function suggest(SuggestedReplyService $svc, int $id): JsonResponse
     {
-        $i = Interaction::findOrFail($id); // tenant scoped
+        $i = Interaction::findOrFail($id);
 
         return response()->json(['success' => true, 'data' => $svc->suggest($i)]);
     }

@@ -30,7 +30,7 @@ class CheckoutController extends Controller
         return view('storefront.checkout', [
             'cities' => City::where('is_active', true)->orderBy('sort_order')->get(),
             'methods' => PaymentMethod::available()->orderBy('sort_order')->get(),
-            'codUpfront' => current_tenant()->codCollectsShippingUpfront(),
+            'codUpfront' => (bool) setting('cod_collect_shipping_upfront', config('payments.cod_upfront_default', true)),
             'addresses' => $this->addresses->forCustomer($customer->id),
             'selectedAddress' => null,
             'customer' => $customer,

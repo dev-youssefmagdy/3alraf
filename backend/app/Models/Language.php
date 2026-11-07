@@ -26,14 +26,14 @@ class Language extends Model
         return $q->where('is_active', true)->orderBy('sort_order')->orderBy('id');
     }
 
-    /** Active languages (cached). When a tenant is resolved, restricted to its locales. */
+    /** Active languages (cached), restricted to the site locales (setting `locales`) once they are set. */
     public static function activeList()
     {
         // cache raw rows (arrays) - Laravel's cache store does not unserialize Eloquent classes
         $rows = Cache::remember('languages.active', 3600, fn () => static::active()->get()->map->getAttributes()->all());
         $all = static::hydrate($rows);
 
-        return ($t = current_tenant()) ? $all->whereIn('code', $t->locales)->values() : $all;
+        return ($locales = Setting::get('locales')) ? $all->whereIn('code', (array) $locales)->values() : $all;
     }
 
     public function isRtl(): bool

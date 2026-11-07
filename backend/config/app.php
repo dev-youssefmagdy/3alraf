@@ -67,7 +67,8 @@ return [
 
     'timezone' => 'UTC',
 
-    'central_domain' => env('APP_CENTRAL_DOMAIN', '3alraf.test'),
+    // The one site host (from APP_URL). Other subdomains of it are legacy hosts: 301 to this host (LegacyHostRedirect).
+    'host' => strtolower((string) (parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost')),
 
     /*
     |--------------------------------------------------------------------------

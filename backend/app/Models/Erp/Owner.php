@@ -2,17 +2,14 @@
 
 namespace App\Models\Erp;
 
-use App\Models\Concerns\BelongsToTenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use Illuminate\Database\Eloquent\Model;
 
 class Owner extends Model
 {
-    use BelongsToTenant;
-
     protected $table = 'erp_owners';
 
-    protected $fillable = ['name', 'phone', 'ownership_percent', 'is_eligible', 'tenant_admin_id'];
+    protected $fillable = ['name', 'phone', 'ownership_percent', 'is_eligible', 'admin_id'];
 
     protected function casts(): array
     {
@@ -26,6 +23,6 @@ class Owner extends Model
 
     public function user()
     {
-        return $this->belongsTo(TenantAdmin::class, 'tenant_admin_id');
+        return $this->belongsTo(Admin::class, 'admin_id');
     }
 }

@@ -8,6 +8,6 @@ return [
     'margin' => (int) env('QR_MARGIN', 36),
     // Logo width as a fraction of the image width. Error correction is High (30%), keep this <= 0.22 so codes still scan.
     'logo_ratio' => (float) env('QR_LOGO_RATIO', 0.20),
-    // Directory (under tenants/{id}/) on the media disk.
+    // Directory on the media disk (codes generated before the single-store conversion keep their stored path).
     'dir' => 'qr/products',
 ];

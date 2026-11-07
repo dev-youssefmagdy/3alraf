@@ -28,7 +28,7 @@ class StockRequestDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('tenant')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('product_name', fn (StockRequest $m) => e($m->product?->name).($m->variant ? '<div class="text-xs text-slate-500">'.e($m->variant->label()).'</div>' : ''))
             ->editColumn('name', fn (StockRequest $m) => e($m->name))
             ->addColumn('phone_full', fn (StockRequest $m) => '<a dir="ltr" class="text-brand-600" href="tel:'.e($m->phone_country_code.$m->phone).'">'.e(trim($m->phone_country_code.' '.$m->phone)).'</a>')
@@ -40,12 +40,12 @@ class StockRequestDataTable extends BaseDataTable
                 if ($u?->can('stock_requests.edit')) {
                     foreach (['contacted', 'closed'] as $s) {
                         if ($m->status->value !== $s) {
-                            $h .= '<button type="button" data-post-action="'.e(route('tenant.stock-requests.status', [$m->id, $s])).'" class="btn-sm btn-secondary">'.e(__('stock_requests.mark_'.$s)).'</button>';
+                            $h .= '<button type="button" data-post-action="'.e(route('admin.stock-requests.status', [$m->id, $s])).'" class="btn-sm btn-secondary">'.e(__('stock_requests.mark_'.$s)).'</button>';
                         }
                     }
                 }
                 if ($u?->can('stock_requests.delete')) {
-                    $h .= '<button type="button" data-delete="'.e(route('tenant.stock-requests.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
+                    $h .= '<button type="button" data-delete="'.e(route('admin.stock-requests.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
                 }
 
                 return $h.'</div>';

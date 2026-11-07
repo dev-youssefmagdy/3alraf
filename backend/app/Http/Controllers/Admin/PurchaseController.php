@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\PurchaseOrderDataTable;
 use App\DTOs\PurchaseOrderData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\PurchaseOrderRequest;
+use App\Http\Requests\Admin\PurchaseOrderRequest;
 use App\Models\Branch;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -32,7 +32,7 @@ class PurchaseController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.crud.index', ['table' => new PurchaseOrderDataTable, 'title' => __('ops.purchases'), 'route' => 'tenant.purchases', 'perm' => 'purchases']);
+        return view('admin.crud.index', ['table' => new PurchaseOrderDataTable, 'title' => __('ops.purchases'), 'route' => 'admin.purchases', 'perm' => 'purchases']);
     }
 
     public function datatable(): JsonResponse
@@ -55,21 +55,21 @@ class PurchaseController extends Controller implements HasMiddleware
 
     public function show(int $id)
     {
-        return view('tenant.purchases.show', ['po' => $this->service->find($id)]);
+        return view('admin.purchases.show', ['po' => $this->service->find($id)]);
     }
 
     public function store(PurchaseOrderRequest $request): JsonResponse
     {
         $po = $this->service->create(PurchaseOrderData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('tenant.purchases.show', $po->id));
+        return $this->ok(__('admin.saved'), route('admin.purchases.show', $po->id));
     }
 
     public function update(PurchaseOrderRequest $request, int $id): JsonResponse
     {
         $po = $this->service->update($this->service->find($id), PurchaseOrderData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('tenant.purchases.show', $po->id));
+        return $this->ok(__('admin.saved'), route('admin.purchases.show', $po->id));
     }
 
     public function validateForm(PurchaseOrderRequest $request, ?int $id = null): JsonResponse
@@ -81,14 +81,14 @@ class PurchaseController extends Controller implements HasMiddleware
     {
         $this->service->receive($this->service->find($id));
 
-        return $this->ok(__('ops.purchase_received'), route('tenant.purchases.show', $id));
+        return $this->ok(__('ops.purchase_received'), route('admin.purchases.show', $id));
     }
 
     public function cancel(int $id): JsonResponse
     {
         $this->service->cancel($this->service->find($id));
 
-        return $this->ok(__('admin.saved'), route('tenant.purchases.show', $id));
+        return $this->ok(__('admin.saved'), route('admin.purchases.show', $id));
     }
 
     public function destroy(int $id): JsonResponse
@@ -102,7 +102,7 @@ class PurchaseController extends Controller implements HasMiddleware
     {
         $po->loadMissing('items');
 
-        return view('tenant.purchases.form', [
+        return view('admin.purchases.form', [
             'po' => $po, 'editing' => $po->exists, 'items' => $this->catalog->options(),
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),

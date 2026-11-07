@@ -7,8 +7,6 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
 use App\Repositories\Contracts\RetentionRepositoryInterface;
 use App\Services\ImageUploadService;
 use Illuminate\Database\Eloquent\Model;
@@ -25,8 +23,8 @@ use Illuminate\Support\Str;
  *  order           purge (items/history/usages cascade + private payment proof) unless it has returns or an affiliate commission
  *                  (the returns / commission reports count them) -> then kept and its customer snapshot is anonymised
  *  customer        has orders or reviews -> anonymised (name/e-mail/phone/password, addresses/carts/wishlist/tokens removed), else purged
- *  variant         referenced by order items / stock / purchase / adjustment / transfer rows -> kept, else purged (+images, QR codes, listing rows)
- *  product         same references (any of its variants too) -> kept, else purged (+images, variants, QR codes, tenant listings)
+ *  variant         referenced by order items / stock / purchase / adjustment / transfer rows -> kept, else purged (+images, QR codes)
+ *  product         same references (any of its variants too) -> kept, else purged (+images, variants, QR codes)
  *  packaging_option referenced by an order (packaging_option_id) -> kept, else purged (+image, cart refs cleared)
  *  bundle          referenced by an order item (bundle_id) -> kept, else purged (+image, components, cart lines)
  *  brand           still has products (even soft-deleted) -> kept, else purged (+logo)
@@ -38,7 +36,6 @@ use Illuminate\Support\Str;
  *  supplier        has purchase orders -> kept, else purged
  *  branch          has orders / purchases / adjustments / transfers / returns / expenses / stock movements -> kept, else purged (stock levels cascade)
  *  city            used by an order / address / branch -> kept, else purged (shipping rates cascade)
- *  tenant          NEVER automatic (explicit manual operation only)
  */
 class SoftDeletePurger
 {
@@ -142,7 +139,7 @@ class SoftDeletePurger
         }
         $kept = $this->repo->referencedAny([['orders', 'customer_id'], ['reviews', 'customer_id']], $c->id);
         $rawEmail = (string) $c->getRawOriginal('email'); // may carry the #del tombstone
-        $this->repo->deleteWhere('customer_auth_codes', ['tenant_id' => $c->tenant_id, 'email' => preg_replace('/#del\d+$/', '', $rawEmail)]);
+        $this->repo->deleteWhere('customer_auth_codes', ['email' => preg_replace('/#del\d+$/', '', $rawEmail)]);
         DB::table('personal_access_tokens')->where('tokenable_type', $c->getMorphClass())->where('tokenable_id', $c->id)->delete();
         DB::table('model_has_roles')->where('model_type', $c->getMorphClass())->where('model_id', $c->id)->delete();
         DB::table('model_has_permissions')->where('model_type', $c->getMorphClass())->where('model_id', $c->id)->delete();
@@ -321,16 +318,15 @@ class SoftDeletePurger
         $v->forceDelete();
     }
 
-    /** QR codes (+ their files) of every tenant listing / listing variant row that points at the catalogue row. */
+    /** QR codes (+ their files) of the product (and every variant of it) or of one variant. */
     private function dropListings(string $column, int $id): void
     {
         if ($column === 'product_id') {
-            $tpIds = $this->repo->ids('tenant_products', ['product_id' => $id]);
-            $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachQrCodes(TenantProduct::class, $tpIds));
-            $tvIds = TenantProductVariant::withoutGlobalScopes()->whereIn('tenant_product_id', $tpIds)->pluck('id')->all();
+            $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachQrCodes(Product::class, [$id]));
+            $variantIds = ProductVariant::withoutGlobalScopes()->where('product_id', $id)->pluck('id')->all();
         } else {
-            $tvIds = $this->repo->ids('tenant_product_variants', ['product_variant_id' => $id]);
+            $variantIds = [$id];
         }
-        $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachQrCodes(TenantProductVariant::class, $tvIds));
+        $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachQrCodes(ProductVariant::class, $variantIds));
     }
 }

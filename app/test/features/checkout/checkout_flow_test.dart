@@ -23,7 +23,7 @@ void main() {
       extra: (o) => o.path == '/home' ? envelope({}) : b.call(o),
     );
     await env.init();
-    await env.secrets.write('auth_token:egy', '12|secret');
+    await env.secrets.write('auth_token', '12|secret');
     await env.pumpApp(tester);
 
     await tester.tap(find.text('السلة').last);

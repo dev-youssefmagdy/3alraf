@@ -43,7 +43,7 @@
                 @endforeach
             </div>
             @if ($editing && $model->provider === $p)
-                <p class="text-xs text-slate-500">{{ __('ops.webhook_url') }}: <code>{{ tenant_url(current_tenant(), 'webhooks/payments/'.$model->id) }}</code></p>
+                <p class="text-xs text-slate-500">{{ __('ops.webhook_url') }}: <code>{{ url('webhooks/payments/'.$model->id) }}</code></p>
             @endif
         </div>
     @endforeach

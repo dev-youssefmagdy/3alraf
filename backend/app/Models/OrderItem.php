@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderItem extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['order_id', 'product_id', 'product_variant_id', 'flash_sale_item_id', 'bundle_id', 'bundle_name', 'bundle_group', 'name', 'sku', 'barcode', 'unit_price', 'unit_cost', 'quantity', 'line_subtotal', 'line_discount', 'returned_qty'];
 

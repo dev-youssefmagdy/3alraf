@@ -1,8 +1,8 @@
 @php
-    $postDesc = $post->meta_description ?: ($post->excerpt ?: \Illuminate\Support\Str::limit(strip_tags((string) $post->content), 160, ''));
+    $postDesc = $post->meta_description ?: ($post->excerpt ?: \Illuminate\Support\Str::limit(\App\Support\SafeHtml::text($post->content), 160, ''));
     $ld = ['@context' => 'https://schema.org', '@type' => 'BlogPosting', 'headline' => \Illuminate\Support\Str::limit($post->title, 110, ''), 'description' => $postDesc, 'mainEntityOfPage' => url()->current(),
         'datePublished' => ($post->published_at ?? $post->created_at)?->toIso8601String(), 'dateModified' => $post->updated_at?->toIso8601String(), 'inLanguage' => app()->getLocale(),
-        'author' => ['@type' => 'Organization', 'name' => current_tenant()->name], 'publisher' => ['@type' => 'Organization', 'name' => current_tenant()->name, 'logo' => ['@type' => 'ImageObject', 'url' => asset('logo-512.png')]],
+        'author' => ['@type' => 'Organization', 'name' => setting('name')], 'publisher' => ['@type' => 'Organization', 'name' => setting('name'), 'logo' => ['@type' => 'ImageObject', 'url' => asset('logo-512.png')]],
         'image' => [asset('logo-512.png')]];
     $bc = [[__('store.breadcrumb_home'), route('storefront.home')], [__('growth.blog'), route('storefront.blog.index')], [$post->title, url()->current()]];
 @endphp

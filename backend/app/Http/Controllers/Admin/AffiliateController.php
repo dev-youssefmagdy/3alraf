@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\AffiliateDataTable;
 use App\Enums\AffiliateStatus;
@@ -26,7 +26,7 @@ class AffiliateController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.affiliates.index', ['table' => new AffiliateDataTable]);
+        return view('admin.affiliates.index', ['table' => new AffiliateDataTable]);
     }
 
     public function datatable(): JsonResponse

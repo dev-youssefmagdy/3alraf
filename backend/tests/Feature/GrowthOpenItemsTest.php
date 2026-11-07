@@ -9,56 +9,47 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\SupplierProductPrice;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\InteractionService;
 use App\Services\Growth\SupplierPriceService;
 use Database\Seeders\CatalogSeeder;
 use Database\Seeders\FoundationSeeder;
-use Database\Seeders\TenantDemoSeeder;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(GrowthFeatures::class)->enableAll($this->tenant);
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->t = 'http://egy.3alraf.test/admin';
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->t = '/admin';
 });
 
 function ocOwner()
 {
-    return TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
+    return Admin::query()->where('email', 'owner@egy.test')->first();
 }
 
 function ocFeature(string $k, bool $on = true): void
 {
-    $t = current_tenant();
-    $s = $t->settings ?? [];
-    $s['growth']['features'][$k] = $on;
-    $t->update(['settings' => $s]);
-    app()->instance('currentTenant', $t->refresh());
+    growthFeatures($on, $k);
     Cache::flush();
 }
 
 // ---- A seeder
 it('A: the demo seeder runs clean and seeds >= 10 orders (no proof_required failure)', function () {
-    $this->seed([CatalogSeeder::class, TenantDemoSeeder::class]);
-    expect(Order::withoutGlobalScopes()->count())->toBeGreaterThanOrEqual(10)
-        ->and(Order::withoutGlobalScopes()->where('status', 'delivered')->count())->toBeGreaterThanOrEqual(4)
-        ->and(Order::withoutGlobalScopes()->where('status', 'cancelled')->count())->toBe(1);
+    $this->seed([CatalogSeeder::class, DemoSeeder::class]);
+    expect(Order::query()->count())->toBeGreaterThanOrEqual(10)
+        ->and(Order::query()->where('status', 'delivered')->count())->toBeGreaterThanOrEqual(4)
+        ->and(Order::query()->where('status', 'cancelled')->count())->toBe(1);
 });
 
 // ---- C supplier prices
-it('C: ranks suppliers (history + explicit), flags margin, never touches tenant cost, reorder draft uses the supplier quote', function () {
+it('C: ranks suppliers (history + explicit), flags margin, never touches the product cost, reorder draft uses the supplier quote', function () {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'م'], 'slug' => 'sp1', 'sku' => 'SP1', 'barcode' => '2000000000901']);
-    $tp = TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    $tp = listProduct($p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     $a = Supplier::create(['name' => 'A', 'is_active' => true]);
     $b = Supplier::create(['name' => 'B', 'is_active' => true]);
     $c = Supplier::create(['name' => 'C', 'is_active' => true]);
@@ -82,9 +73,9 @@ it('C: ranks suppliers (history + explicit), flags margin, never touches tenant 
 
 it('C: admin can save/delete a supplier price (audited, switch-gated) and the inventory page lists alternatives', function () {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'م'], 'slug' => 'sp2', 'sku' => 'SP2', 'barcode' => '2000000000902']);
-    TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     $s = Supplier::create(['name' => 'Sup', 'is_active' => true]);
-    $this->actingAs(ocOwner(), 'tenant');
+    $this->actingAs(ocOwner(), 'admin');
     ocFeature('inventory_engine', false);
     $this->postJson("{$this->t}/growth/inventory/prices", ['product_id' => $p->id, 'supplier_id' => $s->id, 'unit_cost' => 50])->assertStatus(403);   // switch OFF
     ocFeature('inventory_engine');
@@ -116,7 +107,7 @@ function ocInteraction(array $o = []): Interaction
 
 it('D: review control stores the human label (audited), validates enums; real eval refuses a verdict below the minimum', function () {
     $i = ocInteraction();
-    $this->actingAs(ocOwner(), 'tenant');
+    $this->actingAs(ocOwner(), 'admin');
     $this->postJson("{$this->t}/growth/interactions/{$i->id}/review", ['category' => 'bogus', 'intent' => 'question', 'sentiment' => 'neutral'])->assertStatus(422);
     $this->postJson("{$this->t}/growth/interactions/{$i->id}/review", ['category' => 'shipping', 'intent' => 'complaint', 'sentiment' => 'negative'])->assertOk();
     $i->refresh();
@@ -124,7 +115,7 @@ it('D: review control stores the human label (audited), validates enums; real ev
         ->and(GrowthActionLog::where('action', 'interaction.reviewed')->exists())->toBeTrue();
     $res = app(InteractionService::class)->evaluateReal();
     expect($res['n'])->toBe(1)->and($res['verdict'])->toBe('insufficient_data');
-    $this->artisan('growth:eval-classifier', ['--real' => true, '--tenant' => 'egy'])->assertFailed();
+    $this->artisan('growth:eval-classifier', ['--real' => true])->assertFailed();
     expect(app(InteractionService::class)->realEvalPasses())->toBeFalse();
 });
 
@@ -133,14 +124,12 @@ it('D: real eval with >= min reviewed rows gives a verdict, stores it, and unloc
     foreach (range(1, 10) as $k) {
         ocInteraction(['reviewed_category' => 'price', 'reviewed_intent' => 'question', 'reviewed_sentiment' => 'neutral', 'reviewed_at' => now(), 'category' => $k <= 3 ? 'shipping' : 'price']);
     }
-    $this->artisan('growth:eval-classifier', ['--real' => true, '--tenant' => 'egy'])->assertSuccessful();
-    $ce = $this->tenant->fresh()->settings['growth']['classifier_eval'];
+    $this->artisan('growth:eval-classifier', ['--real' => true])->assertSuccessful();
+    $ce = setting('growth.classifier_eval');
     expect($ce['verdict'])->toBe('meets_target')->and($ce['n'])->toBe(10)->and($ce['accuracy']['category'])->toBe(0.7);
-    app()->instance('currentTenant', $this->tenant->fresh());
     expect(app(InteractionService::class)->realEvalPasses())->toBeTrue();
     Interaction::query()->limit(5)->update(['category' => 'shipping']);
-    $this->artisan('growth:eval-classifier', ['--real' => true, '--tenant' => 'egy'])->assertFailed();
-    app()->instance('currentTenant', $this->tenant->fresh());
+    $this->artisan('growth:eval-classifier', ['--real' => true])->assertFailed();
     expect(app(InteractionService::class)->realEvalPasses())->toBeFalse()->and(app(InteractionService::class)->aiFallback('where is my order'))->toBe([]);
 });
 
@@ -151,7 +140,7 @@ it('D: the labeling export is stratified, masked and has no contact or thread da
         }
     }
     $out = sys_get_temp_dir().'/oc-sample-'.uniqid().'.json';
-    $this->artisan('growth:export-labeling-sample', ['--tenant' => 'egy', '--n' => 6, '--out' => $out])->assertSuccessful();
+    $this->artisan('growth:export-labeling-sample', ['--n' => 6, '--out' => $out])->assertSuccessful();
     $rows = json_decode(file_get_contents($out), true);
     @unlink($out);
     expect($rows)->toHaveCount(6)->and(collect($rows)->pluck('predicted.category')->unique()->count())->toBe(3)

@@ -1,16 +1,16 @@
-<x-layouts.admin guard="tenant" :title="__('ai.gen.title')">
+<x-layouts.admin :title="__('ai.gen.title')">
     @php
         $s = fn ($k, $a = []) => __('ai.gen.'.$k, $a);
         $inp = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm';
         $lbl = 'block text-sm text-slate-600';
     @endphp
-    <div class="space-y-4" id="gen" data-store="{{ route('tenant.ai.generators.store') }}">
+    <div class="space-y-4" id="gen" data-store="{{ route('admin.ai.generators.store') }}">
         <form id="gen-form" class="space-y-3 rounded-xl border border-slate-200 bg-white p-4" autocomplete="off">
             <h3 class="font-semibold text-slate-800">{{ $s('new') }}</h3>
             <p class="text-xs text-slate-500">{{ $s('hint') }}</p>
             <div class="grid gap-3 sm:grid-cols-3">
                 <label class="{{ $lbl }}">{{ $s('fields.kind') }}
-                    <select name="kind" id="gen-kind" class="{{ $inp }}">@foreach (['banner', 'flash_sale', 'discount_code', 'bundle', 'static_page', 'custom_page', 'blog_post', 'content_package'] as $k)@if ($k !== 'content_package' || (app(\App\Services\Growth\GrowthFeatures::class)->active('content_factory') && auth('tenant')->user()?->can('growth.manage')))<option value="{{ $k }}">{{ $s('kinds.'.$k) }}</option>@endif @endforeach</select></label>
+                    <select name="kind" id="gen-kind" class="{{ $inp }}">@foreach (['banner', 'flash_sale', 'discount_code', 'bundle', 'static_page', 'custom_page', 'blog_post', 'content_package'] as $k)@if ($k !== 'content_package' || (app(\App\Services\Growth\GrowthFeatures::class)->active('content_factory') && auth('admin')->user()?->can('growth.manage')))<option value="{{ $k }}">{{ $s('kinds.'.$k) }}</option>@endif @endforeach</select></label>
                 <label class="{{ $lbl }}" data-not="static_page custom_page blog_post content_package">{{ $s('fields.margin_floor') }}<input type="number" name="margin_floor" value="10" min="0" max="95" step="0.5" class="{{ $inp }}"><span class="text-xs text-slate-400">{{ $s('margin_hint') }}</span></label>
                 <label class="{{ $lbl }}" data-not="static_page custom_page blog_post content_package">{{ $s('fields.season') }} ({{ $s('optional') }})<input name="season" maxlength="80" class="{{ $inp }}"></label>
             </div>
@@ -36,7 +36,7 @@
         </form>
 
         <x-card :title="$s('queue')">
-            <x-datatable :table="$table" :url="route('tenant.ai.generators.datatable')" id="ai-generators-table" />
+            <x-datatable :table="$table" :url="route('admin.ai.generators.datatable')" id="ai-generators-table" />
         </x-card>
     </div>
     <script>

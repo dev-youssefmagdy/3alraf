@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant\Concerns;
+namespace App\Http\Requests\Admin\Concerns;
 
 use App\Services\Stock\StockItemCatalog;
 

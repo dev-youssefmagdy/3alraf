@@ -4,10 +4,10 @@ namespace App\Services\Growth;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\TenantProduct;
+use App\Models\Product;
 
 /**
- * Honest-metrics checks for the current tenant. Cost columns stay NOT NULL, so 0 means "unknown" (documented in CALCULATIONS.md).
+ * Honest-metrics checks of the shop. Cost columns stay NOT NULL, so 0 means "unknown" (documented in CALCULATIONS.md).
  * Each issue: {key, count, ids[], severity}. Surfaced in the brief (data_quality[]) and as an admin warning list.
  */
 class DataQuality
@@ -17,9 +17,9 @@ class DataQuality
         $since = now()->subDays($days)->startOfDay();
         $issues = [];
 
-        $products = TenantProduct::where('is_active', true)->where(fn ($q) => $q->whereNull('cost')->orWhere('cost', '<=', 0));
+        $products = Product::where('is_active', true)->where(fn ($q) => $q->whereNull('cost')->orWhere('cost', '<=', 0));
         if (($n = (clone $products)->count()) > 0) {
-            $issues[] = ['key' => 'product_cost_missing', 'count' => $n, 'ids' => (clone $products)->orderBy('id')->limit(10)->pluck('product_id')->all(), 'severity' => 'high'];
+            $issues[] = ['key' => 'product_cost_missing', 'count' => $n, 'ids' => (clone $products)->orderBy('id')->limit(10)->pluck('id')->all(), 'severity' => 'high'];
         }
         $lines = OrderItem::where(fn ($q) => $q->whereNull('unit_cost')->orWhere('unit_cost', '<=', 0))
             ->whereHas('order', fn ($q) => $q->where('status', 'delivered')->where('placed_at', '>=', $since));

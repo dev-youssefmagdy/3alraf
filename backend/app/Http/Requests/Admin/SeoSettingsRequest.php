@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Services\SeoSettingsService;
 
-/** Tenant "SEO & Analytics" settings (AJAX-validated first, then saved). */
+/** "SEO & Analytics" settings (AJAX-validated first, then saved). */
 class SeoSettingsRequest extends BaseRequest
 {
     public function rules(): array

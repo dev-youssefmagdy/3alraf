@@ -17,7 +17,7 @@ class AdResultsController extends Controller
     public function store(AdResultsRequest $r, int $id): JsonResponse
     {
         $client = $r->attributes->get('integration_client');
-        $e = GrowthExperiment::whereNotNull('product_id')->findOrFail($id); // tenant scoped
+        $e = GrowthExperiment::whereNotNull('product_id')->findOrFail($id);
 
         return $this->idem->run($client, $r, fn () => [200, ['success' => true, 'data' => $this->lab->importAds($e, $r->validated()['rows'], 'n8n', $client->id)]]);
     }

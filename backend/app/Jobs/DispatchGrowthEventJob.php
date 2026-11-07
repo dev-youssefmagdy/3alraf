@@ -38,7 +38,7 @@ class DispatchGrowthEventJob implements ShouldQueue
             return;
         }
 
-        $clients = app(\App\Repositories\Contracts\IntegrationClientRepositoryInterface::class)->webhookTargets($e->tenant_id);
+        $clients = app(\App\Repositories\Contracts\IntegrationClientRepositoryInterface::class)->webhookTargets();
         $done = (array) ($e->delivered_to ?? []);
         $body = json_encode($e->payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $errors = [];

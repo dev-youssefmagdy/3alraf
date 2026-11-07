@@ -1,6 +1,6 @@
 @php
     use App\Enums\OrderStatus as S;
-    $cur = current_tenant()->currency_symbol;
+    $cur = setting('currency_symbol');
     $flow = [S::PENDING, S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED];
     $idx = collect($flow)->search(fn ($s) => $s === $order->status);
     $mine = $order->customer_id && $order->customer_id === auth('web')->id();

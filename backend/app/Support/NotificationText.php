@@ -16,8 +16,6 @@ class NotificationText
             'proof_uploaded' => __('notifications.admin.proof_uploaded', ['number' => $num]),
             'payment_received' => __('notifications.admin.payment_received', ['number' => $num, 'total' => $total]),
             'return_requested' => __('notifications.admin.return_requested', ['number' => $num, 'return' => $d['return'] ?? '']),
-            'tenant_created' => __('notifications.admin.tenant_created', ['name' => $d['name'] ?? '']),
-            'tenant_status' => __('notifications.admin.tenant_status', ['name' => $d['name'] ?? '', 'state' => __('notifications.admin.'.(($d['active'] ?? false) ? 'tenant_active' : 'tenant_inactive'))]),
             'ad_cap_exceeded' => __('growth_gaps.ad_cap_title', ['day' => $d['day'] ?? '', 'spend' => $d['spend_f'] ?? '', 'cap' => $d['cap_f'] ?? '']),
             'erp_posting_failed' => __('erp_acc.notify.posting_failed', ['subject' => ($d['subject_type'] ?? '').' #'.($d['subject_id'] ?? ''), 'error' => \Illuminate\Support\Str::limit((string) ($d['error'] ?? ''), 120)]),
             default => $num,

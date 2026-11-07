@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 class GrowthClientRequest extends BaseRequest
 {

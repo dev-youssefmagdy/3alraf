@@ -1,9 +1,9 @@
-<x-layouts.admin guard="tenant" :title="__('ai.editor.title')">
+<x-layouts.admin :title="__('ai.editor.title')">
     @php
         $t = fn ($k, $a = []) => __('ai.editor.'.$k, $a);
         $inp = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm';
     @endphp
-    <div id="ed" class="space-y-4" data-store="{{ route('tenant.ai.editor.store') }}" data-products="{{ route('tenant.ai.editor.products') }}" data-history="{{ route('tenant.ai.editor.history') }}" data-base="{{ url('admin/ai/editor/generations') }}">
+    <div id="ed" class="space-y-4" data-store="{{ route('admin.ai.editor.store') }}" data-products="{{ route('admin.ai.editor.products') }}" data-history="{{ route('admin.ai.editor.history') }}" data-base="{{ url('admin/ai/editor/generations') }}">
         <p class="text-sm text-slate-600">{{ $t('intro') }}</p>
         <div class="grid gap-4 lg:grid-cols-3">
             <form id="ed-form" class="space-y-4 rounded-xl border border-slate-200 bg-white p-4 lg:col-span-1" autocomplete="off">

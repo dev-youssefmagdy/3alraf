@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\LowStockService;
@@ -16,6 +16,6 @@ class LowStockController extends Controller implements HasMiddleware
 
     public function index(LowStockService $service)
     {
-        return view('tenant.stock.low', ['rows' => $service->rows()]);
+        return view('admin.stock.low', ['rows' => $service->rows()]);
     }
 }

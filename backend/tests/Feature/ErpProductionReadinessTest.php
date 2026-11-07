@@ -1,8 +1,7 @@
 <?php
 
-use App\Http\Controllers\Central\Erp\HubController as CentralHub;
-use App\Http\Controllers\Tenant\Erp\HubController as TenantHub;
-use App\Services\Erp\Central\AnomalyService;
+use App\Http\Controllers\Admin\Erp\HubController;
+use App\Services\Erp\Audit\AnomalyService;
 use App\Services\Erp\Reports\ReportCatalog;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Arr;
@@ -13,8 +12,8 @@ use Illuminate\Support\Facades\Lang;
 /** Every file that belongs to the ERP module (PHP + blade). */
 function erpFiles(): array
 {
-    $dirs = [app_path('Services/Erp'), app_path('Http/Controllers/Tenant/Erp'), app_path('Http/Controllers/Central/Erp'), app_path('Listeners/Erp'), app_path('Events/Erp'), app_path('Models/Erp'),
-        resource_path('views/tenant/erp'), resource_path('views/central/erp')];
+    $dirs = [app_path('Services/Erp'), app_path('Http/Controllers/Admin/Erp'), app_path('Listeners/Erp'), app_path('Events/Erp'), app_path('Models/Erp'),
+        resource_path('views/admin/erp')];
     $files = [app_path('Console/Commands/ErpBackfill.php'), app_path('Console/Commands/ErpDepreciate.php'), app_path('Console/Commands/ErpReconcile.php'), app_path('Console/Commands/ErpVerify.php'),
         app_path('Exceptions/AccountingException.php'), resource_path('views/components/layouts/admin.blade.php')];
     foreach ($dirs as $d) {
@@ -45,7 +44,7 @@ function erpKeyFiles(): array
 
 function erpGroups(): array
 {
-    return ['erp', 'erp_central', 'erp_dist', 'erp_ext', 'erp_rep', 'erp_acc'];
+    return ['erp', 'erp_audit', 'erp_dist', 'erp_ext', 'erp_rep', 'erp_acc'];
 }
 
 function langFlat(string $group, string $locale): array
@@ -98,11 +97,8 @@ it('keeps en and ar ERP language files in sync (same keys) and resolves every en
         expect(array_values(array_diff($en, $ar)))->toBe([], "$g: keys missing in ar")->and(array_values(array_diff($ar, $en)))->toBe([], "$g: keys missing in en");
     }
     $need = [];
-    foreach (TenantHub::CARDS as $c) {
+    foreach (HubController::CARDS as $c) {
         $need[] = 'erp.cards.'.$c[0];
-    }
-    foreach (CentralHub::CARDS as $c) {
-        $need[] = 'erp_central.cards.'.$c[0];
     }
     foreach (array_keys(ReportCatalog::META) as $r) {
         $need[] = 'erp_rep.t.'.$r;
@@ -117,10 +113,10 @@ it('keeps en and ar ERP language files in sync (same keys) and resolves every en
         $need[] = 'erp.entry_types.'.$t;
     }
     foreach (['high', 'medium', 'low'] as $s) {
-        $need[] = 'erp_central.severity.'.$s;
+        $need[] = 'erp_audit.severity.'.$s;
     }
     foreach ((new ReflectionClass(AnomalyService::class))->getConstant('SEVERITY') ?: [] as $code => $_) {
-        $need[] = 'erp_central.an.'.$code;
+        $need[] = 'erp_audit.an.'.$code;
     }
     foreach (['cash', 'bank', 'pos_cash', 'gateway', 'wallet'] as $r) {
         $need[] = 'erp_ext.roles.'.$r;
@@ -179,9 +175,9 @@ it('compiles every ERP blade view to valid PHP (view:cache safe)', function () {
 it('registers every ERP route, command and schedule entry', function () {
     expect(Artisan::call('route:list', ['--name' => 'erp.', '--json' => true]))->toBe(0);
     $routes = json_decode(Artisan::output(), true);
-    expect(count($routes))->toBeGreaterThan(75);
+    expect(count($routes))->toBeGreaterThan(65);   // central ERP duplicates dropped (single store)
     $names = collect($routes)->pluck('name')->filter();
-    expect($names->filter(fn ($n) => str_starts_with($n, 'tenant.erp.'))->count())->toBeGreaterThan(60)->and($names->filter(fn ($n) => str_starts_with($n, 'central.erp.'))->count())->toBe(15);
+    expect($names->filter(fn ($n) => str_starts_with($n, 'admin.erp.'))->count())->toBeGreaterThan(60)->and($names->filter(fn ($n) => str_starts_with($n, 'central.') || str_starts_with($n, 'tenant.'))->count())->toBe(0);
     $cmds = array_keys(Artisan::all());
     foreach (['erp:depreciate', 'erp:backfill', 'erp:reconcile', 'erp:verify'] as $c) {
         expect($cmds)->toContain($c);
@@ -209,10 +205,10 @@ it('keeps ERP permissions complete: every permission used by a gate exists in co
     $walk($cfg);
     $used = [];
     foreach (erpFiles() as $f) {
-        preg_match_all('/(?:allow|can)\(\s*[\'"]((?:erp|erp_central)\.[a-z_.]+)[\'"]/', file_get_contents($f), $m);
+        preg_match_all('/(?:allow|can)\(\s*[\'"](erp\.[a-z_.]+)[\'"]/', file_get_contents($f), $m);
         $used = array_merge($used, $m[1]);
     }
-    foreach (array_merge(array_column(TenantHub::CARDS, 3), array_column(CentralHub::CARDS, 3)) as $p) {
+    foreach (array_column(HubController::CARDS, 3) as $p) {
         array_push($used, ...explode('|', $p)); // "a|b" = any of the permissions (ERP-028 view-or-manage cards)
     }
     // abilities defined as Gates (not stored permissions) must really be defined: erp.access = "any ERP permission" (ERP-028)

@@ -18,7 +18,7 @@ class BlogPostResource extends JsonResource
         return [
             'slug' => $this->slug, 'title' => $this->title, 'excerpt' => $this->excerpt, 'meta_description' => $this->meta_description,
             'published_at' => ($this->published_at ?? $this->created_at)?->toIso8601String(),
-            'url' => tenant_url(current_tenant(), app()->getLocale().'/blog/'.$this->slug),
+            'url' => url(app()->getLocale().'/blog/'.$this->slug),
         ] + ($this->withContent ? ['content' => $this->content] : []);
     }
 }

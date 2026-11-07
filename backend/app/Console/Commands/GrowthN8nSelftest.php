@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Tenant;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthFeatures;
 use App\Services\Growth\IntegrationClientService;
@@ -22,7 +21,7 @@ use Symfony\Component\Process\Process;
  */
 class GrowthN8nSelftest extends Command
 {
-    protected $signature = 'growth:n8n-selftest {--tenant=egy : tenant slug (all changes are rolled back)} {--json : machine readable result}';
+    protected $signature = 'growth:n8n-selftest {--json : machine readable result}';
 
     protected $description = 'Replay every HTTP node of the n8n workflow pack against the real integration routes (ON/OFF) and assert status/shape. Rolled back, never touches data.';
 
@@ -33,25 +32,16 @@ class GrowthN8nSelftest extends Command
 
             return self::FAILURE;
         }
-        $tenant = Tenant::where('slug', $this->option('tenant'))->first();
-        if (! $tenant) {
-            $this->error('Tenant not found');
-
-            return self::FAILURE;
-        }
-        $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
         $problems = [];
         $stats = ['requests' => 0, 'ok' => 0];
         DB::beginTransaction();
         try {
-            $access->set($tenant, true);
+            $access->set(true);
             foreach (['on', 'off'] as $mode) {
                 Cache::flush();
-                app()->instance('currentTenant', $tenant->refresh());
-                $mode === 'on' ? $features->enableAll($tenant) : $features->update($tenant, array_merge(array_fill_keys(array_keys($features->registry()), false), ['integration_api' => true]));
-                app()->instance('currentTenant', $tenant->refresh());
+                $mode === 'on' ? $features->enableAll() : $features->update(array_merge(array_fill_keys(array_keys($features->registry()), false), ['integration_api' => true]));
                 [, $token, $secret] = $clients->create('selftest-'.$mode, array_keys(config('growth.scopes')), null, null);
-                $base = 'http://'.config('app.central_domain').'/api/integration/v1';
+                $base = rtrim((string) config('app.url'), '/').'/api/integration/v1';
                 $reqs = $this->build($base, $secret);
                 if ($reqs === null) {
                     return self::FAILURE;
@@ -65,7 +55,7 @@ class GrowthN8nSelftest extends Command
         } finally {
             DB::rollBack();
             Cache::flush();
-            $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
+            \App\Models\Setting::flush(); // the rolled-back growth switches must not stay in the per-request settings cache
         }
         if ($this->option('json')) {
             $this->line(json_encode(['stats' => $stats, 'problems' => $problems]));
@@ -128,6 +118,10 @@ class GrowthN8nSelftest extends Command
         }
         if (! is_array($body)) {
             return "$where: unexpected response shape (status $status)";
+        }
+        if ($status === 200 && str_ends_with(parse_url((string) $r['url'], PHP_URL_PATH) ?? '', '/ping')
+            && (! is_array($body['data']['store'] ?? null) || array_key_exists('tenant', (array) ($body['data'] ?? [])))) {
+            return "$where: single-store contract broken (expected data.store, no data.tenant)";
         }
 
         return null; // 2xx/422/404-model: authenticated, routed, gated correctly

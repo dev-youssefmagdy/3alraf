@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="$a->number">
+<x-layouts.admin :title="$a->number">
     <div class="space-y-4">
         <x-card>
             <div class="grid gap-3 text-sm sm:grid-cols-4">

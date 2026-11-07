@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Branch;
 use App\Services\Erp\Cash\SettlementService;
@@ -18,14 +18,14 @@ class CashBankController extends ErpController
         $this->ensureSetup();
         $balances = collect(self::BALANCE_ROLES)->mapWithKeys(fn ($r) => [$r => $svc->balance($r)])->all();
 
-        return view('tenant.erp.cash-bank', ['balances' => $balances, 'branches' => Branch::orderBy('id')->get(),
-            'canPost' => auth('tenant')->user()->can('erp.journals.post')]);
+        return view('admin.erp.cash-bank', ['balances' => $balances, 'branches' => Branch::orderBy('id')->get(),
+            'canPost' => auth('admin')->user()->can('erp.journals.post')]);
     }
 
     private function common(): array
     {
         return ['ref' => ['required', 'string', 'max:60'], 'date' => ErpRules::date(false), 'note' => ['nullable', 'string', 'max:300'],
-            'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)]];
+            'branch_id' => ['nullable', 'integer', $this->existsRule('branches', true)]];
     }
 
     public function settle(Request $r, string $kind, SettlementService $svc)

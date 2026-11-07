@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\FeeBearer;
 use App\Enums\PaymentMethodType;
@@ -15,7 +15,7 @@ class PaymentMethodRequest extends BaseRequest
         $type = PaymentMethodType::tryFrom((string) $this->input('type'));
         $rules = $this->translatable('name') + $this->translatable('instructions', false, 2000) + [
             'type' => ['required', Rule::enum(PaymentMethodType::class), function ($attr, $value, $fail) {
-                // exactly one COD per tenant (the default one): no second COD, and the default one cannot be turned into something else
+                // exactly one COD (the default one): no second COD, and the default one cannot be turned into something else
                 $existing = $this->id() ? PaymentMethod::find($this->id()) : null;
                 if ($value === 'cod' && PaymentMethod::where('type', 'cod')->when($existing, fn ($q) => $q->whereKeyNot($existing->id))->exists()) {
                     $fail(__('ops.cod_exists'));

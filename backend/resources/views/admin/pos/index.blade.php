@@ -1,7 +1,7 @@
-<x-layouts.admin guard="tenant" :title="__('pos.title')">
+<x-layouts.admin :title="__('pos.title')">
     @php($i18n = collect(['cart_empty', 'no_products', 'in_stock', 'out_of_stock', 'orders_count', 'pick_city', 'free', 'eta_days', 'cod_unavailable', 'remove', 'type_to_search', 'no_customers', 'subtotal', 'discount', 'shipping_fee', 'packaging_fee', 'tax', 'cod_fee', 'payment_fee', 'total', 'prepaid_shipping', 'collect_on_delivery'])->mapWithKeys(fn ($k) => [$k => __('pos.'.$k)]))
-    <div id="pos" class="grid gap-5 lg:grid-cols-5" data-i18n='@json($i18n)' data-symbol="{{ current_tenant()->currency_symbol }}"
-        data-url-products="{{ route('tenant.pos.products') }}" data-url-customers="{{ route('tenant.pos.customers') }}" data-url-shipping="{{ route('tenant.pos.shipping') }}" data-url-quote="{{ route('tenant.pos.quote') }}">
+    <div id="pos" class="grid gap-5 lg:grid-cols-5" data-i18n='@json($i18n)' data-symbol="{{ setting('currency_symbol') }}"
+        data-url-products="{{ route('admin.pos.products') }}" data-url-customers="{{ route('admin.pos.customers') }}" data-url-shipping="{{ route('admin.pos.shipping') }}" data-url-quote="{{ route('admin.pos.quote') }}">
 
         {{-- LEFT: product finder --}}
         <section class="lg:col-span-2">
@@ -12,7 +12,7 @@
         </section>
 
         {{-- RIGHT: the order --}}
-        <form id="pos-form" class="space-y-5 lg:col-span-3" action="{{ route('tenant.pos.store') }}" method="POST" enctype="multipart/form-data" novalidate>
+        <form id="pos-form" class="space-y-5 lg:col-span-3" action="{{ route('admin.pos.store') }}" method="POST" enctype="multipart/form-data" novalidate>
             @csrf
             <x-card :title="__('pos.customer')">
                 <x-slot:actions><button type="button" class="btn-sm btn-secondary" data-modal-open="pos-customer-modal">+ {{ __('pos.new_customer') }}</button></x-slot:actions>
@@ -70,7 +70,7 @@
 
     {{-- quick customer create --}}
     <x-modal id="pos-customer-modal" :title="__('pos.new_customer')">
-        <form id="pos-customer-form" action="{{ route('tenant.pos.customers.store') }}" method="POST" class="space-y-4" novalidate>
+        <form id="pos-customer-form" action="{{ route('admin.pos.customers.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <x-input name="name" :label="__('pos.customer_name')" required />
             <x-phone-input name="phone" :label="__('pos.customer_phone')" required />

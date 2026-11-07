@@ -7,9 +7,11 @@ import 'core/l10n/locale_provider.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'features/store/application/store_controller.dart';
 
-/// Root widget. Direction (RTL for Arabic) comes from the locale through
-/// `GlobalWidgetsLocalizations`, so no manual `Directionality` is needed.
+/// Root widget. Direction comes from the store's locale `rtl` flag
+/// (`app-config.store.locales`) when known, else from the locale through
+/// `GlobalWidgetsLocalizations`.
 class AlrafApp extends ConsumerWidget {
   const AlrafApp({super.key});
 
@@ -18,6 +20,7 @@ class AlrafApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final direction = ref.watch(storeTextDirectionProvider);
     return MaterialApp.router(
       onGenerateTitle: (c) => AppLocalizations.of(c).appName,
       debugShowCheckedModeBanner: false,
@@ -33,6 +36,9 @@ class AlrafApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      builder: (context, child) => direction == null
+          ? child!
+          : Directionality(textDirection: direction, child: child!),
     );
   }
 }

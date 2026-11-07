@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\SupplierDataTable;
 use App\DTOs\SupplierData;
-use App\Http\Requests\Tenant\SupplierRequest;
+use App\Http\Requests\Admin\SupplierRequest;
 use App\Models\Supplier;
 use App\Services\SupplierService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class SupplierController extends ResourceController
 {
     protected static string $perm = 'suppliers';
-    protected static string $routeBase = 'tenant.suppliers';
-    protected static string $view = 'tenant.suppliers';
+    protected static string $routeBase = 'admin.suppliers';
+    protected static string $view = 'admin.suppliers';
     protected static string $titleKey = 'ops.suppliers';
     protected static string $requestClass = SupplierRequest::class;
     protected static string $dtoClass = SupplierData::class;

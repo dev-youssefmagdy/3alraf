@@ -3,7 +3,6 @@
 namespace App\Services\Growth;
 
 use App\Models\Product;
-use App\Models\TenantProduct;
 
 /**
  * Product Truth Guard (rule based, deterministic). Splits text into sentences, detects RISKY claims (ingredient / benefit / authenticity / result / testimonial),
@@ -118,7 +117,7 @@ class TruthGuardService
             $v = $p->getTranslations($f) ?? [];
             $parts[] = is_array($v) ? implode(' ', $v) : (string) $v;
         }
-        $tp = TenantProduct::where('product_id', $productId)->first();
+        $tp = Product::whereKey($productId)->first();
         $parts[] = (string) ($tp?->getAttribute('notes') ?? '');
 
         return implode(' ', $parts);

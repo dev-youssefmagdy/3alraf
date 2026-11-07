@@ -659,7 +659,7 @@ Any pre-order must have transparent terms.
 
 ## 16.5 Brand Memory
 
-Maintain a central knowledge base containing:
+Maintain a single shared knowledge base containing:
 
 - 3alraf's brand voice.
 - Preferred and prohibited wording.

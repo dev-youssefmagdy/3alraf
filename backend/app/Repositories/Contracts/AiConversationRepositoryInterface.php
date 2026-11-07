@@ -6,7 +6,7 @@ use App\Models\AiConversation;
 use App\Models\AiMessage;
 use Illuminate\Support\Collection;
 
-/** Conversations are private to their user (and tenant-scoped by the model). */
+/** Conversations are private to their user. */
 interface AiConversationRepositoryInterface
 {
     public function listFor(int $userId, int $limit = 50): Collection;

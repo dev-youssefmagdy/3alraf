@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\BlogPostRequest;
+use App\Http\Requests\Admin\BlogPostRequest;
 
 final readonly class BlogPostData
 {

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Customer / supplier ledgers derived ONLY from posted journal lines (party_type + party_id). A party's balance is expressed in the party's own
  * sense - customer: what they owe us (receivable - customer advances); supplier: what we owe them (payable - supplier advances) - so a positive
- * number is always "open" and an advance simply is a negative open item. No maintained totals; tenant scope comes from the models.
+ * number is always "open" and an advance simply is a negative open item. No maintained totals.
  */
 class PartyLedger
 {

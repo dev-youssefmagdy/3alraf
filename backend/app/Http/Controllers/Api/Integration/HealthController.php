@@ -7,7 +7,7 @@ use App\Models\GrowthEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
-/** Monitoring probe for n8n: auth works, DB reachable, outbox backlog (own tenant only). */
+/** Monitoring probe for n8n: auth works, DB reachable, outbox backlog. */
 class HealthController extends Controller
 {
     public function __invoke(): JsonResponse

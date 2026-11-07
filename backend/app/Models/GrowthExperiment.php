@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class GrowthExperiment extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected $fillable = ['name', 'hypothesis', 'objective', 'metric', 'starts_on', 'ends_on', 'budget_cap', 'status', 'outcome', 'learnings', 'created_by', 'product_id', 'audience', 'platform', 'angle', 'utm_campaign', 'content_approved_at'];
 

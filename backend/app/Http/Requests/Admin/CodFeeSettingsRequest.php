@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\DTOs\Orders\CodFeeConfig;
 use App\Models\City;
 use Illuminate\Validation\Rule;
 
-/** Tenant "COD fees" settings (AJAX-validated first, then saved). */
+/** "COD fees" settings (AJAX-validated first, then saved). */
 class CodFeeSettingsRequest extends BaseRequest
 {
     public function rules(): array
@@ -25,7 +25,7 @@ class CodFeeSettingsRequest extends BaseRequest
             'cod_extra_fee_free_over' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'cod_extra_fee_bearer' => ['required', Rule::in(['customer', 'merchant'])],
             'cod_extra_fee_city_fixed' => ['nullable', 'array', function ($attr, $value, $fail) {
-                // only cities of THIS tenant (City is tenant-scoped)
+                // only existing cities
                 $ids = array_map('intval', array_keys((array) $value));
                 if ($ids && City::whereIn('id', $ids)->count() !== count(array_unique($ids))) {
                     $fail(__('validation.exists', ['attribute' => $attr]));

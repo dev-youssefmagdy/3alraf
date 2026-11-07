@@ -4,9 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/harness.dart';
 
 void main() {
-  testWidgets('boots RTL, splash then bottom-nav shell (single tenant)', (
-    tester,
-  ) async {
+  testWidgets('boots RTL, splash then bottom-nav shell', (tester) async {
     final env = TestEnv(
       prefs: {'onboarding_done': true},
       extra: (o) => o.path == '/cart' ? envelope({'items': <Object>[]}) : null,

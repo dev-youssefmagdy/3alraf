@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StockAdjustmentDataTable;
 use App\DTOs\StockAdjustmentData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\StockAdjustmentRequest;
+use App\Http\Requests\Admin\StockAdjustmentRequest;
 use App\Models\Branch;
 use App\Services\Stock\StockItemCatalog;
 use App\Services\StockAdjustmentService;
@@ -27,7 +27,7 @@ class StockAdjustmentController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.crud.index', ['table' => new StockAdjustmentDataTable, 'title' => __('ops.stock_adjustments'), 'route' => 'tenant.stock-adjustments', 'perm' => 'stock_adjustments']);
+        return view('admin.crud.index', ['table' => new StockAdjustmentDataTable, 'title' => __('ops.stock_adjustments'), 'route' => 'admin.stock-adjustments', 'perm' => 'stock_adjustments']);
     }
 
     public function datatable(): JsonResponse
@@ -37,7 +37,7 @@ class StockAdjustmentController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('tenant.stock-adjustments.form', [
+        return view('admin.stock-adjustments.form', [
             'items' => $this->catalog->options(),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),
         ]);
@@ -45,14 +45,14 @@ class StockAdjustmentController extends Controller implements HasMiddleware
 
     public function show(int $id)
     {
-        return view('tenant.stock-adjustments.show', ['a' => $this->service->find($id)]);
+        return view('admin.stock-adjustments.show', ['a' => $this->service->find($id)]);
     }
 
     public function store(StockAdjustmentRequest $request): JsonResponse
     {
         $a = $this->service->create(StockAdjustmentData::fromRequest($request));
 
-        return $this->ok(__('ops.adjustment_applied'), route('tenant.stock-adjustments.show', $a->id));
+        return $this->ok(__('ops.adjustment_applied'), route('admin.stock-adjustments.show', $a->id));
     }
 
     public function validateForm(StockAdjustmentRequest $request): JsonResponse

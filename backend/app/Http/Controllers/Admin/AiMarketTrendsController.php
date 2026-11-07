@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\Ai\MarketTrendQuery;
 use App\Exceptions\AiException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\AiMarketDismissRequest;
-use App\Http\Requests\Tenant\AiMarketTrendRequest;
+use App\Http\Requests\Admin\AiMarketDismissRequest;
+use App\Http\Requests\Admin\AiMarketTrendRequest;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Supplier;
@@ -29,14 +29,14 @@ class AiMarketTrendsController extends Controller implements HasMiddleware
     {
         $models = $this->market->webModels();
 
-        return view('tenant.ai.market-trends', [
-            'countries' => MarketCountries::names(), 'defaultCountry' => in_array(current_tenant()->country, MarketCountries::codes(), true) ? current_tenant()->country : 'EG',
+        return view('admin.ai.market-trends', [
+            'countries' => MarketCountries::names(), 'defaultCountry' => in_array(setting('country'), MarketCountries::codes(), true) ? setting('country') : 'EG',
             'categories' => Category::query()->where('is_active', true)->get()->map(fn ($c) => (string) $c->name)->filter()->values()->all(),
             'webModels' => $models, 'webModel' => $this->market->pickModel(),
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),
-            'canPurchase' => auth('tenant')->user()?->can('purchases.create'),
-            'canStudio' => auth('tenant')->user()?->can('ai_studio.use') && app(\App\Services\Ai\AiAccess::class)->feature('studio', current_tenant()),
+            'canPurchase' => auth('admin')->user()?->can('purchases.create'),
+            'canStudio' => auth('admin')->user()?->can('ai_studio.use') && app(\App\Services\Ai\AiAccess::class)->feature('studio'),
         ]);
     }
 

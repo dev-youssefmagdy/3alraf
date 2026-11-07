@@ -6,6 +6,7 @@ return [
     'period_closed' => 'Period closed.', 'period_reopened' => 'Period reopened.', 'reversal_of' => 'Reversal of :number.',
     'year_closed_ok' => 'Fiscal year closed and locked.', 'year_reopened_ok' => 'Fiscal year reopened (closing entries reversed).', 'year_close_memo' => 'Year-end closing', 'year_close_desc' => 'Year-end closing :year - revenue and expenses to income summary', 'year_close_re' => 'Year-end closing :year - income summary to retained earnings',
     'cards' => [
+        'anomalies' => ['Anomalies', 'Unbalanced entries, stale drafts, failed postings, mismatches and more.'],
         'audit' => ['Audit trail', 'Every posting, reversal, period close and settings change, with who and when.'],
         'cash_bank' => ['Cash & Bank', 'Money balances, VAT payment, carrier payments, gateway payouts and register close.'],
         'accounts' => ['Chart of Accounts', 'Hierarchical accounts, custom accounts and archiving.'],
@@ -52,8 +53,8 @@ return [
     'bf' => [
         'opening_receivable' => 'Opening receivable', 'opening_receivable_desc' => 'Opening receivables as of :date (erp:backfill)', 'opening_carrier' => 'Opening carrier COD receivable', 'opening_carrier_desc' => 'Opening carrier COD receivable as of :date (erp:backfill)',
         'opening_payable' => 'Opening payable', 'opening_payable_desc' => 'Opening supplier payables as of :date (erp:backfill)', 'opening_inventory' => 'Opening inventory', 'opening_inventory_desc' => 'Opening inventory as of :date (erp:backfill)',
-        'err_opening_date' => 'This tenant already has opening date :date; use the same --from.', 'err_closed' => 'Cannot backfill into closed periods: :periods. Reopen them first.',
-        'auto_title' => 'Automatic posting', 'auto_hint' => 'When on, every new order, purchase, return, stock and expense event is posted to the ledger. Tenants that existed before the ERP start OFF until the backfill completes (it turns the switch on); new tenants start ON.',
+        'err_opening_date' => 'The opening date is already :date; use the same --from.', 'err_closed' => 'Cannot backfill into closed periods: :periods. Reopen them first.',
+        'auto_title' => 'Automatic posting', 'auto_hint' => 'When on, every new order, purchase, return, stock and expense event is posted to the ledger. Data that existed before the ERP starts OFF until the backfill completes (it turns the switch on).',
         'opening_date' => 'Opening date', 'on' => 'On', 'off' => 'Off', 'enable' => 'Enable', 'disable' => 'Disable', 'runs' => 'Backfill runs', 'from' => 'From', 'status' => 'Status', 'started' => 'Started', 'by' => 'Triggered by',
         'counts' => 'Created / skipped / failed', 'counts_hint' => 'Per document type: created / already posted / failed.', 'no_runs' => 'No backfill has been run yet.', 'failed_docs' => 'Failed documents',
         'recon' => 'Reconciliation', 'rerun' => 'Re-run reconciliation', 'recon_result' => ':n mismatch(es) for :from .. :to', 'check' => 'Check', 'expected' => 'Expected', 'actual' => 'Ledger', 'diff' => 'Difference', 'mismatch' => 'MISMATCH',

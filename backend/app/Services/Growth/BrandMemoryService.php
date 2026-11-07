@@ -8,7 +8,7 @@ use App\Models\BrandMemoryVersion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/** Central brand knowledge (voice, wording, policies, FAQs, claims, offer rules). Every edit snapshots the previous state as a version. */
+/** Shared brand knowledge (voice, wording, policies, FAQs, claims, offer rules). Every edit snapshots the previous state as a version. */
 class BrandMemoryService
 {
     public const KINDS = ['voice', 'preferred_words', 'prohibited_words', 'reply_policy', 'faq', 'approved_claim', 'offer_rule'];

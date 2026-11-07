@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Central\CategoryRequest;
+use App\Http\Requests\Admin\CategoryRequest;
 use Illuminate\Http\UploadedFile;
 
 final readonly class CategoryData

@@ -3,38 +3,32 @@
 namespace App\Services\Stock;
 
 use App\Models\Product;
-use App\Models\TenantProduct;
 
-/** Stockable items for the tenant: enabled simple products + variants of enabled variable products. Key = "productId-variantId". */
+/** Stockable items: listed (priced) simple products + variants of enabled variable products. Key = "productId-variantId". */
 class StockItemCatalog
 {
     /** @return array<int,array{key:string,label:string,sku:?string,cost:string}> */
     public function options(): array
     {
         $out = [];
-        $tps = TenantProduct::with(['product.variants.values'])->whereHas('product')->get();
-        foreach ($tps as $tp) {
-            $p = $tp->product;
+        foreach (Product::with('variants.values')->whereNotNull('price')->get() as $p) {
             if ($p->isVariable()) {
                 foreach ($p->variants->where('is_active', true) as $v) {
-                    $out[] = ['key' => $p->id.'-'.$v->id, 'label' => $p->name.' - '.$v->label(), 'sku' => $v->sku, 'cost' => (string) $tp->cost];
+                    $out[] = ['key' => $p->id.'-'.$v->id, 'label' => $p->name.' - '.$v->label(), 'sku' => $v->sku, 'cost' => (string) ($v->cost ?? $p->cost)];
                 }
             } else {
-                $out[] = ['key' => $p->id.'-0', 'label' => $p->name, 'sku' => $p->sku, 'cost' => (string) $tp->cost];
+                $out[] = ['key' => $p->id.'-0', 'label' => $p->name, 'sku' => $p->sku, 'cost' => (string) $p->cost];
             }
         }
 
         return $out;
     }
 
-    /** Valid key for current tenant? */
+    /** Valid key (a listed product, or a variant of one)? */
     public function exists(string $key): bool
     {
         [$pid, $vid] = $this->split($key);
-        if (! TenantProduct::where('product_id', $pid)->exists()) {
-            return false;
-        }
-        $p = Product::withTrashed()->with('variants')->find($pid);
+        $p = Product::withTrashed()->with('variants')->whereNotNull('price')->find($pid);
         if (! $p) {
             return false;
         }

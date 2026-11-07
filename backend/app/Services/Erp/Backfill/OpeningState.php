@@ -36,7 +36,7 @@ class OpeningState
         return null;
     }
 
-    /** True when the order was confirmed before the opening date of this tenant. */
+    /** True when the order was confirmed before the ERP opening date. */
     public static function absorbed(Order $o): bool
     {
         $d = self::openingDate();
@@ -51,12 +51,12 @@ class OpeningState
     /** @return array{paid:string,refunded:string} paid/refunded already inside the opening balances (0 when none) */
     public static function baseline(Order $o): array
     {
-        $r = DB::table('erp_opening_orders')->where('tenant_id', $o->tenant_id)->where('order_id', $o->id)->first();
+        $r = DB::table('erp_opening_orders')->where('order_id', $o->id)->first();
 
         return ['paid' => (string) ($r->paid_amount ?? '0'), 'refunded' => (string) ($r->refunded_amount ?? '0')];
     }
 
-    /** Statuses at/after the tenant's revenue-recognition point. @return array<int,string> */
+    /** Statuses at/after the revenue-recognition point. @return array<int,string> */
     public static function salesValues(): array
     {
         return \App\Services\Erp\Posting\RevenueRecognition::values();

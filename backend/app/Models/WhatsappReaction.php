@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/** Tenant-less on purpose: always reached through its message (which is owner-scoped). */
+/** Always reached through its message. */
 class WhatsappReaction extends Model
 {
     use HasFactory;

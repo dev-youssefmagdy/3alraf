@@ -61,7 +61,7 @@ class AuthCodeService
     private function issue(Customer $c, string $type, bool $silent = false): void
     {
         $email = strtolower($c->email);
-        $key = 'auth-code:'.current_tenant()->id.':'.$type.':'.$email;
+        $key = 'auth-code:'.$type.':'.$email;
         if (RateLimiter::tooManyAttempts($key.':cool', 1) || RateLimiter::tooManyAttempts($key.':hour', self::MAX_ISSUES)) {
             if ($silent) {
                 return;
@@ -73,13 +73,13 @@ class AuthCodeService
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         DB::transaction(function () use ($email, $type, $code) {
-            $q = DB::table('customer_auth_codes')->where('tenant_id', current_tenant()->id)->where('email', $email)->where('type', $type);
+            $q = DB::table('customer_auth_codes')->where('email', $email)->where('type', $type);
             $row = (clone $q)->lockForUpdate()->first();
             $fields = ['code_hash' => Hash::make($code), 'expires_at' => now()->addMinutes(self::MINUTES), 'updated_at' => now()];
             if ($row) {
                 (clone $q)->update($fields + (now()->gt($row->expires_at) ? ['attempts' => 0] : []));
             } else {
-                DB::table('customer_auth_codes')->insert($fields + ['tenant_id' => current_tenant()->id, 'email' => $email, 'type' => $type, 'attempts' => 0, 'created_at' => now()]);
+                DB::table('customer_auth_codes')->insert($fields + ['email' => $email, 'type' => $type, 'attempts' => 0, 'created_at' => now()]);
             }
         });
         $c->notify(new AuthCodeNotification($type, $code, self::MINUTES));
@@ -87,7 +87,7 @@ class AuthCodeService
 
     private function consume(string $email, string $type, string $code, bool $forceFail = false): void
     {
-        $q = DB::table('customer_auth_codes')->where('tenant_id', current_tenant()->id)->where('email', strtolower($email))->where('type', $type);
+        $q = DB::table('customer_auth_codes')->where('email', strtolower($email))->where('type', $type);
         $row = (clone $q)->lockForUpdate()->first();
         if (! $row || $forceFail || $row->attempts >= self::MAX_ATTEMPTS || now()->gt($row->expires_at) || ! Hash::check($code, $row->code_hash)) {
             if ($row) {

@@ -6,50 +6,43 @@ use App\Enums\FlashDiscountType;
 use App\Models\FlashSaleItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
 use App\Support\Money;
 
 /**
  * unit_price resolution (docs/CALCULATIONS.md "Definitions" + "Flash sale"):
- * flash-sale price if active and quantity available, else tenant sale_price if set, else price.
+ * flash-sale price if active and quantity available, else sale_price if set, else price (variant overrides first).
  */
 class PriceResolver
 {
     /**
-     * Sellable item snapshot for the current tenant, or null when not purchasable.
+     * Sellable item snapshot, or null when not purchasable (inactive, deleted, no price, unknown/inactive variant).
      *
-     * @return array{product:Product,variant:?ProductVariant,tenant_product:TenantProduct,price:string,cost:string,name:string,sku:?string,barcode:?string}|null
+     * @return array{product:Product,variant:?ProductVariant,price:string,cost:string,name:string,sku:?string,barcode:?string}|null
      */
     public function item(int $productId, int $variantId = 0): ?array
     {
-        $tp = TenantProduct::with('product.variants.values')->where('product_id', $productId)->where('is_active', true)->first();
-        $product = $tp?->product;
-        if (! $product || $product->trashed() || ! $product->is_active) {
+        $product = Product::with('variants.values')->whereKey($productId)->where('is_active', true)->whereNotNull('price')->first();
+        if (! $product) {
             return null;
         }
 
         $variant = null;
-        $tv = null;
         if ($product->isVariable()) {
             $variant = $product->variants->where('is_active', true)->firstWhere('id', $variantId);
             if (! $variant) {
-                return null;
-            }
-            $tv = TenantProductVariant::where('tenant_product_id', $tp->id)->where('product_variant_id', $variant->id)->first();
-            if ($tv && ! $tv->is_active) {
                 return null;
             }
         } elseif ($variantId !== 0) {
             return null;
         }
 
-        $src = ($tv && $tv->price !== null) ? $tv : $tp;
+        // a variant with its own price carries its own sale price; otherwise the product's price + sale price apply
+        $src = ($variant && $variant->price !== null) ? $variant : $product;
         $price = $src->sale_price !== null ? (string) $src->sale_price : (string) $src->price;
-        $cost = ($tv && $tv->cost !== null) ? (string) $tv->cost : (string) ($tp->cost ?? '0');
+        $cost = ($variant && $variant->cost !== null) ? (string) $variant->cost : (string) ($product->cost ?? '0');
 
         return [
-            'product' => $product, 'variant' => $variant, 'tenant_product' => $tp, 'price' => Money::round($price), 'cost' => Money::round($cost),
+            'product' => $product, 'variant' => $variant, 'price' => Money::round($price), 'cost' => Money::round($cost),
             'name' => $product->name.($variant ? ' - '.$variant->label() : ''),
             'sku' => $variant?->sku ?? $product->sku, 'barcode' => $variant?->barcode ?? $product->barcode,
         ];

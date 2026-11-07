@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\Admin;
 use App\Models\Branch;
-use App\Models\CentralAdmin;
 use App\Models\GrowthActionLog;
 use App\Models\GrowthBriefDecision;
 use App\Models\GrowthDailyStat;
@@ -11,8 +11,6 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\StorefrontVisit;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Services\Growth\AttributionService;
 use App\Services\Growth\BriefDecisionService;
 use App\Services\Growth\DataQuality;
@@ -30,33 +28,28 @@ use Illuminate\Support\Facades\Queue;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::create(['slug' => 'uae', 'name' => 'UAE Store', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
+    app(GrowthAccess::class)->set(true);
+    $this->base = '';
     $this->day = Carbon::parse('2026-10-20')->startOfDay();
     $this->f = app(GrowthFeatures::class);
 });
 
 // ---- #13 per-feature switches ----
-it('features default OFF, respect dependencies and the master flag, and are per tenant', function () {
+it('features default OFF, respect dependencies and and the master flag', function () {
     expect($this->f->active('brief'))->toBeFalse();
-    $this->f->update($this->tenant, ['truth_guard' => true]);
-    expect($this->f->active('truth_guard', $this->tenant->refresh()))->toBeFalse(); // depends on brand_memory
-    $this->f->update($this->tenant, ['brand_memory' => true]);
-    expect($this->f->active('truth_guard', $this->tenant->refresh()))->toBeTrue()->and($this->f->active('truth_guard', $this->other))->toBeFalse();
-    app(GrowthAccess::class)->set($this->tenant, false);
-    expect($this->f->active('brand_memory', $this->tenant->refresh()))->toBeFalse();
-    expect(GrowthActionLog::withoutGlobalScopes()->where('action', 'features.updated')->count())->toBe(2);
+    $this->f->update(['truth_guard' => true]);
+    expect($this->f->active('truth_guard'))->toBeFalse(); // depends on brand_memory
+    $this->f->update(['brand_memory' => true]);
+    expect($this->f->active('truth_guard'))->toBeTrue();
+    app(GrowthAccess::class)->set(false);
+    expect($this->f->active('brand_memory'))->toBeFalse();
+    expect(GrowthActionLog::query()->where('action', 'features.updated')->count())->toBe(2);
 });
 
 it('OFF feature blocks the admin UI (404) and the integration API (403 feature_disabled); ON works', function () {
-    $this->f->update($this->tenant, ['integration_api' => true, 'approvals' => true]);
+    $this->f->update(['integration_api' => true, 'approvals' => true]);
     [$c, $token, $secret] = growthClient();
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->get("{$this->base}/admin/growth/approvals")->assertOk();
     $this->get("{$this->base}/admin/growth/experiments")->assertNotFound();
     $this->get("{$this->base}/admin/growth/brief")->assertNotFound();
@@ -65,80 +58,78 @@ it('OFF feature blocks the admin UI (404) and the integration API (403 feature_d
     integrationCall($this, 'GET', 'approvals/1', null, $token, $secret)->assertStatus(404); // feature on, row missing
     $r = integrationCall($this, 'GET', 'features', null, $token, $secret)->assertOk();
     expect($r->json('data.features.approvals'))->toBeTrue()->and($r->json('data.features.brief'))->toBeFalse();
-    $this->f->update($this->tenant, ['integration_api' => false]);
+    $this->f->update(['integration_api' => false]);
     integrationCall($this, 'GET', 'ping', null, $token, $secret)->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
 });
 
 it('feature switches are saved from the settings page (growth.manage) and sidebar items hide', function () {
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->get("{$this->base}/admin/growth/settings")->assertOk()->assertSee('features[brief]', false);
     $this->putJson("{$this->base}/admin/growth/settings/features", ['features' => ['brief' => true, 'experiments' => false]])->assertOk();
-    expect($this->f->active('brief', $this->tenant->refresh()))->toBeTrue()->and($this->f->active('experiments'))->toBeFalse();
+    expect($this->f->active('brief'))->toBeTrue()->and($this->f->active('experiments'))->toBeFalse();
     $this->get("{$this->base}/admin/growth/settings")->assertOk()->assertSee('/admin/growth/brief', false)->assertDontSee('/admin/growth/experiments', false);
 });
 
-it('events are not emitted and scheduled jobs skip a tenant with the outbox feature off', function () {
+it('events are not emitted and scheduled jobs skip their work while the outbox feature is off', function () {
     Queue::fake();
-    $this->f->update($this->tenant, ['integration_api' => true]);
+    $this->f->update(['integration_api' => true]);
     growthClient(['read'], 'https://n8n.example.com/hook');
     expect(app(GrowthEventService::class)->emit('order.placed', ['order_id' => 1]))->toBeNull();
-    $this->f->update($this->tenant, ['events_outbox' => true]);
+    $this->f->update(['events_outbox' => true]);
     expect(app(GrowthEventService::class)->emit('order.placed', ['order_id' => 1]))->not->toBeNull();
-    $this->f->update($this->tenant, ['events_outbox' => false]);
-    $this->artisan('growth:dispatch-pending')->expectsOutput('Queued: 0')->assertSuccessful();
+    $this->f->update(['events_outbox' => false]);
+    $this->artisan('growth:dispatch-pending')->expectsOutputToContain('Queued: 0')->assertSuccessful();
 });
 
-it('central admin toggles the master flag (audited); tenant owners cannot', function () {
-    app(GrowthAccess::class)->set($this->tenant, false);
-    $this->actingAs(ownerOf('egy'), 'tenant');
-    $this->putJson("{$this->base}/admin/tenants/{$this->tenant->id}/growth", ['growth_enabled' => true])->assertStatus(404);
-    $this->actingAs(CentralAdmin::first(), 'central');
-    $this->get('http://3alraf.test/admin/tenants/'.$this->tenant->id.'/edit')->assertOk()->assertSee('growth_enabled', false);
-    $this->putJson('http://3alraf.test/admin/tenants/'.$this->tenant->id.'/growth', ['growth_enabled' => true])->assertOk();
-    expect(app(GrowthAccess::class)->enabled($this->tenant->refresh()))->toBeTrue()
-        ->and(GrowthActionLog::withoutGlobalScopes()->where('action', 'growth.enabled')->where('tenant_id', $this->tenant->id)->exists())->toBeTrue();
+it('the growth master flag is switched on Settings → General (audited); an admin without general_settings.edit cannot', function () {
+    app(GrowthAccess::class)->set(false);
+    $payload = ['name' => 'Egypt Store', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'EGP', 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Africa/Cairo', 'growth_enabled' => 1];
+    $viewer = Admin::query()->create(['name' => 'Viewer', 'phone' => '201000000777', 'password' => 'password', 'is_active' => true]);
+    $viewer->givePermissionTo('general_settings.view');
+    $this->actingAs($viewer, 'admin')->get('/admin/settings/general')->assertOk()->assertSee('growth_enabled', false);
+    $this->actingAs($viewer, 'admin')->putJson('/admin/settings/general', $payload)->assertForbidden();
+    expect(app(GrowthAccess::class)->enabled())->toBeFalse();
+    $this->actingAs(ownerOf('egy'), 'admin')->putJson('/admin/settings/general', $payload)->assertOk();
+    expect(app(GrowthAccess::class)->enabled())->toBeTrue()
+        ->and(GrowthActionLog::query()->where('action', 'growth.enabled')->exists())->toBeTrue();
 });
 
 // ---- #3 client edit ----
 it('edits client name, scopes and webhook (money scopes and SSRF refused) without touching credentials', function () {
-    $this->f->update($this->tenant, ['integration_api' => true]);
+    $this->f->update(['integration_api' => true]);
     [$c, $token] = growthClient(['read']);
     $hash = $c->token_hash;
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->putJson("{$this->base}/admin/growth/clients/{$c->id}", ['name' => 'renamed', 'scopes' => ['read', 'events:read'], 'webhook_url' => 'https://n8n.example.com/h'])->assertOk();
     $c->refresh();
     expect($c->name)->toBe('renamed')->and($c->scopes)->toBe(['read', 'events:read'])->and($c->token_hash)->toBe($hash);
     $this->putJson("{$this->base}/admin/growth/clients/{$c->id}", ['name' => 'x', 'scopes' => ['read'], 'webhook_url' => 'http://127.0.0.1/h'])->assertStatus(422);
     $this->putJson("{$this->base}/admin/growth/clients/{$c->id}", ['name' => 'x', 'scopes' => ['stock:write']])->assertStatus(422);
-    [$o] = growthClient(['read'], null, $this->other);
-    $this->putJson("{$this->base}/admin/growth/clients/{$o->id}", ['name' => 'x', 'scopes' => ['read']])->assertNotFound();
+    $this->putJson("{$this->base}/admin/growth/clients/999999", ['name' => 'x', 'scopes' => ['read']])->assertNotFound();
 });
 
 // ---- #1 low stock safety net ----
-function stockFor(Tenant $t, int $onHand): StockLevel
+function stockFor(int $onHand): StockLevel
 {
     $p = Product::create(['type' => 'simple', 'name' => ['en' => 'Item', 'ar' => 'صنف'], 'slug' => 'it-'.uniqid(), 'sku' => 'S'.uniqid(), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['tenant_id' => $t->id, 'product_id' => $p->id, 'price' => '50', 'cost' => '20', 'is_active' => true]);
+    listProduct($p, ['price' => '50', 'cost' => '20', 'is_active' => true]);
 
-    return StockLevel::create(['tenant_id' => $t->id, 'branch_id' => Branch::withoutGlobalScopes()->where('tenant_id', $t->id)->value('id') ?? Branch::first()->id, 'product_id' => $p->id, 'product_variant_id' => 0, 'on_hand' => $onHand, 'reserved' => 0, 'avg_cost' => 20]);
+    return StockLevel::create(['branch_id' => Branch::first()->id, 'product_id' => $p->id, 'product_variant_id' => 0, 'on_hand' => $onHand, 'reserved' => 0, 'avg_cost' => 20]);
 }
 
-it('scan-low-stock emits stock.low once per product per day (raw updates included) and never for other tenants', function () {
+it('scan-low-stock emits stock.low once per product per day (raw updates included)', function () {
     Queue::fake();
-    $this->f->update($this->tenant, ['integration_api' => true, 'events_outbox' => true]);
+    $this->f->update(['integration_api' => true, 'events_outbox' => true]);
     growthClient(['read'], 'https://n8n.example.com/hook');
-    $s = stockFor($this->tenant, 50);
+    $s = stockFor(50);
     \Illuminate\Support\Facades\DB::table('stock_levels')->where('id', $s->id)->update(['on_hand' => 2]); // raw: no model event
     $this->artisan('growth:scan-low-stock')->assertSuccessful();
     $this->artisan('growth:scan-low-stock')->assertSuccessful();
-    expect(GrowthEvent::withoutGlobalScopes()->where('type', 'stock.low')->count())->toBe(1);
+    expect(GrowthEvent::query()->where('type', 'stock.low')->count())->toBe(1);
     // the model-event path for the same product/day does not double fire
     $s->refresh()->update(['on_hand' => 60]);
     $s->update(['on_hand' => 1]);
-    expect(GrowthEvent::withoutGlobalScopes()->where('type', 'stock.low')->count())->toBe(1);
-    stockFor($this->other, 1);
-    $this->artisan('growth:scan-low-stock')->assertSuccessful();
-    expect(GrowthEvent::withoutGlobalScopes()->where('type', 'stock.low')->where('tenant_id', $this->other->id)->count())->toBe(0);
+    expect(GrowthEvent::query()->where('type', 'stock.low')->count())->toBe(1);
 });
 
 // ---- #5 visits / conversion, #6 attribution ----
@@ -150,12 +141,10 @@ it('conversion is orders / unique sessions (confirmed) once visits exist and est
     StorefrontVisit::create(['visit_date' => '2026-10-20', 'product_id' => 0, 'channel' => 'direct', 'visits' => 30, 'unique_sessions' => 8]);
     $after = rebuild($this->day)['conversion_rate'];
     expect($after)->toBe(['value' => 25.0, 'confidence' => 'confirmed', 'missing' => []]);
-    app()->instance('currentTenant', $this->other);
-    expect(StorefrontVisit::count())->toBe(0); // tenant isolation
 });
 
 it('storefront traffic middleware counts unique sessions without PII, ignores bots, captures first-touch attribution', function () {
-    $this->f->update($this->tenant, ['brief' => true]);
+    $this->f->update(['brief' => true]);
     $url = "{$this->base}/en?utm_source=instagram&utm_medium=social&utm_campaign=eid&fbclid=abc";
     $ua = ['HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/120'];
     $this->call('GET', $url, [], [], [], $ua)->assertOk();
@@ -183,14 +172,12 @@ it('normalises channels and stores first-touch attribution on the order', functi
 });
 
 // ---- #7 data quality ----
-it('data quality lists missing product / line / shipping costs for the tenant only', function () {
-    $s = stockFor($this->tenant, 5);
-    TenantProduct::where('product_id', $s->product_id)->update(['cost' => 0]);
+it('data quality lists missing product / line / shipping costs', function () {
+    $s = stockFor(5);
+    Product::whereKey($s->product_id)->update(['cost' => 0]);
     mkOrder(['shipping_net' => 20, 'shipping_cost' => 0], [['q' => 1, 'price' => 100, 'cost' => 0]]);
     $keys = collect(app(DataQuality::class)->issues())->pluck('count', 'key')->all();
     expect($keys)->toMatchArray(['product_cost_missing' => 1, 'order_line_cost_missing' => 1, 'shipping_cost_missing' => 1]);
-    app()->instance('currentTenant', $this->other);
-    expect(app(DataQuality::class)->issues())->toBe([]);
 });
 
 // ---- #8 partial returns netted, #9 bundle allocation ----
@@ -213,9 +200,9 @@ it('allocates order shipping/fees/packaging to bundle lines by revenue share (go
 });
 
 // ---- #10 brief decisions ----
-it('persists brief decisions with before/after, dismissed recs drop out, accept can spawn an experiment, tenant isolated', function () {
-    $this->f->update($this->tenant, ['brief' => true, 'experiments' => true]);
-    $this->actingAs(ownerOf('egy'), 'tenant');
+it('persists brief decisions with before/after, dismissed recs drop out, accept can spawn an experiment', function () {
+    $this->f->update(['brief' => true, 'experiments' => true]);
+    $this->actingAs(ownerOf('egy'), 'admin');
     $ev = [['source' => 'stock_levels', 'metric' => 'days_of_cover', 'value' => 3, 'period' => '30d']];
     $this->postJson("{$this->base}/admin/growth/brief/decision", ['recommendation_key' => 'restock_9', 'kind' => 'inventory_low', 'status' => 'accepted', 'note' => 'ordered', 'create_experiment' => true, 'evidence' => $ev])->assertOk();
     $d = GrowthBriefDecision::first();
@@ -223,9 +210,6 @@ it('persists brief decisions with before/after, dismissed recs drop out, accept 
     $this->postJson("{$this->base}/admin/growth/brief/decision", ['recommendation_key' => 'restock_9', 'status' => 'done', 'metric_after' => 21])->assertOk();
     expect(GrowthBriefDecision::count())->toBe(1)->and((float) GrowthBriefDecision::first()->metric_after)->toBe(21.0);
     $this->postJson("{$this->base}/admin/growth/brief/decision", ['recommendation_key' => 'x', 'status' => 'bogus'])->assertStatus(422);
-    app()->instance('currentTenant', $this->other);
-    expect(GrowthBriefDecision::count())->toBe(0);
-    app()->instance('currentTenant', $this->tenant);
     app(BriefDecisionService::class)->decide(['recommendation_key' => 'offer_1', 'status' => 'dismissed'], null);
     $brief = app(\App\Services\Growth\BriefService::class);
     $m = new ReflectionMethod($brief, 'rank');

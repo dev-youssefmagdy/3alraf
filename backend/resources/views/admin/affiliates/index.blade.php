@@ -1,5 +1,5 @@
-<x-layouts.admin guard="tenant" :title="__('growth.affiliates')">
+<x-layouts.admin :title="__('growth.affiliates')">
     <x-card>
-        <x-datatable :table="$table" :url="route('tenant.affiliates.datatable')" id="affiliates-table" />
+        <x-datatable :table="$table" :url="route('admin.affiliates.datatable')" id="affiliates-table" />
     </x-card>
 </x-layouts.admin>

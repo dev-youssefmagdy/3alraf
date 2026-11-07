@@ -1,7 +1,7 @@
-<x-layouts.admin guard="tenant" :title="__('erp.j.new')">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.j.new')">
+    @include('admin.erp._flash')
     <x-card>
-        <form method="POST" action="{{ route('tenant.erp.journals.store') }}" id="jf" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.erp.journals.store') }}" id="jf" enctype="multipart/form-data">
             @csrf<input type="hidden" name="ref" value="{{ old('ref', (string) \Illuminate\Support\Str::uuid()) }}">
             <div class="mb-4 grid gap-3 md:grid-cols-4 text-sm">
                 <label>{{ __('erp.f.date') }}<input type="date" name="entry_date" required min="{{ \App\Support\ErpRules::MIN_DATE }}" max="{{ \App\Support\ErpRules::maxDate() }}" value="{{ old('entry_date', now()->toDateString()) }}" class="mt-1 block w-full rounded border border-slate-300 px-2 py-1.5"></label>

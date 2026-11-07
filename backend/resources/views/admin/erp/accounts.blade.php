@@ -1,9 +1,9 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.accounts')[0]">
-    @include('tenant.erp._flash')
-    @php $can = auth('tenant')->user()->can('erp.accounts.manage'); @endphp
+<x-layouts.admin :title="__('erp.cards.accounts')[0]">
+    @include('admin.erp._flash')
+    @php $can = auth('admin')->user()->can('erp.accounts.manage'); @endphp
     @if ($can)
     <x-card :title="__('erp.a.new')" class="mb-5">
-        <form method="POST" action="{{ route('tenant.erp.accounts.store') }}" class="grid gap-3 md:grid-cols-6">
+        <form method="POST" action="{{ route('admin.erp.accounts.store') }}" class="grid gap-3 md:grid-cols-6">
             @csrf
             <input name="code" required placeholder="{{ __('erp.f.code') }}" value="{{ old('code') }}" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
             <input name="name_en" required placeholder="{{ __('erp.f.name_en') }}" value="{{ old('name_en') }}" class="rounded border border-slate-300 px-2 py-1.5 text-sm md:col-span-2">
@@ -26,8 +26,8 @@
                     <td>{{ __('erp.types.'.$a->type) }}</td>
                     <td class="text-end tabular-nums">{{ $a->is_group ? '' : number_format((float) $a->current_balance, 2) }}</td>
                     <td class="text-end">@if ($can && ! $a->role_key)
-                        @if ($a->is_active)<form method="POST" action="{{ route('tenant.erp.accounts.destroy', $a->id) }}" onsubmit="return confirm(@js(__('erp.a.confirm')))" class="inline">@csrf @method('DELETE')<button class="btn-sm btn-danger">{{ __('erp.a.archive') }}</button></form>
-                        @else<form method="POST" action="{{ route('tenant.erp.accounts.restore', $a->id) }}" class="inline">@csrf<button class="btn-sm btn-secondary">{{ __('erp.a.restore') }}</button></form>@endif
+                        @if ($a->is_active)<form method="POST" action="{{ route('admin.erp.accounts.destroy', $a->id) }}" onsubmit="return confirm(@js(__('erp.a.confirm')))" class="inline">@csrf @method('DELETE')<button class="btn-sm btn-danger">{{ __('erp.a.archive') }}</button></form>
+                        @else<form method="POST" action="{{ route('admin.erp.accounts.restore', $a->id) }}" class="inline">@csrf<button class="btn-sm btn-secondary">{{ __('erp.a.restore') }}</button></form>@endif
                     @endif</td>
                 </tr>
             @endforeach

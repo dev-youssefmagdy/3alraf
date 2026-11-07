@@ -1,7 +1,7 @@
-<x-layouts.admin guard="central" :title="__('admin.categories')">
+<x-layouts.admin :title="__('admin.categories')">
     <x-card>
         <x-slot:actions>
-            @can('categories.create')<x-button :href="route('central.categories.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            @can('categories.create')<x-button :href="route('admin.categories.create')">{{ __('admin.add_new') }}</x-button>@endcan
         </x-slot:actions>
         @if ($tree->isEmpty())
             <p class="text-sm text-slate-500">{{ __('admin.no_data') }}</p>
@@ -14,9 +14,9 @@
                     <span class="font-medium {{ $c->is_active ? '' : 'text-slate-400 line-through' }}">{{ $c->name }}</span>
                     <span class="badge badge-muted">{{ $c->products_count }}</span>
                     <span class="ms-auto flex items-center gap-2">
-                        @can('categories.create')<a href="{{ route('central.categories.create', ['parent' => $c->id]) }}" class="btn-sm btn-secondary">+ {{ __('admin.subcategory') }}</a>@endcan
-                        @can('categories.edit')<a href="{{ route('central.categories.edit', $c) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan
-                        @can('categories.delete')<button type="button" data-delete="{{ route('central.categories.destroy', $c) }}" class="btn-sm btn-danger">{{ __('admin.delete') }}</button>@endcan
+                        @can('categories.create')<a href="{{ route('admin.categories.create', ['parent' => $c->id]) }}" class="btn-sm btn-secondary">+ {{ __('admin.subcategory') }}</a>@endcan
+                        @can('categories.edit')<a href="{{ route('admin.categories.edit', $c) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan
+                        @can('categories.delete')<button type="button" data-delete="{{ route('admin.categories.destroy', $c) }}" class="btn-sm btn-danger">{{ __('admin.delete') }}</button>@endcan
                     </span>
                 </li>
             @endforeach

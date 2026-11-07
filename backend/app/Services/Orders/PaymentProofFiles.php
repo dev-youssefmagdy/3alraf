@@ -56,7 +56,7 @@ class PaymentProofFiles
         return ['hash' => hash_file('sha256', $path), 'ext' => self::EXT[$mime], 'mime' => $mime];
     }
 
-    /** A proof already attached to ANOTHER live order of the tenant is a reused proof (rejected / cancelled orders do not count). */
+    /** A proof already attached to ANOTHER live order is a reused proof (rejected / cancelled orders do not count). */
     public function assertNotReused(string $hash, ?int $exceptOrderId = null): void
     {
         $reused = Order::query()->where('payment_proof_hash', $hash)
@@ -76,9 +76,9 @@ class PaymentProofFiles
     }
 
     /** Stores the already inspected file on the private disk; returns the relative path. */
-    public function store(UploadedFile $file, int $tenantId, array $info): string
+    public function store(UploadedFile $file, array $info): string
     {
-        $path = 'tenants/'.$tenantId.'/payment-proofs/'.Str::random(40).'.'.$info['ext'];
+        $path = 'payment-proofs/'.Str::random(40).'.'.$info['ext'];
         Storage::disk(self::DISK)->put($path, (string) file_get_contents($file->getRealPath()));
 
         return $path;

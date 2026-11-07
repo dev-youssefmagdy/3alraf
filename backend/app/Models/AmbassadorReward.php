@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class AmbassadorReward extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'ambassador_rewards';
 

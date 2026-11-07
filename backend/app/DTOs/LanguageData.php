@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Central\LanguageRequest;
+use App\Http\Requests\Admin\LanguageRequest;
 
 final readonly class LanguageData
 {

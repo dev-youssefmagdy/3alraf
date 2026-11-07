@@ -8,12 +8,12 @@ use App\Services\Orders\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** POST /webhooks/payments/{method} on the tenant host. All verification/idempotency lives in OrderPaymentService::handleWebhook. */
+/** POST /webhooks/payments/{method} on the main host (legacy store subdomains are served directly too). All verification/idempotency lives in OrderPaymentService::handleWebhook. */
 class PaymentWebhookController extends Controller
 {
     public function __invoke(Request $request, OrderPaymentService $payments, int $method): JsonResponse
     {
-        $pm = PaymentMethod::where('is_active', true)->findOrFail($method); // tenant-scoped
+        $pm = PaymentMethod::where('is_active', true)->findOrFail($method);
         [$status, $body] = $payments->handleWebhook($pm, $request);
 
         return response()->json($body, $status);

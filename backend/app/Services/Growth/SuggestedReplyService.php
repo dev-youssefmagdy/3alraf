@@ -5,7 +5,7 @@ namespace App\Services\Growth;
 use App\Models\BrandMemoryEntry;
 use App\Models\Interaction;
 use App\Models\ReputationAlert;
-use App\Models\TenantProduct;
+use App\Models\Product;
 
 /**
  * Maturity L1 classify only, L2 suggest (live facts + brand memory FAQ, Truth Guard checked), L3 auto-reply for ALLOWLISTED tested FAQs only, L4 routing.
@@ -77,12 +77,12 @@ class SuggestedReplyService
         if (! $i->product_id) {
             return [null, null];
         }
-        $tp = TenantProduct::where('product_id', $i->product_id)->where('is_active', true)->first();
+        $tp = Product::whereKey($i->product_id)->where('is_active', true)->first();
         if (! $tp) {
             return [null, null];
         }
-        $name = $tp->product?->getTranslation('name', $ar ? 'ar' : 'en', true) ?? '';
-        $cur = current_tenant()->currency_symbol;
+        $name = $tp->getTranslation('name', $ar ? 'ar' : 'en', true) ?? '';
+        $cur = setting('currency_symbol');
         if ($i->category === 'price') {
             $price = number_format((float) ($tp->sale_price ?: $tp->price), 2);
 

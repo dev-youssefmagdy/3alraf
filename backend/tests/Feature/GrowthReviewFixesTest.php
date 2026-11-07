@@ -1,13 +1,10 @@
 <?php
 
-// N8 adversarial review: regression tests for everything the QA pass found plus systematic sweeps (switches, tenant scope, lang parity).
+// N8 adversarial review: regression tests for everything the QA pass found plus systematic sweeps (switches, lang parity).
 
 use App\Models\CeoChallenge;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\GrowthApproval;
-use App\Models\Scopes\TenantScope;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Growth\ApprovalService;
 use App\Services\Growth\CeoChallengeService;
 use App\Services\Growth\GrowthAccess;
@@ -24,33 +21,18 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-        app(GrowthFeatures::class)->enableAll($t);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
     $this->setAll = function (bool $on, array $except = []) {
-        foreach ([$this->tenant, $this->other] as $t) {
-            $t = $t->refresh();
-            $s = $t->settings;
-            foreach (array_keys(config('growth.features')) as $k) {
-                $s['growth']['features'][$k] = $on ? true : in_array($k, $except, true);
-            }
-            $t->update(['settings' => $s]);
+        foreach (array_keys(config('growth.features')) as $k) {
+            growthFeatures($on || in_array($k, $except, true), $k);
         }
-        app()->instance('currentTenant', $this->tenant->refresh());
     };
 });
 
-function rvClient(array $scopes, ?Tenant $tenant = null): array
+function rvClient(array $scopes): array
 {
-    $prev = current_tenant();
-    app()->instance('currentTenant', $tenant ?? $prev);
     $r = app(IntegrationClientService::class)->create('n8n', $scopes, null, null);
-    app()->instance('currentTenant', $prev);
 
     return $r;
 }
@@ -62,7 +44,7 @@ function rvCall($test, string $method, string $path, ?array $body, array $c, arr
     $ts ??= time();
     $server = ['HTTP_AUTHORIZATION' => 'Bearer '.$token, 'HTTP_X_TIMESTAMP' => (string) $ts, 'HTTP_X_SIGNATURE' => app(SignatureService::class)->sign($secret, $ts, $raw), 'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json'] + $headers;
 
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.ltrim($path, '/'), [], [], [], $server, $raw);
+    return $test->call($method, '/api/integration/v1/'.ltrim($path, '/'), [], [], [], $server, $raw);
 }
 
 function rvIntegrationRoutes(): array
@@ -100,18 +82,18 @@ it('serves the return-reasons report only behind the return_intel switch', funct
 
 it('with every feature switch OFF, every admin growth route is 404 (web) or 403 (json) except the settings page', function () {
     ($this->setAll)(false);
-    $admin = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
+    $admin = Admin::query()->where('email', 'owner@egy.test')->first();
     $n = 0;
     foreach (app('router')->getRoutes()->getRoutes() as $r) {
         $name = (string) $r->getName();
-        if (! str_starts_with($name, 'tenant.growth.') || str_starts_with($name, 'tenant.growth.settings.')) {
+        if (! str_starts_with($name, 'admin.growth.') || str_starts_with($name, 'admin.growth.settings.')) {
             continue;
         }
         $uri = preg_replace('/\{[^}]+\}/', '1', $r->uri());
         $method = collect($r->methods())->first(fn ($m) => $m !== 'HEAD');
-        $web = $this->actingAs($admin, 'tenant')->call($method, 'http://egy.3alraf.test/'.$uri);
+        $web = $this->actingAs($admin, 'admin')->call($method, '/'.$uri);
         expect($web->getStatusCode())->toBe(404, "$method $uri (web)");
-        $json = $this->actingAs($admin, 'tenant')->call($method, 'http://egy.3alraf.test/'.$uri, [], [], [], ['HTTP_ACCEPT' => 'application/json']);
+        $json = $this->actingAs($admin, 'admin')->call($method, '/'.$uri, [], [], [], ['HTTP_ACCEPT' => 'application/json']);
         expect($json->getStatusCode())->toBe(403, "$method $uri (json)");
         $n++;
     }
@@ -127,8 +109,7 @@ it('with the master flag OFF every integration route is denied and with all swit
         expect(rvCall($this, $method, $uri, $method === 'POST' ? [] : null, $c, ['HTTP_IDEMPOTENCY_KEY' => 'k'])->getStatusCode())->toBe(403, "$method $uri all OFF");
     }
     ($this->setAll)(true);
-    app(GrowthAccess::class)->set(current_tenant(), false);
-    app()->instance('currentTenant', current_tenant()->refresh());
+    app(GrowthAccess::class)->set(false);
     foreach (rvIntegrationRoutes() as $r) {
         $method = collect($r->methods())->first(fn ($m) => $m !== 'HEAD');
         $uri = preg_replace('/\{[^}]+\}/', '1', substr($r->uri(), strlen('api/integration/v1/')));
@@ -167,26 +148,11 @@ it('scheduled growth commands are no-ops with every switch OFF', function () {
     expect($snap())->toBe($s0);
 });
 
-it('one failing tenant does not stop the growth jobs for the other tenants', function () {
+it('a failing growth job step fails growth:operate loudly (no silent per-store catch any more)', function () {
     $this->mock(TrendRadarService::class, function ($m) {
-        $m->shouldReceive('scan')->andReturnUsing(function () {
-            if (current_tenant()->slug === 'egy') {
-                throw new RuntimeException('boom');
-            }
-
-            return 0;
-        });
+        $m->shouldReceive('scan')->andThrow(new RuntimeException('boom'));
     });
-    $seen = [];
-    $this->mock(CeoChallengeService::class, function ($m) use (&$seen) {
-        $m->shouldReceive('generate')->andReturnUsing(function () use (&$seen) {
-            $seen[] = current_tenant()->slug;
-
-            return new CeoChallenge(['id' => 1]);
-        });
-    });
-    $this->artisan('growth:operate')->assertFailed();
-    expect($seen)->toContain('sa');
+    expect(fn () => $this->artisan('growth:operate')->run())->toThrow(RuntimeException::class, 'boom');
 });
 
 it('does not let n8n propose approval types that execute internal handlers (only whitelisted types)', function () {
@@ -213,7 +179,7 @@ it('rejects stale and future HMAC timestamps and replays the stored response for
 it('does not double-execute an approval on a second approve', function () {
     $svc = app(ApprovalService::class);
     $a = $svc->request('note', 'x', []);
-    $admin = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('id');
+    $admin = Admin::query()->where('email', 'owner@egy.test')->value('id');
     $svc->approve($a->id, $admin);
     expect(fn () => $svc->approve($a->id, $admin))->toThrow(ValidationException::class);
     expect(fn () => $svc->reject($a->id, $admin, 'late'))->toThrow(ValidationException::class);
@@ -223,35 +189,6 @@ it('has no integration route that can change price, refund, stock or budget', fu
     foreach (rvIntegrationRoutes() as $r) {
         expect($r->uri())->not->toMatch('/price|refund|stock\/adjust|budget|payout|purchase|discount|order.*status/i');
         expect($r->methods())->not->toContain('PUT')->not->toContain('PATCH')->not->toContain('DELETE');
-    }
-});
-
-it('scopes every growth model to the tenant and keeps tenant_id indexed on every growth table', function () {
-    $tables = [];
-    foreach (glob(database_path('migrations/*growth*.php')) as $f) {
-        preg_match_all("/Schema::create\('([a-z_]+)'/", file_get_contents($f), $m);
-        $tables = array_merge($tables, $m[1]);
-    }
-    $tables = array_values(array_diff(array_unique($tables), ['affiliate_clicks', 'affiliate_commissions', 'affiliate_payouts', 'affiliates', 'affiliate_tiers', 'reviews', 'static_pages', 'custom_pages', 'custom_page_products', 'wishlist_items', 'product_list_items', 'storefront_visits']));
-    expect(count($tables))->toBeGreaterThan(25);
-    $db = config('database.connections.'.config('database.default').'.database');
-    foreach ($tables as $t) {
-        $idx = DB::selectOne('select count(*) c from information_schema.statistics where table_schema = ? and table_name = ? and column_name = ? and seq_in_index = 1', [$db, $t, 'tenant_id'])->c;
-        expect($idx)->toBeGreaterThan(0, "$t needs a leading tenant_id index");
-    }
-    $scoped = [];
-    foreach (glob(app_path('Models/*.php')) as $f) {
-        $cls = 'App\\Models\\'.basename($f, '.php');
-        if (! class_exists($cls) || ! is_subclass_of($cls, Model::class)) {
-            continue;
-        }
-        $table = (new $cls)->getTable();
-        if (in_array($table, $tables, true)) {
-            $scoped[$table] = in_array(BelongsToTenant::class, class_uses_recursive($cls), true) || (new $cls)->hasGlobalScope(TenantScope::class);
-        }
-    }
-    foreach ($scoped as $t => $ok) {
-        expect($ok)->toBeTrue("model for $t must be tenant scoped");
     }
 });
 

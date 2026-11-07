@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\StockTransferRequest;
+use App\Http\Requests\Admin\StockTransferRequest;
 
 final readonly class StockTransferData
 {

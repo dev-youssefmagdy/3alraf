@@ -9,7 +9,6 @@ import '../../auth/application/auth_controller.dart';
 import '../../cart/application/cart_controller.dart';
 import '../../cart/data/cart_models.dart';
 import '../../orders/data/order_models.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/checkout_models.dart';
 import '../data/checkout_repository.dart';
 
@@ -198,7 +197,6 @@ class CheckoutController extends Notifier<CheckoutState> {
 
   @override
   CheckoutState build() {
-    ref.watch(tenantSlugProvider);
     ref.watch(localeProvider);
     ref.watch(authControllerProvider.select((s) => s.signedIn));
     _gen++;

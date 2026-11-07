@@ -1,35 +1,35 @@
-# 3alraf - multi-tenant marketplace (Laravel 13)
+# 3alraf - online store (Laravel 13, single store)
+
+One shop on one host (`APP_URL`): admin panel `/admin`, storefront `/{locale}` (`/` → default locale), mobile API `/api/v1`,
+n8n integration API `/api/integration/v1`. Shop settings (name, country, currency, locales, timezone, payments, SEO, AI/Growth switches)
+are in **Settings → General** (`settings` table, helper `setting()`). Until 2026-11 the project was multi-tenant; see
+`docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md` for the conversion.
 
 ## How to run
 
 ```bash
 composer install && npm install
-cp .env.example .env && php artisan key:generate   # DB: MySQL db `3alraf`; APP_CENTRAL_DOMAIN=3alraf.test
-php artisan migrate:fresh --seed                   # ~30s: 2 tenants, 40 products, 75 variants, 52 categories, banners, orders (images are generated locally with GD)
+cp .env.example .env && php artisan key:generate   # DB: MySQL db `3alraf`; APP_URL=http://3alraf.test (any host)
+php artisan migrate:fresh --seed                   # general settings (EG / EGP, ar+en), admins, demo operations, cities, gift catalog
 php artisan storage:link
 npm run build                                      # or `npm run dev`
 php artisan serve --host=127.0.0.1 --port=8000     # or any vhost pointing at public/
 vendor/bin/pest                                    # tests use MySQL db `3alraf_test`
 ```
 
-Hosts (NOT done automatically; add to `/etc/hosts` yourself, vhost on port 80 or use `:8000` with `artisan serve`):
-
-```
-127.0.0.1 3alraf.test egy.3alraf.test sa.3alraf.test
-```
-
-Alternative without editing hosts: set `APP_CENTRAL_DOMAIN=localhost` (Chrome/Firefox resolve `*.localhost` to loopback) and use `http://egy.localhost:8000`.
-Without a browser: `curl --resolve egy.3alraf.test:8000:127.0.0.1 http://egy.3alraf.test:8000/en`.
+Other seed modes: `php artisan seed:dev` (fake data for everything, local/staging) and `php artisan seed:live --force` (removes demo data, keeps live data).
+Real super admins: `php artisan admin:provision-super` (exactly one; created with `otp_exempt`, like the former platform super admin, so the first login works before WhatsApp is paired — an owner/super admin can clear the flag on Team & access → Admins).
 
 | Area | URL | Login |
 |---|---|---|
-| Central admin | http://3alraf.test/admin | admin@3alraf.test / password |
-| Tenant `egy` (EGP, ar/en) storefront | http://egy.3alraf.test/ar , /en | customer@egy.test / password |
-| Tenant `egy` admin | http://egy.3alraf.test/admin | owner@egy.test / password |
-| Tenant `sa` (SAR, ar/en) | http://sa.3alraf.test/ar ; admin `/admin` | owner@sa.test / password, customer@sa.test |
-| Affiliate (per tenant) | /ar/affiliate/login | aff@egy.test / password |
+| Admin panel | APP_URL/admin | Super Admin phone 201000000001 / password (owner role: 201000000101 / password) |
+| Storefront | APP_URL/ar , /en | customer@egy.test / password |
+| Affiliate | APP_URL/ar/affiliate/login | aff@egy.test / password |
 
-Demo discount code `WELCOME10`. Seeders are idempotent per phase; re-run `php artisan db:seed --class=PermissionSeeder` after permission changes. Browser smoke test (headless Chrome via playwright-core) is described in docs/PROGRESS.md (Phase 8).
+Legacy hosts: old shop subdomains (`egy.3alraf.test`, …) answer 301 to `APP_URL` (`LegacyHostRedirect`); `webhooks/*` and `api/*` are served
+directly there. Deploy: `deploy/nginx/app.conf` (site vhost + legacy subdomain block), `docker-compose.yml`, `deploy/supervisor/3alraf.conf`.
+
+Demo discount code `WELCOME10`. Re-run `php artisan db:seed --class=PermissionSeeder` after permission changes. Browser smoke test (headless Chrome via playwright-core) is described in docs/PROGRESS.md.
 
 ## About Laravel
 

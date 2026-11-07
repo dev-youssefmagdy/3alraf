@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.reports')[0]">
+<x-layouts.admin :title="__('erp.cards.reports')[0]">
     <p class="mb-5 text-sm text-slate-500">{{ __('erp_rep.index_hint') }}</p>
     @foreach (['statements', 'parties', 'operations', 'control'] as $g)
         @continue(empty($groups[$g]))

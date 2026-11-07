@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\BundleRequest;
+use App\Http\Requests\Admin\BundleRequest;
 use App\Services\Stock\StockItemCatalog;
 use Illuminate\Http\UploadedFile;
 

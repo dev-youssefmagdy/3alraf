@@ -8,10 +8,6 @@ return [
         'proof_uploaded' => 'Payment proof uploaded for order :number',
         'payment_received' => 'Online payment received for order :number (:total)',
         'return_requested' => 'Return :return requested for order :number',
-        'tenant_created' => 'New store created: :name',
-        'tenant_status' => 'Store :name was :state',
-        'tenant_active' => 'activated',
-        'tenant_inactive' => 'deactivated',
     ],
     'admin_mail' => ['greeting' => 'Hello :name,', 'view' => 'Open in admin panel', 'customer' => 'Customer', 'total' => 'Total', 'payment' => 'Payment'],
     // customer e-mails

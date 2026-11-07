@@ -5,13 +5,13 @@ namespace App\Http\Requests\Storefront;
 use App\Models\PaymentMethod;
 use App\Services\Orders\OfflineCheckoutThrottle;
 use App\Services\Orders\OrderPaymentService;
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     public function after(): array
     {
@@ -25,7 +25,7 @@ class CheckoutRequest extends FormRequest
 
     private function isQuote(): bool
     {
-        return $this->routeIs('storefront.cart.quote', 'api.v1.cart.quote', 'api.v1.h.cart.quote');
+        return $this->routeIs('storefront.cart.quote', 'api.v1.cart.quote');
     }
 
     /** True when the chosen payment method (or the wallet prepay leg of a COD order) is offline = needs a transfer proof file. */
@@ -39,8 +39,8 @@ class CheckoutRequest extends FormRequest
     /** Order-placing routes only (not the live quote / pre-validate): count the attempt against the offline limiter before anything else. */
     protected function prepareForValidation(): void
     {
-        $this->normalizePhone(); // national number (Arabic digits folded) + the tenant's dial code: one canonical phone for the limiter, the open-order cap and the stored order
-        if (! $this->routeIs('storefront.checkout.store', 'api.v1.checkout.place', 'api.v1.h.checkout.place') || ! $this->isOffline()) {
+        $this->normalizePhone(); // national number (Arabic digits folded) + the shop's dial code: one canonical phone for the limiter, the open-order cap and the stored order
+        if (! $this->routeIs('storefront.checkout.store', 'api.v1.checkout.place') || ! $this->isOffline()) {
             return;
         }
         $customer = auth('web')->user();
@@ -57,7 +57,6 @@ class CheckoutRequest extends FormRequest
 
     public function rules(): array
     {
-        $tid = current_tenant()->id;
         $loggedIn = auth('web')->check() && $this->filled('address_id');
         $quote = $this->isQuote(); // live totals: selections may be incomplete
 
@@ -67,14 +66,14 @@ class CheckoutRequest extends FormRequest
             'phone' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:30'],
             ...$this->phoneCodeRule(),
             'email' => ['nullable', 'email', 'max:190'],
-            'city_id' => [$loggedIn || $quote ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
+            'city_id' => [$loggedIn || $quote ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('is_active', true)->whereNull('deleted_at')],
             'address' => [$loggedIn || $quote ? 'nullable' : 'required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
-            'shipping_company_id' => [$quote ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
-            'payment_method_id' => [$quote ? 'nullable' : 'required', Rule::exists('payment_methods', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
-            'prepay_method_id' => ['nullable', Rule::exists('payment_methods', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
+            'shipping_company_id' => [$quote ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->whereNull('deleted_at')],
+            'payment_method_id' => [$quote ? 'nullable' : 'required', Rule::exists('payment_methods', 'id')->whereNull('deleted_at')],
+            'prepay_method_id' => ['nullable', Rule::exists('payment_methods', 'id')->whereNull('deleted_at')],
             'discount_code' => ['nullable', 'string', 'max:50'],
-            'packaging_option_id' => ['nullable', 'integer', Rule::exists('packaging_options', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
+            'packaging_option_id' => ['nullable', 'integer', Rule::exists('packaging_options', 'id')->where('is_active', true)->whereNull('deleted_at')],
             'proof' => [! $quote && $this->isOffline() ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.(int) config('checkout.proof.max_kb')],
         ];
     }

@@ -1,3 +1,4 @@
+import 'package:app/features/store/application/store_controller.dart';
 import 'package:app/core/network/network_providers.dart';
 import 'package:app/core/routing/app_router.dart';
 import 'package:app/core/theme/theme_mode_provider.dart';
@@ -5,8 +6,6 @@ import 'package:app/features/auth/application/auth_controller.dart';
 import 'package:app/features/push/application/push_registrar.dart';
 import 'package:app/features/push/data/push_service.dart';
 import 'package:app/features/shell/presentation/app_drawer.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,10 +78,8 @@ void main() {
       final calls = <RequestOptions>[];
       final env = TestEnv(extra: api(spy: calls.add));
       final c = await env.container();
-      await env.secrets.write('auth_token:egy', 'saved');
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
+      await env.secrets.write('auth_token', 'saved');
+      await bootStore(c);
       final auth = c.read(authControllerProvider.notifier);
 
       await auth.updateProfile(
@@ -115,11 +112,9 @@ void main() {
         final calls = <RequestOptions>[];
         final env = TestEnv(extra: api(spy: calls.add));
         final c = await env.container();
-        await env.secrets.write('auth_token:egy', 'saved');
-        await env.secrets.write('cart_token:egy', 'guest');
-        await c
-            .read(tenantControllerProvider.notifier)
-            .select(Tenant.fromJson(tenantJson('egy')));
+        await env.secrets.write('auth_token', 'saved');
+        await env.secrets.write('cart_token', 'guest');
+        await bootStore(c);
         final auth = c.read(authControllerProvider.notifier);
 
         await expectLater(
@@ -134,11 +129,11 @@ void main() {
         );
         expect((del.data as Map)['password'], 'secret');
         expect(c.read(authControllerProvider).signedIn, isFalse);
-        expect(env.secrets.data.containsKey('auth_token:egy'), isFalse);
-        expect(env.secrets.data.containsKey('cart_token:egy'), isFalse);
+        expect(env.secrets.data.containsKey('auth_token'), isFalse);
+        expect(env.secrets.data.containsKey('cart_token'), isFalse);
 
         // Google-only account.
-        await env.secrets.write('auth_token:egy', 'again');
+        await env.secrets.write('auth_token', 'again');
         await c.read(authControllerProvider.notifier).restore();
         await auth.deleteAccount(confirm: true);
         final del2 = calls.lastWhere(
@@ -153,9 +148,7 @@ void main() {
     test('no-op provider never calls /devices', () async {
       final env = TestEnv(extra: api());
       final c = await env.container();
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
+      await bootStore(c);
       await c
           .read(authControllerProvider.notifier)
           .login('a@b.co', 'password1');
@@ -173,9 +166,7 @@ void main() {
         ],
       );
       addTearDown(c.dispose);
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
+      await bootStore(c);
       await c
           .read(authControllerProvider.notifier)
           .login('a@b.co', 'password1');
@@ -217,16 +208,14 @@ void main() {
           ],
         );
         addTearDown(c.dispose);
-        await c
-            .read(tenantControllerProvider.notifier)
-            .select(Tenant.fromJson(tenantJson('egy')));
+        await bootStore(c);
         await c
             .read(authControllerProvider.notifier)
             .login('a@b.co', 'password1');
         await Future<void>.delayed(const Duration(milliseconds: 50));
         expect(env.requestsTo('/devices'), hasLength(1));
 
-        await c.read(tenantControllerProvider.notifier).chooseLocale('en');
+        await c.read(storeControllerProvider.notifier).chooseLocale('en');
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
         final regs = env.requestsTo('/devices');
@@ -278,7 +267,7 @@ void main() {
       extra: api(spy: calls.add),
     );
     await env.init();
-    await env.secrets.write('auth_token:egy', 'saved');
+    await env.secrets.write('auth_token', 'saved');
     await tester.pumpWidget(envApp(env));
     await settle(tester);
     await go(tester, '/account/profile');
@@ -302,7 +291,7 @@ void main() {
     bigScreen(tester);
     final env = TestEnv(prefs: {'onboarding_done': true}, extra: api());
     await env.init();
-    await env.secrets.write('auth_token:egy', 'saved');
+    await env.secrets.write('auth_token', 'saved');
     await tester.pumpWidget(envApp(env));
     await settle(tester);
     await go(tester, '/account/delete');
@@ -322,7 +311,7 @@ void main() {
       tester.element(find.byType(Scaffold).first),
     );
     expect(c.read(authControllerProvider).signedIn, isFalse);
-    expect(env.secrets.data.containsKey('auth_token:egy'), isFalse);
+    expect(env.secrets.data.containsKey('auth_token'), isFalse);
   });
 
   testWidgets('drawer lists pages, collections, blog, affiliate, about, '

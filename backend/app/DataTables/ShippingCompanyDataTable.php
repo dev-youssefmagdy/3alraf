@@ -28,7 +28,7 @@ class ShippingCompanyDataTable extends BaseDataTable
         $dt->addColumn('name_label', fn (ShippingCompany $m) => e($m->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (ShippingCompany $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (ShippingCompany $m) => $this->tenantActions($m, 'tenant.shipping-companies', 'shipping'));
+            ->addColumn('actions', fn (ShippingCompany $m) => $this->rowActions($m, 'admin.shipping-companies', 'shipping'));
     }
 
     protected function rawColumns(): array

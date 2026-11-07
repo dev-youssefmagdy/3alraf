@@ -1,9 +1,9 @@
 @php($editing = $model->exists)
-<x-layouts.admin guard="central" :title="$editing ? __('admin.edit').': '.$model->label : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit').': '.$model->label : __('admin.add_new')">
     <x-card class="max-w-2xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif
-            data-validate-url="{{ route('central.ai.models.validate', $editing ? [$model] : []) }}"
-            action="{{ $editing ? route('central.ai.models.update', $model) : route('central.ai.models.store') }}" method="POST" class="space-y-4" novalidate>
+            data-validate-url="{{ route('admin.ai.models.validate', $editing ? [$model] : []) }}"
+            action="{{ $editing ? route('admin.ai.models.update', $model) : route('admin.ai.models.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-select name="ai_provider_id" search required :label="__('ai.fields.provider')" :options="$providers" :value="$model->ai_provider_id" />
@@ -17,7 +17,7 @@
             <div>
                 <p class="form-label">{{ __('ai.fields.capabilities') }}</p>
                 <div class="flex flex-wrap gap-4">
-                    @foreach (\App\Http\Requests\Central\Ai\AiModelRequest::CAPABILITIES as $c)
+                    @foreach (\App\Http\Requests\Admin\Ai\AiModelRequest::CAPABILITIES as $c)
                         <x-checkbox name="capabilities[]" :bool="false" :value="$c" :label="__('ai.capabilities.'.$c)" :checked="$model->can($c)" />
                     @endforeach
                 </div>
@@ -26,7 +26,7 @@
                 <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$model->is_active" />
                 <x-checkbox name="is_default" :label="__('ai.fields.is_default')" :checked="$model->is_default" />
             </div>
-            <x-form-actions :cancel="route('central.ai.models.index')" />
+            <x-form-actions :cancel="route('admin.ai.models.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

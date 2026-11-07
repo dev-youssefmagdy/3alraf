@@ -5,12 +5,12 @@ namespace App\Http\Resources\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** TenantProduct with ->affiliate_url (AffiliateService::products). */
+/** Product with ->affiliate_url (AffiliateService::products). */
 class AffiliateProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $p = $this->product;
+        $p = $this->resource;
 
         return ['id' => $p->id, 'slug' => $p->slug, 'name' => $p->name, 'image' => $p->primaryImageUrl(), 'price' => (string) $this->effectivePrice(),
             'link' => $this->affiliate_url,

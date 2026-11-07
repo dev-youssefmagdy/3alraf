@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
-/** A mobile push token (FCM) registered by the app; unique per tenant. */
+/** A mobile push token (FCM) registered by the app; unique per token. */
 class Device extends Model
 {
-    use BelongsToTenant;
 
     public const PLATFORMS = ['android', 'ios', 'web'];
 

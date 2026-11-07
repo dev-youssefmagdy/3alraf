@@ -4,7 +4,6 @@ namespace App\Services\Growth;
 
 use App\Models\ContentAsset;
 use App\Models\Product;
-use App\Models\TenantProduct;
 use Illuminate\Support\Str;
 
 /**
@@ -29,19 +28,18 @@ class ContentPackageService
 
     public function prompt(array $i): string
     {
-        $t = current_tenant();
-        $locales = (array) $t->locales;
+        $locales = (array) setting('locales', []);
         $names = '{"'.implode('":"...","', $locales).'":"..."}';
         $pid = (int) (($i['product_ids'] ?? [])[0] ?? 0);
         $p = Product::find($pid);
         $claims = $this->memory->claims($pid)->map(fn ($c) => '['.$c->type.'] '.$c->claim)->implode('; ');
         $facts = Str::limit(strip_tags((string) $p?->description), 1200, '');
-        $tp = TenantProduct::where('product_id', $pid)->first();
+        $tp = Product::whereKey($pid)->first();
 
         return implode("\n", array_filter([
-            'Store: '.$t->name.' | country '.$t->country.' | languages '.implode(', ', $locales).' | default language '.$t->default_locale.'.',
+            'Store: '.setting('name').' | country '.setting('country').' | languages '.implode(', ', $locales).' | default language '.setting('default_locale').'.',
             'Goal: <data>'.Str::limit((string) ($i['goal'] ?? ''), 300, '').'</data>',
-            'Product: <data>'.($p?->name).' | price '.($tp?->sale_price ?? $tp?->price).' '.$t->currency_code.' | facts: '.$facts.'</data>',
+            'Product: <data>'.($p?->name).' | price '.($tp?->sale_price ?? $tp?->price).' '.setting('currency_code').' | facts: '.$facts.'</data>',
             'Approved claims (the ONLY benefit/ingredient/authenticity/result statements allowed): <data>'.($claims ?: 'none').'</data>',
             $this->memory->promptContext(),
             'Return {"short_description":'.$names.',"long_description":'.$names.',"angles":[{"name":"...","pitch":"..."} x3],"hooks":["..."],"reel_scripts":["..."],"tiktok_scripts":["..."],"stories":["..."],'
@@ -54,15 +52,15 @@ class ContentPackageService
     public function validate(array $in, array $inputs = []): array
     {
         $r = ['errors' => [], 'warnings' => [], 'preview' => []];
-        $default = current_tenant()->default_locale;
+        $default = setting('default_locale');
         $pid = (int) ($in['product_id'] ?? ($inputs['product_ids'][0] ?? 0));
-        $d = ['product_id' => TenantProduct::where('product_id', $pid)->where('is_active', true)->exists() ? $pid : 0];
+        $d = ['product_id' => Product::whereKey($pid)->where('is_active', true)->exists() ? $pid : 0];
         if (! $d['product_id']) {
             $r['errors'][] = ['code' => 'product_required', 'params' => []];
         }
         foreach (['short_description' => 200, 'long_description' => 4000] as $f => $max) {
             $d[$f] = [];
-            foreach ((array) current_tenant()->locales as $l) {
+            foreach ((array) setting('locales', []) as $l) {
                 $d[$f][$l] = Str::limit(trim(strip_tags((string) (($in[$f] ?? [])[$l] ?? ''))), $max, '');
             }
         }
@@ -98,8 +96,8 @@ class ContentPackageService
     /** Approval: one content_asset per item, each with its own UTM-tagged product link (Content-to-Profit attribution via N5). Returns the first asset. */
     public function create(array $d, int $generationId): ContentAsset
     {
-        $default = current_tenant()->default_locale;
-        $slug = TenantProduct::where('product_id', $d['product_id'])->first()?->product?->slug;
+        $default = setting('default_locale');
+        $slug = Product::whereKey($d['product_id'])->first()?->slug;
         $make = function (string $type, string $body, ?string $variant = null, ?string $locale = null, ?string $title = null) use ($d, $generationId, $slug, $default) {
             $a = ContentAsset::create(['product_id' => $d['product_id'], 'ai_generation_id' => $generationId, 'type' => $type, 'variant' => $variant, 'locale' => $locale ?? $default, 'title' => $title, 'body' => $body, 'status' => 'approved', 'version' => 1]);
             $a->update(['utm_content' => 'ca'.$a->id, 'tracked_url' => $this->link($slug, $type, $generationId, $a->id)]);
@@ -142,7 +140,7 @@ class ContentPackageService
         }
         $q = http_build_query(['utm_source' => 'content', 'utm_medium' => $type, 'utm_campaign' => 'pkg'.$gen, 'utm_content' => 'ca'.$assetId]);
 
-        return url('/'.current_tenant()->default_locale.'/product/'.$slug).'?'.$q;
+        return url('/'.setting('default_locale').'/product/'.$slug).'?'.$q;
     }
 
     private function s(mixed $v, int $max): string

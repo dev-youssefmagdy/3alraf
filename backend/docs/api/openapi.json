@@ -3,21 +3,12 @@
     "info": {
         "title": "3alraf Mobile API",
         "version": "1.0.0",
-        "description": "JSON API for the Flutter apps.\n\nTenant: use the store host ({tenant}.domain) or the central host plus the `X-Tenant` slug header. GET /api/v1/tenants (central) lists the stores.\nEnvelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\nAuth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable and only work in the tenant that issued them.\nGuests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\nCheckout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (re-upload of a rejected wallet transfer proof, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\nOffline payment: a wallet / bank-transfer payment method (or the wallet prepay leg of COD) REQUIRES the transfer proof file as the multipart field `proof` (jpg, png, webp or pdf) on POST /checkout and POST /checkout/validate; 422 `proof` when missing, invalid or already used for another order; 429 + Retry-After when the anti-abuse limiter trips. Bundles: add with POST /cart/items {bundle_id, quantity}; special packaging: GET /checkout/packaging then send packaging_option_id.\nMoney values are decimal strings in the store currency. Cost, profit and commission fields are never exposed."
+        "description": "JSON API for the Flutter apps.\n\nHost: one shop on APP_URL. GET /api/v1/app-config returns the app switches plus `store` {name, country, currency{code,symbol}, default_locale, locales[{code,rtl}], timezone, base_url}; GET /api/v1/store returns the full shop profile. The `X-Tenant` header of old app builds and old `{slug}.` hosts are ignored (the API answers on legacy hosts too; generated URLs always use APP_URL). GET /api/v1/tenants is DEPRECATED: a one-item list in the old shape (slug, name, country, flag, currency, default_locale, locales, languages, logo_url, base_url) for old app builds.\nEnvelope: every response is {success, message, data, meta}; errors are {success:false, message, errors?, data:null, meta:{}} with 401/403/404/422/429.\nAuth: Sanctum bearer tokens of two kinds. Customer tokens (ability `customer`, from /auth/login or /auth/register) and affiliate tokens (ability `affiliate`, from /affiliate/login) are not interchangeable.\nGuests: send the `X-Cart-Token` returned by the first cart call; after login call POST /cart/merge (or send it with /auth/login) to merge it.\nCheckout: place the order, then follow meta.next_action: redirect_to_payment (open meta.payment_url, then poll GET /payments/return/{token} until meta.paid), upload_proof (re-upload of a rejected wallet transfer proof, POST /orders/{token}/proof), retry_payment (POST /orders/{token}/pay), none (COD). Orders always wait for the store admin to confirm.\nOffline payment: a wallet / bank-transfer payment method (or the wallet prepay leg of COD) REQUIRES the transfer proof file as the multipart field `proof` (jpg, png, webp or pdf) on POST /checkout and POST /checkout/validate; 422 `proof` when missing, invalid or already used for another order; 429 + Retry-After when the anti-abuse limiter trips. Bundles: add with POST /cart/items {bundle_id, quantity}; special packaging: GET /checkout/packaging then send packaging_option_id.\nMoney values are decimal strings in the store currency. Cost, profit and commission fields are never exposed."
     },
     "servers": [
         {
-            "url": "https://{tenant}.3alraf.loc",
-            "description": "Tenant from the host",
-            "variables": {
-                "tenant": {
-                    "default": "egy"
-                }
-            }
-        },
-        {
-            "url": "https://3alraf.loc",
-            "description": "Central host: send the X-Tenant header"
+            "url": "http://3alraf.loc",
+            "description": "Site host"
         }
     ],
     "paths": {
@@ -29,9 +20,6 @@
                     "addresses"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -72,7 +60,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -90,9 +78,6 @@
                     "addresses"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -174,7 +159,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -195,9 +180,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -286,7 +268,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -304,9 +286,6 @@
                     "addresses"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -355,7 +334,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -375,9 +354,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -418,7 +394,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -438,9 +414,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -502,7 +475,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -522,9 +495,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -586,7 +556,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -606,9 +576,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -649,7 +616,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -669,9 +636,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -743,9 +707,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -785,7 +746,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -806,9 +767,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -848,7 +806,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -869,9 +827,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -911,7 +866,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -930,9 +885,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -972,7 +924,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -993,9 +945,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -1035,7 +984,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1055,9 +1004,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1106,7 +1052,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1126,9 +1072,6 @@
                     "affiliate"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1200,15 +1143,12 @@
         },
         "/api/v1/app-config": {
             "get": {
-                "summary": "App Config",
+                "summary": "App switches (min/latest version, store URLs, maintenance) and the shop basics `store` (name, country, currency, locales, timezone, base_url). Optional ?version=x.y.z",
                 "operationId": "app-config_get",
                 "tags": [
                     "app-config"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     }
@@ -1245,9 +1185,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1288,7 +1225,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1308,9 +1245,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1368,7 +1302,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1388,9 +1322,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1455,9 +1386,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -1502,9 +1430,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1576,9 +1501,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -1618,7 +1540,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1639,9 +1561,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -1681,7 +1600,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1699,9 +1618,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1776,7 +1692,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1794,9 +1710,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1837,7 +1750,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1857,9 +1770,6 @@
                     "auth"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -1938,9 +1848,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2012,9 +1919,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2065,9 +1969,6 @@
                     "blog"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2128,9 +2029,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2181,9 +2079,6 @@
                     "brands"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2244,9 +2139,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2297,9 +2189,6 @@
                     "bundles"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2360,9 +2249,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2413,9 +2299,6 @@
                     "cart"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2493,9 +2376,6 @@
                     "cart"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2580,9 +2460,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2642,9 +2519,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2684,7 +2558,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2704,9 +2578,6 @@
                     "cart"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2822,9 +2693,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2875,9 +2743,6 @@
                     "catalog"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -2930,9 +2795,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -2983,9 +2845,6 @@
                     "categories"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3045,9 +2904,6 @@
                     "checkout"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3163,9 +3019,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3216,9 +3069,6 @@
                     "checkout"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3271,9 +3121,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3325,9 +3172,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3378,9 +3222,6 @@
                     "checkout"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3496,9 +3337,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3543,9 +3381,6 @@
                     "custom-pages"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3599,9 +3434,6 @@
                     "devices"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3679,9 +3511,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3732,9 +3561,6 @@
                     "gift-finder"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3816,9 +3642,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -3878,9 +3701,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     }
                 ],
@@ -3916,9 +3736,6 @@
                     "home"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -3970,9 +3787,6 @@
                     "launch"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4030,9 +3844,6 @@
                     "launch"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4123,9 +3934,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4177,9 +3985,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4219,7 +4024,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4239,9 +4044,6 @@
                     "orders"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4302,9 +4104,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4352,7 +4151,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4372,9 +4171,6 @@
                     "orders"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4435,9 +4231,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4497,9 +4290,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4556,9 +4346,6 @@
                     "orders"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4637,9 +4424,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4708,7 +4492,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4728,9 +4512,6 @@
                     "orders"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4791,9 +4572,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -4838,9 +4616,6 @@
                     "pages"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4894,9 +4669,6 @@
                     "payments"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -4957,9 +4729,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -5019,9 +4788,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -5078,9 +4844,6 @@
                     "products"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -5149,7 +4912,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -5169,9 +4932,6 @@
                     "stock-requests"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -5258,9 +5018,6 @@
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
                     {
@@ -5305,9 +5062,6 @@
                     "tags"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -5361,19 +5115,17 @@
         },
         "/api/v1/tenants": {
             "get": {
-                "summary": "GET /api/v1/tenants: public country/store picker for the mobile app",
-                "operationId": "tenants_get",
+                "summary": "DEPRECATED (old app builds): the single shop as a one-item list in the old store-picker shape. Response header `Deprecation: true`",
+                "operationId": "legacy-stores_get",
                 "tags": [
                     "tenants"
                 ],
                 "parameters": [
                     {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
-                    {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     }
                 ],
+                "deprecated": true,
                 "responses": {
                     "200": {
                         "description": "Success (envelope)",
@@ -5406,9 +5158,6 @@
                     "wishlist"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -5449,7 +5198,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -5469,9 +5218,6 @@
                     "wishlist"
                 ],
                 "parameters": [
-                    {
-                        "$ref": "#/components/parameters/XTenant"
-                    },
                     {
                         "$ref": "#/components/parameters/AcceptLanguage"
                     },
@@ -5520,7 +5266,7 @@
                         }
                     },
                     "401": {
-                        "description": "Missing / wrong-type / other-tenant token",
+                        "description": "Missing / wrong-type token",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -5547,16 +5293,6 @@
             }
         },
         "parameters": {
-            "XTenant": {
-                "name": "X-Tenant",
-                "in": "header",
-                "required": false,
-                "description": "Store slug when calling the central host",
-                "schema": {
-                    "type": "string",
-                    "example": "egy"
-                }
-            },
             "AcceptLanguage": {
                 "name": "Accept-Language",
                 "in": "header",

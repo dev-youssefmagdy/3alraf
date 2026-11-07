@@ -4,11 +4,9 @@ use App\Enums\AiDriverType;
 use App\Exceptions\AiException;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 use App\Models\AiUsageLog;
-use App\Models\CentralAdmin;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Ai\AiAccess;
 use App\Services\Ai\AiContextFactory;
 use App\Services\Ai\AiGateway;
@@ -21,21 +19,18 @@ use Illuminate\Support\Facades\RateLimiter;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    $this->c = 'http://3alraf.test/admin';
-    $this->t = 'http://egy.3alraf.test/admin';
+    $this->c = '/admin';
+    $this->t = '/admin';
     $mk = function (AiDriverType $d, string $mid, string $key = 'sk-secret-123456') {
         $p = AiProvider::create(['driver' => $d, 'name' => $d->value, 'api_key' => $key, 'is_active' => true]);
 
         return AiModel::create(['ai_provider_id' => $p->id, 'model_id' => $mid, 'label' => $mid, 'kind' => 'text', 'capabilities' => ['tools' => true], 'input_cost' => 3, 'output_cost' => 15, 'is_active' => true]);
     };
     $this->mk = $mk;
-    $this->enable = fn (array $o = [], ?Tenant $t = null) => AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => ($t ?? $this->tenant)->id],
+    $this->enable = fn (array $o = []) => AiSetting::query()->updateOrCreate([],
         $o + ['ai_enabled' => true, 'features' => ['chat' => true, 'trends' => true, 'studio' => true, 'editor' => true, 'generators' => true]]);
-    $this->central = fn () => $this->actingAs(CentralAdmin::where('email', 'admin@3alraf.test')->first(), 'central');
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->superAdmin = fn () => $this->actingAs(Admin::where('email', 'admin@3alraf.test')->first(), 'admin');
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 it('maps the Anthropic request and response incl. tool_use round trip', function () {
@@ -60,8 +55,8 @@ it('maps the Anthropic request and response incl. tool_use round trip', function
     $second = $reqs[1][0]->data();
     expect($second['messages'][1]['content'][1])->toMatchArray(['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'echo'])
         ->and($second['messages'][2]['content'][0]['type'])->toBe('tool_result')->and($second['messages'][2]['content'][0]['tool_use_id'])->toBe('tu_1');
-    $log = AiUsageLog::withoutGlobalScopes()->latest('id')->first();
-    expect($log->tenant_id)->toBe($this->tenant->id)->and($log->tokens_in)->toBe(30)->and($log->country)->toBe('EG')->and((float) $log->est_cost)->toBeGreaterThan(0);
+    $log = AiUsageLog::query()->latest('id')->first();
+    expect($log->tokens_in)->toBe(30)->and($log->country)->toBe('EG')->and((float) $log->est_cost)->toBeGreaterThan(0);
 });
 
 it('maps OpenAI chat + tool calls + image, and Moonshot reuses it on its own base url without image/video', function () {
@@ -94,10 +89,10 @@ it('maps provider failures to a user-safe AiException (no vendor body)', functio
     } catch (AiException $e) {
         expect($e->getMessage())->not->toContain('sk-secret')->and($e->reason)->toBe('http_401');
     }
-    expect(AiUsageLog::withoutGlobalScopes()->where('status', 'error')->count())->toBe(1);
+    expect(AiUsageLog::query()->where('status', 'error')->count())->toBe(1);
 });
 
-it('blocks over-quota, disabled feature, disallowed model and throttled tenants', function () {
+it('blocks over-quota, disabled feature, disallowed model and throttled requests', function () {
     $m = ($this->mk)(AiDriverType::OPENAI, 'gpt-x');
     Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => 'ok'], 'finish_reason' => 'stop']], 'usage' => ['prompt_tokens' => 60, 'completion_tokens' => 50]])]);
     $req = fn () => new AiRequest('', [['role' => 'user', 'content' => 'x']]);
@@ -121,18 +116,16 @@ it('blocks over-quota, disabled feature, disallowed model and throttled tenants'
     ($this->enable)(['allowed_model_ids' => null]);
     app(AiAccess::class)->forget();
     config(['ai.rate_per_minute' => 1]);
-    RateLimiter::clear('ai:'.$this->tenant->id);
+    RateLimiter::clear('ai:shop');
     $g->chat($m, $req(), 'chat');
     expect(fn () => $g->chat($m, $req(), 'chat'))->toThrow(AiException::class, __('ai.errors.throttled'));
 
-    // quota is per tenant: the other tenant has its own counter
-    ($this->enable)(['monthly_token_quota' => 100], $this->other);
-    expect($g->usage($this->other->id)['tokens'])->toBe(0);
+    expect($g->usage()['tokens'])->toBe(220);
 });
 
-it('builds a country aware context from the tenant', function () {
+it('builds a country aware context from the site settings', function () {
     ($this->enable)(['brand_voice' => 'warm', 'forbidden_words' => ['cheap']]);
-    $ctx = app(AiContextFactory::class)->forTenant();
+    $ctx = app(AiContextFactory::class)->make();
     expect($ctx->country)->toBe('EG')->and($ctx->currency)->toBe('EGP')->and($ctx->systemPreamble())->toContain('EGP')->toContain('warm')->toContain('cheap')->toContain('untrusted');
 });
 
@@ -143,14 +136,14 @@ it('never exposes or audits the api key', function () {
     $p->update(['api_key' => 'sk-ROTATED-KEY-0000', 'name' => 'renamed']);
     $logs = \Spatie\Activitylog\Models\Activity::where('subject_type', AiProvider::class)->get();
     expect($logs)->not->toBeEmpty()->and(json_encode($logs->toArray()))->not->toContain('TOPSECRET')->not->toContain('ROTATED');
-    ($this->central)();
+    ($this->superAdmin)();
     $this->get("{$this->c}/ai/providers/{$p->id}/edit")->assertOk()->assertDontSee('ROTATED')->assertSee('0000');
     $this->getJson("{$this->c}/ai/providers/datatable")->assertOk();
     expect($this->getJson("{$this->c}/ai/providers/datatable")->getContent())->not->toContain('ROTATED');
 });
 
-it('central CRUD: provider, model defaults, test connection, tenant AI, usage', function () {
-    ($this->central)();
+it('admin CRUD: provider, model defaults, test connection, AI platform card, usage', function () {
+    ($this->superAdmin)();
     $this->postJson("{$this->c}/ai/providers/validate", [])->assertStatus(422)->assertJsonValidationErrors(['driver', 'name', 'api_key']);
     $this->postJson("{$this->c}/ai/providers", ['driver' => 'anthropic', 'name' => 'Claude', 'api_key' => 'sk-ant-1', 'is_active' => 1])->assertSuccessful();
     $p = AiProvider::where('name', 'Claude')->firstOrFail();
@@ -169,22 +162,25 @@ it('central CRUD: provider, model defaults, test connection, tenant AI, usage', 
     }
     expect(AiModel::where('ai_provider_id', $p->id)->where('is_default', true)->pluck('model_id')->all())->toBe(['b'])->and(AiModel::where('model_id', 'a')->first()->can('tools'))->toBeTrue();
 
-    $this->putJson("{$this->c}/ai/tenants/{$this->tenant->id}", ['ai_enabled' => 1, 'monthly_token_quota' => 5000, 'features' => ['chat', 'trends'], 'allowed_model_ids' => [AiModel::where('model_id', 'a')->first()->id]])->assertSuccessful();
-    $s = AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->first();
+    ($this->enable)();
+    app(AiAccess::class)->forget();
+    $this->putJson("{$this->c}/ai/settings/platform", ['ai_enabled' => 1, 'monthly_token_quota' => 5000, 'features' => ['chat', 'trends'], 'allowed_model_ids' => [AiModel::where('model_id', 'a')->first()->id]])->assertSuccessful();
+    $s = AiSetting::query()->first();
     expect($s->ai_enabled)->toBeTrue()->and($s->monthly_token_quota)->toBe(5000)->and($s->features)->toMatchArray(['chat' => true, 'trends' => true, 'studio' => false]);
-    $this->getJson("{$this->c}/ai/tenants/datatable")->assertOk();
-    $this->get("{$this->c}/ai/tenants/{$this->tenant->id}/edit")->assertOk();
+    $this->get("{$this->c}/ai/settings")->assertOk();
     $this->get("{$this->c}/ai/usage")->assertOk();
     $this->getJson("{$this->c}/ai/usage/datatable")->assertOk();
     $this->get("{$this->c}/ai/providers")->assertOk()->assertSee(__('ai.menu.group'));
 });
 
-it('tenant admins cannot reach central AI routes', function () {
-    ($this->owner)();
-    foreach (['providers', 'models', 'tenants', 'usage'] as $r) {
-        $this->get("{$this->t}/ai/$r")->assertStatus(404);                       // not registered on the tenant host
+it('AI providers, models and usage need their own permissions; guests are redirected', function () {
+    $staff = Admin::query()->create(['name' => 'No AI', 'phone' => '201000000555', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($staff, 'admin');
+    foreach (['providers', 'models', 'usage'] as $r) {
+        $this->get("{$this->t}/ai/$r")->assertForbidden();
     }
-    $this->get("http://3alraf.test/admin/ai/providers")->assertRedirect();       // guard isolation on the central host
+    $this->app['auth']->forgetGuards();
+    $this->get('/admin/ai/providers')->assertRedirect('/admin/login');
 });
 
 it('gate middleware: AI off -> 403 disabled state, sidebar hidden; on -> settings page + save', function () {
@@ -198,23 +194,23 @@ it('gate middleware: AI off -> 403 disabled state, sidebar hidden; on -> setting
     ($this->enable)(['allowed_model_ids' => [$m->id]]);
     app(AiAccess::class)->forget();
     $this->get("{$this->t}")->assertOk()->assertSee(__('ai.menu.settings'));
-    $this->get("{$this->t}/ai/settings")->assertOk()->assertSee('gpt-x')->assertDontSee('gpt-hidden');
+    // one page now: the platform card (ai_platform.*) lists every model for the allow-list; the default-model choice is limited (422 below)
+    $this->get("{$this->t}/ai/settings")->assertOk()->assertSee('gpt-x')->assertSee('allowed_model_ids', false);
 
     $this->postJson("{$this->t}/ai/settings/validate", ['default_ai_model_id' => $hidden->id])->assertStatus(422)->assertJsonValidationErrors('default_ai_model_id');
     $this->putJson("{$this->t}/ai/settings", ['default_ai_model_id' => $m->id, 'brand_voice' => 'Friendly', 'forbidden_words' => 'cheap, free,cheap', 'default_platforms' => ['tiktok']])->assertSuccessful();
-    $s = AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->first();
+    $s = AiSetting::query()->first();
     expect($s->default_ai_model_id)->toBe($m->id)->and($s->forbidden_words)->toBe(['cheap', 'free'])->and($s->default_platforms)->toBe(['tiktok'])->and($s->ai_enabled)->toBeTrue();
 });
 
-it('feature gate and tenant isolation of settings', function () {
+it('feature gate of the single AI settings row', function () {
     ($this->enable)(['features' => ['chat' => false]]);
-    ($this->enable)(['monthly_token_quota' => 1], $this->other);
     app(AiAccess::class)->forget();
-    expect(app(AiAccess::class)->feature('chat'))->toBeFalse()->and(AiTenantSetting::count())->toBe(1)->and(AiTenantSetting::first()->tenant_id)->toBe($this->tenant->id);
-    \Illuminate\Support\Facades\Route::middleware(['web', 'tenant.resolve', 'ai.enabled:chat'])->domain('{tenant}.'.config('app.central_domain'))->get('/_ai_probe', fn () => 'ok');
+    expect(app(AiAccess::class)->feature('chat'))->toBeFalse()->and(AiSetting::count())->toBe(1);
+    \Illuminate\Support\Facades\Route::middleware(['web', 'ai.enabled:chat'])->get('/_ai_probe', fn () => 'ok');
     ($this->owner)();
-    $this->get('http://egy.3alraf.test/_ai_probe')->assertStatus(403);
+    $this->get('/_ai_probe')->assertStatus(403);
     ($this->enable)(['features' => ['chat' => true]]);
     app(AiAccess::class)->forget();
-    $this->get('http://egy.3alraf.test/_ai_probe')->assertOk();
+    $this->get('/_ai_probe')->assertOk();
 });

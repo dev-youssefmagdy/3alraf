@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class BrandMemoryEntry extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'brand_memory_entries';
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Exceptions\AccountingException;
 use App\Models\Erp\Owner;
@@ -31,8 +31,8 @@ class ProfitController extends ErpController
             $ready = $e->getMessage();
         }
 
-        return view('tenant.erp.profits', ['from' => $from, 'to' => $to, 'calc' => $calc, 'ready' => $ready, 'runs' => ProfitDistribution::withCount('lines')->latest('id')->limit(30)->get(),
-            'owners' => Owner::where('is_eligible', true)->where('ownership_percent', '>', 0)->orderBy('id')->get(), 'canDistribute' => auth('tenant')->user()->can('erp.profits.distribute')]);
+        return view('admin.erp.profits', ['from' => $from, 'to' => $to, 'calc' => $calc, 'ready' => $ready, 'runs' => ProfitDistribution::withCount('lines')->latest('id')->limit(30)->get(),
+            'owners' => Owner::where('is_eligible', true)->where('ownership_percent', '>', 0)->orderBy('id')->get(), 'canDistribute' => auth('admin')->user()->can('erp.profits.distribute')]);
     }
 
     public function store(Request $r, ProfitDistributionService $svc)
@@ -43,9 +43,9 @@ class ProfitController extends ErpController
         $d['overrides'] = array_filter($d['overrides'] ?? [], fn ($v) => $v !== null && $v !== '');
 
         return $this->guarded(function () use ($svc, $d) {
-            $dist = $svc->create($d, auth('tenant')->id());
+            $dist = $svc->create($d, auth('admin')->id());
 
-            return redirect()->route('tenant.erp.profits.show', $dist->id)->with('status', __('erp_dist.created'));
+            return redirect()->route('admin.erp.profits.show', $dist->id)->with('status', __('erp_dist.created'));
         });
     }
 
@@ -54,8 +54,8 @@ class ProfitController extends ErpController
         $this->allow('erp.profits.view');
         $dist = ProfitDistribution::with(['lines.owner', 'creator', 'approver', 'entry'])->findOrFail($id);
 
-        return view('tenant.erp.profit-show', ['d' => $dist, 'cashRoles' => PartyService::CASH_ROLES, 'second' => app(ErpSettings::class)->bool('distribution_requires_second_approver'),
-            'canDistribute' => auth('tenant')->user()->can('erp.profits.distribute')]);
+        return view('admin.erp.profit-show', ['d' => $dist, 'cashRoles' => PartyService::CASH_ROLES, 'second' => app(ErpSettings::class)->bool('distribution_requires_second_approver'),
+            'canDistribute' => auth('admin')->user()->can('erp.profits.distribute')]);
     }
 
     private function act(int $id, callable $fn, string $msg)
@@ -72,19 +72,19 @@ class ProfitController extends ErpController
 
     public function approve(int $id, ProfitDistributionService $svc)
     {
-        return $this->act($id, fn ($d) => $svc->approve($d, auth('tenant')->id()), 'erp_dist.approved');
+        return $this->act($id, fn ($d) => $svc->approve($d, auth('admin')->id()), 'erp_dist.approved');
     }
 
     public function post(int $id, ProfitDistributionService $svc)
     {
-        return $this->act($id, fn ($d) => $svc->post($d, auth('tenant')->id()), 'erp_dist.posted');
+        return $this->act($id, fn ($d) => $svc->post($d, auth('admin')->id()), 'erp_dist.posted');
     }
 
     public function cancel(Request $r, int $id, ProfitDistributionService $svc)
     {
         $reason = (string) ($r->validate(['reason' => ['nullable', 'string', 'max:300']])['reason'] ?? '');
 
-        return $this->act($id, fn ($d) => $svc->cancel($d, auth('tenant')->id(), $reason), 'erp_dist.cancelled');
+        return $this->act($id, fn ($d) => $svc->cancel($d, auth('admin')->id(), $reason), 'erp_dist.cancelled');
     }
 
     public function pay(Request $r, int $id, int $line, ProfitDistributionService $svc)
@@ -94,7 +94,7 @@ class ProfitController extends ErpController
         $l = ProfitDistributionLine::where('distribution_id', ProfitDistribution::findOrFail($id)->id)->findOrFail($line);
 
         return $this->guarded(function () use ($svc, $l, $d) {
-            $svc->pay($l, $d['account'], auth('tenant')->id(), $d['date'] ?? null);
+            $svc->pay($l, $d['account'], auth('admin')->id(), $d['date'] ?? null);
 
             return back()->with('status', __('erp_dist.paid'));
         });
@@ -107,7 +107,7 @@ class ProfitController extends ErpController
         $from = $r->from ?: now()->startOfYear()->toDateString();
         $to = $r->to ?: now()->toDateString();
 
-        return view('tenant.erp.profit-report', ['from' => $from, 'to' => $to, 'rows' => $svc->report($from, $to)]);
+        return view('admin.erp.profit-report', ['from' => $from, 'to' => $to, 'rows' => $svc->report($from, $to)]);
     }
 
     /** Printable owner distribution statement (all non-cancelled runs of one owner, or one run). */
@@ -116,6 +116,6 @@ class ProfitController extends ErpController
         $this->allow('erp.profits.view');
         $o = Owner::findOrFail($owner);
 
-        return view('tenant.erp.profit-statement', ['owner' => $o, 'lines' => $svc->ownerLines($o)->when($r->distribution, fn ($c) => $c->where('distribution_id', (int) $r->distribution)), 'tenant' => current_tenant()]);
+        return view('admin.erp.profit-statement', ['owner' => $o, 'lines' => $svc->ownerLines($o)->when($r->distribution, fn ($c) => $c->where('distribution_id', (int) $r->distribution)), 'shopName' => (string) setting('name')]);
     }
 }

@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="$po->number">
+<x-layouts.admin :title="$po->number">
     <div class="space-y-4">
         <x-card>
             <div class="grid gap-3 text-sm sm:grid-cols-4">
@@ -12,9 +12,9 @@
         <x-card :title="__('ops.items_section')">
             <x-slot:actions>
                 @if ($po->isDraft())
-                    @can('purchases.edit')<x-button :href="route('tenant.purchases.edit', $po->id)">{{ __('admin.edit') }}</x-button>
-                    <button type="button" class="btn btn-secondary" data-post-action="{{ route('tenant.purchases.cancel', $po->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.cancel_doc') }}</button>@endcan
-                    @can('purchases.receive')<button type="button" class="btn btn-primary" data-post-action="{{ route('tenant.purchases.receive', $po->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.receive') }}</button>@endcan
+                    @can('purchases.edit')<x-button :href="route('admin.purchases.edit', $po->id)">{{ __('admin.edit') }}</x-button>
+                    <button type="button" class="btn btn-secondary" data-post-action="{{ route('admin.purchases.cancel', $po->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.cancel_doc') }}</button>@endcan
+                    @can('purchases.receive')<button type="button" class="btn btn-primary" data-post-action="{{ route('admin.purchases.receive', $po->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.receive') }}</button>@endcan
                 @endif
             </x-slot:actions>
             <div class="overflow-x-auto">

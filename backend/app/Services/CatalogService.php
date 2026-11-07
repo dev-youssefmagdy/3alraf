@@ -2,33 +2,35 @@
 
 namespace App\Services;
 
-use App\DTOs\BulkEnableData;
-use App\DTOs\TenantProductData;
-use App\Models\TenantProduct;
-use App\Repositories\Contracts\TenantProductRepositoryInterface;
+use App\DTOs\ActivateProductsData;
+use App\DTOs\CatalogItemData;
+use App\Models\Product;
 use App\Services\Qr\QrCodeManager;
 use Illuminate\Support\Facades\DB;
 
-/** Tenant listing of central products: price / sale price / cost / status (+ per-variant overrides). */
-class TenantCatalogService
+/** Catalog page (selling side of products): price / sale price / cost / status (+ per-variant overrides), storefront wording, activation. */
+class CatalogService
 {
-    public function __construct(private TenantProductRepositoryInterface $listings, private QrCodeManager $qr) {}
+    public function __construct(private QrCodeManager $qr) {}
 
-    /** @return int number of products enabled */
-    public function enableBulk(BulkEnableData $dto): int
+    /** Products that have no price yet (never activated): the "activate products" picker. */
+    public function inactiveQuery()
+    {
+        return Product::query()->with('images')->whereNull('price');
+    }
+
+    /** Give products a price and put them on sale. Products that already have a price are skipped. @return int number activated */
+    public function enableBulk(ActivateProductsData $dto): int
     {
         return DB::transaction(function () use ($dto) {
             $n = 0;
             foreach ($dto->rows as $row) {
-                if ($this->listings->findByProductId($row['product_id'])) {
-                    continue; // already enabled
+                $p = Product::query()->find($row['product_id']);
+                if (! $p || $p->price !== null) {
+                    continue; // unknown / already activated
                 }
-                $tp = $this->listings->create([
-                    'product_id' => $row['product_id'], 'price' => $row['price'], 'sale_price' => $row['sale_price'],
-                    'cost' => $row['cost'], 'is_active' => $row['is_active'],
-                ]);
-                $this->syncVariantRows($tp);
-                $this->qr->listingSaved($tp);
+                $p->update(['price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'is_active' => $row['is_active']]);
+                $this->qr->listingSaved($p);
                 $n++;
             }
 
@@ -36,40 +38,37 @@ class TenantCatalogService
         });
     }
 
-    public function update(TenantProduct $tp, TenantProductData $dto): TenantProduct
+    public function update(Product $p, CatalogItemData $dto): Product
     {
-        return DB::transaction(function () use ($tp, $dto) {
-            $tp = $this->listings->update($tp, [
+        return DB::transaction(function () use ($p, $dto) {
+            $p->update([
                 'price' => $dto->price, 'sale_price' => $dto->salePrice, 'cost' => $dto->cost, 'is_active' => $dto->isActive, 'min_stock_alert_qty' => $dto->minStockAlert,
             ]);
             foreach ($dto->variants as $row) {
-                $tp->variants()->whereKey($row['id'])->update([
+                $p->variants()->whereKey($row['id'])->update([
                     'price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'min_stock_alert_qty' => $row['min_stock_alert_qty'], 'is_active' => $row['is_active'],
                 ]);
             }
+            $this->qr->listingSaved($p);
 
-            $this->qr->listingSaved($tp);
-
-            return $tp;
+            return $p;
         });
     }
 
-    /** Replace the tenant's text overlay (audited by TenantProduct, so the previous value is recoverable from the activity log). */
-    public function updateContent(TenantProduct $tp, ?array $content): TenantProduct
+    /** Replace the storefront wording overlay (audited by Product, so the previous value is recoverable from the activity log). */
+    public function updateContent(Product $p, ?array $content): Product
     {
-        return $this->listings->update($tp, ['content' => $content ?: null]);
+        $p->update(['content' => $content ?: null]);
+
+        return $p;
     }
 
-    /** Disable the product for this tenant (removes the listing). */
-    public function delete(TenantProduct $tp): void
+    /** Take the product off sale (former "delete listing"): inactive, price cleared, QR codes removed. The catalog product stays. */
+    public function delete(Product $p): void
     {
-        $this->qr->deleteFor($tp);
-        $this->listings->delete($tp);
-    }
-
-    /** Make sure a tenant_product_variants row exists for every live central variant. */
-    public function syncVariantRows(TenantProduct $tp): void
-    {
-        $tp->ensureVariantRows();
+        DB::transaction(function () use ($p) {
+            $this->qr->deleteFor($p);
+            $p->update(['is_active' => false, 'price' => null, 'sale_price' => null]);
+        });
     }
 }

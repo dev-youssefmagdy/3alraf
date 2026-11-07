@@ -31,7 +31,7 @@ class DiscountCodeDataTable extends BaseDataTable
             ->addColumn('usage', fn (DiscountCode $m) => $m->used_count.($m->usage_limit ? ' / '.$m->usage_limit : ''))
             ->addColumn('period', fn (DiscountCode $m) => ($m->starts_at?->toDateString() ?? '—').' → '.($m->ends_at?->toDateString() ?? '—'))
             ->addColumn('status', fn (DiscountCode $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (DiscountCode $m) => $this->tenantActions($m, 'tenant.discount-codes', 'discount_codes'));
+            ->addColumn('actions', fn (DiscountCode $m) => $this->rowActions($m, 'admin.discount-codes', 'discount_codes'));
     }
 
     protected function rawColumns(): array

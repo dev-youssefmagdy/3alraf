@@ -2,13 +2,13 @@
 
 namespace App\Support;
 
-/** Top-level paths a custom page (`tenant-domain/{slug}`) must not take: config('tenancy.reserved_slugs') + active locale codes + `product`, `page`, `affiliate`... */
+/** Top-level paths a custom page (`/{slug}`) must not take: config('catalog.reserved_slugs') + active locale codes + `product`, `page`, `affiliate`... */
 class ReservedSlugs
 {
     public static function all(): array
     {
         return array_values(array_unique(array_merge(
-            config('tenancy.reserved_slugs', []),
+            config('catalog.reserved_slugs', []),
             \App\Models\Language::query()->pluck('code')->all(),
         )));
     }

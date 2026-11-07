@@ -13,9 +13,7 @@ use App\Models\OrderReturnItem;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Models\TrendCandidate;
 use App\Services\Growth\ApprovalService;
 use App\Services\Growth\CeoChallengeService;
@@ -33,52 +31,36 @@ use Illuminate\Support\Facades\Cache;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-        app(GrowthFeatures::class)->enableAll($t);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
-    $this->off = function (string $key) {
-        $t = current_tenant();
-        $s = $t->settings;
-        $s['growth']['features'][$key] = false;
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->base = '';
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
     $this->product = function (string $slug = 'serum', int $stock = 10) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => '100.00', 'cost' => 50, 'is_active' => true]);
+        listProduct($pr, ['price' => '100.00', 'cost' => 50, 'is_active' => true]);
         $stock > 0 && app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, 50);
 
         return $pr;
     };
     $this->sale = function (Product $p, int $qty, string $status = 'delivered', ?\Carbon\Carbon $at = null) {
         static $n = 0;
-        $t = current_tenant();
-        $o = Order::create(['tenant_id' => $t->id, 'number' => 'CP-'.$t->id.'-'.(++$n), 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'X', 'customer_phone' => '01001234567', 'address' => 'a', 'subtotal' => $qty * 100, 'total' => $qty * 100, 'status' => $status, 'currency' => $t->currency_code, 'placed_at' => $at ?? now()->subDays(3), 'cancelled_at' => $status === 'cancelled' ? now()->subDay() : null]);
-        $i = OrderItem::create(['tenant_id' => $t->id, 'order_id' => $o->id, 'product_id' => $p->id, 'name' => 'n', 'sku' => $p->sku, 'unit_price' => 100, 'unit_cost' => 50, 'quantity' => $qty, 'line_subtotal' => $qty * 100]);
+        $o = Order::create(['number' => 'CP-'.(++$n), 'public_token' => (string) \Illuminate\Support\Str::uuid(), 'customer_name' => 'X', 'customer_phone' => '01001234567', 'address' => 'a', 'subtotal' => $qty * 100, 'total' => $qty * 100, 'status' => $status, 'currency' => setting('currency_code'), 'placed_at' => $at ?? now()->subDays(3), 'cancelled_at' => $status === 'cancelled' ? now()->subDay() : null]);
+        $i = OrderItem::create(['order_id' => $o->id, 'product_id' => $p->id, 'name' => 'n', 'sku' => $p->sku, 'unit_price' => 100, 'unit_cost' => 50, 'quantity' => $qty, 'line_subtotal' => $qty * 100]);
 
         return [$o, $i];
     };
     $this->ret = function (Order $o, OrderItem $i, ?string $code) {
         static $m = 0;
-        $r = OrderReturn::create(['tenant_id' => $this->tenant->id, 'number' => 'R-'.(++$m).'-'.$o->id, 'order_id' => $o->id, 'status' => 'requested', 'reason_code' => $code, 'return_value' => 100]);
+        $r = OrderReturn::create(['number' => 'R-'.(++$m).'-'.$o->id, 'order_id' => $o->id, 'status' => 'requested', 'reason_code' => $code, 'return_value' => 100]);
         OrderReturnItem::create(['order_return_id' => $r->id, 'order_item_id' => $i->id, 'quantity' => 1, 'return_value' => 100]);
 
         return $r;
     };
 });
 
-function capClient(array $scopes, ?Tenant $tenant = null): array
+function capClient(array $scopes): array
 {
-    $prev = current_tenant();
-    app()->instance('currentTenant', $tenant ?? $prev);
     $r = app(IntegrationClientService::class)->create('n8n', $scopes, null, null);
-    app()->instance('currentTenant', $prev);
 
     return $r;
 }
@@ -90,7 +72,7 @@ function capCall($test, string $method, string $path, ?array $body, array $c)
     $ts = time();
     $server = ['HTTP_AUTHORIZATION' => 'Bearer '.$token, 'HTTP_X_TIMESTAMP' => (string) $ts, 'HTTP_X_SIGNATURE' => app(SignatureService::class)->sign($secret, $ts, $raw), 'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json'];
 
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
+    return $test->call($method, '/api/integration/v1/'.$path, [], [], [], $server, $raw);
 }
 
 it('recommends a reorder, caps it, and approving creates only a DRAFT purchase order', function () {
@@ -105,7 +87,7 @@ it('recommends a reorder, caps it, and approving creates only a DRAFT purchase o
     expect(GrowthApproval::count())->toBe(1)->and(PurchaseOrder::count())->toBe(0);
     expect(fn () => app(InventoryDecisionService::class)->proposeReorder($p->id, null, $sup->id, 1))->toThrow(\Illuminate\Validation\ValidationException::class); // duplicate pending
 
-    app(ApprovalService::class)->approve($a->id, TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('id'));
+    app(ApprovalService::class)->approve($a->id, Admin::query()->where('email', 'owner@egy.test')->value('id'));
     $po = PurchaseOrder::first();
     expect($po->status->value)->toBe('draft')->and($po->received_at)->toBeNull()->and($po->items()->first()->quantity)->toBe($a->payload['qty']);
 
@@ -167,7 +149,7 @@ it('aggregates structured return reasons, creates a fix task, and measures befor
     expect(fn () => $svc->tagCancellation($o2->id, 'bogus', 1))->toThrow(\Illuminate\Validation\ValidationException::class);
 });
 
-it('accepts reason codes through the API with scope, validation and tenant isolation', function () {
+it('accepts reason codes through the API with scope and validation', function () {
     $p = ($this->product)('api', 5);
     [$o, $i] = ($this->sale)($p, 1);
     $r = ($this->ret)($o, $i, null);
@@ -176,7 +158,6 @@ it('accepts reason codes through the API with scope, validation and tenant isola
     expect($r->fresh()->reason_code)->toBe('size_unclear');
     capCall($this, 'POST', 'returns/reasons', ['kind' => 'return', 'id' => $r->id, 'code' => 'nope'], $c)->assertStatus(422);
     capCall($this, 'POST', 'returns/reasons', ['kind' => 'return', 'id' => $r->id, 'code' => 'quality'], capClient(['read']))->assertStatus(403);
-    capCall($this, 'POST', 'returns/reasons', ['kind' => 'return', 'id' => $r->id, 'code' => 'quality'], capClient(['ingest:write'], $this->other))->assertStatus(404);
     capCall($this, 'GET', 'returns/reasons', null, $c)->assertOk()->assertJsonPath('data.aggregate.by_code.size_unclear.returns', 1);
 });
 
@@ -211,11 +192,11 @@ it('generates one CEO challenge per week from rules with evidence and respects t
     expect($c->fresh()->status)->toBe('reviewed');
 });
 
-it('every N6 surface is gated by its switch (admin 404, API 403, job no-op) and tenants are isolated', function () {
+it('every N6 surface is gated by its switch (admin 404, API 403, job no-op)', function () {
     $p = ($this->product)('gate', 10);
     ($this->sale)($p, 30);
-    $owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($owner, 'tenant');
+    $owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($owner, 'admin');
     foreach (['inventory', 'returns-intel', 'trends', 'ceo'] as $pg) {
         $this->get("{$this->base}/admin/growth/$pg")->assertOk();
     }
@@ -225,13 +206,9 @@ it('every N6 surface is gated by its switch (admin 404, API 403, job no-op) and 
     }
     $this->artisan('growth:operate')->assertSuccessful();
     expect(CeoChallenge::count())->toBe(1);
-    // other tenant sees nothing of mine
-    app()->instance('currentTenant', $this->other);
-    expect(CeoChallenge::count())->toBe(1)->and(CeoChallenge::first()->id)->not->toBe(CeoChallenge::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->first()->id); // own row only
-    app()->instance('currentTenant', $this->tenant);
     foreach ([['inventory_engine', 'inventory', 'inventory/recommendations'], ['return_intel', 'returns-intel', 'returns/reasons'], ['trend_radar', 'trends', 'trends/candidates'], ['ceo_challenge', 'ceo', 'ceo-challenge']] as [$key, $pg, $path]) {
         ($this->off)($key);
-        $this->actingAs($owner, 'tenant');
+        $this->actingAs($owner, 'admin');
         $this->get("{$this->base}/admin/growth/$pg")->assertNotFound();
         capCall($this, 'GET', $path, null, $c)->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
     }

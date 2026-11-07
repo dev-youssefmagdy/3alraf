@@ -2,9 +2,9 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiSettingsRequest;
+use App\Http\Requests\Admin\AiSettingsRequest;
 
-/** Tenant-owned AI preferences. */
+/** Shop AI preferences (brand voice, defaults). */
 final readonly class AiPreferencesData
 {
     public function __construct(public ?int $defaultModelId, public ?string $brandVoice, public array $forbiddenWords, public array $defaultPlatforms) {}

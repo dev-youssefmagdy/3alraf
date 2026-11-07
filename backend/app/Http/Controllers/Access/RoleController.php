@@ -12,7 +12,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Models\Role;
 
-/** Roles + permission matrix for the central and tenant admin panels (guard from the route-name prefix). */
+/** Roles + permission matrix of the admin panel (guard `admin`). */
 class RoleController extends Controller implements HasMiddleware
 {
     public function __construct(private AccessService $access) {}

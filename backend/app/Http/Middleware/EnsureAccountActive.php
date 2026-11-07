@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureAccountActive
 {
-    public const GUARDS = ['web', 'affiliate', 'tenant', 'central'];
+    public const GUARDS = ['web', 'affiliate', 'admin'];
 
     public function handle(Request $request, Closure $next): Response
     {

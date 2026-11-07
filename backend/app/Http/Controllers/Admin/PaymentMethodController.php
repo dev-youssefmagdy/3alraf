@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\PaymentMethodDataTable;
 use App\DTOs\PaymentMethodData;
-use App\Http\Requests\Tenant\PaymentMethodRequest;
+use App\Http\Requests\Admin\PaymentMethodRequest;
 use App\Models\PaymentMethod;
 use App\Services\PaymentMethodService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class PaymentMethodController extends ResourceController
 {
     protected static string $perm = 'payment_methods';
-    protected static string $routeBase = 'tenant.payment-methods';
-    protected static string $view = 'tenant.payment-methods';
+    protected static string $routeBase = 'admin.payment-methods';
+    protected static string $view = 'admin.payment-methods';
     protected static string $titleKey = 'ops.payment_methods';
     protected static string $requestClass = PaymentMethodRequest::class;
     protected static string $dtoClass = PaymentMethodData::class;

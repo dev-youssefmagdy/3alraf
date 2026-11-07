@@ -27,6 +27,6 @@ class AffiliateTierDataTable extends BaseDataTable
     {
         $dt->editColumn('min_sales', fn (AffiliateTier $m) => $this->money($m->min_sales))
             ->editColumn('percent', fn (AffiliateTier $m) => rtrim(rtrim((string) $m->percent, '0'), '.').'%')
-            ->addColumn('actions', fn (AffiliateTier $m) => $this->tenantActions($m, 'tenant.affiliate-tiers', 'affiliate_tiers'));
+            ->addColumn('actions', fn (AffiliateTier $m) => $this->rowActions($m, 'admin.affiliate-tiers', 'affiliate_tiers'));
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Payments;
 
-/** Input for starting an online payment. Amount in tenant currency (decimal string). */
+/** Input for starting an online payment. Amount in the shop currency (decimal string). */
 final readonly class PaymentIntentData
 {
     public function __construct(

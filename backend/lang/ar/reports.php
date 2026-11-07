@@ -11,8 +11,6 @@ return [
     'sales_trend' => 'اتجاه المبيعات',
     'orders_by_status' => 'الطلبات حسب الحالة',
     'top_products' => 'أفضل المنتجات',
-    'sales_by_tenant' => 'المبيعات حسب المتجر',
-    'tenants_breakdown' => 'تفصيل المتاجر',
     'amounts_in' => 'المبالغ بعملة :c',
     'titles' => [
         'sales' => 'المبيعات',
@@ -125,7 +123,6 @@ return [
         'stock_value' => 'قيمة المخزون',
         'subtotal' => 'المجموع الفرعي',
         'supplier' => 'المورد',
-        'tenant' => 'المتجر',
         'total' => 'الإجمالي',
         'total_cost' => 'إجمالي التكلفة',
         'type' => 'النوع',

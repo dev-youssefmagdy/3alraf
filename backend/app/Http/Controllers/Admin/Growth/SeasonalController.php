@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\SeasonalCloseRequest;
-use App\Http\Requests\Tenant\SeasonalEventRequest;
+use App\Http\Requests\Admin\SeasonalCloseRequest;
+use App\Http\Requests\Admin\SeasonalEventRequest;
 use App\Models\Category;
 use App\Models\SeasonalEvent;
 use App\Services\Growth\SeasonalCalendarService;
@@ -30,34 +30,34 @@ class SeasonalController extends Controller implements HasMiddleware
             $e->last = $this->svc->lastMemory($e);
         }
 
-        return view('tenant.growth.seasonal', ['year' => $year, 'events' => $events, 'categories' => Category::orderBy('id')->get(['id', 'name'])]);
+        return view('admin.growth.seasonal', ['year' => $year, 'events' => $events, 'categories' => Category::orderBy('id')->get(['id', 'name'])]);
     }
 
     public function ensure(): JsonResponse
     {
         $year = (int) request()->validate(['year' => ['required', 'integer', 'between:2024,2100']])['year'];
-        $this->svc->ensureYear($year, auth('tenant')->id());
+        $this->svc->ensureYear($year, auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.seasonal.index', ['year' => $year]));
+        return $this->ok(__('admin.saved'), route('admin.growth.seasonal.index', ['year' => $year]));
     }
 
     public function update(SeasonalEventRequest $r, int $id): JsonResponse
     {
-        $e = $this->svc->update($id, $r->validated(), auth('tenant')->id());
+        $e = $this->svc->update($id, $r->validated(), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.seasonal.index', ['year' => $e->year]));
+        return $this->ok(__('admin.saved'), route('admin.growth.seasonal.index', ['year' => $e->year]));
     }
 
     public function confirm(int $id): JsonResponse
     {
-        $e = $this->svc->confirmDate($id, auth('tenant')->id());
+        $e = $this->svc->confirmDate($id, auth('admin')->id());
 
-        return $this->ok(__('growth_hub.seasonal.confirmed'), route('tenant.growth.seasonal.index', ['year' => $e->year]));
+        return $this->ok(__('growth_hub.seasonal.confirmed'), route('admin.growth.seasonal.index', ['year' => $e->year]));
     }
 
     public function task(int $id): JsonResponse
     {
-        $t = $this->svc->toggleTask($id, auth('tenant')->id());
+        $t = $this->svc->toggleTask($id, auth('admin')->id());
 
         return $this->ok(null, null, ['done' => (bool) $t->done_at]);
     }
@@ -65,15 +65,15 @@ class SeasonalController extends Controller implements HasMiddleware
     public function bundles(int $id): JsonResponse
     {
         SeasonalEvent::findOrFail($id);
-        $res = $this->svc->proposeBundles($id, auth('tenant')->id());
+        $res = $this->svc->proposeBundles($id, auth('admin')->id());
 
-        return $this->ok(__('growth_hub.bundles.proposed', ['n' => count($res['approval_ids']), 'rej' => count($res['rejected'])]), route('tenant.growth.bundles.index'));
+        return $this->ok(__('growth_hub.bundles.proposed', ['n' => count($res['approval_ids']), 'rej' => count($res['rejected'])]), route('admin.growth.bundles.index'));
     }
 
     public function close(SeasonalCloseRequest $r, int $id): JsonResponse
     {
-        $this->svc->close($id, $r->validated(), auth('tenant')->id());
+        $this->svc->close($id, $r->validated(), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.seasonal.index', ['year' => SeasonalEvent::findOrFail($id)->year]));
+        return $this->ok(__('admin.saved'), route('admin.growth.seasonal.index', ['year' => SeasonalEvent::findOrFail($id)->year]));
     }
 }

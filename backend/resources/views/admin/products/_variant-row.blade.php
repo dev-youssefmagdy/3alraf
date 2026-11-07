@@ -11,7 +11,7 @@
     <td class="px-1 py-2" data-field><input type="number" step="0.001" min="0" name="variants[{{ $i }}][weight]" value="{{ $v['weight'] ?? '' }}" class="form-control w-24"></td>
     <td class="px-1 py-2">
         @if (! empty($v['barcode']))
-            <img src="{{ route('central.barcode', $v['barcode']) }}?h=40" alt="{{ $v['barcode'] }}" class="h-10"><div class="text-xs text-slate-500">{{ $v['barcode'] }}</div>
+            <img src="{{ route('admin.barcode', $v['barcode']) }}?h=40" alt="{{ $v['barcode'] }}" class="h-10"><div class="text-xs text-slate-500">{{ $v['barcode'] }}</div>
         @else
             <span class="text-xs text-slate-400">{{ __('admin.barcode_auto') }}</span>
         @endif

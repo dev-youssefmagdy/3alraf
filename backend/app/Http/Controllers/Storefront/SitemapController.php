@@ -8,23 +8,23 @@ use App\Models\Brand;
 use App\Models\Bundle;
 use App\Models\Category;
 use App\Models\CustomPage;
+use App\Models\Product;
 use App\Models\StaticPage;
-use App\Models\TenantProduct;
 
-/** `/sitemap.xml` for the current tenant: every locale, hreflang alternates (xhtml:link) and product images. */
+/** `/sitemap.xml` of the shop (main host): every locale, hreflang alternates (xhtml:link) and product images. */
 class SitemapController extends Controller
 {
     public function __invoke()
     {
-        $tenant = current_tenant();
-        $locales = $tenant->locales;
+        $locales = (array) setting('locales', [config('app.locale')]);
+        $default = setting('default_locale') ?: config('app.locale');
         $urls = [];
-        $add = function (string $route, array $params, ?string $mod = null, array $images = []) use ($locales, $tenant, &$urls) {
+        $add = function (string $route, array $params, ?string $mod = null, array $images = []) use ($locales, $default, &$urls) {
             $alts = [];
             foreach ($locales as $l) {
                 $alts[$l] = route($route, ['locale' => $l] + $params);
             }
-            $alts['x-default'] = route($route, ['locale' => $tenant->default_locale] + $params);
+            $alts['x-default'] = route($route, ['locale' => $default] + $params);
             foreach ($locales as $l) {
                 $urls[] = ['loc' => $alts[$l], 'mod' => $mod, 'alts' => $alts, 'images' => $images];
             }
@@ -40,12 +40,9 @@ class SitemapController extends Controller
         foreach (Brand::where('is_active', true)->get(['slug', 'updated_at']) as $b) {
             $add('storefront.brand.show', ['slug' => $b->slug], $b->updated_at?->toDateString());
         }
-        $tps = TenantProduct::where('is_active', true)->with(['product:id,slug,name,is_active,updated_at', 'product.images'])->get();
-        foreach ($tps as $tp) {
-            if ($tp->product?->is_active) {
-                $imgs = $tp->product->images->take(5)->map(fn ($i) => ['loc' => $i->url, 'title' => $tp->product->name])->all();
-                $add('storefront.product.show', ['slug' => $tp->product->slug], $tp->product->updated_at?->toDateString(), $imgs);
-            }
+        foreach (Product::where('is_active', true)->whereNotNull('price')->with('images')->get(['id', 'slug', 'name', 'updated_at']) as $p) {
+            $imgs = $p->images->take(5)->map(fn ($i) => ['loc' => $i->url, 'title' => $p->name])->all();
+            $add('storefront.product.show', ['slug' => $p->slug], $p->updated_at?->toDateString(), $imgs);
         }
         foreach (Bundle::where('is_active', true)->get(['slug', 'updated_at']) as $b) {
             $add('storefront.bundle.show', ['slug' => $b->slug], $b->updated_at?->toDateString());

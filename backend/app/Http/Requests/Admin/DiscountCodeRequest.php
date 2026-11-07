@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\DiscountScope;
 use App\Enums\DiscountType;
@@ -12,7 +12,7 @@ class DiscountCodeRequest extends BaseRequest
     {
         return [
             'code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_\-]+$/',
-                Rule::unique('discount_codes', 'code')->where('tenant_id', current_tenant()->id)->ignore($this->id())],
+                Rule::unique('discount_codes', 'code')->ignore($this->id())],
             'type' => ['required', Rule::in(DiscountType::values())],
             'value' => ['required_unless:free_shipping,1', 'nullable', 'numeric', 'min:0', Rule::when($this->input('type') === 'percent', ['max:100'])],
             'min_order' => ['nullable', 'numeric', 'min:0'],
@@ -23,7 +23,7 @@ class DiscountCodeRequest extends BaseRequest
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
             'scope' => ['required', Rule::in(DiscountScope::values())],
             'product_ids' => ['required_if:scope,products', 'nullable', 'array'],
-            'product_ids.*' => ['integer', Rule::exists('tenant_products', 'product_id')->where('tenant_id', current_tenant()->id)],
+            'product_ids.*' => ['integer', Rule::exists('products', 'id')->whereNull('deleted_at')],
             'category_ids' => ['required_if:scope,categories', 'nullable', 'array'],
             'category_ids.*' => ['integer', 'exists:categories,id'],
             'free_shipping' => ['nullable', 'boolean'],

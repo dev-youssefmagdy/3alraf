@@ -10,7 +10,6 @@ use App\Models\Product;
 use App\Models\ProductSupplyTerm;
 use App\Models\SeasonalEvent;
 use App\Models\Supplier;
-use App\Models\TenantProduct;
 use App\Services\PurchaseService;
 use Illuminate\Validation\ValidationException;
 
@@ -43,23 +42,23 @@ class InventoryDecisionService
         $agedValue = 0.0;
         $seasons = SeasonalEvent::whereDate('starts_on', '>=', now()->toDateString())->whereDate('starts_on', '<=', now()->addDays((int) $this->cfg('season_hold_days', 60))->toDateString())->get();
         $rows = [];
-        foreach (TenantProduct::with('product.categories')->where('is_active', true)->get() as $tp) {
-            $p = $tp->product;
+        foreach (Product::with('categories')->where('is_active', true)->get() as $tp) {
+            $p = $tp;
             if (! $p || $p->trashed()) {
                 continue;
             }
-            $v = $vel[$tp->product_id] ?? ['on_hand' => 0, 'sold' => 0, 'daily_velocity' => 0, 'days_of_cover' => null];
+            $v = $vel[$tp->id] ?? ['on_hand' => 0, 'sold' => 0, 'daily_velocity' => 0, 'days_of_cover' => null];
             $price = (float) ($tp->sale_price ?: $tp->price);
             $cost = (float) $tp->cost;
             $unitMargin = $price - $cost;
             $marginPct = ($price > 0 && $cost > 0) ? $unitMargin / $price * 100 : null;
-            $t = $terms[$tp->product_id] ?? null;
+            $t = $terms[$tp->id] ?? null;
             $lead = (int) ($t?->lead_time_days ?? 14);
             $moq = max(1, (int) ($t?->moq ?? 1));
             $oh = (int) $v['on_hand'];
             $perDay = (float) $v['daily_velocity'];
             $cover = $v['days_of_cover'];
-            $ageInfo = $ages[$tp->product_id] ?? null;
+            $ageInfo = $ages[$tp->id] ?? null;
             $ageDays = $ageInfo['oldest_age_days'] ?? null; // oldest surviving FIFO layer
             $agedVal = $ageInfo ? StockAgeService::valueOlderThan($ageInfo['layers'], $agedDays, $cost) : 0.0;
             $agedValue += $agedVal;
@@ -68,7 +67,7 @@ class InventoryDecisionService
             $expiring = $t?->shelf_life_days && $ageDays !== null && $ageDays >= $t->shelf_life_days * (float) $this->cfg('expiry_urgent_share', 0.7);
             $missing = array_values(array_filter([$cost <= 0 ? 'cost' : null, $price <= 0 ? 'price' : null, ! $t ? 'supply_terms' : null, $ageDays === null ? 'stock_age' : null]));
             $slow = $oh > 0 && ($perDay <= 0 || ($cover !== null && $cover > $maxCover));
-            $row = ['product_id' => $tp->product_id, 'name' => $p->getTranslation('name', app()->getLocale(), true), 'on_hand' => $oh, 'sold_30d' => (int) $v['sold'], 'velocity' => $perDay, 'days_of_cover' => $cover,
+            $row = ['product_id' => $tp->id, 'name' => $p->getTranslation('name', app()->getLocale(), true), 'on_hand' => $oh, 'sold_30d' => (int) $v['sold'], 'velocity' => $perDay, 'days_of_cover' => $cover,
                 'age_days' => $ageDays, 'weighted_age_days' => $ageInfo['weighted_age_days'] ?? null, 'aged_value' => $agedVal, 'unknown_age_qty' => $ageInfo['unknown_qty'] ?? $oh, 'lead_time_days' => $lead, 'moq' => $moq, 'unit_cost' => $cost, 'price' => $price, 'margin_percent' => $marginPct === null ? null : round($marginPct, 1), 'contribution_30d' => round($unitMargin * (int) $v['sold'], 2),
                 'cash_tied' => round($oh * $cost, 2), 'seasonal_event' => $season?->key, 'expiring' => (bool) $expiring, 'missing' => $missing, 'supplier_id' => $t?->supplier_id, 'scenarios' => [], 'action' => 'none', 'impact' => 0.0, 'reasons' => []];
 
@@ -83,7 +82,7 @@ class InventoryDecisionService
                 }
                 $stockoutDays = max(0.0, $lead - $cover);
                 $impact = round($stockoutDays * $perDay * $unitMargin, 2); // margin that would be lost while waiting for delivery
-                $alts = app(SupplierPriceService::class)->options($tp->product_id, $cost, $price, $floor, (int) ceil($lead + $minCover));
+                $alts = app(SupplierPriceService::class)->options($tp->id, $cost, $price, $floor, (int) ceil($lead + $minCover));
                 $row['suppliers'] = $alts;
                 $row['supplier_id'] ??= $alts[0]['supplier_id'] ?? null;
                 $row['scenarios']['reorder'] = ['qty' => $qty, 'cash' => round($qty * $cost, 2), 'impact' => $impact, 'blocked' => $blocked, 'basis' => 'lost_margin_during_lead_time'];
@@ -187,10 +186,10 @@ class InventoryDecisionService
     public function materialize(GrowthApproval $a): array
     {
         $p = $a->payload;
-        $tp = TenantProduct::where('product_id', (int) $p['product_id'])->where('is_active', true)->first();
+        $tp = Product::whereKey((int) $p['product_id'])->where('is_active', true)->first();
         $qty = (int) $p['qty'];
         $cap = (float) $this->config->get('reorder_cash_cap', 0);
-        $unitCost = app(SupplierPriceService::class)->costFor((int) $p['supplier_id'], (int) $p['product_id']) ?? (float) $tp?->cost; // supplier quote, product cost as fallback; tenant_products.cost is never changed
+        $unitCost = app(SupplierPriceService::class)->costFor((int) $p['supplier_id'], (int) $p['product_id']) ?? (float) $tp?->cost; // supplier quote, product cost as fallback; products.cost is never changed
         if (! $tp || $unitCost <= 0 || $qty < 1) {
             throw ValidationException::withMessages(['state' => __('growth_capital.inv.recheck_failed')]);
         }
@@ -208,7 +207,7 @@ class InventoryDecisionService
 
     public function saveTerms(int $productId, array $d, ?int $adminId): ProductSupplyTerm
     {
-        TenantProduct::where('product_id', $productId)->firstOrFail();
+        Product::whereKey($productId)->firstOrFail();
         if (! empty($d['supplier_id'])) {
             Supplier::findOrFail((int) $d['supplier_id']);
         }

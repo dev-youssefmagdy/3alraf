@@ -2,14 +2,12 @@
 
 use App\Models\Interaction;
 use App\Models\SmallBatchSignup;
-use App\Models\Tenant;
 use App\Services\Growth\GrowthRetentionService;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
 });
 
 it('ships valid workflow JSONs with no secrets covering every built feature', function () {
@@ -27,14 +25,14 @@ it('ships valid workflow JSONs with no secrets covering every built feature', fu
     expect(array_values(array_diff($built, $covered)))->toBe([]);
 });
 
-it('prunes old growth data per tenant retention and erases a subject', function () {
+it('prunes old growth data per the retention policy and erases a subject', function () {
     $old = now()->subDays(400);
-    DB::table('interactions')->insert(['tenant_id' => $this->tenant->id, 'channel' => 'whatsapp', 'external_id' => 'e1', 'thread_id' => 't1', 'text_masked' => 'x', 'text_hash' => str_repeat('a', 40), 'status' => 'new', 'received_at' => now(), 'created_at' => $old, 'updated_at' => $old]);
-    DB::table('interactions')->insert(['tenant_id' => $this->tenant->id, 'channel' => 'whatsapp', 'external_id' => 'e2', 'thread_id' => 't2', 'text_masked' => 'x', 'text_hash' => str_repeat('b', 40), 'status' => 'new', 'received_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
-    $r = app(GrowthRetentionService::class)->prune($this->tenant);
-    expect($r['interactions'])->toBe(1)->and(Interaction::withoutGlobalScopes()->count())->toBe(1);
-    $e = app(GrowthRetentionService::class)->erase($this->tenant, 't2');
-    expect($e['interactions'])->toBe(1)->and(Interaction::withoutGlobalScopes()->count())->toBe(0);
+    DB::table('interactions')->insert(['channel' => 'whatsapp', 'external_id' => 'e1', 'thread_id' => 't1', 'text_masked' => 'x', 'text_hash' => str_repeat('a', 40), 'status' => 'new', 'received_at' => now(), 'created_at' => $old, 'updated_at' => $old]);
+    DB::table('interactions')->insert(['channel' => 'whatsapp', 'external_id' => 'e2', 'thread_id' => 't2', 'text_masked' => 'x', 'text_hash' => str_repeat('b', 40), 'status' => 'new', 'received_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+    $r = app(GrowthRetentionService::class)->prune();
+    expect($r['interactions'])->toBe(1)->and(Interaction::query()->count())->toBe(1);
+    $e = app(GrowthRetentionService::class)->erase('t2');
+    expect($e['interactions'])->toBe(1)->and(Interaction::query()->count())->toBe(0);
 });
 
 it('health endpoint requires auth and the allowlist blocks other IPs', function () {

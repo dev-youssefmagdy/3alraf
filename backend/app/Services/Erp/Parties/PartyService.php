@@ -26,7 +26,7 @@ class PartyService
     private function ensureChart(): void
     {
         if (! Account::where('role_key', 'receivable')->exists()) {
-            $this->coa->seed(current_tenant());
+            $this->coa->seed();
             app(\App\Services\Erp\Accounting\AccountResolver::class)->flush();
         }
     }
@@ -55,7 +55,7 @@ class PartyService
     {
         return $this->journals->post([
             'entry_date' => $date, 'type' => $entryType, 'description' => $desc, 'source_type' => $type, 'source_id' => $id,
-            'idempotency_key' => 'party:'.$type.':'.$id.':'.$key, 'branch_id' => $branchId, 'created_by' => auth('tenant')->id(),
+            'idempotency_key' => 'party:'.$type.':'.$id.':'.$key, 'branch_id' => $branchId, 'created_by' => auth('admin')->id(),
             'strict_replay' => $strict, // QA-012: same form token + different amount = error, not a silent no-op
         ], $lines);
     }
@@ -63,7 +63,7 @@ class PartyService
     /** Supplier payment (Dr payable [+ Dr supplier_advances for any excess] / Cr cash-like). $advanceOnly books it all as an advance. */
     public function pay(int $supplierId, string $amount, string $ref, string $from = 'cash', ?string $date = null, bool $advanceOnly = false, ?int $branchId = null, ?string $note = null): JournalEntry
     {
-        return $this->journals->exclusive(fn () => $this->payNow($supplierId, $amount, $ref, $from, $date, $advanceOnly, $branchId, $note)); // open amount is read and settled under the tenant lock
+        return $this->journals->exclusive(fn () => $this->payNow($supplierId, $amount, $ref, $from, $date, $advanceOnly, $branchId, $note)); // open amount is read and settled under the ledger lock
     }
 
     private function payNow(int $supplierId, string $amount, string $ref, string $from, ?string $date, bool $advanceOnly, ?int $branchId, ?string $note): JournalEntry

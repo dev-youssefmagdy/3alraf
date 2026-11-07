@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\AdjustmentType;
-use App\Http\Requests\Tenant\Concerns\HasStockItems;
+use App\Http\Requests\Admin\Concerns\HasStockItems;
 use Illuminate\Validation\Rule;
 
 class StockAdjustmentRequest extends BaseRequest
@@ -14,7 +14,7 @@ class StockAdjustmentRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'branch_id' => ['required', $this->tenantExists('branches', true)],
+            'branch_id' => ['required', $this->existsRule('branches', true)],
             'type' => ['required', Rule::enum(AdjustmentType::class)],
             'reason' => ['required', Rule::enum(AdjustmentReason::class)],
             'note' => ['nullable', 'string', 'max:2000'],

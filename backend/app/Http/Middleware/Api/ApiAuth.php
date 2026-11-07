@@ -10,8 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Bearer-token auth for the two token types. `api.auth:customer|affiliate[,optional]`.
- * The token must carry the matching ability (a customer token can never open affiliate endpoints and vice versa) and its owner must belong
- * to the current tenant (the tenant global scope hides other tenants' users, so their tokens resolve to nobody).
+ * The token must carry the matching ability (a customer token can never open affiliate endpoints and vice versa).
  * The resolved user is also set on the legacy session guard (`web` / `affiliate`) so the existing Services/FormRequests work unchanged.
  */
 class ApiAuth

@@ -32,7 +32,7 @@ class ReconciliationReport extends ReportBase
 
     public function run(ErpReportFilter $f): array
     {
-        $lf = new ReportFilter($f->from, $f->to, false, current_tenant() ? [current_tenant()->id] : null, $f->branchId);
+        $lf = new ReportFilter($f->from, $f->to, $f->branchId);
         $np = $this->legacy->netProfitFigures($lf);
         $pl = $this->ledger->profitLoss($f->from, $f->to, $f->branchId);
         $role = fn (string $r) => collect($pl['groups']['revenue'])->first(fn ($x) => $x['account']->role_key === $r)['amount'] ?? '0';
@@ -47,7 +47,7 @@ class ReconciliationReport extends ReportBase
             ->orWhere(fn ($x) => $x->where('e.source_type', 'order_return')->whereIn('e.source_id', OrderReturn::whereHas('order', fn ($o) => $o->where('status', 'returned'))->select('id'))));
         $retRev = (string) ($retEntries()->where('a.role_key', 'sales_revenue')->selectRaw('COALESCE(SUM(erp_journal_lines.credit - erp_journal_lines.debit),0) as n')->value('n') ?? '0');
         $retNet = (string) ($retEntries()->whereIn('a.type', ['revenue', 'expense'])->selectRaw('COALESCE(SUM(erp_journal_lines.credit - erp_journal_lines.debit),0) as n')->value('n') ?? '0');
-        // Timing (ERP-011): the Net Profit report counts every admin-confirmed order; the ledger recognises an order at the tenant's recognition
+        // Timing (ERP-011): the Net Profit report counts every admin-confirmed order; the ledger recognises an order at the recognition
         // point (default: shipment). Confirmed orders not yet recognised are taken out of the expected side (documented, not a mismatch).
         $pending = Order::query()->whereIn('status', RevenueRecognition::pendingValues())->whereBetween('created_at', [$f->from.' 00:00:00', $f->to.' 23:59:59'])
             ->when($f->branchId, fn ($q) => $q->where('branch_id', $f->branchId))->get();

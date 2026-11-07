@@ -3,7 +3,7 @@
     <div class="space-y-1 p-3">
         <span class="inline-block rounded bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600">{{ __('store.bundle') }}</span>
         <p class="line-clamp-2 font-semibold">{{ $b['name'] }}</p>
-        <p><b class="text-brand-600">{{ number_format((float) $b['price'], 2) }}</b> <small>{{ current_tenant()->currency_symbol }}</small>
+        <p><b class="text-brand-600">{{ number_format((float) $b['price'], 2) }}</b> <small>{{ setting('currency_symbol') }}</small>
             @if (bccomp($b['savings'], '0', 2) > 0)<span class="ms-1 text-xs text-slate-400 line-through">{{ number_format((float) $b['regular_total'], 2) }}</span>@endif</p>
         @unless ($b['in_stock'])<p class="text-xs font-semibold text-red-600">{{ __('store.sold_out') }}</p>@endunless
     </div>

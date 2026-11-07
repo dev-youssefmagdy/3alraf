@@ -3,9 +3,8 @@
 namespace App\Services\Erp\Accounting;
 
 use App\Models\Erp\Account;
-use App\Models\Tenant;
 
-/** Default professional chart of accounts, seeded once per tenant and fully editable afterwards. */
+/** Default professional chart of accounts, seeded once and fully editable afterwards. */
 class CoaTemplate
 {
     /** [code, en, ar, type, subtype, role_key|null, parent code|null, is_group] */
@@ -80,15 +79,15 @@ class CoaTemplate
         ['6990', 'Other Business Expenses', 'مصروفات أخرى', 'expense', 'opex', 'other_expense', '6000', false],
     ];
 
-    public function seed(?Tenant $tenant = null): int
+    public function seed(): int
     {
-        $tenant ??= current_tenant();
+        $currency = setting('currency_code');
         $created = 0;
         $ids = [];
         foreach (self::ACCOUNTS as [$code, $en, $ar, $type, $sub, $role, $parent, $group]) {
-            $acc = Account::withoutGlobalScopes()->firstOrCreate(['tenant_id' => $tenant->id, 'code' => $code], [
+            $acc = Account::withoutGlobalScopes()->firstOrCreate(['code' => $code], [
                 'name' => ['en' => $en, 'ar' => $ar], 'type' => $type, 'subtype' => $sub, 'normal_balance' => Account::normalBalanceFor($type),
-                'role_key' => $role, 'is_group' => $group, 'is_system' => true, 'currency' => $tenant->currency_code,
+                'role_key' => $role, 'is_group' => $group, 'is_system' => true, 'currency' => $currency,
                 'parent_id' => $parent ? ($ids[$parent] ?? null) : null,
             ]);
             $created += (int) $acc->wasRecentlyCreated;
@@ -99,29 +98,29 @@ class CoaTemplate
     }
 
     /**
-     * Idempotent, lazy top-up for tenants seeded before a role existed: creates only the missing role accounts (never touches existing ones;
+     * Idempotent, lazy top-up for a chart seeded before a role existed: creates only the missing role accounts (never touches existing ones;
      * if the template code is taken by a custom account the next free code is used). Returns the number created.
      *
      * @param  array<int,string>  $roles
      */
-    public function ensureRoles(array $roles, ?Tenant $tenant = null): int
+    public function ensureRoles(array $roles): int
     {
-        $tenant ??= current_tenant();
+        $currency = setting('currency_code');
         $created = 0;
         foreach (self::ACCOUNTS as [$code, $en, $ar, $type, $sub, $role, $parent, $group]) {
             if (! $role || ! in_array($role, $roles, true)) {
                 continue;
             }
-            if (Account::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('role_key', $role)->exists()) {
+            if (Account::withoutGlobalScopes()->where('role_key', $role)->exists()) {
                 continue;
             }
             $free = $code;
-            while (Account::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('code', $free)->exists()) {
+            while (Account::withoutGlobalScopes()->where('code', $free)->exists()) {
                 $free = (string) ((int) $free + 1);
             }
-            $parentId = $parent ? Account::withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('code', $parent)->value('id') : null;
-            Account::withoutGlobalScopes()->create(['tenant_id' => $tenant->id, 'code' => $free, 'name' => ['en' => $en, 'ar' => $ar], 'type' => $type, 'subtype' => $sub,
-                'normal_balance' => Account::normalBalanceFor($type), 'role_key' => $role, 'is_group' => $group, 'is_system' => true, 'currency' => $tenant->currency_code, 'parent_id' => $parentId]);
+            $parentId = $parent ? Account::withoutGlobalScopes()->where('code', $parent)->value('id') : null;
+            Account::withoutGlobalScopes()->create(['code' => $free, 'name' => ['en' => $en, 'ar' => $ar], 'type' => $type, 'subtype' => $sub,
+                'normal_balance' => Account::normalBalanceFor($type), 'role_key' => $role, 'is_group' => $group, 'is_system' => true, 'currency' => $currency, 'parent_id' => $parentId]);
             $created++;
         }
         if ($created) {

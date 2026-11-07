@@ -1,8 +1,8 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.distribution')[0]">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.cards.distribution')[0]">
+    @include('admin.erp._flash')
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; $c = $calc;
         $row = fn ($label, $v, $bold = false) => '<tr class="border-b border-slate-100 '.($bold ? 'font-semibold' : '').'"><td class="py-1.5">'.e($label).'</td><td class="text-end tabular-nums">'.number_format((float) $v, 2).'</td></tr>'; @endphp
-    <div class="mb-4 flex flex-wrap gap-4 text-sm"><a class="text-brand-600" href="{{ route('tenant.erp.profits.report') }}">{{ __('erp_dist.report') }}</a></div>
+    <div class="mb-4 flex flex-wrap gap-4 text-sm"><a class="text-brand-600" href="{{ route('admin.erp.profits.report') }}">{{ __('erp_dist.report') }}</a></div>
     <x-card :title="__('erp_dist.calc')" class="mb-5">
         <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 text-sm"><label>{{ __('erp.f.from') }}<input type="date" name="from" value="{{ $from }}" class="mt-1 block rounded border border-slate-300 px-2 py-1.5"></label><label>{{ __('erp.f.to') }}<input type="date" name="to" value="{{ $to }}" class="mt-1 block rounded border border-slate-300 px-2 py-1.5"></label><x-button type="submit" variant="secondary">{{ __('erp.f.filter') }}</x-button></form>
         <div class="grid gap-6 lg:grid-cols-2">
@@ -30,7 +30,7 @@
     </x-card>
     @if ($canDistribute)
     <x-card :title="__('erp_dist.new')" class="mb-5">
-        <form method="POST" action="{{ route('tenant.erp.profits.store') }}" class="grid gap-3 sm:grid-cols-3 text-sm">@csrf
+        <form method="POST" action="{{ route('admin.erp.profits.store') }}" class="grid gap-3 sm:grid-cols-3 text-sm">@csrf
             <input type="hidden" name="from" value="{{ $from }}"><input type="hidden" name="to" value="{{ $to }}">
             <label>{{ __('erp_dist.retain_percent') }}<input name="retain_percent" type="number" step="0.01" min="0" max="100" class="{{ $in }}"></label>
             <label>{{ __('erp_dist.retain_amount') }}<input name="retain_amount" type="number" step="0.01" min="0" class="{{ $in }}"></label>
@@ -43,7 +43,7 @@
     @endif
     <x-card :title="__('erp_dist.runs')">
         <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">#</th><th class="text-start">{{ __('erp.f.period') }}</th><th class="text-end">{{ __('erp_dist.l.net_profit') }}</th><th class="text-end">{{ __('erp_dist.distributed') }}</th><th class="text-start">{{ __('erp.f.status') }}</th><th></th></tr></thead><tbody>
-        @forelse ($runs as $r)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $r->id }}</td><td>{{ $r->period_start->format('Y-m-d') }} → {{ $r->period_end->format('Y-m-d') }}</td><td class="text-end tabular-nums">{{ $n($r->net_profit) }}</td><td class="text-end tabular-nums">{{ $n($r->distributed_amount) }}</td><td>{{ __('erp_dist.status.'.$r->status) }}</td><td class="text-end"><a class="text-brand-600" href="{{ route('tenant.erp.profits.show', $r->id) }}">{{ __('erp_ext.f.view') }}</a></td></tr>
+        @forelse ($runs as $r)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $r->id }}</td><td>{{ $r->period_start->format('Y-m-d') }} → {{ $r->period_end->format('Y-m-d') }}</td><td class="text-end tabular-nums">{{ $n($r->net_profit) }}</td><td class="text-end tabular-nums">{{ $n($r->distributed_amount) }}</td><td>{{ __('erp_dist.status.'.$r->status) }}</td><td class="text-end"><a class="text-brand-600" href="{{ route('admin.erp.profits.show', $r->id) }}">{{ __('erp_ext.f.view') }}</a></td></tr>
         @empty<tr><td colspan="6" class="py-4 text-slate-500">{{ __('erp_ext.f.none') }}</td></tr>@endforelse
         </tbody></table></div>
     </x-card>

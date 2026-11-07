@@ -1,4 +1,4 @@
-{{-- GET filter: date range (+ branch in tenant context). $f ReportFilter, $branches [id=>name], $snapshot bool --}}
+{{-- GET filter: date range (+ branch). $f ReportFilter, $branches [id=>name], $snapshot bool --}}
 <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3">
     @unless ($snapshot ?? false)
         <div><label class="form-label">{{ __('reports.from') }}</label><input type="date" name="from" value="{{ $f->from }}" class="form-control"></div>

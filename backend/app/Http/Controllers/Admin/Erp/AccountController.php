@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Erp\Account;
 use App\Models\Erp\AuditLog;
@@ -14,16 +14,16 @@ class AccountController extends ErpController
         $this->allow('erp.accounts.view');
         $this->ensureSetup();
 
-        return view('tenant.erp.accounts', ['accounts' => Account::with('parent')->orderBy('code')->get(), 'types' => Account::TYPES]);
+        return view('admin.erp.accounts', ['accounts' => Account::with('parent')->orderBy('code')->get(), 'types' => Account::TYPES]);
     }
 
     public function store(Request $r)
     {
         $this->allow('erp.accounts.manage');
         $d = $r->validate([
-            'code' => ['required', 'string', 'max:32', Rule::unique('erp_accounts', 'code')->where('tenant_id', current_tenant()->id)],
+            'code' => ['required', 'string', 'max:32', Rule::unique('erp_accounts', 'code')],
             'name_en' => ['required', 'string', 'max:150'], 'name_ar' => ['nullable', 'string', 'max:150'], 'description' => ['nullable', 'string', 'max:500'],
-            'type' => ['required', Rule::in(Account::TYPES)], 'parent_id' => ['nullable', 'integer', $this->tenantExists('erp_accounts')], // QA-003: unknown id = field error 'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)],
+            'type' => ['required', Rule::in(Account::TYPES)], 'parent_id' => ['nullable', 'integer', $this->existsRule('erp_accounts')], // QA-003: unknown id = field error 'branch_id' => ['nullable', 'integer', $this->existsRule('branches', true)],
             'is_group' => ['nullable', 'boolean'],
         ]);
         $parent = ! empty($d['parent_id']) ? Account::find($d['parent_id']) : null;
@@ -35,7 +35,7 @@ class AccountController extends ErpController
         }
         Account::create(['code' => $d['code'], 'name' => ['en' => $d['name_en'], 'ar' => ($d['name_ar'] ?? null) ?: $d['name_en']], // QA-001 'description' => $d['description'] ?? null,
             'type' => $d['type'], 'normal_balance' => Account::normalBalanceFor($d['type']), 'parent_id' => $parent?->id, 'branch_id' => $d['branch_id'] ?? null,
-            'currency' => current_tenant()->currency_code, 'is_group' => (bool) ($d['is_group'] ?? false)]);
+            'currency' => setting('currency_code'), 'is_group' => (bool) ($d['is_group'] ?? false)]);
 
         return back()->with('status', __('erp.saved'));
     }
@@ -53,7 +53,7 @@ class AccountController extends ErpController
         }
         if ($a->hasPostedActivity()) {
             $a->update(['is_active' => false, 'archived_at' => now()]);
-            AuditLog::create(['action' => 'account.archived', 'subject_type' => 'account', 'subject_id' => $a->id, 'user_id' => auth('tenant')->id(), 'meta' => ['code' => $a->code]]);
+            AuditLog::create(['action' => 'account.archived', 'subject_type' => 'account', 'subject_id' => $a->id, 'user_id' => auth('admin')->id(), 'meta' => ['code' => $a->code]]);
 
             return back()->with('status', __('erp.archived'));
         }

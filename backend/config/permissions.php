@@ -2,32 +2,12 @@
 
 /**
  * Permission matrix seeded by PermissionSeeder: guard => module => actions. Names are "{module}.{action}".
- * Later phases: append modules here and re-run `php artisan db:seed --class=PermissionSeeder`.
+ * One guard (`admin`). Append modules here and re-run `php artisan db:seed --class=PermissionSeeder`.
  */
 $crud = ['view', 'create', 'edit', 'delete'];
 
 return [
-    'central' => [
-        'languages' => $crud,
-        'tenants' => $crud,
-        'brands' => $crud,
-        'audit' => ['view'],
-        'tags' => $crud,
-        'attributes' => $crud,
-        'categories' => $crud,
-        'products' => $crud,
-        'admins' => $crud,
-        'roles' => $crud,
-        'reports' => ['view', 'export'],
-        'ai_providers' => $crud,
-        'ai_models' => $crud,
-        'ai_tenants' => ['view', 'edit'],
-        'ai_usage' => ['view'],
-        'whatsapp' => ['view', 'manage'],
-        'whatsapp.chat' => ['view', 'send', 'manage', 'media'],
-        'erp_central' => ['view', 'reports', 'audit'],
-    ],
-    'tenant' => [
+    'admin' => [
         'admins' => $crud,
         'roles' => $crud,
         'catalog' => ['view', 'create', 'edit', 'delete'],
@@ -90,5 +70,19 @@ return [
         'ai_generators' => ['use', 'approve'],
         // n8n growth system (feature flag `growth`)
         'growth' => ['view', 'manage', 'approve'],
+        // master catalog: products, categories, brands, tags, attributes
+        'products' => $crud,
+        'categories' => $crud,
+        'brands' => $crud,
+        'tags' => $crud,
+        'attributes' => $crud,
+        // settings: Settings → General (name, country, currency, locales, timezone, growth / AI master switches) + languages
+        'general_settings' => ['view', 'edit'],
+        'languages' => $crud,
+        // AI platform: vendors, models, usage & cost, enablement/quotas card on AI settings
+        'ai_providers' => $crud,
+        'ai_models' => $crud,
+        'ai_usage' => ['view'],
+        'ai_platform' => ['view', 'edit'],
     ],
 ];

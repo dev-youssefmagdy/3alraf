@@ -65,58 +65,9 @@
   "close": "إغلاق",
   "menu": "القائمة",
   "startupErrorTitle": "تعذّر تشغيل التطبيق",
-  "selectCountryTitle": "اختر بلدك",
-  "selectCountrySubtitle": "اختر المتجر الذي تريد التسوّق منه.",
-  "searchCountry": "ابحث عن بلد أو متجر",
-  "noStoresFound": "لا توجد متاجر مطابقة",
-  "noStoresAvailable": "لا توجد متاجر متاحة حاليًا.",
+  "chooseLanguageTitle": "اختر اللغة",
+  "chooseLanguageSubtitle": "يمكنك تغيير اللغة لاحقًا من القائمة الجانبية.",
   "continueAction": "متابعة",
-  "confirmCountryTitle": "التسوّق من {store}؟",
-  "@confirmCountryTitle": {
-    "placeholders": {
-      "store": {
-        "type": "String"
-      }
-    }
-  },
-  "confirmCountryMessage": "يمكنك تغيير البلد لاحقًا من القائمة الجانبية.",
-  "countryInactiveNotice": "متجرك السابق لم يعد متاحًا. اختر بلدًا آخر للمتابعة.",
-  "currentStore": "الحالي",
-  "storeCurrency": "العملة: {currency}",
-  "@storeCurrency": {
-    "placeholders": {
-      "currency": {
-        "type": "String"
-      }
-    }
-  },
-  "storeLanguages": "اللغات: {languages}",
-  "@storeLanguages": {
-    "placeholders": {
-      "languages": {
-        "type": "String"
-      }
-    }
-  },
-  "switchCountry": "تغيير البلد",
-  "switchCountryWarnTitle": "تغيير المتجر؟",
-  "switchCountryWarnBody": "السلة والمفضلة تخصّ المتجر الحالي. سيتم تسجيل خروجك ومسح بيانات السلة على هذا الجهاز عند التغيير إلى {store}.",
-  "@switchCountryWarnBody": {
-    "placeholders": {
-      "store": {
-        "type": "String"
-      }
-    }
-  },
-  "switchConfirm": "تغيير",
-  "switchedTo": "تتسوّق الآن من {store}",
-  "@switchedTo": {
-    "placeholders": {
-      "store": {
-        "type": "String"
-      }
-    }
-  },
   "offlineBanner": "أنت غير متصل. نعرض بيانات محفوظة.",
   "updateRequiredTitle": "يلزم تحديث التطبيق",
   "updateRequiredBody": "يرجى تحديث التطبيق إلى أحدث إصدار للمتابعة.",
@@ -138,14 +89,6 @@
   "@appVersion": {
     "placeholders": {
       "version": {
-        "type": "String"
-      }
-    }
-  },
-  "currentStoreLabel": "المتجر الحالي: {store}",
-  "@currentStoreLabel": {
-    "placeholders": {
-      "store": {
         "type": "String"
       }
     }

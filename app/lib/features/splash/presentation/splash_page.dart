@@ -8,7 +8,7 @@ import '../../../core/storage/storage_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../tenant/application/startup_controller.dart';
+import '../../startup/application/startup_controller.dart';
 
 /// Minimum time the splash stays up (overridden to zero in tests).
 final splashMinDurationProvider = Provider<Duration>(
@@ -17,8 +17,8 @@ final splashMinDurationProvider = Provider<Duration>(
 
 /// Splash + startup orchestration. Runs [StartupController.run] and, after
 /// the minimum display time, routes by the result: maintenance / forced
-/// update / onboarding / Home / country selection. If nothing is saved and
-/// the store directory is unreachable it shows a full-screen retry.
+/// update / language choice / onboarding / Home. If `/app-config` is
+/// unreachable and nothing is cached it shows a full-screen retry.
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 

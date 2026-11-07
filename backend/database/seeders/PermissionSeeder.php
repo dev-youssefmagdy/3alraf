@@ -7,21 +7,27 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
+/** Idempotent: every permission of config/permissions.php on guard `admin`; system roles `super-admin` and `owner` get all of them. */
 class PermissionSeeder extends Seeder
 {
+    public const GUARD = 'admin';
+
+    /** System roles (cannot be edited away in the UI): both hold every permission; super-admin also bypasses every gate. */
+    public const ROLES = ['super-admin', 'owner'];
+
     public function run(): void
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $roles = ['central' => 'super-admin', 'tenant' => 'tenant-owner'];
-        foreach (config('permissions') as $guard => $modules) {
-            $names = [];
-            foreach ($modules as $module => $actions) {
-                foreach ($actions as $a) {
-                    $names[] = Permission::findOrCreate("$module.$a", $guard)->name;
-                }
+        $names = [];
+        foreach (config('permissions.'.self::GUARD, []) as $module => $actions) {
+            foreach ($actions as $a) {
+                $names[] = Permission::findOrCreate("$module.$a", self::GUARD)->name;
             }
-            Role::findOrCreate($roles[$guard], $guard)->syncPermissions($names);
         }
+        foreach (self::ROLES as $role) {
+            Role::findOrCreate($role, self::GUARD)->syncPermissions($names);
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

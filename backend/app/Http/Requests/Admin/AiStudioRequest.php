@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\SocialPlatform;
 use App\Services\Ai\AiAccess;
@@ -12,9 +12,8 @@ class AiStudioRequest extends BaseRequest
 
     public function rules(): array
     {
-        $tid = current_tenant()->id;
         $access = app(AiAccess::class);
-        $ids = fn ($kind) => Rule::in($access->modelsFor(current_tenant(), $kind)->pluck('id')->all());
+        $ids = fn ($kind) => Rule::in($access->modelsFor($kind)->pluck('id')->all());
 
         return [
             'mode' => ['required', Rule::in(['social', 'marketing'])],
@@ -22,13 +21,13 @@ class AiStudioRequest extends BaseRequest
             'goal' => ['required', 'string', 'max:200'],
             'tone' => ['required', 'string', 'max:60'],
             'languages' => ['required', 'array', 'min:1', 'max:4'],
-            'languages.*' => ['string', Rule::in((array) current_tenant()->locales)],   // tenant locales only
+            'languages.*' => ['string', Rule::in((array) setting('locales', []))],   // shop locales only
             'cta' => ['nullable', 'string', 'max:120'],
             'format' => ['required', Rule::in(['text', 'image', 'video', 'all'])],
             'product_ids' => ['nullable', 'array', 'max:5'],
-            'product_ids.*' => ['integer', 'exists:tenant_products,product_id,tenant_id,'.$tid],
-            'bundle_id' => ['nullable', 'integer', $this->tenantExists('bundles', true)],
-            'flash_sale_id' => ['nullable', 'integer', $this->tenantExists('flash_sales')],
+            'product_ids.*' => ['integer', 'exists:products,id'],
+            'bundle_id' => ['nullable', 'integer', $this->existsRule('bundles', true)],
+            'flash_sale_id' => ['nullable', 'integer', $this->existsRule('flash_sales')],
             'brief' => ['nullable', 'string', 'max:1500'],
             'campaign_type' => ['nullable', Rule::in(self::CAMPAIGNS)],
             'event' => ['nullable', 'string', 'max:40'],
@@ -47,10 +46,10 @@ class AiStudioRequest extends BaseRequest
                 $v->errors()->add('brief', __('ai.studio.need_subject'));
             }
             $f = $this->input('format');
-            if (in_array($f, ['video', 'all'], true) && ! app(AiAccess::class)->modelsFor(current_tenant(), 'video')->count()) {
+            if (in_array($f, ['video', 'all'], true) && ! app(AiAccess::class)->modelsFor('video')->count()) {
                 $v->errors()->add('format', __('ai.studio.no_video_model'));
             }
-            if (in_array($f, ['image', 'all'], true) && ! app(AiAccess::class)->modelsFor(current_tenant(), 'image')->count()) {
+            if (in_array($f, ['image', 'all'], true) && ! app(AiAccess::class)->modelsFor('image')->count()) {
                 $v->errors()->add('format', __('ai.studio.no_image_model'));
             }
             if (in_array($f, ['video', 'all'], true) && ! SocialPlatform::tryFrom((string) $this->input('platform'))?->supportsVideo()) {

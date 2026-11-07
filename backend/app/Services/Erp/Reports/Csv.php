@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Erp\Central;
+namespace App\Services\Erp\Reports;
 
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/** UTF-8 BOM CSV, formula-injection safe (same rule as the tenant ReportExporter). */
+/** UTF-8 BOM CSV, formula-injection safe (same rule as the ERP ReportExporter). */
 class Csv
 {
     public static function cell(mixed $v): string

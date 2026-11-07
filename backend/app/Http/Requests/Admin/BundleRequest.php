@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Services\Orders\PriceResolver;
 use App\Services\Stock\StockItemCatalog;
@@ -18,7 +18,7 @@ class BundleRequest extends BaseRequest
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'is_active' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
-            // components must be listed (active) products/variants of THIS tenant (PriceResolver is tenant scoped)
+            // components must be listed (active) products/variants
             'items.*.item' => ['required', 'string', function ($a, $v, $fail) {
                 $catalog = app(StockItemCatalog::class);
                 if (! $catalog->exists((string) $v)) {

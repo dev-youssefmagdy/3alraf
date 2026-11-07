@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
-/** Staff accounts (admins) with role assignment, for both panels. */
+/** Staff accounts (admins) with role assignment (guard `admin`). */
 class AdminUserController extends Controller implements HasMiddleware
 {
     public function __construct(private AccessService $access) {}

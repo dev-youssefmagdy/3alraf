@@ -1,8 +1,31 @@
 # 3alraf customer app (عالرف)
 
-Flutter 3.41 / Dart ^3.11 customer app for the 3alraf multi-tenant marketplace.
-One app, many stores: the shopper picks a country (tenant) and every API call
-carries `X-Tenant: <slug>` against a single central base URL.
+Flutter 3.41 / Dart ^3.11 customer app for the 3alraf store (one shop, one
+host). Every API call goes to `API_BASE/api/v1`; the shop basics (name,
+country, currency, locales + RTL, timezone, base URL) come from
+`GET /api/v1/app-config` (`store` block) and are cached for offline starts.
+
+### Startup flow
+
+`splash` -> one-time legacy storage migration -> `GET /app-config?version=`
+(maintenance / forced update gates + `store`, cached) -> background
+`GET /store` (contact, features, app links, cached) -> **language page only if
+the user never chose a language and the store offers more than one** (choices =
+store `locales` the app translates; default = `default_locale`) -> onboarding
+(first launch) -> Home. Offline with a cached store: Home with a retry banner;
+offline and nothing cached: full-screen retry. Currency (`currencyLabelProvider`),
+locale and text direction (store `rtl` flag) all come from the store info.
+
+### Upgrading from the multi-store builds
+
+Older builds saved a store slug and namespaced keys as `<key>:<slug>`. On the
+first launch of this build `migrateLegacyStorage()`
+(`lib/core/storage/legacy_storage_migration.dart`) moves the auth / affiliate /
+guest-cart tokens (secure storage), the chosen locale, the `/store` cache and
+recent searches to the plain keys and drops the slug, so customers stay signed
+in and keep their cart and language. It runs once (`storage_single_store_v1`).
+The backend still answers old builds (`X-Tenant` ignored, deprecated
+`/api/v1/tenants` alias) - see `../backend/docs/MOBILE_API.md` section 1.
 
 Package / bundle id: `com.alraf.shop`. Display name: `عالرف / 3alraf`.
 Contract with the backend: `../backend/docs/MOBILE_API.md` and
@@ -24,7 +47,7 @@ Android needs a JDK 17 and the Android SDK; iOS needs macOS + Xcode.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `API_BASE` | `https://3alraf.com` | Central host (no `/api/v1`). Local examples: `http://10.0.2.2:8000` (Android emulator), `http://192.168.x.x:8000`. `GET {API_BASE}/api/v1/tenants` and `/app-config` are called on it; per-store calls add `X-Tenant`. |
+| `API_BASE` | `https://3alraf.com` | The store host = backend `APP_URL` (no `/api/v1`). Local examples: `http://10.0.2.2:8000` (Android emulator), `http://192.168.x.x:8000`. Every call (`/app-config`, `/store`, catalog, auth...) goes to `{API_BASE}/api/v1`. |
 | `GOOGLE_SERVER_CLIENT_ID` | empty | OAuth **Web** client id. Empty hides Google sign-in. Must equal the backend `GOOGLE_CLIENT_ID` (or be listed in `GOOGLE_MOBILE_CLIENT_IDS`) because the ID token audience is checked by `POST /auth/google`. |
 | `ENV` | `prod` | Free-form label (`dev`, `staging`, `prod`). |
 
@@ -36,14 +59,14 @@ flutter run --dart-define=API_BASE=http://10.0.2.2:8000 --dart-define=ENV=dev
 
 Debug builds allow plain-http backends (`usesCleartextTraffic` is set only in
 `android/app/src/debug`). Release builds are https-only. For local backends
-seed at least one active tenant; with exactly one active tenant the app skips
-the country picker.
+fill Settings -> General (name, currency, locales) so `app-config.store` is
+complete.
 
 ## Quality gates
 
 ```bash
 flutter analyze        # must be clean
-flutter test           # 133 tests
+flutter test           # 128 tests
 dart format lib test
 ```
 
@@ -172,8 +195,9 @@ with `alias`, shared by the wildcard `*.3alraf.com` server block). Verify with
 ### iOS Universal Links
 
 `ios/Runner/Runner.entitlements` already lists the associated domains
-(`applinks:3alraf.com`, `egy.3alraf.com`, `sa.3alraf.com`; add every store
-host) but it is **not referenced by the Xcode project**, because associated
+(`applinks:3alraf.com`; `egy.3alraf.com` / `sa.3alraf.com` are legacy hosts
+of the old per-country stores, kept so already shared links still open the app
+- the server 301s them to the main host) but it is **not referenced by the Xcode project**, because associated
 domains cannot be signed with a free Apple team. To enable:
 
 1. Paid Apple Developer team selected for Runner; enable the *Associated
@@ -209,6 +233,6 @@ assets/             Cairo font, branding sources
 ```
 
 Rules of thumb: money is always a server string (never computed or stored as
-`double`), secrets live in secure storage namespaced per tenant slug
-(`SessionStorage`), and every user-visible string is an ARB key in `lib/l10n`
+`double`), secrets live in secure storage (`SessionStorage`: `auth_token`,
+`affiliate_token`, `cart_token`), and every user-visible string is an ARB key in `lib/l10n`
 (`ar` template, `en`).

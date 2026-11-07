@@ -34,7 +34,7 @@ abstract class BaseDataTable
         return $dt->rawColumns($this->rawColumns())->toJson();
     }
 
-    /** Standard edit/delete buttons html. $base = route prefix (e.g. central.languages). */
+    /** Standard edit/delete buttons html. $base = route prefix (e.g. admin.languages). */
     protected function actionButtons(string $editUrl, string $deleteUrl, bool $canEdit = true, bool $canDelete = true): string
     {
         $h = '<div class="flex items-center gap-2">';
@@ -55,10 +55,10 @@ abstract class BaseDataTable
             : '<span class="badge badge-muted">'.e($no ?? __('admin.inactive')).'</span>';
     }
 
-    /** Edit/delete buttons for tenant resource routes ({route}.edit / {route}.destroy, param = id) honoring tenant permissions. */
-    protected function tenantActions(\Illuminate\Database\Eloquent\Model $m, string $route, string $perm): string
+    /** Edit/delete buttons for admin resource routes ({route}.edit / {route}.destroy, param = id) honoring the permissions. */
+    protected function rowActions(\Illuminate\Database\Eloquent\Model $m, string $route, string $perm): string
     {
-        $u = auth('tenant')->user();
+        $u = auth('admin')->user();
 
         return $this->actionButtons(route("$route.edit", $m->getKey()), route("$route.destroy", $m->getKey()), (bool) $u?->can("$perm.edit"), (bool) $u?->can("$perm.delete"));
     }

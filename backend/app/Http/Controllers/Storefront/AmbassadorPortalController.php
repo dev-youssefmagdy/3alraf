@@ -7,7 +7,7 @@ use App\Http\Requests\Storefront\AmbassadorJoinRequest;
 use App\Http\Requests\Storefront\AmbassadorLinkRequest;
 use App\Models\Ambassador;
 use App\Models\AmbassadorIdea;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Models\TrackedLink;
 use App\Services\Growth\AmbassadorService;
 use App\Services\Growth\TrackedLinkService;
@@ -25,7 +25,7 @@ class AmbassadorPortalController extends Controller
         $ls = $amb ? TrackedLink::where('ambassador_id', $amb->id)->orderByDesc('id')->get()->each(fn ($l) => $l->short = $links->url($l)) : collect();
 
         return view('storefront.affiliate.ambassador', ['amb' => $amb, 'ideas' => AmbassadorIdea::orderByDesc('id')->get(), 'links' => $ls, 'channels' => AmbassadorService::CHANNELS,
-            'products' => TenantProduct::with('product')->where('is_active', true)->limit(100)->get(), 'report' => $amb ? $this->svc->report($amb, now()->subDays(29), now()) : null]);
+            'products' => Product::query()->where('is_active', true)->whereNotNull('price')->limit(100)->get(), 'report' => $amb ? $this->svc->report($amb, now()->subDays(29), now()) : null]);
     }
 
     public function join(AmbassadorJoinRequest $r): JsonResponse

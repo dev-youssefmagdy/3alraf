@@ -5,8 +5,8 @@ namespace App\Services\Stock;
 use App\Enums\StockMovementType;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +29,8 @@ class StockLedger
         }
 
         return DB::transaction(function () use ($branchId, $productId, $variantId, $type, $qty, $unitCost, $reference, $note, $userId) {
-            $tenantId = $this->tenantIdFor($branchId);
-            $level = $this->lockedLevel($branchId, $productId, $variantId, $tenantId);
+            $this->assertBranch($branchId);
+            $level = $this->lockedLevel($branchId, $productId, $variantId);
 
             $onHand = (int) $level->on_hand;
             $avg = (string) $level->avg_cost;
@@ -53,9 +53,8 @@ class StockLedger
             $movement = new StockMovement([
                 'branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId, 'type' => $type, 'quantity' => $signed,
                 'unit_cost' => Money::round($cost), 'balance_after' => $onHand + $signed, 'avg_cost_after' => $newAvg, 'note' => $note,
-                'created_by' => $userId ?? auth('tenant')->id(),
+                'created_by' => $userId ?? auth('admin')->id(),
             ]);
-            $movement->tenant_id = $tenantId;
             if ($reference) {
                 $movement->reference_type = $reference->getMorphClass();
                 $movement->reference_id = $reference->getKey();
@@ -63,7 +62,7 @@ class StockLedger
             $movement->save();
 
             if ($type === StockMovementType::PURCHASE_IN) {
-                $this->syncTenantCost($tenantId, $productId, $variantId);
+                $this->syncListingCost($productId, $variantId);
             }
 
             return $movement;
@@ -132,36 +131,33 @@ class StockLedger
      * Row-locked stock level. Missing first-ever rows are created with INSERT IGNORE (the unique key makes a concurrent
      * creator harmless) and then re-read FOR UPDATE, so two requests can never 500 on a duplicate insert.
      */
-    private function lockedLevel(int $branchId, int $productId, int $variantId, ?int $tenantId = null): StockLevel
+    private function lockedLevel(int $branchId, int $productId, int $variantId): StockLevel
     {
-        $tenantId ??= $this->tenantIdFor($branchId);
         $key = ['branch_id' => $branchId, 'product_id' => $productId, 'product_variant_id' => $variantId];
-        $find = fn () => StockLevel::withoutGlobalScopes()->where($key)->lockForUpdate()->first();
+        $find = fn () => StockLevel::query()->where($key)->lockForUpdate()->first();
 
         $level = $find();
         if (! $level) {
-            DB::table('stock_levels')->insertOrIgnore($key + ['tenant_id' => $tenantId, 'on_hand' => 0, 'reserved' => 0, 'avg_cost' => 0, 'created_at' => now(), 'updated_at' => now()]);
+            $this->assertBranch($branchId); // reserve()/release() too: an unknown branch must not reach the INSERT IGNORE (FK error swallowed)
+            DB::table('stock_levels')->insertOrIgnore($key + ['on_hand' => 0, 'reserved' => 0, 'avg_cost' => 0, 'created_at' => now(), 'updated_at' => now()]);
             $level = $find();
         }
 
         return $level;
     }
 
-    /** Branch trust: the branch must belong to the current tenant (when one is resolved); returns the branch's tenant id. */
-    private function tenantIdFor(int $branchId): int
+    /** The branch must exist. */
+    private function assertBranch(int $branchId): void
     {
-        $owner = \App\Models\Branch::withoutGlobalScopes()->whereKey($branchId)->value('tenant_id');
-        if ($owner === null || (current_tenant() && (int) $owner !== (int) current_tenant()->id)) {
-            throw new \InvalidArgumentException("Branch {$branchId} does not belong to the current tenant.");
+        if (! \App\Models\Branch::query()->whereKey($branchId)->exists()) {
+            throw new \InvalidArgumentException("Branch {$branchId} does not exist.");
         }
-
-        return (int) $owner;
     }
 
-    /** Tenant listing cost = Σ(on_hand×avg)/Σ on_hand over all branches (what orders snapshot as unit_cost). */
-    private function syncTenantCost(int $tenantId, int $productId, int $variantId): void
+    /** Product (or variant) cost = Σ(on_hand×avg)/Σ on_hand over all branches (what orders snapshot as unit_cost). */
+    private function syncListingCost(int $productId, int $variantId): void
     {
-        $rows = StockLevel::withoutGlobalScopes()->where(['tenant_id' => $tenantId, 'product_id' => $productId, 'product_variant_id' => $variantId])->where('on_hand', '>', 0)->get(['on_hand', 'avg_cost']);
+        $rows = StockLevel::query()->where(['product_id' => $productId, 'product_variant_id' => $variantId])->where('on_hand', '>', 0)->get(['on_hand', 'avg_cost']);
         $qty = $rows->sum('on_hand');
         if ($qty <= 0) {
             return;
@@ -169,21 +165,15 @@ class StockLedger
         $value = $rows->reduce(fn ($c, $r) => bcadd($c, bcmul((string) $r->on_hand, (string) $r->avg_cost, 8), 8), '0');
         $cost = Money::round(bcdiv($value, (string) $qty, 8));
 
-        $tp = TenantProduct::withoutGlobalScopes()->where(['tenant_id' => $tenantId, 'product_id' => $productId])->first();
-        if (! $tp) {
-            return;
-        }
         if ($variantId === 0) {
-            $tp->forceFill(['cost' => $cost])->save();
+            Product::query()->whereKey($productId)->first()?->forceFill(['cost' => $cost])->save();
         } else {
-            $v = TenantProductVariant::withoutGlobalScopes()->firstOrNew(['tenant_id' => $tenantId, 'tenant_product_id' => $tp->id, 'product_variant_id' => $variantId]);
-            $v->tenant_id = $tenantId;
-            $v->forceFill(['cost' => $cost])->save();
+            ProductVariant::query()->where('product_id', $productId)->whereKey($variantId)->first()?->forceFill(['cost' => $cost])->save();
         }
     }
 
     private function allowsBackorder(): bool
     {
-        return (bool) (current_tenant()?->settings['allow_backorder'] ?? false);
+        return (bool) setting('allow_backorder', false);
     }
 }

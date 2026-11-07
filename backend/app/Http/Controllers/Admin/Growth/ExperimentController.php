@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\DataTables\GrowthExperimentDataTable;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\GrowthExperimentRequest;
-use App\Http\Requests\Tenant\GrowthExperimentResultRequest;
+use App\Http\Requests\Admin\GrowthExperimentRequest;
+use App\Http\Requests\Admin\GrowthExperimentResultRequest;
 use App\Models\GrowthExperiment;
 use App\Services\Growth\ExperimentService;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +23,7 @@ class ExperimentController extends Controller implements HasMiddleware
 
     public function index(GrowthExperimentDataTable $table)
     {
-        return view('tenant.growth.experiments', ['table' => $table]);
+        return view('admin.growth.experiments', ['table' => $table]);
     }
 
     public function datatable(GrowthExperimentDataTable $table)
@@ -33,34 +33,34 @@ class ExperimentController extends Controller implements HasMiddleware
 
     public function show(int $id)
     {
-        return view('tenant.growth.experiment', ['exp' => $this->service->find($id)]);
+        return view('admin.growth.experiment', ['exp' => $this->service->find($id)]);
     }
 
     public function store(GrowthExperimentRequest $r): JsonResponse
     {
-        $e = $this->service->create($r->validated(), auth('tenant')->id());
+        $e = $this->service->create($r->validated(), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.experiments.show', $e->id));
+        return $this->ok(__('admin.saved'), route('admin.growth.experiments.show', $e->id));
     }
 
     public function update(GrowthExperimentRequest $r, int $id): JsonResponse
     {
-        $this->service->update($e = $this->service->find($id), $r->validated(), auth('tenant')->id());
+        $this->service->update($e = $this->service->find($id), $r->validated(), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.experiments.show', $e->id));
+        return $this->ok(__('admin.saved'), route('admin.growth.experiments.show', $e->id));
     }
 
     public function destroy(int $id): JsonResponse
     {
-        $this->service->delete($this->service->find($id), auth('tenant')->id());
+        $this->service->delete($this->service->find($id), auth('admin')->id());
 
-        return $this->ok(__('admin.deleted'), route('tenant.growth.experiments.index'));
+        return $this->ok(__('admin.deleted'), route('admin.growth.experiments.index'));
     }
 
     public function storeResult(GrowthExperimentResultRequest $r, int $id): JsonResponse
     {
-        $this->service->addResult($this->service->find($id), $r->validated(), 'admin', auth('tenant')->id());
+        $this->service->addResult($this->service->find($id), $r->validated(), 'admin', auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.experiments.show', $id));
+        return $this->ok(__('admin.saved'), route('admin.growth.experiments.show', $id));
     }
 }

@@ -142,8 +142,7 @@ class AmbassadorService
             $amount = $rows->reduce(fn ($c, $r) => \App\Support\Money::add($c, (string) $r->amount), '0');
             $n = AmbassadorReward::whereIn('id', $rows->pluck('id'))->update(['status' => 'paid', 'paid_at' => now()]);
             // ERP: the rewards are real money paid to the ambassador (Dr Marketing / Cr paying account), keyed by the payout run
-            $tenantId = (int) current_tenant()?->id;
-            \Illuminate\Support\Facades\DB::afterCommit(fn () => event(new \App\Events\Erp\AmbassadorRewardsPaid($tenantId, $affiliateId, $amount, $ref ?? 'r'.$rows->max('id'), $paidFrom ?? 'cash')));
+            \Illuminate\Support\Facades\DB::afterCommit(fn () => event(new \App\Events\Erp\AmbassadorRewardsPaid($affiliateId, $amount, $ref ?? 'r'.$rows->max('id'), $paidFrom ?? 'cash')));
 
             return $n;
         });

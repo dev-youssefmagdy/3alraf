@@ -30,7 +30,7 @@ class BranchDataTable extends BaseDataTable
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('city_label', fn (Branch $m) => e($m->city?->name ?? '—'))
             ->addColumn('status', fn (Branch $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (Branch $m) => $this->tenantActions($m, 'tenant.branches', 'branches'));
+            ->addColumn('actions', fn (Branch $m) => $this->rowActions($m, 'admin.branches', 'branches'));
     }
 
     protected function rawColumns(): array

@@ -1,5 +1,7 @@
 # ERP Module – Final QA/QC Sign-off (branch `ERP-MODULE`)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Role: lead QA/QC, final independent verification. Date: 2026-11-05. Inputs: `docs/qa/ERP_AUDIT_FINDINGS.md` (ERP-001…031), `docs/qa/QA_TEST_REPORT.md` (QA-001…015), `docs/ERP_PLAN.md` §12/§13, `docs/CALCULATIONS.md`, `docs/ERP_FINAL_REPORT.md`.
 The status columns were **not trusted**: every "Fixed" item was re-checked by reading the code and by a test that runs (an existing one or a new one in `tests/Feature/QaSignoffErpTest.php`).
 

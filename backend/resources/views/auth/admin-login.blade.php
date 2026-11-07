@@ -2,10 +2,10 @@
     <div class="grid min-h-screen place-items-center px-4">
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
-                <a href="{{ url('/') }}" class="inline-block" aria-label="{{ current_tenant()?->name ?? config('app.name') }}">
-                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ current_tenant()?->name ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
+                <a href="{{ url('/') }}" class="inline-block" aria-label="{{ setting('name') ?? config('app.name') }}">
+                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
                 </a>
-                <p class="text-sm text-slate-500">{{ __('admin.'.($guard === 'central' ? 'central_panel' : 'tenant_panel')) }}</p>
+                <p class="text-sm text-slate-500">{{ __('admin.admin_panel') }}</p>
             </div>
             <x-card>
                 <form data-ajax-form data-validate-url="{{ $validateUrl }}" action="{{ $action }}" method="POST" class="space-y-4" novalidate>

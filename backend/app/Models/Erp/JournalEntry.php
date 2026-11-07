@@ -3,14 +3,12 @@
 namespace App\Models\Erp;
 
 use App\Models\Branch;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
 /** Posted/reversed entries are immutable: corrections are reversal + replacement (JournalService). */
 class JournalEntry extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'erp_journal_entries';
 

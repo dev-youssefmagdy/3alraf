@@ -12,13 +12,13 @@ class InvoicePdf
     public function render(Order $order): \Barryvdh\DomPDF\PDF
     {
         $order->loadMissing(['items', 'city', 'paymentMethod']);
-        $rtl = (bool) current_tenant()?->isRtl(app()->getLocale());
+        $rtl = locale_is_rtl();
         $shaper = $rtl ? new Arabic : null;
         // Western digits, no 50-char wrapping; mixed Latin/Arabic strings are handled by the shaper.
         $t = fn (?string $s) => ($shaper && $s !== null && $s !== '') ? $shaper->utf8Glyphs($s, 5000, false) : (string) $s;
 
         return Pdf::setOption(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true])
-            ->loadView('tenant.orders.invoice-pdf', ['order' => $order, 'rtl' => $rtl, 't' => $t, 'tenant' => current_tenant()])
+            ->loadView('admin.orders.invoice-pdf', ['order' => $order, 'rtl' => $rtl, 't' => $t])
             ->setPaper('a4');
     }
 

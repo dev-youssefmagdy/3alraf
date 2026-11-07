@@ -14,9 +14,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockLevel;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Services\Orders\CarrierSettlementService;
 use App\Services\Orders\OrderPlacementService;
@@ -29,12 +27,11 @@ use Illuminate\Validation\ValidationException;
 /** Regression tests for the money defects fixed 2026-10-25 (docs/CALCULATIONS.md). */
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = codUpfront(Tenant::where('slug', 'egy')->first(), false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->t = '/admin';
     $this->branch = Branch::first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'P'], 'slug' => 'md', 'sku' => 'MD']);
-    $this->tp = TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    $this->tp = listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record($this->branch->id, $this->product->id, 0, T::PURCHASE_IN, 50, '60.00');
     $this->company = ShippingCompany::first();
     $this->place = fn (array $lines) => app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '01000000100', cityId: City::first()->id, address: 'St',
@@ -47,8 +44,8 @@ beforeEach(function () {
 
         return $o->refresh();
     };
-    $this->filter = fn (?int $branchId = null) => new ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), false, [$this->tenant->id], $branchId);
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->filter = fn (?int $branchId = null) => new ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), $branchId);
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 it('does not subtract the returns of a fully-returned order a second time in the net profit report', function () {
@@ -97,8 +94,7 @@ it('shares a product-wide flash item across cart lines: total flash units never 
 });
 
 it('excludes VAT of tax-inclusive orders from order profit and report revenue', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => 14, 'prices_include_tax' => true])]);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    settings(['tax_rate' => 14, 'prices_include_tax' => true]);
     $this->tp->update(['price' => 114, 'cost' => 50]);
     $o = ($this->place)([($this->line)(1)]);
     expect((string) $o->tax)->toBe('14.00')->and($o->taxIncluded())->toBeTrue();
@@ -109,13 +105,13 @@ it('excludes VAT of tax-inclusive orders from order profit and report revenue', 
     expect(app(ReportRepositoryInterface::class)->netProfit(($this->filter)())['revenue'])->toBe('100.00');
 });
 
-it('uses confirmed-order net_profit in the branches and tenant breakdowns, and respects the branch on carrier settlement', function () {
+it('uses confirmed-order net_profit in the branches breakdown, and respects the branch on carrier settlement', function () {
     $o = ($this->place)([($this->line)(1)]);
     app(OrderStatusService::class)->change($o, S::CONFIRMED);   // confirmed, not delivered
     $profit = (string) $o->refresh()->net_profit;
     expect((float) $profit)->toBeGreaterThan(0);
     $repo = app(ReportRepositoryInterface::class);
-    expect($repo->branches(($this->filter)())[0]['profit'])->toBe($profit)->and($repo->tenantBreakdown(($this->filter)())[0]['profit'])->toBe($profit);
+    expect($repo->branches(($this->filter)())[0]['profit'])->toBe($profit);
 
     $o->forceFill(['status' => S::DELIVERED, 'delivered_at' => now()])->save();
     $other = Branch::create(['name' => ['ar' => 'فرع 2'], 'is_active' => true, 'is_default' => false]);

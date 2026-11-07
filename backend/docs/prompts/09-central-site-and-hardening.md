@@ -1,3 +1,5 @@
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Working dir: /var/www/3alraf/backend (Laravel 13, MySQL). Read CLAUDE.md, docs/REQUIREMENTS.md (§9 decisions), docs/PROGRESS.md and docs/GAP_ANALYSIS.md first, and docs/CALCULATIONS.md if touching money/stock/reports. Follow the layering/stack conventions strictly (Controller → FormRequest → DTO → Service → Repository → Model, enums, Blade components, tenant_id isolation). Do only this sprint. Write tests; run `vendor/bin/pest` and `php artisan route:list`. Be token-efficient. At the end append <=15 lines to docs/PROGRESS.md and reply with a <=8 line summary.
 
 SPRINT 1 Central site + launch blockers:

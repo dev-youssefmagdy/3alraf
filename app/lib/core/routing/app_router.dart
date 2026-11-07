@@ -34,10 +34,8 @@ import '../../features/catalog/presentation/search_page.dart';
 import '../../features/wishlist/presentation/wishlist_page.dart';
 import '../../features/shell/presentation/shell_scaffold.dart';
 import '../../features/splash/presentation/splash_page.dart';
-import '../../features/tenant/application/startup_controller.dart';
-import '../../features/tenant/application/tenant_controller.dart';
-import '../../features/tenant/presentation/country_selection_page.dart';
-import '../../features/tenant/presentation/gate_pages.dart';
+import '../../features/startup/application/startup_controller.dart';
+import '../../features/startup/presentation/gate_pages.dart';
 import '../network/network_providers.dart';
 import 'app_routes.dart';
 import 'link_router.dart';
@@ -62,26 +60,23 @@ final pendingLinkProvider = Provider<PendingLink>((ref) => PendingLink());
 ///
 /// * `/` (splash) always renders: it runs the startup orchestration.
 /// * Before startup finished every other route bounces to the splash.
-/// * Without a tenant only the pre-tenant routes are reachable.
 /// * Protected routes need a session -> `/login?from=<route>`.
 String? computeRedirect({
   required Uri uri,
   required bool startupReady,
-  required bool hasTenant,
   required bool signedIn,
 }) {
   final location = uri.path;
   if (location == AppRoutes.splash) return null;
   if (!startupReady) return AppRoutes.splash;
-  if (AppRoutes.preTenant.contains(location)) return null;
-  if (!hasTenant) return AppRoutes.selectCountry;
+  if (AppRoutes.startupRoutes.contains(location)) return null;
   if (!signedIn && AppRoutes.isProtected(location)) {
     return AppRoutes.loginWithReturn(uri.toString());
   }
   return null;
 }
 
-/// Re-runs the redirect when tenant / session / startup state changes.
+/// Re-runs the redirect when session / startup state changes.
 class _RouterRefresh extends ChangeNotifier {
   void ping() => notifyListeners();
 }
@@ -89,7 +84,6 @@ class _RouterRefresh extends ChangeNotifier {
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh();
   ref.onDispose(refresh.dispose);
-  ref.listen(tenantSlugProvider, (_, _) => refresh.ping());
   ref.listen(
     authControllerProvider.select((s) => s.signedIn),
     (_, _) => refresh.ping(),
@@ -107,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ref.read(authControllerProvider.notifier).sessionExpired();
     final current = router.routerDelegate.currentConfiguration.uri;
     final path = current.path;
-    if (AppRoutes.preTenant.contains(path) ||
+    if (AppRoutes.startupRoutes.contains(path) ||
         AppRoutes.guestOnly.contains(path)) {
       return;
     }
@@ -121,12 +115,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final ready = ref.read(startupControllerProvider).isReady;
-      // Deep links (https://{slug}.3alraf.com/{ar|en}/...) map to app routes.
+      // Deep links (https://3alraf.com/{ar|en}/...) map to app routes.
       final rewritten = rewriteIncomingLocation(state.uri);
       final target = computeRedirect(
         uri: rewritten == null ? state.uri : Uri.parse(rewritten),
         startupReady: ready,
-        hasTenant: ref.read(tenantSlugProvider) != null,
         signedIn: ref.read(authControllerProvider).signedIn,
       );
       if (!ready && state.uri.path != AppRoutes.splash) {
@@ -137,8 +130,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashPage()),
       GoRoute(
-        path: AppRoutes.selectCountry,
-        builder: (_, _) => const CountrySelectionPage(),
+        path: AppRoutes.chooseLanguage,
+        builder: (_, _) => const LanguageSelectionPage(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,

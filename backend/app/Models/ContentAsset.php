@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ContentAsset extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'content_assets';
 

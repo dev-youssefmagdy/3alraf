@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\ProductListData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\ProductListRequest;
-use App\Models\TenantProduct;
+use App\Http\Requests\Admin\ProductListRequest;
+use App\Models\Product;
 use App\Services\Lists\ProductListService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -23,9 +23,9 @@ class ProductListController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.product-lists.index', [
+        return view('admin.product-lists.index', [
             'lists' => $this->service->overview(),
-            'options' => TenantProduct::query()->where('is_active', true)->with('product')->get()->mapWithKeys(fn ($tp) => [$tp->product_id => $tp->product?->name])->filter()->all(),
+            'options' => Product::query()->where('is_active', true)->get()->mapWithKeys(fn ($p) => [$p->id => $p->name])->filter()->all(),
         ]);
     }
 

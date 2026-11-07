@@ -33,7 +33,7 @@ class GrowthExperimentDataTable extends BaseDataTable
             ->addColumn('status_label', fn (GrowthExperiment $e) => '<span class="badge badge-muted">'.e(__('growth_hub.experiments.statuses.'.$e->status)).'</span>')
             ->addColumn('outcome_label', fn (GrowthExperiment $e) => $e->outcome ? e(__('growth_hub.experiments.outcomes.'.$e->outcome)) : '—')
             ->editColumn('starts_on', fn (GrowthExperiment $e) => $e->starts_on?->format('Y-m-d') ?? '—')
-            ->addColumn('actions', fn (GrowthExperiment $e) => '<a href="'.e(route('tenant.growth.experiments.show', $e->id)).'" class="btn-sm btn-secondary">'.e(__('growth_hub.experiments.open')).'</a>');
+            ->addColumn('actions', fn (GrowthExperiment $e) => '<a href="'.e(route('admin.growth.experiments.show', $e->id)).'" class="btn-sm btn-secondary">'.e(__('growth_hub.experiments.open')).'</a>');
     }
 
     protected function rawColumns(): array

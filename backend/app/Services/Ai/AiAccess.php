@@ -3,49 +3,47 @@
 namespace App\Services\Ai;
 
 use App\Models\AiModel;
-use App\Models\AiTenantSetting;
-use App\Models\Tenant;
+use App\Models\AiSetting;
 
-/** Who may use AI: tenant switch + feature toggle + allowed models. Cached per request/tenant. */
+/** Who may use AI: master switch + feature toggle + allowed models (one `ai_settings` row). Cached per request. */
 class AiAccess
 {
-    private array $cache = [];
+    private bool $loaded = false;
 
-    public function settings(?Tenant $tenant = null): ?AiTenantSetting
+    private ?AiSetting $row = null;
+
+    public function settings(): ?AiSetting
     {
-        $tenant ??= current_tenant();
-        if (! $tenant) {
-            return null;
+        if (! $this->loaded) {
+            $this->row = AiSetting::query()->first();
+            $this->loaded = true;
         }
 
-        if (! array_key_exists($tenant->id, $this->cache)) {
-            $this->cache[$tenant->id] = AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $tenant->id)->first();
-        }
-
-        return $this->cache[$tenant->id];
+        return $this->row;
     }
 
     public function forget(): void
     {
-        $this->cache = [];
+        $this->loaded = false;
+        $this->row = null;
     }
 
-    public function enabled(?Tenant $t = null): bool
+    public function enabled(): bool
     {
-        return (bool) $this->settings($t)?->ai_enabled;
+        return (bool) $this->settings()?->ai_enabled;
     }
 
-    public function feature(string $feature, ?Tenant $t = null): bool
+    public function feature(string $feature): bool
     {
-        return (bool) $this->settings($t)?->featureOn($feature);
+        return (bool) $this->settings()?->featureOn($feature);
     }
 
-    /** Active models of a kind the tenant may use. */
-    public function modelsFor(?Tenant $t = null, string $kind = 'text')
+    /** Active models of a kind the shop may use (allowed list of the AI settings; null = all). */
+    public function modelsFor(string $kind = 'text')
     {
-        $s = $this->settings($t);
+        $s = $this->settings();
         $q = AiModel::active()->with('provider')->where('kind', $kind)->orderBy('ai_provider_id')->orderBy('label');
-        if ($s?->allowed_model_ids !== null && $s) {
+        if ($s && $s->allowed_model_ids !== null) {
             $q->whereIn('id', $s->allowed_model_ids);
         }
 

@@ -79,7 +79,7 @@ class SmallBatchService
         if ($t->preorder && empty($d['preorder_accepted'])) {
             throw ValidationException::withMessages(['preorder_accepted' => __('growth_hub.batch.accept_terms')]);
         }
-        $hash = sha1($t->tenant_id.'|'.$t->id.'|'.mb_strtolower(trim($d['contact'])));
+        $hash = sha1($t->id.'|'.mb_strtolower(trim($d['contact'])));
         if ($ex = SmallBatchSignup::where('small_batch_test_id', $t->id)->where('contact_hash', $hash)->first()) {
             return [$ex, false];
         }

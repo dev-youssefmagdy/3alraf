@@ -116,7 +116,7 @@ class ReturnService
             if ($order->items->every(fn ($i) => $i->returned_qty >= $i->quantity)) {
                 $from = $order->status;
                 $order->update(['status' => OrderStatus::RETURNED, 'affiliate_commission' => 0]);
-                $order->histories()->create(['from_status' => $from->value, 'to_status' => OrderStatus::RETURNED->value, 'note' => $ret->number, 'user_id' => auth('tenant')->id()]);
+                $order->histories()->create(['from_status' => $from->value, 'to_status' => OrderStatus::RETURNED->value, 'note' => $ret->number, 'user_id' => auth('admin')->id()]);
                 DB::afterCommit(fn () => event(new OrderStatusChanged($order, $from, OrderStatus::RETURNED)));
             } else {
                 // partial return: recomputed from the CUMULATIVE returned value (CALCULATIONS.md §Affiliate commission)

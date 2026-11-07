@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use App\Enums\AdjustmentReason;
 use App\Enums\AdjustmentType;
-use App\Http\Requests\Tenant\StockAdjustmentRequest;
+use App\Http\Requests\Admin\StockAdjustmentRequest;
 
 final readonly class StockAdjustmentData
 {

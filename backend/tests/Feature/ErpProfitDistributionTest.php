@@ -7,8 +7,7 @@ use App\Models\Erp\JournalEntry;
 use App\Models\Erp\Owner;
 use App\Models\Erp\Period;
 use App\Models\Erp\ProfitDistribution;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Accounting\PeriodService;
@@ -23,15 +22,13 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(CoaTemplate::class)->seed($this->tenant);
+    app(CoaTemplate::class)->seed();
     $this->je = app(JournalService::class);
     $this->profit = app(ProfitService::class);
     $this->dist = app(ProfitDistributionService::class);
     $this->settings = app(ErpSettings::class);
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($this->owner, 'tenant');
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->owner, 'admin');
     $this->today = now()->toDateString();
     $this->from = now()->startOfMonth()->toDateString();
     $this->bal = fn (string $role) => (string) Account::where('role_key', $role)->value('current_balance');
@@ -51,9 +48,9 @@ beforeEach(function () {
         return $this->dist->post($d, $this->owner->id);
     };
     $this->second = function () {
-        $a = new TenantAdmin(['tenant_id' => $this->tenant->id, 'name' => 'Second', 'phone' => '20100000999', 'password' => 'secret123', 'is_active' => true]);
+        $a = new Admin(['name' => 'Second', 'phone' => '20100000999', 'password' => 'secret123', 'is_active' => true]);
         $a->save();
-        $a->assignRole(\Spatie\Permission\Models\Role::where(['name' => 'tenant-owner', 'guard_name' => 'tenant'])->first());
+        $a->assignRole(\Spatie\Permission\Models\Role::where(['name' => 'owner', 'guard_name' => 'admin'])->first());
 
         return $a;
     };
@@ -138,7 +135,7 @@ it('blocks duplicate and overlapping distributions and frees the period on cance
     expect(fn () => ($this->run)())->toThrow(AccountingException::class);
     expect(fn () => ($this->run)(['from' => $this->today]))->toThrow(AccountingException::class); // overlapping sub-period
     // the DB constraint is the last line of defence
-    expect(fn () => DB::table('erp_profit_distributions')->insert(['tenant_id' => $this->tenant->id, 'period_start' => $this->from, 'period_end' => $this->today, 'active_key' => $d->active_key]))->toThrow(\Illuminate\Database\QueryException::class);
+    expect(fn () => DB::table('erp_profit_distributions')->insert(['period_start' => $this->from, 'period_end' => $this->today, 'active_key' => $d->active_key]))->toThrow(\Illuminate\Database\QueryException::class);
     $d = ($this->full)($d);
     expect(fn () => ($this->run)())->toThrow(AccountingException::class);
     $this->dist->cancel($d, $this->owner->id, 'oops'); // posted -> reversal
@@ -204,7 +201,7 @@ it('blocks distribution on draft journals, an unbalanced ledger and an unacknowl
     $draft = $this->je->draft(['entry_date' => $this->today], [['account' => 'rent', 'debit' => '5'], ['account' => 'bank', 'credit' => '5']]);
     expect(fn () => ($this->run)())->toThrow(AccountingException::class);
     $this->je->deleteDraft($draft);
-    DB::table('erp_journal_lines')->insert(['tenant_id' => $this->tenant->id, 'entry_id' => $e->id, 'account_id' => Account::where('role_key', 'rent')->value('id'), 'debit' => 7, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()]);
+    DB::table('erp_journal_lines')->insert(['entry_id' => $e->id, 'account_id' => Account::where('role_key', 'rent')->value('id'), 'debit' => 7, 'credit' => 0, 'created_at' => now(), 'updated_at' => now()]);
     expect(app(LedgerReports::class)->trialBalance()['balanced'])->toBeFalse();
     expect(fn () => ($this->run)())->toThrow(AccountingException::class);
     expect(ProfitDistribution::count())->toBe(0);
@@ -271,8 +268,8 @@ it('distributes the profit of a closed year without moving it twice', function (
     expect(fn () => app(PeriodService::class)->reopenYear(FiscalYear::where('starts_on', "$y-01-01")->first(), $this->owner->id, 'r'))->toThrow(AccountingException::class);
 });
 
-it('serves the pages, enforces permissions and tenant isolation', function () {
-    $base = 'http://egy.3alraf.test/admin/erp';
+it('serves the pages, enforces permissions and 404s unknown ids', function () {
+    $base = '/admin/erp';
     ($this->owners)(['A' => 100]);
     ($this->tx)('bank', 'sales_revenue', '100');
     $d = ($this->full)(($this->run)());
@@ -280,27 +277,24 @@ it('serves the pages, enforces permissions and tenant isolation', function () {
     foreach (['profits', "profits/{$d->id}", 'profits/report', "profits/owner/{$o->id}/statement", 'settings', 'periods', "owners/{$o->id}", ''] as $u) {
         $this->get("$base/$u")->assertOk();
     }
-    $this->get($base)->assertSee(route('tenant.erp.profits.index'))->assertSee(route('tenant.erp.settings.edit'));
+    $this->get($base)->assertSee(route('admin.erp.profits.index'))->assertSee(route('admin.erp.settings.edit'));
     $this->put("$base/settings", ['reserve_percent' => 5, 'distribution_min_cash_buffer' => 10, 'tax_rate' => 0, 'distribution_requires_second_approver' => 1])->assertRedirect();
     expect($this->settings->get('reserve_percent'))->toBe('5')->and($this->settings->bool('distribution_requires_second_approver'))->toBeTrue();
     $this->post("$base/profits/{$d->id}/lines/{$d->lines->first()->id}/pay", ['account' => 'bank'])->assertRedirect();
     expect($d->lines->first()->fresh()->paid)->toBeTrue();
 
-    $other = Tenant::create(['slug' => 'oth', 'name' => 'O', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'E', 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'UTC', 'is_active' => true]);
-    $fo = Owner::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => 'FO', 'ownership_percent' => 10]);
-    $fd = ProfitDistribution::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'period_start' => '2025-01-01', 'period_end' => '2025-01-31', 'status' => 'draft']);
-    $this->get("$base/profits/{$fd->id}")->assertNotFound();
-    $this->post("$base/profits/{$fd->id}/approve")->assertNotFound();
-    $this->post("$base/profits/{$fd->id}/cancel")->assertNotFound();
-    $this->get("$base/profits/owner/{$fo->id}/statement")->assertNotFound();
-    expect($fd->fresh()->status)->toBe('draft');
+    // unknown ids are 404
+    $this->get("$base/profits/999999")->assertNotFound();
+    $this->post("$base/profits/999999/approve")->assertNotFound();
+    $this->post("$base/profits/999999/cancel")->assertNotFound();
+    $this->get("$base/profits/owner/999999/statement")->assertNotFound();
 
     foreach (['erp.profits.distribute', 'erp.settings.manage'] as $p) {
         $this->owner->roles->each->revokePermissionTo($p);
     }
     app(PermissionRegistrar::class)->forgetCachedPermissions();
     $this->owner->unsetRelation('permissions')->unsetRelation('roles');
-    $this->actingAs($this->owner->fresh(), 'tenant');
+    $this->actingAs($this->owner->fresh(), 'admin');
     $this->get("$base/profits")->assertOk(); // view stays
     $this->post("$base/profits", ['from' => $this->from, 'to' => $this->today])->assertForbidden();
     $this->post("$base/profits/{$d->id}/approve")->assertForbidden();
@@ -309,6 +303,6 @@ it('serves the pages, enforces permissions and tenant isolation', function () {
     $this->put("$base/settings", ['reserve_percent' => 1, 'distribution_min_cash_buffer' => 0, 'tax_rate' => 0])->assertForbidden();
     $this->owner->roles->each->revokePermissionTo('erp.profits.view');
     app(PermissionRegistrar::class)->forgetCachedPermissions();
-    $this->actingAs($this->owner->fresh(), 'tenant');
+    $this->actingAs($this->owner->fresh(), 'admin');
     $this->get("$base/profits")->assertForbidden();
 });

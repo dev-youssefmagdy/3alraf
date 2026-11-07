@@ -21,9 +21,7 @@ use App\Models\Product;
 use App\Models\ProductListItem;
 use App\Models\Review;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Affiliates\AffiliateCommissionService;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\BarcodeService;
@@ -38,18 +36,16 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->t = '/admin';
+    $this->s = '/ar';
     $this->branch = Branch::first();
     $this->city = City::first();
     $this->company = ShippingCompany::first();
     $this->cod = PaymentMethod::where('type', 'cod')->first();
     $this->mk = function (string $slug, $price = 100) {
         $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => 60, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'cost' => 60, 'is_active' => true]);
         app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 100, '60.00');
 
         return $p;
@@ -171,7 +167,7 @@ it('registers affiliates as pending, blocks login until approved, and shows dash
     $this->postJson("{$this->s}/affiliate/login", ['email' => 'new@egy.test', 'password' => 'secret123'])->assertOk();
 
     $this->get("{$this->s}/affiliate")->assertOk()->assertSee(__('growth.dashboard'));
-    $link = "http://egy.3alraf.test/ar/product/p1?utm_source=affiliate&aff={$new->uuid}";
+    $link = "/ar/product/p1?utm_source=affiliate&aff={$new->uuid}";
     $this->get("{$this->s}/affiliate/products")->assertOk()->assertSee(e($link), false)->assertSee($this->product->barcode)->assertSee('/qr/products/p', false);
     $this->get("{$this->s}/affiliate/qr/p1")->assertOk()->assertHeader('Content-Type', 'image/png');
     $this->post("{$this->s}/affiliate/logout")->assertRedirect();
@@ -190,9 +186,9 @@ it('resolves lists: pinned first in order, algorithmic fill, de-duplicated, limi
         ($this->deliver)(($this->place)($q, null, $p));
     }
     ($this->place)(50, null, $d);   // pending order must not count
-    TenantProduct::where('product_id', $hidden->id)->update(['is_active' => false]);
+    Product::whereKey($hidden->id)->update(['is_active' => false]);
 
-    $ids = fn ($col) => $col->pluck('product_id')->all();
+    $ids = fn ($col) => $col->pluck('id')->all(); // the resolver returns Products (listing merged into products)
     expect($ids($r->resolve(L::MOST_SOLD, 3)))->toBe([$c->id, $b->id, $this->product->id]);
 
     // pin d then p1 (admin order wins), rest filled by algorithm without duplicates
@@ -201,7 +197,7 @@ it('resolves lists: pinned first in order, algorithmic fill, de-duplicated, limi
     ProductListItem::create(['list_type' => 'most_sold', 'product_id' => $hidden->id, 'sort_order' => 2]);   // inactive pin is skipped
     expect($ids($r->resolve(L::MOST_SOLD, 4)))->toBe([$d->id, $this->product->id, $c->id, $b->id])
         ->and($ids($r->resolve(L::MOST_SOLD, 2)))->toBe([$d->id, $this->product->id])
-        ->and($r->resolve(L::MOST_SOLD, 10)->pluck('product_id')->unique()->count())->toBe($r->resolve(L::MOST_SOLD, 10)->count());
+        ->and($r->resolve(L::MOST_SOLD, 10)->pluck('id')->unique()->count())->toBe($r->resolve(L::MOST_SOLD, 10)->count());
 
     // most reviewed: approved reviews only (count, then average)
     $cust = Customer::first() ?? Customer::create(['name' => 'C', 'email' => 'c@x.test', 'password' => 'password', 'is_active' => true]);
@@ -222,14 +218,14 @@ it('resolves lists: pinned first in order, algorithmic fill, de-duplicated, limi
 
 it('admin pins lists through the UI endpoints and respects the limit setting', function () {
     $b = ($this->mk)('p2');
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("{$this->t}/product-lists")->assertOk();
     $this->putJson("{$this->t}/product-lists/most_sold", ['limit' => 0, 'product_ids' => [$b->id]])->assertStatus(422)->assertJsonValidationErrors(['limit']);
     $this->postJson("{$this->t}/product-lists/most_sold/validate", ['limit' => 1, 'product_ids' => [999999]])->assertStatus(422);
     $this->putJson("{$this->t}/product-lists/most_sold", ['limit' => 1, 'product_ids' => [$b->id, $this->product->id]])->assertOk();
     expect(ProductListItem::where('list_type', 'most_sold')->orderBy('sort_order')->pluck('product_id')->all())->toBe([$b->id, $this->product->id])
         ->and(app(ProductListResolver::class)->limitFor(L::MOST_SOLD))->toBe(1)
-        ->and(app(ProductListResolver::class)->resolve(L::MOST_SOLD)->pluck('product_id')->all())->toBe([$b->id]);
+        ->and(app(ProductListResolver::class)->resolve(L::MOST_SOLD)->pluck('id')->all())->toBe([$b->id]);
     $this->putJson("{$this->t}/product-lists/bogus", ['limit' => 3])->assertNotFound();
 });
 
@@ -245,7 +241,7 @@ it('lets only buyers review, moderates reviews, and manages wishlist', function 
     $this->get("{$this->s}/product/p1")->assertOk()->assertDontSee('Buyer</strong>', false);
 
     $rev = Review::first();
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("{$this->t}/reviews")->assertOk();
     $this->getJson("{$this->t}/reviews/datatable?draw=1&start=0&length=10&status=pending")->assertOk()->assertJsonPath('recordsFiltered', 1);
     $this->postJson("{$this->t}/reviews/{$rev->id}/approve")->assertOk();
@@ -261,7 +257,7 @@ it('lets only buyers review, moderates reviews, and manages wishlist', function 
 it('serves custom pages at /{slug} with pinned products first, filters and reserved slug rules', function () {
     $b = ($this->mk)('p2', 500);
     $c = ($this->mk)('p3', 50);
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $base = ['title' => ['ar' => 'صفحة', 'en' => 'Page'], 'is_active' => 1];
     foreach (['admin', 'cart', 'ar', 'xyz'] as $bad) {   // reserved / locale-like
         $this->postJson("{$this->t}/custom-pages/validate", ['slug' => $bad] + $base)->assertStatus(422)->assertJsonValidationErrors(['slug']);
@@ -269,25 +265,25 @@ it('serves custom pages at /{slug} with pinned products first, filters and reser
     $this->postJson("{$this->t}/custom-pages/validate", ['slug' => 'Bad Slug'] + $base)->assertStatus(422);
     expect(ReservedSlugs::isReserved('webhooks'))->toBeTrue();
     $this->postJson("{$this->t}/custom-pages", ['slug' => 'cheap-stuff', 'filters' => ['price_max' => 120, 'sort' => 'price_asc'], 'product_ids' => [$b->id]] + $base)->assertOk();
-    $this->postJson("{$this->t}/custom-pages", ['slug' => 'cheap-stuff'] + $base)->assertStatus(422)->assertJsonValidationErrors(['slug']);   // unique per tenant
+    $this->postJson("{$this->t}/custom-pages", ['slug' => 'cheap-stuff'] + $base)->assertStatus(422)->assertJsonValidationErrors(['slug']);   // unique slug
     $this->get("{$this->t}/custom-pages")->assertOk();
     $this->get("{$this->t}/custom-pages/create")->assertOk();
 
-    auth('tenant')->logout();
-    $html = $this->get('http://egy.3alraf.test/cheap-stuff')->assertOk()->assertSee('صفحة')->getContent();
+    auth('admin')->logout();
+    $html = $this->get('/cheap-stuff')->assertOk()->assertSee('صفحة')->getContent();
     // pinned p2 (500) first although outside the price filter, then <=120 sorted by price: p3 (50), p1 (100)
     $pos = fn ($slug) => strpos($html, "/product/$slug");
     expect($pos('p2'))->toBeInt()->toBeLessThan($pos('p3'))->and($pos('p3'))->toBeLessThan($pos('p1'));
-    $this->get('http://egy.3alraf.test/cheap-stuff?price_max=60')->assertOk()->assertSee('/product/p3', false)->assertDontSee('/product/p1"', false);
-    $this->get('http://egy.3alraf.test/nope-nope')->assertNotFound();
-    $this->get('http://egy.3alraf.test/offers')->assertOk();      // seeded page (flash sale filter)
-    $this->get('http://egy.3alraf.test/ar')->assertOk();          // static routes still win
+    $this->get('/cheap-stuff?price_max=60')->assertOk()->assertSee('/product/p3', false)->assertDontSee('/product/p1"', false);
+    $this->get('/nope-nope')->assertNotFound();
+    $this->get('/offers')->assertOk();      // seeded page (flash sale filter)
+    $this->get('/ar')->assertOk();          // static routes still win
     CustomPage::where('slug', 'cheap-stuff')->update(['is_active' => false]);
-    $this->get('http://egy.3alraf.test/cheap-stuff')->assertNotFound();
+    $this->get('/cheap-stuff')->assertNotFound();
 });
 
-it('manages static pages, tiers, affiliates and payouts from the tenant admin', function () {
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+it('manages static pages, tiers, affiliates and payouts from the admin panel', function () {
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->postJson("{$this->t}/static-pages", ['slug' => 'faq', 'title' => ['ar' => 'أسئلة', 'en' => 'FAQ'], 'content' => ['ar' => 'نص', 'en' => 'Body text'], 'is_active' => 1])->assertOk();
     $this->get("{$this->t}/static-pages")->assertOk();
     $this->get("{$this->s}/page/faq")->assertOk()->assertSee('أسئلة')->assertSee('نص');

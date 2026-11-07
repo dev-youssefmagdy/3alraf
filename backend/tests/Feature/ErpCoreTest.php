@@ -4,8 +4,7 @@ use App\Exceptions\AccountingException;
 use App\Models\Erp\Account;
 use App\Models\Erp\JournalEntry;
 use App\Models\Erp\Period;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Accounting\PeriodService;
@@ -14,11 +13,9 @@ use Database\Seeders\FoundationSeeder;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(CoaTemplate::class)->seed($this->tenant);
+    app(CoaTemplate::class)->seed();
     $this->svc = app(JournalService::class);
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
     $this->sale = fn (array $o = []) => $this->svc->post(array_merge(['entry_date' => now()->toDateString(), 'description' => 't'], $o), [
         ['account' => 'cash', 'debit' => '100'], ['account' => 'sales_revenue', 'credit' => '100'],
     ]);
@@ -85,19 +82,17 @@ it('keeps the ledger reports reconciled', function () {
     expect($gl['closing'])->toBe('600.0000');
 });
 
-it('serves the hub with cards and enforces permissions and tenant isolation', function () {
-    $this->actingAs($this->owner, 'tenant');
-    $t = 'http://egy.3alraf.test/admin';
-    $this->get("$t/erp")->assertOk()->assertSee(route('tenant.erp.accounts.index'));
+it('serves the hub with cards and enforces permissions and refuses unknown accounts', function () {
+    $this->actingAs($this->owner, 'admin');
+    $t = '/admin';
+    $this->get("$t/erp")->assertOk()->assertSee(route('admin.erp.accounts.index'));
     $this->get("$t/erp/accounts")->assertOk();
     $this->get("$t/erp/reports/trial-balance")->assertOk();
     $this->post("$t/erp/journals", ['entry_date' => now()->toDateString(), 'description' => 'm', 'type' => 'manual', 'post_now' => 1, 'lines' => [
         ['account_id' => Account::where('role_key', 'cash')->value('id'), 'debit' => 10], ['account_id' => Account::where('role_key', 'owner_capital')->value('id'), 'credit' => 10]]])->assertRedirect();
     expect(JournalEntry::first()->status)->toBe('posted');
-    // another tenant's account id is invisible
-    $other = Tenant::create(['slug' => 'oth', 'name' => 'O', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'E', 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'UTC', 'is_active' => true]);
-    app(CoaTemplate::class)->seed($other);
-    $foreign = Account::withoutGlobalScopes()->where('tenant_id', $other->id)->where('role_key', 'cash')->value('id');
+    // an unknown account id is refused
+    $foreign = 999999;
     $this->post("$t/erp/journals", ['entry_date' => now()->toDateString(), 'description' => 'm', 'type' => 'manual', 'lines' => [['account_id' => $foreign, 'debit' => 5], ['account_id' => $foreign, 'credit' => 5]]])->assertNotFound();
     // permission gate
     $this->owner->roles->each->revokePermissionTo('erp.journals.post');

@@ -1,5 +1,11 @@
 # Mobile app - progress log
 
+> **Single store (2026-11-06, backend Phase 6 of `REMOVE_MULTI_TENANCY_PLAN.md`) — overrides every tenant/country statement below.**
+> The backend now serves ONE shop on one host (`APP_URL/api/v1`); there is no tenant, no country picker and no `X-Tenant` resolution.
+> - `GET /app-config` returns the switches **plus** `store` {name, country, currency{code,symbol}, default_locale, locales[{code,rtl}], timezone, base_url}; `GET /store` the full profile.
+> - Compat for builds already in the stores: `X-Tenant` is ignored (any value), old `{slug}.` hosts still answer `/api/*`, `GET /tenants` is deprecated and returns a one-item list in the old `Tenant.fromJson` shape with `slug` = `egy` (config `mobile.legacy_store_slug`) so saved sessions/carts keep working and the picker is skipped.
+> - **Phase 7 (Flutter) done (2026-11-07):** `features/tenant` removed (country selection/list/switcher, decision table, tenant list/repository/models); no `X-Tenant` interceptor, no central/tenant request split, one base URL. New `features/store` (`StoreInfo` = `app-config.store`, `StoreProfile` = `GET /store`, both cached; `StoreController`, `storeInfoProvider`, `storeProfileProvider`, `storeTextDirectionProvider`) and `features/startup` (startup controller, gate pages, first-run `LanguageSelectionPage` at `/language`, language sheet). Startup = splash -> legacy storage migration -> `app-config` -> language page only if never chosen (store locales/default) -> onboarding (first launch) -> Home. Storage keys are plain (`auth_token`, `affiliate_token`, `cart_token`, `locale`, `store_info`, `store_profile`, `recent_searches`); old `<key>:<slug>` values are moved once on first launch so sessions/carts/language survive. Contract: `backend/docs/MOBILE_API.md` §1; app details: `app/README.md`.
+
 ## Phase 1 - Backend API gap closure (done)
 
 Contract for later phases: `backend/docs/MOBILE_API.md` (narrative + every endpoint with example JSON) and `backend/docs/openapi-mobile.yaml` (OpenAPI 3.1). Both were generated from `php artisan api:docs` output plus curated overlays and real captured responses; `backend/docs/api/openapi.json` was regenerated too (72 paths).
@@ -255,3 +261,13 @@ All PLAN §5 items are met in code; remaining work is configuration and device v
 - Pre-existing backend failures listed above (web storefront/environment), plus `backend/public/favicon.ico` status unchanged from Phase 2.
 - `stash@{0}` from Phase 1 still exists (content identical to the working tree at the time); drop it manually when sure.
 - Soft-update (`update_available`) is parsed but not shown; `thumb` image sizes are parsed but unused; `matchTextDirection` relies on Flutter's built-in icons only.
+
+## Single-store migration - Phase 7 (Flutter) (done, 2026-11-07)
+
+- Removed: `lib/features/tenant/**` (country selection page, country list, country switcher, `tenant_decision`, tenant list provider, `TenantRepository`, `Tenant` model), `TenantInterceptor` + `kCentralExtra`, `ApiContext.tenantSlug`, route `/select-country`, drawer/account "Switch country" entries, 17 country/store-picker ARB keys (ar + en), tests `test/features/tenant/*`.
+- Moved/renamed (git mv): `startup_controller` + `gate_pages` + `language_picker` -> `lib/features/startup/**`; `tenant_models` -> `features/store/data/store_models.dart` (`AppConfigInfo.store`, `StoreInfo`, `StoreProfile`), `tenant_repository` -> `store_repository.dart` (`fetchAppConfig`, `fetchProfile`), `tenant_controller` -> `store_controller.dart`.
+- Added: `LanguageSelectionPage` (`/language`, ARB `chooseLanguageTitle/Subtitle`), `lib/core/storage/legacy_storage_migration.dart`, store `rtl` -> `Directionality` in `app.dart`, share links `{base_url}/{locale}/product/{slug}`.
+- Consumers switched to store info: cart, checkout, product, catalog widgets (currency), orders, affiliate (features), addresses (scope only; the server derives the phone dial code), push registrar, content pages (contact), gift finder, home, about, account, drawer. Data providers now rebuild on language/session changes only.
+- Tests: new `test/features/startup/startup_test.dart`, `test/features/store/store_models_test.dart`, `test/core/storage/legacy_storage_migration_test.dart`; harness serves `app-config.store`, seeds a chosen locale by default (`languageChosen: false` for first-run tests), `bootStore()` helper.
+- Checks: `flutter analyze` clean; `flutter test` 128 tests - 119 pass, 9 fail only with the environment shader error `ink_sparkle.frag ... Runtime stages buffer failed verification` (same 9-of-133 class as the baseline; `app/build/unit_test_assets` is owned by another user and read-only, so the stale shader is never rebuilt). With `InkRipple` patched in temporarily all 128 pass. Fix: delete `app/build/unit_test_assets` (or `flutter clean`) as its owner.
+

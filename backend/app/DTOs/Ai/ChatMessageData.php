@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiChatMessageRequest;
+use App\Http\Requests\Admin\AiChatMessageRequest;
 
 final readonly class ChatMessageData
 {

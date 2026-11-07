@@ -16,7 +16,7 @@ use App\Support\Money;
  *   Pay carrier      : Dr Shipping payable / Cr bank|cash   (prepaid-order shipping, return shipping, COD fees above the collected amount)
  *   Payout / deposit : Dr bank|cash (net) + Dr Gateway fees (fee) / Cr gateway|wallet|pos_cash (gross)  - gateway payout, wallet sweep,
  *                      POS register close (ERP-014)
- * Every action is one journal through JournalService (the only ledger writer), idempotent by a form token, serialised per tenant.
+ * Every action is one journal through JournalService (the only ledger writer), idempotent by a form token, serialised by the ledger lock.
  */
 class SettlementService
 {
@@ -29,7 +29,7 @@ class SettlementService
     private function ensureChart(): void
     {
         if (! Account::where('role_key', 'receivable')->exists()) {
-            $this->coa->seed(current_tenant());
+            $this->coa->seed();
             app(\App\Services\Erp\Accounting\AccountResolver::class)->flush();
         }
     }
@@ -61,7 +61,7 @@ class SettlementService
     private function post(string $key, string $date, string $desc, array $lines, ?int $branchId): JournalEntry
     {
         return $this->journals->post(['entry_date' => $date, 'type' => 'auto', 'description' => $desc, 'source_type' => 'settlement', 'source_id' => 0,
-            'idempotency_key' => 'settle:'.$key, 'branch_id' => $branchId, 'created_by' => auth('tenant')->id()], $lines);
+            'idempotency_key' => 'settle:'.$key, 'branch_id' => $branchId, 'created_by' => auth('admin')->id()], $lines);
     }
 
     /** Pay a liability (vat_payable | shipping_payable) out of bank/cash, never more than is owed. */

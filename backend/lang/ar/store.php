@@ -64,7 +64,7 @@ return [
         'verification_sent' => 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.', 'verified' => 'تم التحقق من بريدك الإلكتروني.', 'already_verified' => 'هذا البريد موثّق بالفعل.',
         'invalid_code' => 'الرمز غير صحيح أو منتهي الصلاحية.', 'too_many' => 'محاولات كثيرة. حاول مرة أخرى لاحقاً.', 'account_deleted' => 'تم حذف حسابك.',
         'unauthenticated' => 'غير مصرّح، يرجى تسجيل الدخول.', 'forbidden' => 'هذا الإجراء غير مسموح.', 'not_found' => 'غير موجود.', 'server_error' => 'حدث خطأ ما، حاول مرة أخرى.',
-        'tenant_not_found' => 'المتجر غير موجود.', 'mail_expires' => 'ينتهي هذا الرمز خلال :minutes دقيقة.',
+        'mail_expires' => 'ينتهي هذا الرمز خلال :minutes دقيقة.',
         'mail_verify_subject' => 'تأكيد بريدك الإلكتروني - :store', 'mail_verify_line' => 'رمز تأكيد بريدك الإلكتروني هو:',
         'mail_reset_subject' => 'إعادة تعيين كلمة المرور - :store', 'mail_reset_line' => 'رمز إعادة تعيين كلمة المرور هو:',
     ],

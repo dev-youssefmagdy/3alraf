@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\FlashDiscountType;
 use App\Services\Stock\StockItemCatalog;

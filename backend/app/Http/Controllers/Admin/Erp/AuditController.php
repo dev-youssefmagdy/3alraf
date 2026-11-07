@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Erp\AuditLog;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 
-/** ERP-029: the tenant's own ERP audit trail (postings, reversals, period closes, settings changes...). Needs erp.audit.view. Read-only. */
+/** ERP-029: the shop's ERP audit trail (postings, reversals, period closes, settings changes...). Needs erp.audit.view. Read-only. */
 class AuditController extends ErpController
 {
     public function index(Request $r)
@@ -19,8 +19,8 @@ class AuditController extends ErpController
             ->when($date('from'), fn ($q, $d) => $q->where('created_at', '>=', $d.' 00:00:00'))->when($date('to'), fn ($q, $d) => $q->where('created_at', '<=', $d.' 23:59:59'))
             ->orderByDesc('id')->paginate(30)->withQueryString();
 
-        return view('tenant.erp.audit', ['logs' => $logs, 'actions' => AuditLog::query()->distinct()->orderBy('action')->pluck('action'),
-            'users' => TenantAdmin::whereIn('id', $logs->pluck('user_id')->filter()->unique())->pluck('name', 'id'),
+        return view('admin.erp.audit', ['logs' => $logs, 'actions' => AuditLog::query()->distinct()->orderBy('action')->pluck('action'),
+            'users' => Admin::whereIn('id', $logs->pluck('user_id')->filter()->unique())->pluck('name', 'id'),
             'q' => ['action' => $str('action'), 'user_id' => $user, 'from' => $date('from'), 'to' => $date('to')]]);
     }
 }

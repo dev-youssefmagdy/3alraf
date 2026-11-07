@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiMarketTrendRequest;
+use App\Http\Requests\Admin\AiMarketTrendRequest;
 
 final readonly class MarketTrendQuery
 {
@@ -17,7 +17,7 @@ final readonly class MarketTrendQuery
         return new self($c, (int) ($r->input('period') ?: 30), trim((string) $r->input('keyword', '')), (int) ($r->input('count') ?: 10), $r->integer('ai_model_id') ?: null, $r->boolean('force'));
     }
 
-    /** Snapshot cache key: sorted countries + period + keyword + count (tenant isolation comes from the snapshot's tenant scope). */
+    /** Snapshot cache key: sorted countries + period + keyword + count. */
     public function key(): string
     {
         return substr(sha1(implode(',', $this->countries).'|'.$this->period.'|'.mb_strtolower($this->keyword).'|'.$this->count), 0, 20);

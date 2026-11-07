@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 /** What the owner decided about a brief recommendation (learning loop). One row per recommendation key. */
 class GrowthBriefDecision extends Model
 {
-    use BelongsToTenant;
 
     public const STATUSES = ['accepted', 'dismissed', 'done'];
 

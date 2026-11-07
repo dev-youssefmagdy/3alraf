@@ -1,9 +1,9 @@
 @php($editing = $language->exists)
-<x-layouts.admin guard="central" :title="$editing ? __('admin.edit').': '.$language->name : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit').': '.$language->name : __('admin.add_new')">
     <x-card class="max-w-2xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif
-            data-validate-url="{{ route('central.languages.validate', $editing ? [$language] : []) }}"
-            action="{{ $editing ? route('central.languages.update', $language) : route('central.languages.store') }}" method="POST" class="space-y-4" novalidate>
+            data-validate-url="{{ route('admin.languages.validate', $editing ? [$language] : []) }}"
+            action="{{ $editing ? route('admin.languages.update', $language) : route('admin.languages.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-input name="code" :label="__('admin.fields.code')" :value="$language->code" required maxlength="10" />
@@ -16,7 +16,7 @@
                 <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$language->is_active" />
                 <x-checkbox name="is_default" :label="__('admin.fields.is_default')" :checked="$language->is_default" />
             </div>
-            <x-form-actions :cancel="route('central.languages.index')" />
+            <x-form-actions :cancel="route('admin.languages.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

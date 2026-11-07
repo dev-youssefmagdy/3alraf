@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 /** Inline edit of a draft; the service re-validates and normalises every field, so only the shape is checked here. */
 class AiGeneratorDraftRequest extends BaseRequest

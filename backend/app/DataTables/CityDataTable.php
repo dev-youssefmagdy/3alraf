@@ -28,7 +28,7 @@ class CityDataTable extends BaseDataTable
         $dt->addColumn('name_label', fn (City $m) => e($m->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (City $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (City $m) => $this->tenantActions($m, 'tenant.cities', 'cities'));
+            ->addColumn('actions', fn (City $m) => $this->rowActions($m, 'admin.cities', 'cities'));
     }
 
     protected function rawColumns(): array

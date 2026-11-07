@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\BannerPlacement;
 use App\Services\Ai\AiAccess;
@@ -12,8 +12,7 @@ class AiGeneratorRequest extends BaseRequest
 {
     public function rules(): array
     {
-        $tid = current_tenant()->id;
-        $ids = fn ($kind) => Rule::in(app(AiAccess::class)->modelsFor(current_tenant(), $kind)->pluck('id')->all());
+        $ids = fn ($kind) => Rule::in(app(AiAccess::class)->modelsFor($kind)->pluck('id')->all());
 
         return [
             'kind' => ['required', Rule::in(array_merge(DraftValidator::KINDS, ContentGeneratorService::KINDS))],
@@ -21,7 +20,7 @@ class AiGeneratorRequest extends BaseRequest
             'season' => ['nullable', 'string', 'max:80'],
             'margin_floor' => ['nullable', 'numeric', 'min:0', 'max:95'],
             'product_ids' => ['nullable', 'array', 'max:20'],
-            'product_ids.*' => ['integer', 'exists:tenant_products,product_id,tenant_id,'.$tid],
+            'product_ids.*' => ['integer', 'exists:products,id'],
             'brief' => ['nullable', 'string', 'max:1500'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
@@ -39,7 +38,7 @@ class AiGeneratorRequest extends BaseRequest
             if ($this->input('kind') !== ContentGeneratorService::PACKAGE) {
                 return;
             }
-            if (! app(\App\Services\Growth\GrowthFeatures::class)->active('content_factory', current_tenant()) || ! $this->user('tenant')?->can('growth.manage')) {
+            if (! app(\App\Services\Growth\GrowthFeatures::class)->active('content_factory') || ! $this->user('admin')?->can('growth.manage')) {
                 $v->errors()->add('kind', __('growth_hub.content.not_allowed'));
             } elseif (count((array) $this->input('product_ids', [])) !== 1) {
                 $v->errors()->add('product_ids', __('growth_hub.content.one_product'));

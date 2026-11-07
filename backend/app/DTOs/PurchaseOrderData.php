@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\PurchaseOrderRequest;
+use App\Http\Requests\Admin\PurchaseOrderRequest;
 
 final readonly class PurchaseOrderData
 {

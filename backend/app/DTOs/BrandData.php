@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Central\BrandRequest;
+use App\Http\Requests\Admin\BrandRequest;
 use Illuminate\Http\UploadedFile;
 
 final readonly class BrandData

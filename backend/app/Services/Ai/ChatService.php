@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Tenant chat assistant: conversations, history window (+ rolling summary), read-only tool loop through AiGateway.
+ * Admin chat assistant: conversations, history window (+ rolling summary), read-only tool loop through AiGateway.
  * The model only reads data; nothing here can write business records.
  */
 class ChatService
@@ -43,10 +43,10 @@ class ChatService
         $this->repo->delete($c);
     }
 
-    /** Tenant-allowed active text models (same list the platform admin allowed). */
+    /** Allowed active text models (AI settings). */
     public function models(): Collection
     {
-        return $this->access->modelsFor(current_tenant(), 'text');
+        return $this->access->modelsFor('text');
     }
 
     public function resolveModel(?int $requested, ?AiConversation $c = null): ?AiModel
@@ -66,9 +66,7 @@ class ChatService
     /** @return array{used:int,quota:?int} */
     public function quota(): array
     {
-        $t = current_tenant();
-
-        return ['used' => $this->gateway->usage($t->id)['tokens'], 'quota' => $this->access->settings($t)?->monthly_token_quota];
+        return ['used' => $this->gateway->usage()['tokens'], 'quota' => $this->access->settings()?->monthly_token_quota];
     }
 
     public function start(int $userId, ?AiConversation $c, ChatMessageData $d): AiConversation
@@ -101,7 +99,7 @@ class ChatService
             if (! $model) {
                 throw new AiException(__('ai.errors.model_unavailable'), 'model');
             }
-            $ctx = $this->contexts->forTenant();
+            $ctx = $this->contexts->make();
             $this->compact($c, $model, $ctx);
             $req = new AiRequest('', $this->history($c), $this->instructions($c), maxTokens: 1500);
             $res = $this->gateway->chat($model, $req, 'chat', $this->tools->chatTools(), $ctx, $trace, fn ($name) => $emit('tool', ['name' => $name]));

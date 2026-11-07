@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ReputationAlert extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'reputation_alerts';
 

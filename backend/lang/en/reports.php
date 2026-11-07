@@ -11,8 +11,6 @@ return [
     'sales_trend' => 'Sales trend',
     'orders_by_status' => 'Orders by status',
     'top_products' => 'Top products',
-    'sales_by_tenant' => 'Sales by tenant',
-    'tenants_breakdown' => 'Tenants breakdown',
     'amounts_in' => 'Amounts in :c',
     'titles' => [
         'sales' => 'Sales',
@@ -125,7 +123,6 @@ return [
         'stock_value' => 'Stock value',
         'subtotal' => 'Subtotal',
         'supplier' => 'Supplier',
-        'tenant' => 'Tenant',
         'total' => 'Total',
         'total_cost' => 'Total cost',
         'type' => 'Type',

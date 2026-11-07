@@ -4,7 +4,7 @@ namespace App\Services\Ai\Contracts;
 
 use App\Services\Ai\AiContext;
 
-/** Read-only, tenant-scoped, size-capped tool exposed to the model. */
+/** Read-only, size-capped tool exposed to the model. */
 interface AiTool
 {
     public function name(): string;

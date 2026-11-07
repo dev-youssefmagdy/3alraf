@@ -18,16 +18,9 @@ abstract class ReportBase
 
     public const CASH_ROLES = PartyService::CASH_ROLES;
 
-    protected function tenantId(): int
-    {
-        return (int) (current_tenant()?->id ?? 0);
-    }
-
     /** Lines joined to entry (e) and account (a), filtered. */
     protected function lines(ErpReportFilter $f, bool $useFrom = true, bool $withAccountFilter = true, bool $useTo = true): Builder
     {
-        $tid = $this->tenantId();
-
         return JournalLine::query()
             ->join('erp_journal_entries as e', 'e.id', '=', 'erp_journal_lines.entry_id')
             ->join('erp_accounts as a', 'a.id', '=', 'erp_journal_lines.account_id')
@@ -38,15 +31,15 @@ abstract class ReportBase
             ->when($withAccountFilter && $f->accountId, fn ($q) => $q->where('erp_journal_lines.account_id', $f->accountId))
             ->when($f->type, fn ($q) => in_array($f->type, ErpReportFilter::ENTRY_TYPES, true) ? $q->where('e.type', $f->type) : $q->where('e.source_type', $f->type))
             ->when($f->currency, fn ($q) => $q->where('e.currency', $f->currency))
-            ->when($f->customerId, fn ($q) => $q->whereExists(fn ($x) => $this->partyExists($x, 'customer', $f->customerId, $tid)))
-            ->when($f->supplierId, fn ($q) => $q->whereExists(fn ($x) => $this->partyExists($x, 'supplier', $f->supplierId, $tid)))
+            ->when($f->customerId, fn ($q) => $q->whereExists(fn ($x) => $this->partyExists($x, 'customer', $f->customerId)))
+            ->when($f->supplierId, fn ($q) => $q->whereExists(fn ($x) => $this->partyExists($x, 'supplier', $f->supplierId)))
             ->when($f->paymentMethodId, fn ($q) => $q->where('e.source_type', 'order')->whereExists(fn ($x) => $x->select(DB::raw(1))->from('orders as o')
-                ->whereColumn('o.id', 'e.source_id')->where('o.tenant_id', $tid)->where('o.payment_method_id', $f->paymentMethodId)));
+                ->whereColumn('o.id', 'e.source_id')->where('o.payment_method_id', $f->paymentMethodId)));
     }
 
-    private function partyExists($x, string $type, int $id, int $tid): void
+    private function partyExists($x, string $type, int $id): void
     {
-        $x->select(DB::raw(1))->from('erp_journal_lines as pl')->whereColumn('pl.entry_id', 'e.id')->where('pl.tenant_id', $tid)->where('pl.party_type', $type)->where('pl.party_id', $id);
+        $x->select(DB::raw(1))->from('erp_journal_lines as pl')->whereColumn('pl.entry_id', 'e.id')->where('pl.party_type', $type)->where('pl.party_id', $id);
     }
 
     /** Year-end closing entries (and their reversals) are not trading activity. */

@@ -30,7 +30,7 @@ class PostOrderEvents
     public function onStatusChanged(OrderStatusChanged $e): void
     {
         $o = $e->order;
-        $this->guard->run($o->tenant_id, 'order', $o->id, 'status:'.$e->to->value, function () use ($o, $e) {
+        $this->guard->run('order', $o->id, 'status:'.$e->to->value, function () use ($o, $e) {
             if ($e->to === OrderStatus::CANCELLED) {
                 $this->payments->sync($o);
                 $this->sales->cancelled($o);
@@ -38,7 +38,7 @@ class PostOrderEvents
 
                 return;
             }
-            $this->sales->confirmed($o);            // no-op until the tenant's recognition point (RevenueRecognition)
+            $this->sales->confirmed($o);            // no-op until the recognition point (RevenueRecognition)
             if ($e->to === OrderStatus::SHIPPED) {
                 $this->sales->shipped($o);          // COGS true-up / goods out for delivery
             }
@@ -49,7 +49,7 @@ class PostOrderEvents
     public function onCarrierSettled(\App\Events\Erp\CarrierSettled $e): void
     {
         $o = $e->order;
-        $this->guard->run($o->tenant_id, 'order', $o->id, 'carrier.settled', fn () => $this->payments->carrierSettled($o, $e->into));
+        $this->guard->run('order', $o->id, 'carrier.settled', fn () => $this->payments->carrierSettled($o, $e->into));
     }
 
     public function onPaymentUpdated(OrderPaymentUpdated $e): void
@@ -58,7 +58,7 @@ class PostOrderEvents
             return;
         }
         $o = $e->order;
-        $this->guard->run($o->tenant_id, 'order', $o->id, 'payment:'.$e->kind, fn () => $this->payments->sync($o));
+        $this->guard->run('order', $o->id, 'payment:'.$e->kind, fn () => $this->payments->sync($o));
     }
 
     public function onReturnUpdated(OrderReturnUpdated $e): void
@@ -68,6 +68,6 @@ class PostOrderEvents
         if (! in_array($e->kind, ['approved', 'refunded'], true) || ! $order) {
             return;
         }
-        $this->guard->run($order->tenant_id, 'order_return', $r->id, 'return:'.$e->kind, fn () => $e->kind === 'approved' ? $this->returns->approved($r) : $this->returns->refunded($r));
+        $this->guard->run('order_return', $r->id, 'return:'.$e->kind, fn () => $e->kind === 'approved' ? $this->returns->approved($r) : $this->returns->refunded($r));
     }
 }

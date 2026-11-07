@@ -1,10 +1,10 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.brand.title')">
+<x-layouts.admin :title="__('growth_hub.brand.title')">
     @php $b = fn ($k) => __('growth_hub.brand.'.$k); $inp = 'block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm'; @endphp
     <div class="space-y-4" id="bm">
         <p class="text-sm text-slate-600">{{ $b('hint') }}</p>
         @can('growth.manage')
             <x-card :title="$b('add')">
-                <form data-ajax-form action="{{ route('tenant.growth.brand-memory.store') }}" method="POST" class="grid gap-3 sm:grid-cols-2" novalidate>
+                <form data-ajax-form action="{{ route('admin.growth.brand-memory.store') }}" method="POST" class="grid gap-3 sm:grid-cols-2" novalidate>
                     @csrf
                     <label class="text-sm text-slate-600">{{ $b('fields.kind') }}<select name="kind" class="{{ $inp }}">@foreach ($kinds as $k)<option value="{{ $k }}">{{ __('growth_hub.brand.kinds.'.$k) }}</option>@endforeach</select></label>
                     <x-input name="title" :label="$b('fields.title')" maxlength="160" />
@@ -34,7 +34,7 @@
         <x-card :title="$b('claims_title')">
             <p class="mb-3 text-sm text-slate-600">{{ $b('claims_hint') }}</p>
             @can('growth.manage')
-                <form data-ajax-form action="{{ route('tenant.growth.claims.store') }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-4" novalidate>
+                <form data-ajax-form action="{{ route('admin.growth.claims.store') }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-4" novalidate>
                     @csrf
                     <label class="text-sm text-slate-600">{{ $b('fields.product_id') }}<select data-search name="product_id" class="{{ $inp }}">@foreach ($products as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></label>
                     <label class="text-sm text-slate-600">{{ $b('fields.type') }}<select name="type" class="{{ $inp }}">@foreach ($claimTypes as $t)<option value="{{ $t }}">{{ __('growth_hub.brand.claim_types.'.$t) }}</option>@endforeach</select></label>

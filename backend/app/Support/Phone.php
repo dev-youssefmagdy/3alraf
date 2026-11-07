@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-/** Tenant-country phone handling: normalise typed input to the national number, build E.164 / display forms. */
+/** Shop-country phone handling: normalise typed input to the national number, build E.164 / display forms. */
 final class Phone
 {
     public static function config(?string $iso): ?array
@@ -10,10 +10,10 @@ final class Phone
         return $iso ? config('phone.countries.'.strtoupper($iso)) : null;
     }
 
-    /** Dial code (e.g. +20) of the current tenant, null when unknown. */
-    public static function tenantCode(): ?string
+    /** Dial code (e.g. +20) of the shop country, null when unknown. */
+    public static function shopCode(): ?string
     {
-        return self::config(current_tenant()?->country)['dial'] ?? null;
+        return self::config(setting('country'))['dial'] ?? null;
     }
 
     public static function ascii(string $v): string

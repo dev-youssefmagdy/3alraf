@@ -111,67 +111,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get startupErrorTitle => 'تعذّر تشغيل التطبيق';
 
   @override
-  String get selectCountryTitle => 'اختر بلدك';
+  String get chooseLanguageTitle => 'اختر اللغة';
 
   @override
-  String get selectCountrySubtitle => 'اختر المتجر الذي تريد التسوّق منه.';
-
-  @override
-  String get searchCountry => 'ابحث عن بلد أو متجر';
-
-  @override
-  String get noStoresFound => 'لا توجد متاجر مطابقة';
-
-  @override
-  String get noStoresAvailable => 'لا توجد متاجر متاحة حاليًا.';
+  String get chooseLanguageSubtitle =>
+      'يمكنك تغيير اللغة لاحقًا من القائمة الجانبية.';
 
   @override
   String get continueAction => 'متابعة';
-
-  @override
-  String confirmCountryTitle(String store) {
-    return 'التسوّق من $store؟';
-  }
-
-  @override
-  String get confirmCountryMessage =>
-      'يمكنك تغيير البلد لاحقًا من القائمة الجانبية.';
-
-  @override
-  String get countryInactiveNotice =>
-      'متجرك السابق لم يعد متاحًا. اختر بلدًا آخر للمتابعة.';
-
-  @override
-  String get currentStore => 'الحالي';
-
-  @override
-  String storeCurrency(String currency) {
-    return 'العملة: $currency';
-  }
-
-  @override
-  String storeLanguages(String languages) {
-    return 'اللغات: $languages';
-  }
-
-  @override
-  String get switchCountry => 'تغيير البلد';
-
-  @override
-  String get switchCountryWarnTitle => 'تغيير المتجر؟';
-
-  @override
-  String switchCountryWarnBody(String store) {
-    return 'السلة والمفضلة تخصّ المتجر الحالي. سيتم تسجيل خروجك ومسح بيانات السلة على هذا الجهاز عند التغيير إلى $store.';
-  }
-
-  @override
-  String get switchConfirm => 'تغيير';
-
-  @override
-  String switchedTo(String store) {
-    return 'تتسوّق الآن من $store';
-  }
 
   @override
   String get offlineBanner => 'أنت غير متصل. نعرض بيانات محفوظة.';
@@ -230,11 +177,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String appVersion(String version) {
     return 'الإصدار $version';
-  }
-
-  @override
-  String currentStoreLabel(String store) {
-    return 'المتجر الحالي: $store';
   }
 
   @override

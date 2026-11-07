@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\ShippingCompanyRequest;
+use App\Http\Requests\Admin\ShippingCompanyRequest;
 
 final readonly class ShippingCompanyData
 {

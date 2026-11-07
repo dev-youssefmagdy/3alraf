@@ -4,76 +4,87 @@ use App\Http\Controllers\Access\AdminUserController;
 use App\Http\Controllers\Access\AuditLogController;
 use App\Http\Controllers\Access\RoleController;
 use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\Admin\GeneralSettingsController;
 use App\Http\Controllers\BarcodeController;
-use App\Http\Controllers\Tenant\AffiliateController;
-use App\Http\Controllers\Tenant\AffiliatePayoutController;
-use App\Http\Controllers\Tenant\AffiliateTierController;
-use App\Http\Controllers\Tenant\AiChatController;
-use App\Http\Controllers\Tenant\AiGeneratorController;
-use App\Http\Controllers\Tenant\AiMarketTrendsController;
-use App\Http\Controllers\Tenant\AiProductEditorController;
-use App\Http\Controllers\Tenant\AiSettingsController;
-use App\Http\Controllers\Tenant\AiStudioController;
-use App\Http\Controllers\Tenant\AiTrendsController;
-use App\Http\Controllers\Tenant\BannerController;
-use App\Http\Controllers\Tenant\BlogPostController;
-use App\Http\Controllers\Tenant\BranchController;
-use App\Http\Controllers\Tenant\BundleController;
-use App\Http\Controllers\Tenant\CatalogController;
-use App\Http\Controllers\Tenant\CityController;
-use App\Http\Controllers\Tenant\CodFeeSettingsController;
-use App\Http\Controllers\Tenant\CustomerController;
-use App\Http\Controllers\Tenant\CustomPageController;
-use App\Http\Controllers\Tenant\DashboardController;
-use App\Http\Controllers\Tenant\DiscountCodeController;
-use App\Http\Controllers\Tenant\ExpenseCategoryController;
-use App\Http\Controllers\Tenant\ExpenseController;
-use App\Http\Controllers\Tenant\FlashSaleController;
-use App\Http\Controllers\Tenant\Growth\AmbassadorAdminController;
-use App\Http\Controllers\Tenant\Growth\ApprovalController;
-use App\Http\Controllers\Tenant\Growth\BrandMemoryController;
-use App\Http\Controllers\Tenant\Growth\BriefController;
-use App\Http\Controllers\Tenant\Growth\BundleEngineController;
-use App\Http\Controllers\Tenant\Growth\CapitalAdminController;
-use App\Http\Controllers\Tenant\Growth\ClientController;
-use App\Http\Controllers\Tenant\Growth\ContentController;
-use App\Http\Controllers\Tenant\Growth\EngagementAdminController;
-use App\Http\Controllers\Tenant\Growth\EventController;
-use App\Http\Controllers\Tenant\Growth\ExperimentController;
-use App\Http\Controllers\Tenant\Growth\GiftFinderAdminController;
-use App\Http\Controllers\Tenant\Growth\LabController;
-use App\Http\Controllers\Tenant\Growth\SeasonalController;
-use App\Http\Controllers\Tenant\Growth\SettingsController;
-use App\Http\Controllers\Tenant\Growth\SmallBatchController;
-use App\Http\Controllers\Tenant\LowStockController;
-use App\Http\Controllers\Tenant\NotificationController;
-use App\Http\Controllers\Tenant\NotificationSettingsController;
-use App\Http\Controllers\Tenant\OrderController;
-use App\Http\Controllers\Tenant\PackagingOptionController;
-use App\Http\Controllers\Tenant\PaymentMethodController;
-use App\Http\Controllers\Tenant\PosController;
-use App\Http\Controllers\Tenant\PrivateFileController;
-use App\Http\Controllers\Tenant\ProductListController;
-use App\Http\Controllers\Tenant\PurchaseController;
-use App\Http\Controllers\Tenant\ReportController;
-use App\Http\Controllers\Tenant\ReturnController;
-use App\Http\Controllers\Tenant\ReviewController;
-use App\Http\Controllers\Tenant\SeoSettingsController;
-use App\Http\Controllers\Tenant\ShippingCompanyController;
-use App\Http\Controllers\Tenant\StaticPageController;
-use App\Http\Controllers\Tenant\StockAdjustmentController;
-use App\Http\Controllers\Tenant\StockController;
-use App\Http\Controllers\Tenant\StockRequestController;
-use App\Http\Controllers\Tenant\StockTransferController;
-use App\Http\Controllers\Tenant\SupplierController;
-use App\Http\Controllers\Tenant\Erp\AccountController as ErpAccountController;
-use App\Http\Controllers\Tenant\Erp\HubController as ErpHubController;
-use App\Http\Controllers\Tenant\Erp\JournalController as ErpJournalController;
-use App\Http\Controllers\Tenant\Erp\PeriodController as ErpPeriodController;
-use App\Http\Controllers\Tenant\Erp\PartyController as ErpPartyController;
-use App\Http\Controllers\Tenant\Erp\OwnerController as ErpOwnerController;
-use App\Http\Controllers\Tenant\Erp\AssetController as ErpAssetController;
-use App\Http\Controllers\Tenant\Erp\ReportController as ErpReportController;
+use App\Http\Controllers\Admin\Ai\ModelController as AiModelController;
+use App\Http\Controllers\Admin\Ai\ProviderController as AiProviderController;
+use App\Http\Controllers\Admin\Ai\UsageController as AiUsageController;
+use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\Erp\AnomalyController as ErpAnomalyController;
+use App\Http\Controllers\Admin\LanguageController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\AffiliateController;
+use App\Http\Controllers\Admin\AffiliatePayoutController;
+use App\Http\Controllers\Admin\AffiliateTierController;
+use App\Http\Controllers\Admin\AiChatController;
+use App\Http\Controllers\Admin\AiGeneratorController;
+use App\Http\Controllers\Admin\AiMarketTrendsController;
+use App\Http\Controllers\Admin\AiProductEditorController;
+use App\Http\Controllers\Admin\AiSettingsController;
+use App\Http\Controllers\Admin\AiStudioController;
+use App\Http\Controllers\Admin\AiTrendsController;
+use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BlogPostController;
+use App\Http\Controllers\Admin\BranchController;
+use App\Http\Controllers\Admin\BundleController;
+use App\Http\Controllers\Admin\CatalogController;
+use App\Http\Controllers\Admin\CityController;
+use App\Http\Controllers\Admin\CodFeeSettingsController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\CustomPageController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DiscountCodeController;
+use App\Http\Controllers\Admin\ExpenseCategoryController;
+use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\FlashSaleController;
+use App\Http\Controllers\Admin\Growth\AmbassadorAdminController;
+use App\Http\Controllers\Admin\Growth\ApprovalController;
+use App\Http\Controllers\Admin\Growth\BrandMemoryController;
+use App\Http\Controllers\Admin\Growth\BriefController;
+use App\Http\Controllers\Admin\Growth\BundleEngineController;
+use App\Http\Controllers\Admin\Growth\CapitalAdminController;
+use App\Http\Controllers\Admin\Growth\ClientController;
+use App\Http\Controllers\Admin\Growth\ContentController;
+use App\Http\Controllers\Admin\Growth\EngagementAdminController;
+use App\Http\Controllers\Admin\Growth\EventController;
+use App\Http\Controllers\Admin\Growth\ExperimentController;
+use App\Http\Controllers\Admin\Growth\GiftFinderAdminController;
+use App\Http\Controllers\Admin\Growth\LabController;
+use App\Http\Controllers\Admin\Growth\SeasonalController;
+use App\Http\Controllers\Admin\Growth\SettingsController;
+use App\Http\Controllers\Admin\Growth\SmallBatchController;
+use App\Http\Controllers\Admin\LowStockController;
+use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\NotificationSettingsController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PackagingOptionController;
+use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\PosController;
+use App\Http\Controllers\Admin\PrivateFileController;
+use App\Http\Controllers\Admin\ProductListController;
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ReturnController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\SeoSettingsController;
+use App\Http\Controllers\Admin\ShippingCompanyController;
+use App\Http\Controllers\Admin\StaticPageController;
+use App\Http\Controllers\Admin\StockAdjustmentController;
+use App\Http\Controllers\Admin\StockController;
+use App\Http\Controllers\Admin\StockRequestController;
+use App\Http\Controllers\Admin\StockTransferController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\Erp\AccountController as ErpAccountController;
+use App\Http\Controllers\Admin\Erp\HubController as ErpHubController;
+use App\Http\Controllers\Admin\Erp\JournalController as ErpJournalController;
+use App\Http\Controllers\Admin\Erp\PeriodController as ErpPeriodController;
+use App\Http\Controllers\Admin\Erp\PartyController as ErpPartyController;
+use App\Http\Controllers\Admin\Erp\OwnerController as ErpOwnerController;
+use App\Http\Controllers\Admin\Erp\AssetController as ErpAssetController;
+use App\Http\Controllers\Admin\Erp\ReportController as ErpReportController;
 use App\Http\Controllers\Whatsapp\ChatConversationController;
 use App\Http\Controllers\Whatsapp\ChatMediaController;
 use App\Http\Controllers\Whatsapp\ChatMessageController;
@@ -82,8 +93,8 @@ use App\Http\Controllers\Whatsapp\ConnectionController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(function () {
-    Route::middleware('guest:tenant')->group(function () {
+Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(function () {
+    Route::middleware('guest:admin')->group(function () {
         Route::get('login', [AdminLoginController::class, 'show'])->name('login');
         Route::post('login/validate', [AdminLoginController::class, 'validateForm'])->middleware('throttle:login-validate')->name('login.validate');
         Route::post('login', [AdminLoginController::class, 'login'])->middleware('throttle:auth')->name('login.submit');
@@ -92,7 +103,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         Route::post('login/otp/resend', [AdminLoginController::class, 'resendOtp'])->middleware('throttle:auth-strict')->name('login.otp.resend');
     });
 
-    Route::middleware('auth:tenant')->group(function () {
+    Route::middleware('auth:admin')->group(function () {
         Route::post('logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('locale/{code}', function (string $code) {
@@ -102,17 +113,50 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
         })->name('locale');
         Route::get('barcode/{code}', BarcodeController::class)->where('code', '[0-9]{8,13}')->name('barcode');
 
-        // Catalog: enable central products for this tenant (price / sale / cost / status)
+        // Settings → General (shop profile + AI / Growth master switches; reachable while AI / Growth are off)
+        Route::get('settings/general', [GeneralSettingsController::class, 'edit'])->name('general-settings.edit');
+        Route::post('settings/general/validate', [GeneralSettingsController::class, 'validateForm'])->name('general-settings.validate');
+        Route::put('settings/general', [GeneralSettingsController::class, 'update'])->name('general-settings.update');
+
+        // Languages + products / categories / brands / tags / attributes
+        Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');
+        Route::post('languages/validate/{language?}', [LanguageController::class, 'validateForm'])->name('languages.validate');
+        Route::resource('languages', LanguageController::class)->except('show');
+        foreach (['brands' => [BrandController::class, 'brand'], 'tags' => [TagController::class, 'tag'], 'attributes' => [AttributeController::class, 'attribute'], 'products' => [ProductController::class, 'product']] as $name => [$ctl, $param]) {
+            Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
+            Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
+            Route::resource($name, $ctl)->except('show');
+        }
+        Route::post('categories/validate/{category?}', [CategoryController::class, 'validateForm'])->name('categories.validate');
+        Route::resource('categories', CategoryController::class)->except('show');
+
+        // AI platform: providers, models, usage (always reachable, also while AI is off)
+        Route::prefix('ai')->name('ai.')->group(function () {
+            foreach (['providers' => [AiProviderController::class, 'ai_provider'], 'models' => [AiModelController::class, 'ai_model']] as $name => [$ctl, $param]) {
+                Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
+                Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
+                Route::resource($name, $ctl)->except('show')->parameters([$name => $param]);
+            }
+            Route::post('providers/{ai_provider}/test', [AiProviderController::class, 'test'])->middleware('throttle:10,1')->name('providers.test');
+            Route::get('usage', [AiUsageController::class, 'index'])->name('usage.index');
+            Route::get('usage/datatable', [AiUsageController::class, 'datatable'])->name('usage.datatable');
+        });
+
+        // ERP anomalies (erp.audit.view)
+        Route::get('erp/anomalies', [ErpAnomalyController::class, 'anomalies'])->name('erp.anomalies');
+        Route::get('erp/anomalies/export', [ErpAnomalyController::class, 'exportAnomalies'])->name('erp.anomalies.export');
+
+        // Catalog: selling fields of products (price / sale / cost / status / QR)
         Route::get('catalog/datatable', [CatalogController::class, 'datatable'])->name('catalog.datatable');
         Route::get('catalog/available', [CatalogController::class, 'available'])->name('catalog.available');
         Route::post('catalog/bulk/validate', [CatalogController::class, 'validateBulk'])->name('catalog.bulk.validate');
         Route::post('catalog/bulk', [CatalogController::class, 'bulkStore'])->name('catalog.bulk.store');
-        Route::get('catalog/{tenantProduct}/qr', [CatalogController::class, 'qr'])->name('catalog.qr');
-        Route::post('catalog/{tenantProduct}/qr/regenerate', [CatalogController::class, 'regenerateQr'])->name('catalog.qr.regenerate');
+        Route::get('catalog/{product}/qr', [CatalogController::class, 'qr'])->name('catalog.qr');
+        Route::post('catalog/{product}/qr/regenerate', [CatalogController::class, 'regenerateQr'])->name('catalog.qr.regenerate');
         Route::get('bundles/{id}/qr', [BundleController::class, 'qr'])->whereNumber('id')->name('bundles.qr');
         Route::post('bundles/{id}/qr/regenerate', [BundleController::class, 'regenerateQr'])->whereNumber('id')->name('bundles.qr.regenerate');
-        Route::post('catalog/validate/{tenantProduct}', [CatalogController::class, 'validateForm'])->name('catalog.validate');
-        Route::resource('catalog', CatalogController::class)->only(['index', 'edit', 'update', 'destroy'])->parameters(['catalog' => 'tenantProduct']);
+        Route::post('catalog/validate/{product}', [CatalogController::class, 'validateForm'])->name('catalog.validate');
+        Route::resource('catalog', CatalogController::class)->only(['index', 'edit', 'update', 'destroy'])->parameters(['catalog' => 'product']);
 
         // Phase 3: simple CRUD modules (ResourceController): datatable + validate + resource (param {id})
         foreach ([
@@ -148,33 +192,33 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::post('periods/years/{id}/close', [ErpPeriodController::class, 'closeYear'])->where('id', '[0-9]{1,18}')->name('periods.year-close');
             Route::post('periods/years/{id}/reopen', [ErpPeriodController::class, 'reopenYear'])->where('id', '[0-9]{1,18}')->name('periods.year-reopen');
             // profit distribution + settings
-            Route::get('profits', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'index'])->name('profits.index');
-            Route::post('profits', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'store'])->name('profits.store');
-            Route::get('profits/report', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'report'])->name('profits.report');
-            Route::get('profits/owner/{owner}/statement', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'statement'])->where('owner', '[0-9]{1,18}')->name('profits.statement');
-            Route::get('profits/{id}', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'show'])->where('id', '[0-9]{1,18}')->name('profits.show');
-            Route::post('profits/{id}/approve', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'approve'])->where('id', '[0-9]{1,18}')->name('profits.approve');
-            Route::post('profits/{id}/post', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'post'])->where('id', '[0-9]{1,18}')->name('profits.post');
-            Route::post('profits/{id}/cancel', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'cancel'])->where('id', '[0-9]{1,18}')->name('profits.cancel');
-            Route::post('profits/{id}/lines/{line}/pay', [\App\Http\Controllers\Tenant\Erp\ProfitController::class, 'pay'])->where(['id' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])->name('profits.pay');
-            Route::get('settings', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'edit'])->name('settings.edit');
-            Route::put('settings', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'update'])->name('settings.update');
-            Route::post('settings/rates', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'storeRate'])->name('settings.rates.store');
-            Route::delete('settings/rates/{id}', [\App\Http\Controllers\Tenant\Erp\SettingsController::class, 'destroyRate'])->where('id', '[0-9]{1,18}')->name('settings.rates.destroy');
-            Route::get('migration', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'index'])->name('migration.index');
-            Route::post('migration/reconcile', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'reconcile'])->name('migration.reconcile');
-            Route::post('migration/detect', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'detect'])->name('migration.detect');
-            Route::post('migration/post-missing', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'postMissing'])->name('migration.post-missing');
-            Route::put('migration/auto-posting', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'toggle'])->name('migration.toggle');
-            Route::get('dashboard', [\App\Http\Controllers\Tenant\Erp\DashboardController::class, 'index'])->name('dashboard');
-            Route::get('audit', [\App\Http\Controllers\Tenant\Erp\AuditController::class, 'index'])->name('audit.index');
-            Route::get('cash-bank', [\App\Http\Controllers\Tenant\Erp\CashBankController::class, 'index'])->name('cash-bank.index');
+            Route::get('profits', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'index'])->name('profits.index');
+            Route::post('profits', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'store'])->name('profits.store');
+            Route::get('profits/report', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'report'])->name('profits.report');
+            Route::get('profits/owner/{owner}/statement', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'statement'])->where('owner', '[0-9]{1,18}')->name('profits.statement');
+            Route::get('profits/{id}', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'show'])->where('id', '[0-9]{1,18}')->name('profits.show');
+            Route::post('profits/{id}/approve', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'approve'])->where('id', '[0-9]{1,18}')->name('profits.approve');
+            Route::post('profits/{id}/post', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'post'])->where('id', '[0-9]{1,18}')->name('profits.post');
+            Route::post('profits/{id}/cancel', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'cancel'])->where('id', '[0-9]{1,18}')->name('profits.cancel');
+            Route::post('profits/{id}/lines/{line}/pay', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'pay'])->where(['id' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])->name('profits.pay');
+            Route::get('settings', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/rates', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'storeRate'])->name('settings.rates.store');
+            Route::delete('settings/rates/{id}', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'destroyRate'])->where('id', '[0-9]{1,18}')->name('settings.rates.destroy');
+            Route::get('migration', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'index'])->name('migration.index');
+            Route::post('migration/reconcile', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'reconcile'])->name('migration.reconcile');
+            Route::post('migration/detect', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'detect'])->name('migration.detect');
+            Route::post('migration/post-missing', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'postMissing'])->name('migration.post-missing');
+            Route::put('migration/auto-posting', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'toggle'])->name('migration.toggle');
+            Route::get('dashboard', [\App\Http\Controllers\Admin\Erp\DashboardController::class, 'index'])->name('dashboard');
+            Route::get('audit', [\App\Http\Controllers\Admin\Erp\AuditController::class, 'index'])->name('audit.index');
+            Route::get('cash-bank', [\App\Http\Controllers\Admin\Erp\CashBankController::class, 'index'])->name('cash-bank.index');
             foreach (['vat', 'carrier', 'payout'] as $kind) {
-                Route::post("cash-bank/$kind", [\App\Http\Controllers\Tenant\Erp\CashBankController::class, 'settle'])->defaults('kind', $kind)->name("cash-bank.$kind");
+                Route::post("cash-bank/$kind", [\App\Http\Controllers\Admin\Erp\CashBankController::class, 'settle'])->defaults('kind', $kind)->name("cash-bank.$kind");
             }
-            Route::post('posting-failures/{id}/retry', [\App\Http\Controllers\Tenant\Erp\MigrationController::class, 'retry'])->where('id', '[0-9]{1,18}')->name('migration.retry');
-            Route::get('branches', [\App\Http\Controllers\Tenant\Erp\BranchController::class, 'index'])->name('branches.index');
-            Route::post('branches/transfer', [\App\Http\Controllers\Tenant\Erp\BranchController::class, 'transfer'])->name('branches.transfer');
+            Route::post('posting-failures/{id}/retry', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'retry'])->where('id', '[0-9]{1,18}')->name('migration.retry');
+            Route::get('branches', [\App\Http\Controllers\Admin\Erp\BranchController::class, 'index'])->name('branches.index');
+            Route::post('branches/transfer', [\App\Http\Controllers\Admin\Erp\BranchController::class, 'transfer'])->name('branches.transfer');
             Route::get('reports', [ErpReportController::class, 'index'])->name('reports.index');
             Route::get('reports/{report}', [ErpReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
             Route::get('reports/{report}/export', [ErpReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
@@ -335,6 +379,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('tenant.')->group(funct
             Route::get('settings', [AiSettingsController::class, 'edit'])->name('settings.edit');
             Route::put('settings', [AiSettingsController::class, 'update'])->name('settings.update');
             Route::post('settings/validate', [AiSettingsController::class, 'validateForm'])->name('settings.validate');
+            Route::put('settings/platform', [AiSettingsController::class, 'updatePlatform'])->name('settings.platform');
+            Route::post('settings/platform/validate', [AiSettingsController::class, 'validatePlatform'])->name('settings.platform.validate');
 
             Route::middleware('ai.enabled:trends')->prefix('trends')->name('trends.')->group(function () {
                 Route::get('/', [AiTrendsController::class, 'index'])->name('index');

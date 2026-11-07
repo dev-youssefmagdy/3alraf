@@ -16,7 +16,7 @@ class ExperimentResultController extends Controller
     public function store(ExperimentResultRequest $r, int $id): JsonResponse
     {
         $client = $r->attributes->get('integration_client');
-        $exp = GrowthExperiment::findOrFail($id); // tenant-scoped: another tenant's id is a 404
+        $exp = GrowthExperiment::findOrFail($id);
 
         return $this->idem->run($client, $r, function () use ($r, $exp, $client) {
             $res = $this->service->addResult($exp, $r->validated(), 'n8n', $client->id);

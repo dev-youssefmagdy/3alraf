@@ -14,9 +14,9 @@ class GrowthApprovalRepository extends BaseRepository implements GrowthApprovalR
         return $this->query()->lockForUpdate()->findOrFail($id);
     }
 
-    public function expireDue(iterable $tenantIds): int
+    public function expireDue(): int
     {
-        return GrowthApproval::withoutGlobalScopes()->whereIn('tenant_id', collect($tenantIds))->where('status', GrowthApproval::PENDING)->where('expires_at', '<', now())
+        return GrowthApproval::query()->where('status', GrowthApproval::PENDING)->where('expires_at', '<', now())
             ->update(['status' => GrowthApproval::EXPIRED, 'decided_at' => now()]);
     }
 

@@ -9,7 +9,7 @@ use App\Models\Order;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Weekly CEO Challenge (spec 16.6): ONE business question per ISO week chosen by explicit rules over the tenant's own metrics (evidence stored),
+ * Weekly CEO Challenge (spec 16.6): ONE business question per ISO week chosen by explicit rules over the shop's own metrics (evidence stored),
  * with hypothesis, small experiment, success metric, duration and review date. The same rule is not repeated within the cooldown.
  */
 class CeoChallengeService

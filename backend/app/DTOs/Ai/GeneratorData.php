@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiGeneratorRequest;
+use App\Http\Requests\Admin\AiGeneratorRequest;
 
 final readonly class GeneratorData
 {

@@ -9,8 +9,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\StaticPage;
-use App\Models\TenantProduct;
 use App\Services\Lists\ProductListResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -20,10 +20,10 @@ class StorefrontData
 {
     public function __construct(private ProductListResolver $lists, private CardPresenter $cards, private CatalogSearch $search) {}
 
-    /** Active category tree as nested arrays (cached per tenant + locale for a minute). */
+    /** Active category tree as nested arrays (cached per locale for a minute). */
     public function menu(): array
     {
-        return Cache::remember('sf.menu.'.current_tenant()?->id.'.'.app()->getLocale(), 60, function () {
+        return Cache::remember('sf.menu.'.app()->getLocale(), 60, function () {
             $all = Category::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()->groupBy('parent_id');
             $build = function (?int $parent) use (&$build, $all): array {
                 return ($all[$parent] ?? collect())->map(fn ($c) => [
@@ -35,14 +35,14 @@ class StorefrontData
         });
     }
 
-    /** Footer data as plain arrays (cached per tenant + locale for a minute): static pages, ACTIVE payment methods (+icon kind), app store links. */
+    /** Footer data as plain arrays (cached per locale for a minute): static pages, ACTIVE payment methods (+icon kind), app store links. */
     public function footer(): array
     {
-        return Cache::remember('sf.footer.'.current_tenant()?->id.'.'.app()->getLocale(), 60, fn () => [
+        return Cache::remember('sf.footer.'.app()->getLocale(), 60, fn () => [
             'pages' => StaticPage::where('is_active', true)->orderBy('id')->get(['slug', 'title'])->map(fn ($p) => ['slug' => $p->slug, 'title' => $p->title])->all(),
             'blog' => \App\Models\BlogPost::published()->exists(),
             'payments' => PaymentMethod::available()->orderBy('sort_order')->get()->map(fn ($m) => ['name' => $m->name, 'type' => $m->type->value, 'provider' => $m->provider?->value])->all(),
-            'apps' => ['ios' => current_tenant()?->settings['app_links']['ios'] ?? null, 'android' => current_tenant()?->settings['app_links']['android'] ?? null],
+            'apps' => ['ios' => setting('app_links.ios'), 'android' => setting('app_links.android')],
         ]);
     }
 
@@ -71,7 +71,7 @@ class StorefrontData
     /** Active brands with sellable products, newest-first by sort order, with a product count for the home strip. */
     private function brands()
     {
-        $sellable = fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+        $sellable = fn ($p) => $p->where('is_active', true)->whereNotNull('price');
 
         return Brand::query()->where('is_active', true)->whereHas('products', $sellable)
             ->withCount(['products as sellable_count' => $sellable])
@@ -86,7 +86,7 @@ class StorefrontData
             return null;
         }
         $ids = $sale->items()->pluck('product_id')->unique()->all();
-        $items = TenantProduct::query()->where('is_active', true)->whereIn('product_id', $ids)->whereHas('product', fn ($p) => $p->where('is_active', true))->with('product.images')->limit(12)->get();
+        $items = Product::query()->where('is_active', true)->whereNotNull('price')->whereIn('id', $ids)->with('images')->limit(12)->get();
 
         return $items->isEmpty() ? null : ['sale' => $sale, 'items' => $this->cards->decorate($items)];
     }
@@ -103,12 +103,11 @@ class StorefrontData
             return [];
         }
         $rootOf = $cats->mapWithKeys(fn ($c) => [$c->id => (int) explode('/', $c->path)[0]]);
-        $sellable = TenantProduct::query()->where('is_active', true)->whereHas('product', fn ($p) => $p->where('is_active', true))->orderByDesc('id')->get(['id', 'product_id']);
-        $tpByProduct = $sellable->pluck('id', 'product_id');
+        $sellable = Product::query()->where('is_active', true)->whereNotNull('price')->pluck('id');
         $byRoot = [];
-        foreach (DB::table('category_product')->whereIn('product_id', $tpByProduct->keys())->get(['product_id', 'category_id']) as $row) {
+        foreach (DB::table('category_product')->whereIn('product_id', $sellable)->get(['product_id', 'category_id']) as $row) {
             if ($root = $rootOf[$row->category_id] ?? null) {
-                $byRoot[$root][$row->product_id] = $tpByProduct[$row->product_id];
+                $byRoot[$root][$row->product_id] = (int) $row->product_id;
             }
         }
         $picked = [];
@@ -121,7 +120,7 @@ class StorefrontData
                 break;
             }
         }
-        $cards = $this->cards->decorate(TenantProduct::query()->whereIn('id', collect($picked)->flatten())->with('product.images')->get())->keyBy('id');
+        $cards = $this->cards->decorate(Product::query()->whereIn('id', collect($picked)->flatten())->with('images')->get())->keyBy('id');
 
         return $roots->filter(fn ($r) => isset($picked[$r->id]))->map(fn ($r) => [
             'category' => $r, 'items' => collect($picked[$r->id])->map(fn ($id) => $cards->get($id))->filter()->values(),

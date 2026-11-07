@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StockLevelDataTable;
 use App\DataTables\StockMovementDataTable;
@@ -24,7 +24,7 @@ class StockController extends Controller implements HasMiddleware
     {
         $valuation = (string) (StockLevel::query()->selectRaw('COALESCE(SUM(on_hand * avg_cost), 0) as v')->value('v') ?? '0');
 
-        return view('tenant.stock.index', [
+        return view('admin.stock.index', [
             'table' => new StockLevelDataTable, 'branches' => Branch::get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),
             'valuation' => \App\Support\Money::round($valuation), 'units' => (int) StockLevel::sum('on_hand'),
         ]);
@@ -37,7 +37,7 @@ class StockController extends Controller implements HasMiddleware
 
     public function movements()
     {
-        return view('tenant.stock.movements', [
+        return view('admin.stock.movements', [
             'table' => new StockMovementDataTable, 'branches' => Branch::get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(), 'types' => StockMovementType::options(),
         ]);
     }

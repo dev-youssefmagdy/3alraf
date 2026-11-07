@@ -1,10 +1,10 @@
 {{-- Marketing tags configured in Admin → SEO & Analytics. Ids are regex-validated on save (SeoSettingsRequest), so they are safe to echo.
      Nothing loads until the page is idle (first interaction or 3s after window load) so tags never hurt Core Web Vitals. --}}
 @php
-    $skipStaff = auth('tenant')->check() && ! $seo['track_staff'];
+    $skipStaff = auth('admin')->check() && ! $seo['track_staff'];
     $trk = array_filter(['ga4' => $seo['ga4_id'], 'gtm' => $seo['gtm_id'], 'ads' => $seo['google_ads_id'], 'adsLabel' => $seo['google_ads_label'], 'meta' => $seo['meta_pixel_id'],
         'tiktok' => $seo['tiktok_pixel_id'], 'snap' => $seo['snapchat_pixel_id'], 'clarity' => $seo['clarity_id']]);
-    $currency = current_tenant()->currency_code;
+    $currency = setting('currency_code');
 @endphp
 @if ($trk && ! $skipStaff)
 <script>

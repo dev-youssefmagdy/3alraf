@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="$e->name">
+<x-layouts.admin :title="$e->name">
     @php $l = fn ($k, $r = []) => __('growth_hub.lab.'.$k, $r); $rec = $m['recommendation']; $v = fn ($x) => $x ?? '—'; @endphp
     <div class="space-y-4">
         <x-card :title="$e->name">
@@ -9,8 +9,8 @@
             <p class="mt-2 text-sm">{{ $e->content_approved_at ? $l('content_ok') : $l('content_pending') }}</p>
             @can('growth.manage')
                 <div class="mt-2 flex flex-wrap gap-2">
-                    @unless ($e->content_approved_at)<form data-ajax-form action="{{ route('tenant.growth.lab.content', $e->id) }}" method="POST">@csrf<x-button type="submit">{{ $l('approve_content') }}</x-button></form>@endunless
-                    @if ($e->content_approved_at && $e->status === 'draft')<form data-ajax-form action="{{ route('tenant.growth.lab.start', $e->id) }}" method="POST">@csrf<x-button type="submit">{{ $l('start') }}</x-button></form>@endif
+                    @unless ($e->content_approved_at)<form data-ajax-form action="{{ route('admin.growth.lab.content', $e->id) }}" method="POST">@csrf<x-button type="submit">{{ $l('approve_content') }}</x-button></form>@endunless
+                    @if ($e->content_approved_at && $e->status === 'draft')<form data-ajax-form action="{{ route('admin.growth.lab.start', $e->id) }}" method="POST">@csrf<x-button type="submit">{{ $l('start') }}</x-button></form>@endif
                 </div>
             @endcan
         </x-card>
@@ -29,19 +29,19 @@
         @can('growth.manage')
             <x-card :title="$l('import')">
                 <p class="mb-2 text-xs text-slate-500">{{ $l('import_hint') }}</p>
-                <form data-ajax-form action="{{ route('tenant.growth.lab.ads', $e->id) }}" method="POST" class="grid gap-3 sm:grid-cols-6" novalidate>@csrf
+                <form data-ajax-form action="{{ route('admin.growth.lab.ads', $e->id) }}" method="POST" class="grid gap-3 sm:grid-cols-6" novalidate>@csrf
                     <x-input name="date" type="date" :label="$l('date')" :value="now()->toDateString()" /><x-input name="spend" type="number" step="0.01" min="0" :label="$l('spend')" /><x-input name="impressions" type="number" min="0" :label="$l('impressions')" />
                     <x-input name="clicks" type="number" min="0" :label="$l('clicks')" /><x-input name="creative" :label="$l('creative')" /><div class="self-end"><x-button type="submit">{{ __('admin.save') }}</x-button></div>
                 </form>
             </x-card>
             @if ($rec['action'] === 'scale_candidate')
-                <x-card :title="$l('budget_req')"><form data-ajax-form action="{{ route('tenant.growth.lab.budget', $e->id) }}" method="POST" class="flex flex-wrap items-end gap-3" novalidate>@csrf
+                <x-card :title="$l('budget_req')"><form data-ajax-form action="{{ route('admin.growth.lab.budget', $e->id) }}" method="POST" class="flex flex-wrap items-end gap-3" novalidate>@csrf
                     <x-input name="budget_cap" type="number" step="0.01" min="0" :label="$l('budget')" /><x-input name="reason" :label="__('growth_hub.fields.note')" /><x-button type="submit">{{ $l('budget_req') }}</x-button></form></x-card>
             @endif
         @endcan
         <x-card :title="$l('links')">
             @foreach ($links as $lk)<p class="text-sm"><code>{{ $lk->short }}</code> | {{ $lk->channel }} | {{ $lk->stats['clicks'] }} / {{ $lk->stats['orders'] }}</p>@endforeach
-            @can('growth.manage')<form data-ajax-form action="{{ route('tenant.growth.lab.links', $e->id) }}" method="POST" class="mt-2 flex items-end gap-3" novalidate>@csrf<x-input name="channel" :label="__('growth_hub.amb.channel')" /><x-button type="submit">{{ $l('new_link') }}</x-button></form>@endcan
+            @can('growth.manage')<form data-ajax-form action="{{ route('admin.growth.lab.links', $e->id) }}" method="POST" class="mt-2 flex items-end gap-3" novalidate>@csrf<x-input name="channel" :label="__('growth_hub.amb.channel')" /><x-button type="submit">{{ $l('new_link') }}</x-button></form>@endcan
         </x-card>
     </div>
 </x-layouts.admin>

@@ -8,7 +8,7 @@
                     <a href="{{ route('storefront.orders.show', $o->public_token) }}" class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 py-3 text-sm hover:bg-slate-50">
                         <span><b>{{ $o->number }}</b> <span class="text-slate-500">{{ $o->placed_at?->format('Y-m-d') }}</span></span>
                         <span class="badge {{ $o->status->color() }}">{{ $o->status->label() }}</span>
-                        <span class="font-bold">{{ number_format((float) $o->total, 2) }} {{ current_tenant()->currency_symbol }}</span>
+                        <span class="font-bold">{{ number_format((float) $o->total, 2) }} {{ setting('currency_symbol') }}</span>
                     </a>
                 @empty
                     <p class="text-sm text-slate-500">{{ __('store.no_orders') }}</p>

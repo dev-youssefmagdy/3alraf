@@ -7,7 +7,6 @@ import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/catalog_models.dart';
 import '../data/catalog_repository.dart';
 import '../data/product_models.dart';
@@ -17,10 +16,8 @@ final catalogRepositoryProvider = Provider<CatalogRepository>(
 );
 
 /// Every store-content provider calls this first so nothing survives a
-/// tenant switch (data is per store) or a language change (content is
-/// localised server side).
+/// language change (content is localised server side).
 void watchStoreScope(Ref ref) {
-  ref.watch(tenantSlugProvider);
   ref.watch(localeProvider);
 }
 
@@ -189,7 +186,7 @@ final listingProvider = NotifierProvider.autoDispose
     );
 
 /// Infinite-scroll listing with sort/filter changes. Rebuilt (and so
-/// refetched) when the tenant or language changes.
+/// refetched) when the language changes.
 class ListingController extends Notifier<ListingState> {
   ListingController(this.scope);
 
@@ -337,41 +334,28 @@ final recentSearchesProvider =
 class RecentSearchesController extends Notifier<List<String>> {
   static const max = 8;
 
-  String? get _slug => ref.read(tenantSlugProvider);
-
   @override
-  List<String> build() {
-    final slug = ref.watch(tenantSlugProvider);
-    if (slug == null) return const [];
-    return ref.read(preferencesProvider).recentSearches(slug);
-  }
+  List<String> build() => ref.read(preferencesProvider).recentSearches;
 
   Future<void> add(String term) async {
     final t = term.trim();
-    final slug = _slug;
-    if (t.length < 2 || slug == null) return;
+    if (t.length < 2) return;
     state = [t, ...state.where((e) => e != t)].take(max).toList();
-    await ref.read(preferencesProvider).setRecentSearches(slug, state);
+    await ref.read(preferencesProvider).setRecentSearches(state);
   }
 
   Future<void> clear() async {
-    final slug = _slug;
     state = const [];
-    if (slug != null) {
-      await ref.read(preferencesProvider).setRecentSearches(slug, const []);
-    }
+    await ref.read(preferencesProvider).setRecentSearches(const []);
   }
 }
 
-/// Home popup banner: shown once per app session and store.
+/// Home popup banner: shown once per app session.
 final popupShownProvider = NotifierProvider<PopupShown, bool>(PopupShown.new);
 
 class PopupShown extends Notifier<bool> {
   @override
-  bool build() {
-    ref.watch(tenantSlugProvider);
-    return false;
-  }
+  bool build() => false;
 
   void markShown() => state = true;
 }

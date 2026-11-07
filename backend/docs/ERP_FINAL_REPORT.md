@@ -2,6 +2,8 @@
 
 Source of truth for design: `docs/ERP_PLAN.md` (phases 1-10 + production runbook). Order math: `docs/CALCULATIONS.md`.
 
+> **Single store (2026-11 conversion).** The ERP now runs for the one shop: no `tenant_id`, no central ERP pages, no `--tenant` options (`erp:backfill --from=…`, `erp:reconcile`, `erp:verify`, `erp:depreciate`). `erp_central.*` permissions were dropped; the only kept central page is **Finance → ERP anomalies** (`admin.erp.anomalies`, permission `erp.audit.view`, lang group `erp_audit`). Exchange rates stay as reference rates on ERP settings (never auto-applied, see CALCULATIONS.md). Sections below that mention tenants/central describe the multi-tenant era.
+
 ## 1. Existing architecture findings
 Single shared DB with `tenant_id` + `BelongsToTenant` global scope (central context sees all rows); `Money` (bcmath, HALF_UP); `StockLedger` is the only stock writer (weighted average cost); orders carry `net_profit`/`cogs`; profit is recognised when the admin confirms; domain events (OrderStatusChanged, OrderPaymentUpdated, OrderReturnUpdated, ...) already exist; Spatie permissions with separate `tenant` / `central` guards; Blade + Tailwind + Chart.js; lang in `lang/ar` (+ `resources/lang-erp/en` for the ERP). Risks found: double revenue, order-profit vs ledger drift, COD cash held by carriers, historic data without journals, tenant leaks through ids, closed periods.
 
@@ -14,7 +16,7 @@ Double-entry ledger. `JournalService` is the only writer of journals and account
 ## 4. Tenant functionality
 Hub of cards at `/admin/erp`: dashboard, chart of accounts, manual journals (draft/post/reverse), accounting periods (close/reopen, year-end close), customers and suppliers ledgers (statements, ageing, receipts/payments with advances, credit/debit notes, opening balances), owners and equity (contributions, withdrawals, branch capital), fixed assets (register, monthly depreciation, disposal, branch transfer), controlled profit distribution (calculate, approve, post, pay), branch accounting (+ branch cash transfer), 18 financial reports with CSV/PDF export, reconciliation, migration page (backfill history, post missing, auto-posting switch), settings (reserve %, buffer, tax estimate, approvals, exchange rates).
 
-## 5. Central functionality (read-only, `erp_central.*`)
+## 5. Central functionality (historical; removed in the 2026-11 single-store conversion except the Anomalies page)
 Hub, tenant overview (+ CSV, drill-down to a tenant's own statements), performance and consolidated views grouped by currency (optional conversion with stored rates only), cross-tenant transactions + entry detail, receivables/payables, inventory valuation, periods, anomaly detection (+ CSV), audit log viewer, backfill/migration monitor.
 
 ## 6. Accounting workflows and journal mappings
@@ -50,8 +52,8 @@ Budgeting, payroll integration, loan amortisation, bad-debt provisioning, schedu
 
 ## 14. Deployment steps and environment
 1. Deploy code; `php artisan migrate --force` (also seeds ERP permissions; adds CHECK constraints when existing rows comply, otherwise logs a warning).
-2. `php artisan permission:cache-reset`; assign `erp.*` / `erp_central.*` permissions to roles.
-3. Per tenant: `erp:backfill --tenant=SLUG --from=YYYY-MM-DD --dry-run`, then real run, then `erp:reconcile --tenant=SLUG` (exit 0) and `erp:verify --tenant=SLUG` (exit 0); confirm auto-posting is on.
+2. `php artisan permission:cache-reset`; assign `erp.*` permissions to roles.
+3. `erp:backfill --from=YYYY-MM-DD --dry-run`, then real run, then `erp:reconcile` (exit 0) and `erp:verify` (exit 0); confirm auto-posting is on.
 4. `php artisan optimize` (config/route/view caches verified safe; no `env()` outside config).
 5. Scheduler (`schedule:run` every minute): `erp:depreciate` monthly (1st, 03:20), `erp:verify` weekly (Mon 04:10); optionally schedule `erp:reconcile` daily and alert on non-zero exit.
 6. Environment: no new variables. Attachments use the existing private disk (`config('media.private_disk')`). Optional `config('erp.large_manual_threshold')` (default 100000) for the large-manual-entry anomaly.

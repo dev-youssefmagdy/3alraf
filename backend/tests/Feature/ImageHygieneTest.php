@@ -3,12 +3,10 @@
 use App\Models\Banner;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\CentralAdmin;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\ImageUploadService;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Http\UploadedFile;
@@ -18,17 +16,17 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->c = 'http://3alraf.test/admin';
-    $this->t = 'http://egy.3alraf.test/admin';
+    $this->c = '/admin';
+    $this->t = '/admin';
     $this->media = Storage::disk('media');
     $this->img = fn (string $n = 'a.jpg', int $w = 400) => UploadedFile::fake()->image($n, $w, $w);
     $this->files = fn () => collect($this->media->allFiles())->reject(fn ($f) => str_contains($f, '/qr/'))->values()->all();
-    $this->central = fn () => $this->actingAs(CentralAdmin::first(), 'central');
-    $this->tenantAdmin = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->superAdmin = fn () => $this->actingAs(Admin::first(), 'admin');
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 it('brand logo: replace deletes original + thumb, remove deletes, delete removes the file', function () {
-    ($this->central)();
+    ($this->superAdmin)();
     $h = ['Accept' => 'application/json'];
     $this->post("{$this->c}/brands", ['name' => ['ar' => 'ب', 'en' => 'B'], 'is_active' => 1, 'logo' => ($this->img)()], $h)->assertOk();
     $b = Brand::first();
@@ -51,7 +49,7 @@ it('brand logo: replace deletes original + thumb, remove deletes, delete removes
 });
 
 it('category image: replace / remove / delete leave no files behind', function () {
-    ($this->central)();
+    ($this->superAdmin)();
     $h = ['Accept' => 'application/json'];
     $this->post("{$this->c}/categories", ['name' => ['ar' => 'ق'], 'is_active' => 1, 'image' => ($this->img)()], $h)->assertOk();
     $cat = Category::first();
@@ -67,10 +65,10 @@ it('category image: replace / remove / delete leave no files behind', function (
 });
 
 it('product images: remove ids deletes rows + files, variant image replacement drops the old one', function () {
-    ($this->central)();
+    ($this->superAdmin)();
     $h = ['Accept' => 'application/json'];
     $cat = Category::create(['name' => ['ar' => 'c'], 'slug' => 'c', 'path' => '1', 'depth' => 0]);
-    $base = ['type' => 'simple', 'name' => ['ar' => 'س'], 'sku' => 'HG-1', 'category_ids' => [$cat->id], 'is_active' => 1];
+    $base = ['type' => 'simple', 'name' => ['ar' => 'س'], 'sku' => 'HG-1', 'category_ids' => [$cat->id], 'is_active' => 1, 'price' => '10', 'cost' => '5'];
     $this->post("{$this->c}/products", $base + ['images' => [($this->img)('a.jpg', 300), ($this->img)('b.jpg', 301)]], $h)->assertOk();
     $p = Product::with('images')->first();
     expect($p->images)->toHaveCount(2)->and(($this->files)())->toHaveCount(8);
@@ -121,7 +119,7 @@ it('a failed upload keeps the old file (new is stored before the old is deleted)
 });
 
 it('banner images per locale: replace, remove one locale, delete all', function () {
-    ($this->tenantAdmin)();
+    ($this->owner)();
     $h = ['Accept' => 'application/json'];
     $base = ['placement' => 'home_hero', 'title' => ['ar' => 'ب'], 'is_active' => 1, 'sort_order' => 0];
     $this->post("{$this->t}/banners", $base + ['images' => ['ar' => ($this->img)('1.jpg', 300), 'en' => ($this->img)('2.jpg', 310)]], $h)->assertOk();
@@ -144,9 +142,9 @@ it('banner images per locale: replace, remove one locale, delete all', function 
 });
 
 it('expense receipts (private disk): replace, remove and delete leave no file', function () {
-    ($this->tenantAdmin)();
+    ($this->owner)();
     $h = ['Accept' => 'application/json'];
-    $cat = ExpenseCategory::create(['tenant_id' => Tenant::where('slug', 'egy')->value('id'), 'name' => ['ar' => 'ع'], 'is_active' => true]);
+    $cat = ExpenseCategory::create(['name' => ['ar' => 'ع'], 'is_active' => true]);
     $base = ['expense_category_id' => $cat->id, 'amount' => '10', 'expense_date' => now()->toDateString()];
     $pdf = fn ($n) => UploadedFile::fake()->create($n, 20, 'application/pdf');
     $this->post("{$this->t}/expenses", $base + ['attachment' => $pdf('a.pdf')], $h)->assertOk();
@@ -168,14 +166,15 @@ it('media:prune-orphans lists unreferenced files and only deletes them without -
     $kept = $svc->store(($this->img)(), 'brands');
     $b = Brand::create(['name' => ['ar' => 'ب'], 'slug' => 'b', 'logo' => $kept['path'], 'is_active' => true]);
     $orphan = $svc->store(($this->img)('o.jpg', 333), 'brands');
-    $this->media->put('tenants/1/qr/products/p1-aaaa.png', 'x'); // unreferenced qr file
-    foreach ([$orphan['path'], $orphan['thumb_path'], 'tenants/1/qr/products/p1-aaaa.png'] as $f) {
+    $this->media->put('tenants/1/qr/products/p1-aaaa.png', 'x'); // unreferenced legacy (pre single-store) qr file
+    $this->media->put('qr/products/p2-bbbb.png', 'x');           // unreferenced qr file
+    foreach ([$orphan['path'], $orphan['thumb_path'], 'tenants/1/qr/products/p1-aaaa.png', 'qr/products/p2-bbbb.png'] as $f) {
         touch(Storage::disk('media')->path($f), time() - 3 * 86400);
     }
 
     $this->artisan('media:prune-orphans', ['--dry-run' => true])->expectsOutputToContain($orphan['path'])->assertSuccessful();
     $this->media->assertExists([$orphan['path'], $orphan['thumb_path']]);
     $this->artisan('media:prune-orphans')->assertSuccessful();
-    $this->media->assertMissing([$orphan['path'], $orphan['thumb_path'], 'tenants/1/qr/products/p1-aaaa.png']);
+    $this->media->assertMissing([$orphan['path'], $orphan['thumb_path'], 'tenants/1/qr/products/p1-aaaa.png', 'qr/products/p2-bbbb.png']);
     $this->media->assertExists([$b->logo, $kept['thumb_path']]);
 });

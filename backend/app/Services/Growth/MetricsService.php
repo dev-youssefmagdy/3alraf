@@ -13,7 +13,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Growth metrics for the current tenant. Every metric is {value, confidence, missing[]}:
+ * Growth metrics of the shop. Every metric is {value, confidence, missing[]}:
  * confirmed = computed only from stored ledger figures; estimated = derived/approximated (velocity, carts as visits, ...);
  * insufficient = an input is missing, value is null (never a profit figure from partial costs).
  */
@@ -203,7 +203,7 @@ class MetricsService
     /** Return reasons (counts + value), PII-free. */
     public function returnReasons(CarbonInterface $from, CarbonInterface $to): array
     {
-        return DB::table('order_returns')->where('tenant_id', current_tenant()->id)->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+        return DB::table('order_returns')->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->selectRaw('COALESCE(NULLIF(reason, \'\'), \'unspecified\') reason, COUNT(*) returns_count, SUM(return_value) value')->groupBy('reason')->orderByDesc('returns_count')->limit(50)->get()
             ->map(fn ($r) => ['reason' => mb_substr((string) $r->reason, 0, 120), 'count' => (int) $r->returns_count, 'value' => round((float) $r->value, 2)])->all();
     }

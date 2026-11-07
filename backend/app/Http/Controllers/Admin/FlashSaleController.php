@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\FlashSaleDataTable;
 use App\DTOs\FlashSaleData;
-use App\Http\Requests\Tenant\FlashSaleRequest;
+use App\Http\Requests\Admin\FlashSaleRequest;
 use App\Models\FlashSale;
 use App\Services\FlashSaleService;
 use App\Services\Stock\StockItemCatalog;
@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 class FlashSaleController extends ResourceController
 {
     protected static string $perm = 'flash_sales';
-    protected static string $routeBase = 'tenant.flash-sales';
-    protected static string $view = 'tenant.flash-sales';
+    protected static string $routeBase = 'admin.flash-sales';
+    protected static string $view = 'admin.flash-sales';
     protected static string $titleKey = 'orders.flash_sales';
     protected static string $requestClass = FlashSaleRequest::class;
     protected static string $dtoClass = FlashSaleData::class;

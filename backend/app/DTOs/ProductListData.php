@@ -3,7 +3,7 @@
 namespace App\DTOs;
 
 use App\Enums\ProductListType;
-use App\Http\Requests\Tenant\ProductListRequest;
+use App\Http\Requests\Admin\ProductListRequest;
 
 final readonly class ProductListData
 {

@@ -31,7 +31,7 @@ class PackagingOptionDataTable extends BaseDataTable
             ->addColumn('name_label', fn (PackagingOption $m) => e($m->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (PackagingOption $m) => $this->badge($m->is_active, __('admin.active'), __('admin.inactive')))
-            ->addColumn('actions', fn (PackagingOption $m) => $this->tenantActions($m, 'tenant.packaging', 'packaging'));
+            ->addColumn('actions', fn (PackagingOption $m) => $this->rowActions($m, 'admin.packaging', 'packaging'));
     }
 
     protected function rawColumns(): array

@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class BundleItem extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['bundle_id', 'product_id', 'product_variant_id', 'quantity'];
 

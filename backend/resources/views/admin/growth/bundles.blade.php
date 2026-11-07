@@ -1,10 +1,10 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.bundles.title')">
+<x-layouts.admin :title="__('growth_hub.bundles.title')">
     @php $b = fn ($k, $r = []) => __('growth_hub.bundles.'.$k, $r); $inp = 'block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm'; @endphp
     <div class="space-y-4" id="be">
         <p class="text-sm text-slate-600">{{ $b('hint') }}</p>
         @can('growth.manage')
             <x-card :title="$b('propose')">
-                <form data-ajax-form action="{{ route('tenant.growth.bundles.propose') }}" method="POST" class="grid gap-3 sm:grid-cols-4" novalidate>
+                <form data-ajax-form action="{{ route('admin.growth.bundles.propose') }}" method="POST" class="grid gap-3 sm:grid-cols-4" novalidate>
                     @csrf
                     <label class="text-sm text-slate-600">{{ $b('fields.mode') }}<select name="mode" class="{{ $inp }}">@foreach ($modes as $m)<option value="{{ $m }}">{{ $b('modes.'.$m) }}</option>@endforeach</select></label>
                     <label class="text-sm text-slate-600">{{ $b('budgets_hint') }}<input name="budgets" class="{{ $inp }}" placeholder="250, 500, 1000"></label>
@@ -16,7 +16,7 @@
         <x-card :title="$b('pending')">
             @forelse ($pending as $a)
                 <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 py-2 text-sm"><b>{{ $a->title }}</b><span class="text-slate-500">{{ $a->payload['price'] ?? '' }} / {{ __('growth_hub.bundles.cols.margin') }} {{ $a->payload['pricing']['margin_percent'] ?? '?' }}%</span>
-                    <a class="ms-auto text-xs text-brand-700 underline" href="{{ route('tenant.growth.approvals.index') }}">{{ __('growth_hub.menu.approvals') }}</a></div>
+                    <a class="ms-auto text-xs text-brand-700 underline" href="{{ route('admin.growth.approvals.index') }}">{{ __('growth_hub.menu.approvals') }}</a></div>
             @empty<p class="text-sm text-slate-500">{{ $b('none_pending') }}</p>@endforelse
         </x-card>
         <x-card :title="$b('performance')">
@@ -32,10 +32,10 @@
             <x-card :title="$b('ab_title')">
                 <p class="mb-3 text-sm text-slate-600">{{ $b('ab_hint') }}</p>
                 @can('growth.manage')
-                    <form data-ajax-form action="{{ route('tenant.growth.bundles.ab.start') }}" method="POST" enctype="multipart/form-data" class="mb-4 grid gap-3 sm:grid-cols-3" novalidate>
+                    <form data-ajax-form action="{{ route('admin.growth.bundles.ab.start') }}" method="POST" enctype="multipart/form-data" class="mb-4 grid gap-3 sm:grid-cols-3" novalidate>
                         @csrf
                         <label class="text-sm text-slate-600">{{ $b('fields.bundle_id') }}<select data-search name="bundle_id" class="{{ $inp }}">@foreach ($bundles as $bd)<option value="{{ $bd->id }}">{{ $bd->name }}</option>@endforeach</select></label>
-                        @foreach ((array) current_tenant()->locales as $l)
+                        @foreach ((array) ((array) setting('locales', [])) as $l)
                             <label class="text-sm text-slate-600">{{ $b('fields.name') }} ({{ $l }})<input name="name[{{ $l }}]" class="{{ $inp }}"></label>
                             <label class="text-sm text-slate-600 sm:col-span-2">{{ $b('fields.description') }} ({{ $l }})<input name="description[{{ $l }}]" class="{{ $inp }}"></label>
                         @endforeach

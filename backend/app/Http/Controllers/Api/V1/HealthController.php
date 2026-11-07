@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-/** `GET {central}/api/v1/health` - liveness + dependency check for load balancers / uptime monitors. No secrets, no tenant data. */
+/** `GET /api/v1/health` - liveness + dependency check for load balancers / uptime monitors. No secrets, no business data. */
 class HealthController extends Controller
 {
     public function __invoke(): JsonResponse

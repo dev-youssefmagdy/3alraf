@@ -12,9 +12,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\BranchTransferService;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
@@ -32,15 +30,13 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    app(CoaTemplate::class)->seed($this->tenant);
+    codUpfront(false);
+    app(CoaTemplate::class)->seed();
     $this->je = app(JournalService::class);
     $this->cat = app(ReportCatalog::class);
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($this->owner, 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin/erp';
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->owner, 'admin');
+    $this->base = '/admin/erp';
     $this->branch = Branch::first();
     $this->today = now()->toDateString();
     $this->old = now()->subDays(40)->toDateString();
@@ -67,7 +63,7 @@ beforeEach(function () {
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->owner->unsetRelation('permissions')->unsetRelation('roles');
-        $this->actingAs($this->owner->fresh(), 'tenant');
+        $this->actingAs($this->owner->fresh(), 'admin');
     };
 });
 
@@ -134,7 +130,7 @@ it('tax report shows VAT collected, reversed on returns and the net payable', fu
 it('compares ledger inventory with the StockLedger valuation and shows the difference', function () {
     ($this->tx)('inventory', 'payable', '1000', null, ['dr' => ['branch_id' => $this->branch->id], 'cr' => ['party_type' => 'supplier', 'party_id' => $this->sup->id]]);
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => 'x'], 'slug' => 'x', 'sku' => 'X', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['product_id' => $p->id, 'price' => '100', 'cost' => '60', 'is_active' => true]);
+    listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
     app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 10, '60');
     $m = ($this->meta)('inventory-valuation');
     expect($m['ledger'])->toBe('1000.0000')->and($m['stock'])->toBe('600.0000')->and($m['difference'])->toBe('400.0000');
@@ -147,7 +143,7 @@ it('compares ledger inventory with the StockLedger valuation and shows the diffe
 
 it('flags reconciliation mismatches against business records', function () {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => 'pa'], 'slug' => 'pa', 'sku' => 'PA', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['product_id' => $p->id, 'price' => '100', 'cost' => '60', 'is_active' => true]);
+    listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
     app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 100, '60');
     $o = app(OrderPlacementService::class)->place(new CheckoutData(name: 'Ali', phone: '01000000100', cityId: City::first()->id, address: 'St', shippingCompanyId: ShippingCompany::first()->id,
         paymentMethodId: PaymentMethod::where('type', 'cod')->first()->id), [['product_id' => $p->id, 'variant_id' => 0, 'qty' => 2]])['order'];
@@ -183,7 +179,7 @@ it('dashboard numbers equal the statements', function () {
         ->and($k['cash'])->toBe(($this->meta)('cash-flow')['closing']);
     $html = $this->get($this->base.'/dashboard')->assertOk()->getContent();
     expect($html)->toContain('data-kpi="net_profit"')->and($html)->toContain(number_format((float) $pl['net_profit'], 2))->and($html)->toContain('data-chart=');
-    $this->get($this->base)->assertSee(route('tenant.erp.dashboard'))->assertSee(route('tenant.erp.branches.index'))->assertSee(route('tenant.erp.reports.index'))->assertSee(route('tenant.erp.reports.show', 'reconciliation'));
+    $this->get($this->base)->assertSee(route('admin.erp.dashboard'))->assertSee(route('admin.erp.branches.index'))->assertSee(route('admin.erp.reports.index'))->assertSee(route('admin.erp.reports.show', 'reconciliation'));
     // branch dashboard == branch statements
     ($this->tx)('cash', 'sales_revenue', '60', null, ['dr' => ['branch_id' => $this->branch->id], 'cr' => ['branch_id' => $this->branch->id]]);
     $fb = ($this->f)(['branch' => $this->branch->id]);
@@ -206,7 +202,7 @@ it('exports CSV and PDF with the report content and enforces the export permissi
     $this->get($this->base.'/reports/branch-profitability/export')->assertOk()->assertSee(__('erp_rep.t.branch-profitability'), false);
     $pdf = $this->get($this->base.'/reports/cash-flow/export?format=pdf')->assertOk();
     expect($pdf->headers->get('content-type'))->toContain('pdf')->and(substr($pdf->getContent(), 0, 4))->toBe('%PDF');
-    $this->get($this->base.'/reports')->assertOk()->assertSee(route('tenant.erp.reports.show', 'cash-flow'));
+    $this->get($this->base.'/reports')->assertOk()->assertSee(route('admin.erp.reports.show', 'cash-flow'));
     ($this->revoke)(['erp.reports.export']);
     $this->get($this->base.'/reports/profit-loss/export')->assertForbidden();
     $this->get($this->base.'/reports/profit-loss')->assertOk()->assertDontSee('format=csv', false);
@@ -228,14 +224,14 @@ it('limits branch-specific views to users with erp.branches.view', function () {
     $this->get($this->base.'/branches')->assertForbidden();
     $this->get($this->base."/reports/profit-loss?branch_id={$b2->id}")->assertOk()->assertViewHas('f', fn ($f) => $f->branchId === null)->assertViewHas('data', fn ($d) => $d['net_profit'] === '140.0000');
     $this->get($this->base."/dashboard?branch_id={$b2->id}")->assertOk()->assertViewHas('f', fn ($f) => $f->branchId === null);
-    $this->get($this->base.'/reports')->assertDontSee(route('tenant.erp.reports.show', 'branch-profitability'));
+    $this->get($this->base.'/reports')->assertDontSee(route('admin.erp.reports.show', 'branch-profitability'));
 });
 
 it('transfers cash between branches without changing consolidated profit or cash', function () {
     $b2 = Branch::create(['name' => ['en' => 'B2', 'ar' => 'ب2'], 'is_active' => true, 'is_default' => false]);
     ($this->tx)('cash', 'branch_capital', '1000', null, ['dr' => ['branch_id' => $this->branch->id], 'cr' => ['branch_id' => $this->branch->id]]);
     ($this->tx)('cash', 'sales_revenue', '10', null, ['dr' => ['branch_id' => $this->branch->id], 'cr' => ['branch_id' => $this->branch->id]]);
-    // an older tenant that never got the clearing account: ensureRoles tops it up lazily
+    // an older chart that never got the clearing account: ensureRoles tops it up lazily
     Account::where('role_key', 'branch_transfer')->forceDelete();
     app(\App\Services\Erp\Accounting\AccountResolver::class)->flush();
     $before = ($this->meta)('cash-flow')['closing'];
@@ -252,23 +248,11 @@ it('transfers cash between branches without changing consolidated profit or cash
     expect(fn () => app(BranchTransferService::class)->cash($this->branch->id, $this->branch->id, '5'))->toThrow(\App\Exceptions\AccountingException::class);
 });
 
-it('keeps reports tenant-isolated', function () {
+it('refuses unknown branch ids on reports and branch transfers (QA-003)', function () {
     ($this->scenario)();
-    $other = Tenant::create(['slug' => 'oth', 'name' => 'O', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'E', 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'UTC', 'is_active' => true]);
-    app(CoaTemplate::class)->seed($other);
-    $ob = Branch::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => ['en' => 'OB', 'ar' => 'ب'], 'is_active' => true, 'is_default' => true]);
-    app()->instance('currentTenant', $other);
-    app(\App\Services\Erp\Accounting\AccountResolver::class)->flush();
-    $this->je->post(['entry_date' => $this->today, 'description' => 'foreign'], [['account' => 'bank', 'debit' => '777', 'branch_id' => $ob->id], ['account' => 'sales_revenue', 'credit' => '777', 'branch_id' => $ob->id]]);
-    app()->instance('currentTenant', $this->tenant);
-    app(\App\Services\Erp\Accounting\AccountResolver::class)->flush();
     expect(($this->meta)('profit-loss')['net_profit'])->toBe('500.0000')->and(($this->meta)('cash-flow')['closing'])->toBe('9800.0000');
-    $csv = $this->get($this->base.'/reports/journal-entries/export?from='.$this->old)->assertOk()->getContent();
-    expect($csv)->not->toContain('777')->and(count(($this->rows)('journal-entries', ($this->f)(['from' => $this->old]))))->toBe(2 * 7 + 1);
-    $this->get($this->base."/reports/profit-loss?branch_id={$ob->id}")->assertNotFound();
-    $this->get($this->base.'/branches')->assertOk()->assertDontSee('OB');
-    // QA-003: another tenant's branch is an unknown id for this tenant -> field error (tenant-scoped exists), nothing posted
-    $this->post($this->base.'/branches/transfer', ['from_branch' => $this->branch->id, 'to_branch' => $ob->id, 'amount' => '5'])->assertSessionHasErrors('to_branch');
+    $this->get($this->base.'/reports/profit-loss?branch_id=999999')->assertNotFound();
+    $this->post($this->base.'/branches/transfer', ['from_branch' => $this->branch->id, 'to_branch' => 999999, 'amount' => '5'])->assertSessionHasErrors('to_branch');
     expect(\App\Models\Erp\JournalEntry::where('source_type', 'branch_cash_transfer')->count())->toBe(0);
 });
 

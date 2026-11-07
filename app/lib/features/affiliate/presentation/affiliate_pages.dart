@@ -15,7 +15,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../auth/presentation/auth_widgets.dart';
 import '../../catalog/presentation/catalog_widgets.dart';
 import '../../orders/presentation/order_widgets.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../store/application/store_controller.dart';
 import '../application/affiliate_controller.dart';
 import '../data/affiliate_models.dart';
 
@@ -291,7 +291,7 @@ class _DashboardView extends ConsumerWidget {
     final l10n = context.l10n;
     final dash = ref.watch(affiliateDashboardProvider);
     final currency = ref.watch(currencyLabelProvider);
-    final store = ref.watch(storeInfoProvider);
+    final store = ref.watch(storeProfileProvider);
     String money(String v) => l10n.currencyAmount(v, currency);
     return Scaffold(
       appBar: AppBar(

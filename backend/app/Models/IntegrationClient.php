@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 /** An external caller (n8n) of the integration API. Token stored hashed, HMAC secret encrypted; never logged. */
 class IntegrationClient extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected array $auditExcept = ['token_hash', 'hmac_secret', 'token_prefix'];
 

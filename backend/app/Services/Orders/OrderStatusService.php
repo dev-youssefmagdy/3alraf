@@ -43,7 +43,7 @@ class OrderStatusService
 
             $locked->update(['status' => $to]);
             $this->profit->recalculate($locked); // net_profit: computed on admin confirmation, 0 again on cancel
-            $locked->histories()->create(['from_status' => $from->value, 'to_status' => $to->value, 'note' => $note, 'user_id' => $userId ?? auth('tenant')->id()]);
+            $locked->histories()->create(['from_status' => $from->value, 'to_status' => $to->value, 'note' => $note, 'user_id' => $userId ?? auth('admin')->id()]);
             $order->setRawAttributes($locked->fresh()->getAttributes(), true);
 
             return $from;

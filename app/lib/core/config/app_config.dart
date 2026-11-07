@@ -18,7 +18,8 @@ class AppConfig {
 
   static const String defaultApiBase = 'https://3alraf.com';
 
-  /// Central host (no trailing slash). The store is chosen with `X-Tenant`.
+  /// The store's single host (`APP_URL`, no trailing slash needed). Every API
+  /// call, image and share link uses it.
   final String apiBase;
   final String googleServerClientId;
   final String env;

@@ -12,7 +12,7 @@ use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\Bundle;
 use App\Models\FlashSale;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Repositories\Contracts\AiGenerationRepositoryInterface;
 use App\Services\Ai\Studio\MarketingCalendar;
 use App\Services\Ai\Support\AiRequest;
@@ -40,7 +40,7 @@ class StudioService
         $inputs = $d->toInputs() + ['parent_id' => $parentId];
         $g = $this->repo->create(['user_id' => $userId, 'type' => $d->mode === 'marketing' ? AiGenerationType::MARKETING_POST : AiGenerationType::SOCIAL_POST,
             'status' => AiGenerationStatus::QUEUED, 'inputs' => $inputs, 'ai_model_id' => $this->model('text', $d->textModelId)?->id]);
-        RunAiGenerationJob::dispatch($g->id, current_tenant()->id);
+        RunAiGenerationJob::dispatch($g->id);
 
         return $g->fresh();   // sync queue (local/tests) has already run it
     }
@@ -96,20 +96,19 @@ class StudioService
 
     public function options(): array
     {
-        $t = current_tenant();
-        $kinds = fn ($k) => $this->access->modelsFor($t, $k);
+        $kinds = fn ($k) => $this->access->modelsFor($k);
 
-        return ['text' => $kinds('text'), 'image' => $kinds('image'), 'video' => $kinds('video'), 'events' => $this->calendar->upcoming($t->country)];
+        return ['text' => $kinds('text'), 'image' => $kinds('image'), 'video' => $kinds('video'), 'events' => $this->calendar->upcoming(setting('country'))];
     }
 
     // ---- job side ------------------------------------------------------------------------------------------------------------
 
-    /** Text (+ image) stage. Runs inside the tenant context. */
+    /** Text (+ image) stage (runs in the job). */
     public function generate(AiGeneration $g): void
     {
         $i = $g->inputs;
         $platform = SocialPlatform::from($i['platform']);
-        $ctx = $this->contexts->forTenant();
+        $ctx = $this->contexts->make();
         $model = $this->model('text', $i['text_model_id'] ?? null);
         if (! $model) {
             throw new AiException(__('ai.studio.no_text_model'), 'model');
@@ -135,7 +134,7 @@ class StudioService
             $media = (array) $g->media;
             $media[] = ['type' => 'video', 'state' => 'pending', 'aspect' => $platform->aspect()];
             $g->forceFill(['media' => $media])->save();
-            RunAiGenerationJob::dispatch($g->id, current_tenant()->id, 'video');
+            RunAiGenerationJob::dispatch($g->id, 'video');
         }
     }
 
@@ -189,7 +188,7 @@ class StudioService
             if (! $bytes) {
                 throw AiException::provider();
             }
-            $path = 'tenants/'.current_tenant()->id.'/ai/video/'.date('Y/m').'/'.Str::lower(Str::random(24)).'.mp4';
+            $path = 'ai/video/'.date('Y/m').'/'.Str::lower(Str::random(24)).'.mp4';
             ImageUploadService::disk()->put($path, $bytes);
             $media[$idx] = ['type' => 'video', 'state' => 'ready', 'aspect' => $platform->aspect(), 'path' => $path];
         } catch (AiException $e) {
@@ -225,7 +224,7 @@ class StudioService
         }
         if ($i['mode'] === 'marketing') {
             $ev = $i['event'] ? __('ai.studio.events.'.$i['event']) : null;
-            $lines[] = 'Marketing campaign type: '.($i['campaign_type'] ?? 'general').($ev ? "; seasonal event: $ev" : '').'. Country: '.current_tenant()->country.'.';
+            $lines[] = 'Marketing campaign type: '.($i['campaign_type'] ?? 'general').($ev ? "; seasonal event: $ev" : '').'. Country: '.setting('country').'.';
             $lines[] = 'Produce '.max(1, (int) ($i['variants'] ?? 1)).' distinct A/B variant(s) per language (different angle/hook each), labelled A, B, C.';
         }
         $lines[] = "Return {\"variants\":[{\"label\":\"A\",\"language\":\"<code>\",\"caption\":\"...\",\"hashtags\":[\"word\"],\"cta\":\"...\",\"image_prompt\":\"English visual description\",\"video_prompt\":\"English 8s shot description\"}],\"schedule\":[{\"day\":\"Mon\",\"time\":\"20:00\",\"reason\":\"...\"}]} with exactly {$want} variants and 2-3 schedule suggestions for this country's audience.";
@@ -363,24 +362,23 @@ class StudioService
     /** @return array{summary:string,link:?string,photo:?string} */
     public function facts(array $i): array
     {
-        $t = current_tenant();
-        $cur = $t->currency_code;
+        $cur = setting('currency_code');
         $lines = [];
-        $link = $t->url('/');
+        $link = storefront_url();
         $photo = null;
         if (! empty($i['product_ids'])) {
-            $rows = TenantProduct::with('product')->whereIn('product_id', $i['product_ids'])->where('is_active', true)->get();
-            foreach ($rows as $tp) {
-                $lines[] = '- Product: '.$tp->product->name.' | price '.number_format((float) $tp->price, 2).' '.$cur.' | '.Str::limit(strip_tags((string) $tp->product->description), 220, '');
+            $rows = Product::query()->whereIn('id', $i['product_ids'])->where('is_active', true)->get();
+            foreach ($rows as $p) {
+                $lines[] = '- Product: '.$p->name.' | price '.number_format((float) $p->price, 2).' '.$cur.' | '.Str::limit(strip_tags((string) $p->description), 220, '');
             }
             if ($rows->count() === 1) {
-                $link = $t->url('product/'.$rows->first()->product->slug);
-                $photo = media_url($rows->first()->product->primaryImageUrl(false));
+                $link = storefront_url('product/'.$rows->first()->slug);
+                $photo = media_url($rows->first()->primaryImageUrl(false));
             }
         }
         if (! empty($i['bundle_id']) && ($b = Bundle::find($i['bundle_id']))) {
             $lines[] = '- Bundle: '.$b->name.' | price '.number_format((float) $b->price, 2).' '.$cur;
-            $link = $t->url('bundles');
+            $link = storefront_url('bundles');
         }
         if (! empty($i['flash_sale_id']) && ($f = FlashSale::find($i['flash_sale_id']))) {
             $lines[] = '- Offer: '.$f->name.' | '.$f->starts_at?->toDateString().' to '.$f->ends_at?->toDateString();
@@ -388,15 +386,15 @@ class StudioService
         if (! empty($i['brief'])) {
             $lines[] = '- Brief: '.Str::limit($i['brief'], 1500, '');
         }
-        $lines[] = '- Store: '.$t->name.' ('.$t->country.', '.$cur.')';
+        $lines[] = '- Store: '.setting('name').' ('.setting('country').', '.$cur.')';
 
         return ['summary' => implode("\n", $lines), 'link' => $link, 'photo' => $photo];
     }
 
-    /** Request > tenant default (text) > kind default > first allowed. Only models the tenant may use. */
+    /** Request > AI settings default (text) > kind default > first allowed. Only allowed models. */
     public function model(string $kind, ?int $id): ?AiModel
     {
-        $models = $this->access->modelsFor(current_tenant(), $kind);
+        $models = $this->access->modelsFor($kind);
         $pref = $kind === 'text' ? $this->access->settings()?->default_ai_model_id : null;
 
         return $models->firstWhere('id', $id) ?? ($pref ? $models->firstWhere('id', $pref) : null) ?? $models->firstWhere('is_default', true) ?? $models->first();
@@ -405,7 +403,7 @@ class StudioService
     private function assertQuota(StudioData $d): void
     {
         $s = $this->access->settings();
-        $u = $this->gateway->usage(current_tenant()->id);
+        $u = $this->gateway->usage();
         if ($d->wantsImage() && $s?->monthly_image_quota !== null && $u['images'] >= $s->monthly_image_quota) {
             throw AiException::quota('images');
         }

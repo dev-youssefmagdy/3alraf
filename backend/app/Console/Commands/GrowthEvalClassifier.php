@@ -2,13 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Tenant;
 use App\Services\Growth\InteractionService;
 use Illuminate\Console\Command;
 
 class GrowthEvalClassifier extends Command
 {
-    protected $signature = 'growth:eval-classifier {--file= : labelled JSON (default tests/Fixtures/growth/interactions_labelled.json)} {--set= : labelled (default) or blind} {--real : accuracy on human-reviewed rows of --tenant} {--tenant= : tenant slug for --real} {--confusion : print the confusion matrix}';
+    protected $signature = 'growth:eval-classifier {--file= : labelled JSON (default tests/Fixtures/growth/interactions_labelled.json)} {--set= : labelled (default) or blind} {--real : accuracy on the human-reviewed interactions} {--confusion : print the confusion matrix}';
 
     protected $description = 'Measure the keyword classifier against the hand-labelled set (accuracy per field vs the targets in config/growth.php). No AI call, no database.';
 
@@ -66,17 +65,8 @@ class GrowthEvalClassifier extends Command
 
     private function real(InteractionService $svc): int
     {
-        $t = $this->option('tenant') ? Tenant::where('slug', $this->option('tenant'))->first() : null;
-        if (! $t) {
-            $this->error('--tenant=<slug> is required with --real');
-
-            return self::FAILURE;
-        }
-        $prev = app()->bound('currentTenant') ? app('currentTenant') : null;
-        app()->instance('currentTenant', $t);
         $res = $svc->evaluateReal();
         $svc->storeRealEval($res);
-        $prev ? app()->instance('currentTenant', $prev) : app()->forgetInstance('currentTenant');
         $this->info("Reviewed rows: {$res['n']} (minimum {$res['min']}). Verdict: {$res['verdict']}");
         if ($res['verdict'] === 'insufficient_data') {
             $this->warn('Insufficient data: no accuracy verdict is given below the minimum sample.');

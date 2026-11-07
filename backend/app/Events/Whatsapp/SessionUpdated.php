@@ -9,22 +9,25 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
-/** QR / status change, sent only to the owner's private channel (whatsapp.central or whatsapp.tenant.{id}). */
+/** QR / status change, sent to the private channel `whatsapp` (guard admin). */
 class SessionUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets;
 
     public function __construct(public WhatsappSession $session, public ?string $qr = null) {}
 
-    public static function channelName(?int $tenantId): string
+    public const CHANNEL = 'whatsapp';
+
+    /** The single connection channel. */
+    public static function channelName(): string
     {
-        return $tenantId ? "whatsapp.tenant.$tenantId" : 'whatsapp.central';
+        return self::CHANNEL;
     }
 
     /** @return array<int,Channel> */
     public function broadcastOn(): array
     {
-        return [new PrivateChannel(self::channelName($this->session->tenant_id))];
+        return [new PrivateChannel(self::CHANNEL)];
     }
 
     public function broadcastAs(): string

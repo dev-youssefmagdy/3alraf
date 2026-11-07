@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Models\AiModel;
 use App\Services\Ai\AiAccess;
@@ -12,10 +12,10 @@ class AiSettingsRequest extends BaseRequest
 
     public function rules(): array
     {
-        $allowed = app(AiAccess::class)->modelsFor(current_tenant(), 'text')->pluck('id')->all();
+        $allowed = app(AiAccess::class)->modelsFor('text')->pluck('id')->all();
 
         return [
-            'default_ai_model_id' => ['nullable', 'integer', Rule::in($allowed)],   // only models the platform allowed for this tenant
+            'default_ai_model_id' => ['nullable', 'integer', Rule::in($allowed)],   // only models allowed on the AI settings page
             'brand_voice' => ['nullable', 'string', 'max:1000'],
             'forbidden_words' => ['nullable', 'string', 'max:2000'],
             'default_platforms' => ['nullable', 'array'],

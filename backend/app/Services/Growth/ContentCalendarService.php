@@ -15,7 +15,7 @@ class ContentCalendarService
 
     public function schedule(int $assetId, string $channel, string $when, ?string $note, ?int $adminId): ContentCalendarItem
     {
-        $asset = ContentAsset::findOrFail($assetId); // tenant scoped
+        $asset = ContentAsset::findOrFail($assetId);
         if ($asset->status === 'retired') {
             throw ValidationException::withMessages(['content_asset_id' => __('growth_hub.content.retired')]);
         }

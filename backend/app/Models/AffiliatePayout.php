@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Enums\PayoutStatus;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class AffiliatePayout extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['affiliate_id', 'amount', 'paid_from', 'status', 'note', 'paid_at'];
 

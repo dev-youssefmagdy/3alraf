@@ -11,7 +11,7 @@ class PruneOrphanMedia extends Command
 {
     protected $signature = 'media:prune-orphans {--dry-run : only list} {--min-age=24 : ignore files younger than N hours (in-flight uploads)}';
 
-    protected $description = 'Find (and delete) files on the media disk under tenants/ and catalog/ that no DB row references (images, brand logos, category images, banners, QR codes).';
+    protected $description = 'Find (and delete) files on the media disk under catalog/, qr/ and the legacy per-store root that no DB row references (images, brand logos, category images, banners, QR codes).';
 
     public function handle(): int
     {
@@ -20,7 +20,8 @@ class PruneOrphanMedia extends Command
         $cut = now()->subHours((int) $this->option('min-age'))->getTimestamp();
         $n = 0;
         $bytes = 0;
-        foreach (['tenants', 'catalog'] as $root) {
+        // catalog/ + qr/ = current upload roots; the legacy per-store root still holds every file uploaded before the single-store conversion
+        foreach (['catalog', 'qr', 'tenants'] as $root) {
             foreach ($disk->allFiles($root) as $file) {
                 if (isset($used[MediaPaths::stem($file)]) || $disk->lastModified($file) > $cut) {
                     continue;

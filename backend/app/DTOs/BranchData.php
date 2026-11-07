@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\BranchRequest;
+use App\Http\Requests\Admin\BranchRequest;
 
 final readonly class BranchData
 {

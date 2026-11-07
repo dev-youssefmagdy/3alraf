@@ -24,7 +24,7 @@ class StockTransferService
     public function create(StockTransferData $dto): StockTransfer
     {
         return DB::transaction(function () use ($dto) {
-            $t = $this->transfers->create(['from_branch_id' => $dto->fromBranchId, 'to_branch_id' => $dto->toBranchId, 'note' => $dto->note, 'status' => TransferStatus::DRAFT, 'created_by' => auth('tenant')->id()]);
+            $t = $this->transfers->create(['from_branch_id' => $dto->fromBranchId, 'to_branch_id' => $dto->toBranchId, 'note' => $dto->note, 'status' => TransferStatus::DRAFT, 'created_by' => auth('admin')->id()]);
             $t->update(['number' => sprintf('TR-%06d', $t->id)]);
             $this->syncItems($t, $dto);
 

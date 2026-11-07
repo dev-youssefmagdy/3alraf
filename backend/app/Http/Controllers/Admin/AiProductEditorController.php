@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\Ai\ProductEditData;
 use App\Exceptions\AiException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\AiProductEditApplyRequest;
-use App\Http\Requests\Tenant\AiProductEditRequest;
+use App\Http\Requests\Admin\AiProductEditApplyRequest;
+use App\Http\Requests\Admin\AiProductEditRequest;
 use App\Services\Ai\ProductEditorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +25,7 @@ class AiProductEditorController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.ai.editor', $this->editor->options() + ['presets' => ProductEditorService::PRESETS, 'fields' => \App\Models\TenantProduct::CONTENT_FIELDS]);
+        return view('admin.ai.editor', $this->editor->options() + ['presets' => ProductEditorService::PRESETS, 'fields' => \App\Models\Product::CONTENT_FIELDS]);
     }
 
     public function products(Request $r): JsonResponse
@@ -35,7 +35,7 @@ class AiProductEditorController extends Controller implements HasMiddleware
 
     public function store(AiProductEditRequest $r): JsonResponse
     {
-        return $this->guard(fn () => response()->json(['success' => true, 'data' => collect($this->editor->create(ProductEditData::fromRequest($r), auth('tenant')->id()))
+        return $this->guard(fn () => response()->json(['success' => true, 'data' => collect($this->editor->create(ProductEditData::fromRequest($r), auth('admin')->id()))
             ->map(fn ($g) => $this->editor->present($g))->values()], 201));
     }
 
@@ -53,12 +53,12 @@ class AiProductEditorController extends Controller implements HasMiddleware
 
     public function apply(AiProductEditApplyRequest $r, int $id): JsonResponse
     {
-        return $this->guard(fn () => response()->json(['success' => true, 'data' => $this->editor->present($this->editor->apply($this->one($id), $r->validated('accept'), auth('tenant')->id()))]));
+        return $this->guard(fn () => response()->json(['success' => true, 'data' => $this->editor->present($this->editor->apply($this->one($id), $r->validated('accept'), auth('admin')->id()))]));
     }
 
     public function reject(int $id): JsonResponse
     {
-        return $this->guard(fn () => response()->json(['success' => true, 'data' => $this->editor->present($this->editor->reject($this->one($id), auth('tenant')->id()))]));
+        return $this->guard(fn () => response()->json(['success' => true, 'data' => $this->editor->present($this->editor->reject($this->one($id), auth('admin')->id()))]));
     }
 
     public function undo(int $id): JsonResponse

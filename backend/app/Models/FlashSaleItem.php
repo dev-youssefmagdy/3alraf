@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Enums\FlashDiscountType;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class FlashSaleItem extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['flash_sale_id', 'product_id', 'product_variant_id', 'discount_type', 'value', 'qty_limit', 'sold'];
 

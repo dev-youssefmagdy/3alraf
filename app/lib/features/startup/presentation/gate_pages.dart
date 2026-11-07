@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/l10n/locale_provider.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../store/application/store_controller.dart';
 import '../application/startup_controller.dart';
+import 'language_picker.dart';
 
 /// Shown when the installed version is below `min_version`.
 class UpdateRequiredPage extends ConsumerWidget {
@@ -90,10 +93,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _finish() async {
     await ref.read(preferencesProvider).setOnboardingDone();
     if (!mounted) return;
-    final route =
-        ref.read(startupControllerProvider).result?.tenantRoute ??
-        AppRoutes.splash;
-    context.go(route);
+    context.go(AppRoutes.home);
   }
 
   @override
@@ -201,6 +201,88 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// First launch: pick the UI language among the store's locales (shown only
+/// when the user never chose one and the store offers several).
+class LanguageSelectionPage extends ConsumerStatefulWidget {
+  const LanguageSelectionPage({super.key});
+
+  @override
+  ConsumerState<LanguageSelectionPage> createState() =>
+      _LanguageSelectionPageState();
+}
+
+class _LanguageSelectionPageState extends ConsumerState<LanguageSelectionPage> {
+  bool _busy = false;
+
+  Future<void> _pick(String code) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    await ref.read(storeControllerProvider.notifier).chooseLocale(code);
+    if (!mounted) return;
+    final result = ref.read(startupControllerProvider).result;
+    final done = ref.read(preferencesProvider).onboardingDone;
+    context.go(
+      result?.afterLanguage(onboardingDone: done) ??
+          (done ? AppRoutes.home : AppRoutes.onboarding),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final store = ref.watch(storeControllerProvider);
+    final options = store.availableLocales;
+    final current = ref.watch(localeProvider).languageCode;
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: AppSpacing.xl),
+                Image.asset('assets/branding/splash_logo.png', height: 120),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  l10n.chooseLanguageTitle,
+                  textAlign: TextAlign.center,
+                  style: context.text.headlineSmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.chooseLanguageSubtitle,
+                  textAlign: TextAlign.center,
+                  style: context.text.bodyLarge,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                for (final code in options)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Card(
+                      child: ListTile(
+                        key: ValueKey('lang-$code'),
+                        title: Text(languageName(code)),
+                        trailing: code == current
+                            ? Icon(
+                                Icons.check_rounded,
+                                color: context.colors.primary,
+                              )
+                            : null,
+                        onTap: () => _pick(code),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

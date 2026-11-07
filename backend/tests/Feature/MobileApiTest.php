@@ -12,8 +12,6 @@ use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Notifications\AuthCodeNotification;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
@@ -31,11 +29,9 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
     Storage::fake('media');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    app()->instance('currentTenant', $this->tenant);
-    $this->api = 'http://egy.3alraf.test/api/v1';     // tenant from the host
-    $this->hdr = 'http://3alraf.test/api/v1';         // tenant from X-Tenant
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->api = '/api/v1';
+    $this->legacy = 'http://egy.3alraf.loc/api/v1';   // old per-country host: api/* is served directly (LegacyHostRedirect)
     $this->branch = Branch::first();
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -49,7 +45,7 @@ beforeEach(function () {
     $this->mk = function (string $slug, $price, $sale = null, bool $inCat = true) {
         $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'brand_id' => $this->brand->id]);
         $inCat && $p->categories()->attach($this->cat->id);
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'sale_price' => $sale, 'cost' => 60, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'sale_price' => $sale, 'cost' => 60, 'is_active' => true]);
         app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 50, '60.00');
 
         return $p;
@@ -61,7 +57,6 @@ beforeEach(function () {
     $this->tokenFor = fn ($u, string $ability = 'customer') => $u->createToken('t', [$ability])->plainTextToken;
     $this->auth = fn () => ['Authorization' => 'Bearer '.($this->tokenFor)($this->customer)];
     $this->body = ['name' => 'Ali', 'phone' => '01000000100', 'city_id' => $this->city->id, 'address' => 'St 1', 'shipping_company_id' => $this->company->id];
-    $this->sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
 });
 
 function envelope($r, bool $ok = true)
@@ -71,20 +66,36 @@ function envelope($r, bool $ok = true)
     return $r;
 }
 
-// ------------------------------------------------------------------ tenant / envelope / locale
+// ------------------------------------------------------------------ single store / envelope / locale
 
-it('resolves the tenant from the host or from the X-Tenant header, 404 envelope otherwise', function () {
-    envelope($this->getJson("{$this->api}/store"))->assertJsonPath('data.slug', 'egy')->assertJsonPath('data.currency.code', 'EGP')->assertJsonPath('data.cod_collect_shipping_upfront', false);
-    envelope($this->getJson("{$this->hdr}/store", ['X-Tenant' => 'egy']))->assertJsonPath('data.slug', 'egy');
-    envelope($this->getJson("{$this->hdr}/store"), false)->assertNotFound();
-    envelope($this->getJson("{$this->hdr}/store", ['X-Tenant' => 'nope']), false)->assertNotFound();
-    $this->tenant->update(['is_active' => false]);
-    envelope($this->getJson("{$this->hdr}/store", ['X-Tenant' => 'egy']), false)->assertNotFound();
-    $this->tenant->update(['is_active' => true]);
-    $this->getJson('http://3alraf.test/api/v1/tenants')->assertOk()->assertJsonPath('data.0.slug', 'egy'); // central, tenant-less
+it('serves the one store with and without X-Tenant (any value ignored) and on legacy hosts', function () {
+    foreach ([[], ['X-Tenant' => 'egy'], ['X-Tenant' => 'nope'], ['X-Tenant' => '']] as $h) {
+        envelope($this->getJson("{$this->api}/store", $h))->assertJsonPath('data.slug', config('mobile.legacy_store_slug'))
+            ->assertJsonPath('data.currency.code', 'EGP')->assertJsonPath('data.cod_collect_shipping_upfront', false);
+        $this->getJson("{$this->api}/products/cheap", $h)->assertOk()->assertJsonPath('data.slug', 'cheap');
+    }
+    $r = $this->getJson("{$this->legacy}/catalog", ['X-Tenant' => 'egy'])->assertOk()->assertJsonCount(2, 'data');
+    expect($r->getContent())->not->toContain('egy.3alraf');   // URLs in API answers always use APP_URL
 });
 
-it('uses Accept-Language limited to the tenant locales', function () {
+it('keeps GET /api/v1/tenants as a deprecated one-item alias in the old Tenant.fromJson shape', function () {
+    foreach (["{$this->api}/tenants", "{$this->legacy}/tenants"] as $url) {
+        $r = $this->getJson($url)->assertOk()->assertHeader('Deprecation', 'true')->assertJsonCount(1, 'data');
+        $t = $r->json('data.0');
+        expect($t)->toHaveKeys(['slug', 'name', 'country', 'flag', 'currency', 'default_locale', 'locales', 'languages', 'logo_url', 'base_url'])
+            ->and($t['slug'])->toBe('egy')->and($t['name'])->toBe('Egypt Store')->and($t['base_url'])->toBe(rtrim(config('app.url'), '/'));
+    }
+});
+
+it('returns the store block in app-config', function () {
+    $s = $this->getJson("{$this->api}/app-config?version=1.0.0")->assertOk()->json('data.store');
+    expect($s)->toMatchArray(['name' => 'Egypt Store', 'country' => 'EG', 'default_locale' => 'ar', 'timezone' => 'Africa/Cairo', 'base_url' => rtrim(config('app.url'), '/')])
+        ->and($s['currency'])->toBe(['code' => 'EGP', 'symbol' => 'EGP'])
+        ->and(collect($s['locales'])->pluck('rtl', 'code')->all())->toBe(['ar' => true, 'en' => false]);
+    $this->getJson("{$this->api}/app-config", ['X-Tenant' => 'whatever'])->assertOk()->assertJsonPath('data.store.name', 'Egypt Store');
+});
+
+it('uses Accept-Language limited to the site locales', function () {
     $this->getJson("{$this->api}/products/cheap", ['Accept-Language' => 'ar'])->assertOk()->assertJsonPath('data.name', 'منتج cheap');
     $this->getJson("{$this->api}/products/cheap", ['Accept-Language' => 'en-US,en;q=0.9'])->assertOk()->assertJsonPath('data.name', 'P cheap')->assertHeader('Content-Language', 'en');
     $this->getJson("{$this->api}/products/cheap", ['Accept-Language' => 'fr'])->assertJsonPath('data.name', 'منتج cheap');
@@ -130,7 +141,7 @@ it('locks a login after 5 failures', function () {
         $this->postJson("{$this->api}/auth/login", ['email' => 'customer@egy.test', 'password' => 'bad'])->assertStatus(422);
     }
     $this->postJson("{$this->api}/auth/login", ['email' => 'customer@egy.test', 'password' => 'password'])->assertStatus(422); // locked even with the right password
-    RateLimiter::clear('login-lock:'.$this->tenant->id.':customer_api:customer@egy.test');
+    RateLimiter::clear('login-lock:customer_api:customer@egy.test');
     $this->postJson("{$this->api}/auth/login", ['email' => 'customer@egy.test', 'password' => 'password'])->assertOk();
 });
 
@@ -165,21 +176,15 @@ it('resets the password with an e-mailed one-time code and verifies the e-mail',
     $this->postJson("{$this->api}/auth/email/verification-notification", [], $h)->assertStatus(422); // already verified
 });
 
-it('isolates tenants: a token or login from another tenant is worthless', function () {
+it('a customer token keeps working whatever X-Tenant an old build sends; orders are read by token', function () {
     $tok = ($this->tokenFor)($this->customer);
-    $this->getJson("{$this->hdr}/auth/me", ['Authorization' => "Bearer $tok", 'X-Tenant' => 'egy'])->assertOk();
-    $this->getJson("{$this->hdr}/auth/me", ['Authorization' => "Bearer $tok", 'X-Tenant' => 'sa'])->assertUnauthorized();
-    $this->postJson("{$this->hdr}/auth/login", ['email' => 'customer@egy.test', 'password' => 'password'], ['X-Tenant' => 'sa'])->assertStatus(422);
-    // same e-mail can register in another tenant
-    $this->postJson("{$this->hdr}/auth/register", ['name' => 'X', 'email' => 'customer@egy.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'], ['X-Tenant' => 'sa'])->assertCreated();
-    // catalog of tenant egy is invisible from sa
-    $this->getJson("{$this->hdr}/products/cheap", ['X-Tenant' => 'sa'])->assertNotFound();
-    $this->getJson("{$this->hdr}/catalog", ['X-Tenant' => 'sa'])->assertOk()->assertJsonCount(0, 'data');
-    app()->instance('currentTenant', $this->tenant);
-    // an order of egy cannot be read through the sa tenant even with its token
+    foreach ([[], ['X-Tenant' => 'egy'], ['X-Tenant' => 'sa']] as $h) {
+        $this->getJson("{$this->api}/auth/me", ['Authorization' => "Bearer $tok"] + $h)->assertOk()->assertJsonPath('data.email', 'customer@egy.test');
+    }
+    $this->postJson("{$this->api}/auth/register", ['name' => 'X', 'email' => 'customer@egy.test', 'password' => 'secret123', 'password_confirmation' => 'secret123'], ['X-Tenant' => 'sa'])->assertStatus(422); // one store: e-mail taken
     $o = app(OrderPlacementService::class)->place(new CheckoutData(name: 'A', phone: '1', cityId: $this->city->id, address: 'x', shippingCompanyId: $this->company->id, paymentMethodId: $this->cod->id), [['product_id' => $this->p1->id, 'variant_id' => 0, 'qty' => 1]])['order'];
-    $this->getJson("{$this->hdr}/orders/{$o->public_token}", ['X-Tenant' => 'sa'])->assertNotFound();
-    $this->getJson("{$this->hdr}/orders/{$o->public_token}", ['X-Tenant' => 'egy'])->assertOk();
+    $this->getJson("{$this->api}/orders/{$o->public_token}", ['X-Tenant' => 'sa'])->assertOk();
+    $this->getJson("{$this->api}/orders/".\Illuminate\Support\Str::uuid())->assertNotFound();
 });
 
 // ------------------------------------------------------------------ catalog
@@ -202,14 +207,13 @@ it('serves home, menu, catalog with filters/sort/pagination, facets, suggest, pr
     expect($d->json('data.variants.0.price'))->toBe('250.00')->and($d->json('data.variants.0.in_stock'))->toBeTrue()->and($d->json('data'))->not->toHaveKey('cost');
     $this->getJson("{$this->api}/products/missing")->assertNotFound();
 
-    app()->instance('currentTenant', $this->tenant);
     \App\Models\StaticPage::where('slug', 'terms')->first()->update(['content' => ['ar' => 'نص', 'en' => 'Body']]);
     $this->getJson("{$this->api}/pages")->assertOk()->assertJsonFragment(['slug' => 'terms']);
     $this->getJson("{$this->api}/pages/terms", ['Accept-Language' => 'en'])->assertOk()->assertJsonPath('data.content', 'Body');
 });
 
 it('does not list inactive products and shows exact per-variant prices', function () {
-    TenantProduct::where('product_id', $this->p1->id)->update(['is_active' => false]);
+    Product::whereKey($this->p1->id)->update(['is_active' => false]);
     $this->getJson("{$this->api}/catalog")->assertJsonCount(1, 'data');
     $this->getJson("{$this->api}/products/cheap")->assertNotFound();
 });
@@ -257,7 +261,7 @@ it('lists cities, shipping options (OrderCalculator totals) and only usable paym
     expect($types)->toContain('cod')->toContain('wallet')->toContain('online')
         ->and(collect($m->json('data'))->pluck('provider')->filter()->all())->not->toContain('stripe')                    // unimplemented providers are never offered
         ->and(json_encode($m->json()))->not->toContain('hmac_secret')->not->toContain('credentials');
-    $this->tenant->update(['settings' => ['cod_collect_shipping_upfront' => true]]);
+    settings(['cod_collect_shipping_upfront' => true]);
     $this->getJson("{$this->api}/checkout/payment-methods")->assertJsonPath('meta.cod_collect_shipping_upfront', true);
 });
 
@@ -274,7 +278,7 @@ it('places a plain COD order (upfront shipping off): pending admin confirmation,
 });
 
 it('requires a prepay method for COD with upfront shipping and follows the wallet-proof flow until the admin approves', function () {
-    $this->tenant->update(['settings' => ['cod_collect_shipping_upfront' => true]]);
+    settings(['cod_collect_shipping_upfront' => true]);
     $h = ['X-Cart-Token' => $this->postJson("{$this->api}/cart/items", ['product_id' => $this->p1->id, 'variant_id' => 0, 'quantity' => 2])->headers->get('X-Cart-Token')];
     $this->postJson("{$this->api}/checkout/validate", $this->body + ['payment_method_id' => $this->cod->id], $h)->assertStatus(422)->assertJsonStructure(['errors' => ['prepay_method_id']]);
     $this->postJson("{$this->api}/checkout", $this->body + ['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->cod->id], $h)->assertStatus(422);
@@ -420,7 +424,8 @@ it('attributes an order to the affiliate sent in X-Affiliate-Ref', function () {
     expect(\App\Models\Order::where('public_token', $t)->value('affiliate_id'))->toBe($aff->id);
 });
 
-it('keeps every route name unique and registers the API on both tenant flavours', function () {
+it('keeps every route name unique and registers the mobile API once (no api.v1.h.* twin)', function () {
     $names = collect(app('router')->getRoutes()->getRoutes())->map->getName()->filter();
-    expect($names->duplicates()->all())->toBe([])->and($names->filter(fn ($n) => str_starts_with($n, 'api.v1.h.'))->count())->toBeGreaterThan(30);
+    expect($names->duplicates()->all())->toBe([])->and($names->filter(fn ($n) => str_starts_with($n, 'api.v1.h.'))->count())->toBe(0)
+        ->and($names->filter(fn ($n) => str_starts_with($n, 'api.v1.'))->count())->toBeGreaterThan(30);
 });

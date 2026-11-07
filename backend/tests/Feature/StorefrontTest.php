@@ -15,8 +15,6 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Services\BarcodeService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -25,10 +23,8 @@ use Illuminate\Support\Facades\Cache;
 beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    $this->s = 'http://egy.3alraf.test/ar';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->s = '/ar';
     $this->branch = Branch::first();
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -43,7 +39,7 @@ beforeEach(function () {
         if ($cat) {
             $p->categories()->attach($cat->id);
         }
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'sale_price' => $sale, 'cost' => 10, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'sale_price' => $sale, 'cost' => 10, 'is_active' => true]);
         app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 50, '10.00');
 
         return $p;
@@ -65,7 +61,7 @@ test('home renders menu, rails, flash sale countdown and banners', function () {
 
     $this->get("{$this->s}")->assertOk()->assertSee('dir="rtl"', false)->assertSee('أجهزة')->assertSee('data-slider', false)->assertSee('data-countdown', false)
         ->assertSee('منتج cheap')->assertSee('80.00')->assertSee('data-cart-count', false)->assertSee('hreflang="en"', false)->assertSee('application/ld+json', false);
-    $this->get('http://egy.3alraf.test/en')->assertOk()->assertSee('dir="ltr"', false)->assertSee('Devices');
+    $this->get('/en')->assertOk()->assertSee('dir="ltr"', false)->assertSee('Devices');
 });
 
 test('category listing filters by subtree, brand, price, sort and serves an AJAX fragment', function () {
@@ -102,7 +98,7 @@ test('product page exposes the variant picker with stock, barcode and flash pric
     $m = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'M']);
     $l = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'L']);
     $p = Product::create(['type' => 'variable', 'name' => ['ar' => 'قميص', 'en' => 'Shirt'], 'slug' => 'shirt', 'sku' => 'SH', 'meta_description' => ['ar' => 'وصف ميتا', 'en' => 'meta']]);
-    TenantProduct::create(['product_id' => $p->id, 'price' => 200, 'cost' => 50, 'is_active' => true]);
+    listProduct($p, ['price' => 200, 'cost' => 50, 'is_active' => true]);
     foreach ([$m, $l] as $i => $val) {
         $v = ProductVariant::create(['product_id' => $p->id, 'combination_hash' => (string) $val->id, 'sku' => "SH-$i", 'barcode' => '200000000010'.$i, 'is_active' => true]);
         $v->values()->attach($val->id);
@@ -158,9 +154,9 @@ test('account area for a logged in customer', function () {
 });
 
 test('sitemap, custom/static pages keep working inside the new layout', function () {
-    $this->get('http://egy.3alraf.test/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml')->assertSee('/ar/product/cheap', false)->assertSee('/en/category/devices', false);
+    $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8')->assertSee('/ar/product/cheap', false)->assertSee('/en/category/devices', false);
     $this->get("{$this->s}/page/about")->assertOk()->assertSee('data-cart-count', false);
-    $this->get('http://egy.3alraf.test/offers')->assertOk()->assertSee('data-cart-count', false)->assertSee('?lang=en', false);
+    $this->get('/offers')->assertOk()->assertSee('data-cart-count', false)->assertSee('?lang=en', false);
 });
 
 test('web checkout is signed-in only: guests are redirected to login (page) or get 401 (JSON); the cart stays open', function () {

@@ -25,7 +25,7 @@ class PurchaseService
     public function create(PurchaseOrderData $dto): PurchaseOrder
     {
         return DB::transaction(function () use ($dto) {
-            $po = $this->orders->create($this->header($dto) + ['status' => PurchaseStatus::DRAFT, 'created_by' => auth('tenant')->id()]);
+            $po = $this->orders->create($this->header($dto) + ['status' => PurchaseStatus::DRAFT, 'created_by' => auth('admin')->id()]);
             $po->update(['number' => sprintf('PO-%06d', $po->id)]);
             $this->syncItems($po, $dto);
             if ($dto->receive) {

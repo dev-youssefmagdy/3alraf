@@ -4,7 +4,6 @@ import '../../../core/error/api_exception.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../catalog/application/catalog_providers.dart';
 import '../../catalog/data/catalog_models.dart';
-import '../../tenant/application/tenant_controller.dart';
 
 class WishlistState {
   const WishlistState({
@@ -32,11 +31,10 @@ final wishlistIdsProvider = Provider<Set<int>>(
 );
 
 /// The signed-in customer's wishlist of the active store. Rebuilds (and so
-/// is emptied) on tenant switch, locale change and sign-in/out.
+/// is emptied) on locale change and sign-in/out.
 class WishlistController extends Notifier<WishlistState> {
   @override
   WishlistState build() {
-    ref.watch(tenantSlugProvider);
     final signedIn = ref.watch(
       authControllerProvider.select((s) => s.signedIn),
     );

@@ -4,9 +4,7 @@ use App\Events\Whatsapp\ChatConversationUpdated;
 use App\Events\Whatsapp\ChatMessageReceived;
 use App\Events\Whatsapp\ChatMessageUpdated;
 use App\Jobs\SendWhatsappMessage;
-use App\Models\CentralAdmin;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Models\WhatsappConversation;
 use App\Models\WhatsappMedia;
 use App\Models\WhatsappMessage;
@@ -31,21 +29,17 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     config(['services.whatsapp' => ['url' => 'http://wa.test', 'token' => 'tok', 'callback_secret' => 's'], 'whatsapp_chat.disk' => 'chat-test']);
     Storage::fake('chat-test');
-    $this->c = 'http://3alraf.test/admin/whatsapp/chat';
-    $this->t = 'http://egy.3alraf.test/admin/whatsapp/chat';
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->super = CentralAdmin::where('is_super_admin', true)->first();
-    $this->owner = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'o', 'email' => 'o@egy.test', 'password' => 'password', 'is_active' => true]);
-    $this->owner->syncRoles('tenant-owner');
-    foreach ([null, $this->tenant->id] as $o) {
-        app(WhatsappService::class)->session($o)->update(['status' => 'connected', 'is_enabled' => true, 'phone' => '201111111111']);
-    }
+    $this->c = '/admin/whatsapp/chat';
+    $this->t = '/admin/whatsapp/chat';
+    $this->super = Admin::where('is_super_admin', true)->first();
+    $this->owner = Admin::query()->create(['name' => 'o', 'email' => 'o@egy.test', 'password' => 'password', 'is_active' => true]);
+    $this->owner->syncRoles('owner');
+    app(WhatsappService::class)->session()->update(['status' => 'connected', 'is_enabled' => true, 'phone' => '201111111111']);
 });
 
-function conv(?int $tenant, array $o = []): WhatsappConversation
+function conv(array $o = []): WhatsappConversation
 {
     $c = WhatsappConversation::factory()->make($o + ['jid' => '2010'.random_int(1000000, 9999999).'@s.whatsapp.net', 'last_message_at' => now()]);
-    $c->tenant_id = $tenant;
     $c->phone ??= null;
     $c->save();
 
@@ -55,7 +49,6 @@ function conv(?int $tenant, array $o = []): WhatsappConversation
 function msg(WhatsappConversation $c, array $o = []): WhatsappMessage
 {
     $m = WhatsappMessage::factory()->make($o + ['conversation_id' => $c->id]);
-    $m->tenant_id = $c->tenant_id;
     $m->save();
 
     return $m;
@@ -74,59 +67,48 @@ function png(): UploadedFile
     return UploadedFile::fake()->createWithContent('pic.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
 }
 
-it('requires authentication and the right permission per guard', function () {
+it('requires authentication and the right permission on guard admin', function () {
     $this->getJson("$this->c/conversations")->assertStatus(401);
-    $plain = CentralAdmin::create(['name' => 'P', 'phone' => '201000000077', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($plain, 'central')->getJson("$this->c/conversations")->assertForbidden();
-    $this->actingAs($plain, 'central')->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '01001112222'])->assertForbidden();
-    $this->actingAs($this->super, 'central')->getJson("$this->c/conversations")->assertOk();
-    $this->actingAs($this->owner, 'tenant')->getJson("$this->t/conversations")->assertOk();
+    $plain = Admin::create(['name' => 'P', 'phone' => '201000000077', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($plain, 'admin')->getJson("$this->c/conversations")->assertForbidden();
+    $this->actingAs($plain, 'admin')->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '01001112222'])->assertForbidden();
+    $this->actingAs($this->super, 'admin')->getJson("$this->c/conversations")->assertOk();
+    $this->actingAs($this->owner, 'admin')->getJson("$this->t/conversations")->assertOk();
     // view-only role cannot send / manage / read media without the permission
-    $viewer = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'v', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
-    $viewer->givePermissionTo(Permission::findOrCreate('whatsapp.chat.view', 'tenant'));
-    $c = conv($this->tenant->id);
-    $this->actingAs($viewer, 'tenant')->getJson("$this->t/conversations/$c->id/messages")->assertOk();
+    $viewer = Admin::query()->create(['name' => 'v', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
+    $viewer->givePermissionTo(Permission::findOrCreate('whatsapp.chat.view', 'admin'));
+    $c = conv();
+    $this->actingAs($viewer, 'admin')->getJson("$this->t/conversations/$c->id/messages")->assertOk();
     $this->postJson("$this->t/conversations/$c->id/messages", ['type' => 'text', 'text' => 'x'])->assertForbidden();
     $this->patchJson("$this->t/conversations/$c->id", ['is_pinned' => true])->assertForbidden();
     $this->deleteJson("$this->t/conversations/$c->id")->assertForbidden();
 });
 
-it('isolates owners: tenant and central never see each other, and ids from another owner are 404', function () {
-    $mine = conv($this->tenant->id, ['name' => 'Mine']);
-    $central = conv(null, ['name' => 'Central']);
-    $other = Tenant::create(['slug' => 'uae', 'name' => 'U', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
-    $theirs = conv($other->id, ['name' => 'Theirs']);
-    $tm = msg($theirs, ['direction' => 'out', 'status' => 'failed', 'wa_message_id' => null]);
-    $media = new WhatsappMedia(['disk' => 'chat-test', 'path' => 'x.png', 'mime' => 'image/png', 'status' => 'ready']);
-    $media->tenant_id = $other->id;
-    $media->save();
-    Storage::disk('chat-test')->put('x.png', 'abc');
-
-    $this->actingAs($this->owner, 'tenant');
-    $names = collect($this->getJson("$this->t/conversations")->assertOk()->json('data'))->pluck('name')->all();
-    expect($names)->toBe(['Mine']);
-    foreach (["conversations/$theirs->id", "conversations/$central->id", "conversations/$theirs->id/messages", "media/$media->id"] as $u) {
+it('answers 404 for unknown conversations, messages and media', function () {
+    $this->actingAs($this->owner, 'admin');
+    foreach (['conversations/999999', 'conversations/999999/messages', 'media/999999'] as $u) {
         $this->getJson("$this->t/$u")->assertNotFound();
     }
-    $this->postJson("$this->t/conversations/$theirs->id/messages", ['type' => 'text', 'text' => 'hi'])->assertNotFound();
-    $this->postJson("$this->t/conversations/$theirs->id/read")->assertNotFound();
-    $this->patchJson("$this->t/conversations/$theirs->id", ['is_pinned' => true])->assertNotFound();
-    $this->deleteJson("$this->t/conversations/$theirs->id")->assertNotFound();
-    $this->postJson("$this->t/messages/$tm->id/resend")->assertNotFound();
-    expect(WhatsappConversation::ownedBy($other->id)->count())->toBe(1);
+    $this->postJson("$this->t/conversations/999999/messages", ['type' => 'text', 'text' => 'hi'])->assertNotFound();
+    $this->postJson("$this->t/conversations/999999/read")->assertNotFound();
+    $this->patchJson("$this->t/conversations/999999", ['is_pinned' => true])->assertNotFound();
+    $this->deleteJson("$this->t/conversations/999999")->assertNotFound();
+    $this->postJson("$this->t/messages/999999/resend")->assertNotFound();
+});
 
-    $this->actingAs($this->super, 'central');
-    expect(collect($this->getJson("$this->c/conversations")->json('data'))->pluck('name')->all())->toBe(['Central']);
-    $this->getJson("$this->c/conversations/$mine->id")->assertNotFound();
-    $this->getJson("$this->c/media/$media->id")->assertNotFound();
+it('the super admin and the owner share the one inbox', function () {
+    conv(['name' => 'Shared']);
+    foreach ([$this->super, $this->owner] as $a) {
+        expect(collect($this->actingAs($a, 'admin')->getJson("$this->t/conversations")->assertOk()->json('data'))->pluck('name')->all())->toBe(['Shared']);
+    }
 });
 
 it('lists conversations with search, filters and cursor pagination', function () {
-    $this->actingAs($this->super, 'central');
+    $this->actingAs($this->super, 'admin');
     foreach (range(1, 5) as $i) {
-        conv(null, ['name' => "Chat $i", 'last_message_at' => now()->subMinutes($i), 'unread_count' => $i === 2 ? 3 : 0, 'is_pinned' => $i === 5]);
+        conv(['name' => "Chat $i", 'last_message_at' => now()->subMinutes($i), 'unread_count' => $i === 2 ? 3 : 0, 'is_pinned' => $i === 5]);
     }
-    conv(null, ['name' => 'Old', 'is_archived' => true]);
+    conv(['name' => 'Old', 'is_archived' => true]);
     $p1 = $this->getJson("$this->c/conversations?limit=2")->assertOk();
     expect($p1->json('data.0.name'))->toBe('Chat 5')->and($p1->json('has_more'))->toBeTrue()->and($p1->json('unread_total'))->toBe(3);
     $p2 = $this->getJson("$this->c/conversations?limit=2&cursor=".urlencode($p1->json('next_cursor')))->assertOk();
@@ -139,8 +121,8 @@ it('lists conversations with search, filters and cursor pagination', function ()
 });
 
 it('pages the thread in both directions', function () {
-    $this->actingAs($this->super, 'central');
-    $c = conv(null);
+    $this->actingAs($this->super, 'admin');
+    $c = conv();
     $ids = collect(range(1, 7))->map(fn ($i) => msg($c, ['body' => "m$i"])->id)->all();
     $r = $this->getJson("$this->c/conversations/$c->id/messages?limit=3")->assertOk();
     expect(collect($r->json('data'))->pluck('id')->all())->toBe(array_slice($ids, 4, 3))->and($r->json('has_more_before'))->toBeTrue();
@@ -151,18 +133,18 @@ it('pages the thread in both directions', function () {
 });
 
 it('creates a conversation by phone via AdminPhone and rejects bad numbers', function () {
-    $this->actingAs($this->super, 'central');
+    $this->actingAs($this->super, 'admin');
     $this->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '123'])->assertStatus(422)->assertJsonPath('code', 'invalid_phone');
     $this->postJson("$this->c/conversations", ['country' => 'EG'])->assertStatus(422);
     $r = $this->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '01001112222'])->assertCreated();
     expect($r->json('data.phone'))->toBe('201001112222')->and($r->json('data.jid'))->toBe('201001112222@s.whatsapp.net');
     $this->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '01001112222'])->assertOk();
-    expect(WhatsappConversation::ownedBy(null)->count())->toBe(1);
+    expect(WhatsappConversation::query()->count())->toBe(1);
 });
 
 it('validates the send payload per type', function () {
-    $this->actingAs($this->super, 'central');
-    $c = conv(null);
+    $this->actingAs($this->super, 'admin');
+    $c = conv();
     $u = "$this->c/conversations/$c->id/messages";
     $this->postJson($u, [])->assertStatus(422)->assertJsonValidationErrors('type');
     $this->postJson($u, ['type' => 'nope'])->assertStatus(422);
@@ -191,36 +173,36 @@ it('validates the send payload per type', function () {
         }
     });
     $this->postJson($u, ['type' => 'image', 'file' => png()])->assertJsonValidationErrors('file');
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(0);
+    expect(WhatsappMessage::query()->count())->toBe(0);
 });
 
 it('refuses to send when the session is not connected', function () {
     WhatsappSession::where('session_id', 'central')->update(['status' => 'disconnected']);
-    $this->actingAs($this->super, 'central');
-    $c = conv(null);
+    $this->actingAs($this->super, 'admin');
+    $c = conv();
     $this->postJson("$this->c/conversations/$c->id/messages", ['type' => 'text', 'text' => 'x'])->assertStatus(409)->assertJsonPath('code', 'not_connected');
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(0);
+    expect(WhatsappMessage::query()->count())->toBe(0);
 });
 
-it('queues a text send, creates the pending row first and sends via the owner session only', function () {
+it('queues a text send, creates the pending row first and ignores client-sent session/tenant ids', function () {
     Queue::fake();
     Event::fake([ChatMessageReceived::class, ChatMessageUpdated::class]);
-    $this->actingAs($this->owner, 'tenant');
-    $c = conv($this->tenant->id, ['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
+    $this->actingAs($this->owner, 'admin');
+    $c = conv(['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
     $r = $this->postJson("$this->t/conversations/$c->id/messages", ['type' => 'text', 'text' => 'hello', 'session_id' => 'central', 'tenant_id' => 999])->assertStatus(202);
     expect($r->json('data.status'))->toBe('pending')->and($r->json('data.direction'))->toBe('out')->and($r->json('data.body'))->toBe('hello');
-    $m = WhatsappMessage::ownedBy($this->tenant->id)->first();
-    expect($m->wa_message_id)->toBeNull()->and($m->sent_by_guard)->toBe('tenant')->and($m->sent_by_admin_id)->toBe($this->owner->id);
-    Queue::assertPushed(SendWhatsappMessage::class, fn ($j) => $j->tenantId === $this->tenant->id && $j->messageId === $m->id);
-    Event::assertDispatched(ChatMessageReceived::class, fn ($e) => $e->tenantId === $this->tenant->id && $e->message['status'] === 'pending');
+    $m = WhatsappMessage::query()->first();
+    expect($m->wa_message_id)->toBeNull()->and($m->sent_by_guard)->toBe('admin')->and($m->sent_by_admin_id)->toBe($this->owner->id);
+    Queue::assertPushed(SendWhatsappMessage::class, fn ($j) => $j->messageId === $m->id);
+    Event::assertDispatched(ChatMessageReceived::class, fn ($e) => $e->message['status'] === 'pending');
     expect($c->fresh()->last_message_id)->toBe($m->id);
 });
 
 it('sends every type through Node with the right typed payload (job end to end)', function () {
     nodeOk();
-    $this->actingAs($this->super, 'central');
-    $c = conv(null, ['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
-    $c2 = conv(null, ['jid' => '555@lid', 'phone' => null]);
+    $this->actingAs($this->super, 'admin');
+    $c = conv(['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
+    $c2 = conv(['jid' => '555@lid', 'phone' => null]);
     $u = "$this->c/conversations/$c->id/messages";
     $sent = [];
     $i = 0;
@@ -235,7 +217,7 @@ it('sends every type through Node with the right typed payload (job end to end)'
     ] as $body) {
         $i++;
         $id = $this->postJson($u, $body)->assertStatus(202)->json('data.id');
-        expect(WhatsappMessage::ownedBy(null)->find($id)->status)->toBe('sent'); // sync queue in tests
+        expect(WhatsappMessage::query()->find($id)->status)->toBe('sent'); // sync queue in tests
     }
     $payloads = Http::recorded(fn ($req) => str_ends_with($req->url(), '/sessions/central/messages'))->map(fn ($p) => $p[0]->data())->values();
     expect($payloads)->toHaveCount(7);
@@ -251,15 +233,15 @@ it('sends every type through Node with the right typed payload (job end to end)'
     Http::assertSent(fn ($r) => str_ends_with($r->url(), '/messages') && ($r['to'] ?? null) === '555@lid');
 });
 
-it('replies with the quoted wa id and keeps the session derived from the tenant', function () {
+it('replies with the quoted wa id through the single session', function () {
     nodeOk();
-    $this->actingAs($this->owner, 'tenant');
-    $c = conv($this->tenant->id);
+    $this->actingAs($this->owner, 'admin');
+    $c = conv();
     $orig = msg($c, ['wa_message_id' => 'ORIG', 'direction' => 'in']);
     $this->postJson("$this->t/conversations/$c->id/messages", ['type' => 'text', 'text' => 'r', 'reply_to_id' => $orig->id])->assertStatus(202)->assertJsonPath('data.reply_to_id', $orig->id)->assertJsonPath('data.reply_to.id', $orig->id);
-    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sessions/tenant-'.$this->tenant->id.'/messages') && $r['reply_to'] === ['id' => 'ORIG', 'from_me' => false]);
+    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sessions/central/messages') && $r['reply_to'] === ['id' => 'ORIG', 'from_me' => false]);
     // reply target from another conversation is ignored, not leaked
-    $other = conv($this->tenant->id);
+    $other = conv();
     $foreign = msg($other, ['wa_message_id' => 'F']);
     $r = $this->postJson("$this->t/conversations/$c->id/messages", ['type' => 'text', 'text' => 'r2', 'reply_to_id' => $foreign->id])->assertStatus(202);
     expect($r->json('data.reply_to_id'))->toBeNull();
@@ -268,73 +250,73 @@ it('replies with the quoted wa id and keeps the session derived from the tenant'
 it('marks the row failed (with an error code, no body) when Node rejects, and resends the same row', function () {
     Http::swap(new Factory);
     Http::fake(['wa.test/sessions/*/messages' => Http::response(['error' => 'number is not on WhatsApp'], 422)]);
-    $this->actingAs($this->super, 'central');
-    $c = conv(null);
+    $this->actingAs($this->super, 'admin');
+    $c = conv();
     $id = $this->postJson("$this->c/conversations/$c->id/messages", ['type' => 'text', 'text' => 'secret body'])->assertStatus(202)->json('data.id');
-    $m = WhatsappMessage::ownedBy(null)->find($id);
+    $m = WhatsappMessage::query()->find($id);
     expect($m->status)->toBe('failed')->and($m->error)->toBe('number is not on WhatsApp')->and($m->error)->not->toContain('secret');
     nodeOk('NEWID');
     $this->postJson("$this->c/messages/$id/resend")->assertStatus(202);
-    expect($m->fresh()->status)->toBe('sent')->and($m->fresh()->wa_message_id)->toBe('NEWID')->and(WhatsappMessage::ownedBy(null)->count())->toBe(1);
+    expect($m->fresh()->status)->toBe('sent')->and($m->fresh()->wa_message_id)->toBe('NEWID')->and(WhatsappMessage::query()->count())->toBe(1);
     $this->postJson("$this->c/messages/$id/resend")->assertStatus(422)->assertJsonPath('code', 'not_resendable');
 });
 
 it('reconciles the from_me echo that arrives BEFORE the Node response (no duplicate)', function () {
-    $c = conv(null, ['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net', 'last_message_at' => now()->subHour()]);
+    $c = conv(['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net', 'last_message_at' => now()->subHour()]);
     $m = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null, 'body' => 'hi there']);
     $ing = app(ChatIngestService::class);
-    $ing->handle(null, 'message.in', ['id' => 'ECHO1', 'jid' => $c->jid, 'phone' => '201001112222', 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'hi there']);
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(1)->and($m->fresh()->wa_message_id)->toBe('ECHO1')->and($m->fresh()->status)->toBe('sent');
+    $ing->handle('message.in', ['id' => 'ECHO1', 'jid' => $c->jid, 'phone' => '201001112222', 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'hi there']);
+    expect(WhatsappMessage::query()->count())->toBe(1)->and($m->fresh()->wa_message_id)->toBe('ECHO1')->and($m->fresh()->status)->toBe('sent');
     // delivery receipt lands before the response too
-    $ing->handle(null, 'message.status', ['id' => 'ECHO1', 'jid' => $c->jid, 'from_me' => true, 'status' => 'delivered']);
+    $ing->handle('message.status', ['id' => 'ECHO1', 'jid' => $c->jid, 'from_me' => true, 'status' => 'delivered']);
     // then the response arrives: id is already set, status must not regress
     $m->refresh()->forceFill(['status' => 'pending'])->save(); // job started when the row was still pending
     $m->forceFill(['status' => 'delivered'])->save();
     nodeOk('ECHO1');
     Queue::fake();
-    app(ChatSendService::class)->deliver(null, $m->id); // no-op: not pending anymore
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(1)->and($m->fresh()->status)->toBe('delivered');
+    app(ChatSendService::class)->deliver($m->id); // no-op: not pending anymore
+    expect(WhatsappMessage::query()->count())->toBe(1)->and($m->fresh()->status)->toBe('delivered');
     // a replay of the echo creates nothing
-    $ing->handle(null, 'message.in', ['id' => 'ECHO1', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'hi there']);
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(1);
+    $ing->handle('message.in', ['id' => 'ECHO1', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'hi there']);
+    expect(WhatsappMessage::query()->count())->toBe(1);
 });
 
 it('merges an echo row that was inserted before the response when no pending row matched', function () {
-    $c = conv(null, ['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
+    $c = conv(['phone' => '201001112222', 'jid' => '201001112222@s.whatsapp.net']);
     $m = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null, 'body' => 'orig']);
     // echo with a (slightly) different body (e.g. link-preview normalisation) is inserted as its own row
-    app(ChatIngestService::class)->handle(null, 'message.in', ['id' => 'ECHO2', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'orig!']);
-    expect(WhatsappMessage::ownedBy(null)->count())->toBe(2);
+    app(ChatIngestService::class)->handle('message.in', ['id' => 'ECHO2', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'orig!']);
+    expect(WhatsappMessage::query()->count())->toBe(2);
     nodeOk('ECHO2');
-    app(ChatSendService::class)->deliver(null, $m->id);
-    $rows = WhatsappMessage::ownedBy(null)->get();
+    app(ChatSendService::class)->deliver($m->id);
+    $rows = WhatsappMessage::query()->get();
     expect($rows)->toHaveCount(1)->and($rows[0]->id)->toBe($m->id)->and($rows[0]->wa_message_id)->toBe('ECHO2')->and($c->fresh()->last_message_id)->toBe($m->id);
 });
 
-it('does not adopt a pending row of another conversation, type or owner', function () {
-    $c = conv(null, ['jid' => '201001112222@s.whatsapp.net']);
-    $c2 = conv(null, ['jid' => '201003334444@s.whatsapp.net']);
+it('does not adopt a pending row of another conversation or type', function () {
+    $c = conv(['jid' => '201001112222@s.whatsapp.net']);
+    $c2 = conv(['jid' => '201003334444@s.whatsapp.net']);
     $m = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null, 'body' => 'same']);
     $ing = app(ChatIngestService::class);
-    $ing->handle(null, 'message.in', ['id' => 'E1', 'jid' => $c2->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'same']);
-    $ing->handle($this->tenant->id, 'message.in', ['id' => 'E2', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'same']);
+    $ing->handle('message.in', ['id' => 'E1', 'jid' => $c2->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'text', 'body' => 'same']);
+    $ing->handle('message.in', ['id' => 'E2', 'jid' => $c->jid, 'from_me' => true, 'timestamp' => time(), 'type' => 'image', 'body' => 'same']);
     expect($m->fresh()->wa_message_id)->toBeNull()->and($m->fresh()->status)->toBe('pending');
 });
 
 it('adopts the real jid Node reports for a new chat started by phone', function () {
     Http::fake(['wa.test/sessions/*/messages' => Http::response(['message_id' => 'M9', 'to_jid' => '99887766@lid', 'timestamp' => 1790000000])]);
-    $this->actingAs($this->super, 'central');
+    $this->actingAs($this->super, 'admin');
     $id = $this->postJson("$this->c/conversations", ['country' => 'EG', 'phone' => '01001112222'])->json('data.id');
     $this->postJson("$this->c/conversations/$id/messages", ['type' => 'text', 'text' => 'first'])->assertStatus(202);
-    expect(WhatsappConversation::ownedBy(null)->find($id)->jid)->toBe('99887766@lid');
+    expect(WhatsappConversation::query()->find($id)->jid)->toBe('99887766@lid');
     Http::assertSent(fn ($r) => ($r['to'] ?? null) === '201001112222');
 });
 
 it('marks a conversation read: resets unread, tells Node, tolerates Node being down', function () {
     nodeOk();
     Event::fake([ChatConversationUpdated::class]);
-    $this->actingAs($this->super, 'central');
-    $c = conv(null, ['unread_count' => 2]);
+    $this->actingAs($this->super, 'admin');
+    $c = conv(['unread_count' => 2]);
     msg($c, ['wa_message_id' => 'IN1']);
     msg($c, ['wa_message_id' => 'IN2']);
     $r = $this->postJson("$this->c/conversations/$c->id/read")->assertOk();
@@ -348,35 +330,32 @@ it('marks a conversation read: resets unread, tells Node, tolerates Node being d
     expect($c->fresh()->unread_count)->toBe(0);
 });
 
-it('sends presence through the owner session', function () {
+it('sends presence through the single session', function () {
     nodeOk();
-    $this->actingAs($this->owner, 'tenant');
-    $c = conv($this->tenant->id);
+    $this->actingAs($this->owner, 'admin');
+    $c = conv();
     $this->postJson("$this->t/conversations/$c->id/presence", ['state' => 'composing'])->assertOk();
     $this->postJson("$this->t/conversations/$c->id/presence", ['state' => 'bogus'])->assertStatus(422);
-    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sessions/tenant-'.$this->tenant->id.'/presence'));
+    Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sessions/central/presence'));
 });
 
-it('archives, pins, assigns (same owner only) and deletes locally with its media files', function () {
-    $this->actingAs($this->owner, 'tenant');
-    $c = conv($this->tenant->id);
+it('archives, pins, assigns (only active admins with whatsapp.chat.view) and deletes locally with its media files', function () {
+    $this->actingAs($this->owner, 'admin');
+    $c = conv();
     $this->patchJson("$this->t/conversations/$c->id", ['is_pinned' => true, 'is_archived' => true])->assertOk()->assertJsonPath('data.is_pinned', true);
-    $this->putJson("$this->t/conversations/$c->id/assign", ['admin_id' => $this->owner->id])->assertOk()->assertJsonPath('data.assigned_admin_id', $this->owner->id)->assertJsonPath('data.assigned_guard', 'tenant');
-    $other = Tenant::create(['slug' => 'uae', 'name' => 'U', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
-    $foreign = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'name' => 'f', 'email' => 'f@uae.test', 'password' => 'password', 'is_active' => true]);
-    $foreign->syncRoles('tenant-owner');
+    $this->putJson("$this->t/conversations/$c->id/assign", ['admin_id' => $this->owner->id])->assertOk()->assertJsonPath('data.assigned_admin_id', $this->owner->id)->assertJsonPath('data.assigned_guard', 'admin');
+    $foreign = Admin::query()->create(['name' => 'f', 'email' => 'f@x.test', 'phone' => '201000000333', 'password' => 'password', 'is_active' => true]);   // no chat permission
     $this->putJson("$this->t/conversations/$c->id/assign", ['admin_id' => $foreign->id])->assertStatus(422)->assertJsonPath('code', 'invalid_assignee');
     $this->putJson("$this->t/conversations/$c->id/assign", ['admin_id' => null])->assertOk()->assertJsonPath('data.assigned_admin_id', null);
 
     Storage::disk('chat-test')->put('f.png', 'abc');
     Storage::disk('chat-test')->put('t.jpg', 'abc');
     $media = new WhatsappMedia(['disk' => 'chat-test', 'path' => 'f.png', 'thumbnail_path' => 't.jpg', 'mime' => 'image/png', 'status' => 'ready']);
-    $media->tenant_id = $this->tenant->id;
     $media->save();
     $m1 = msg($c, ['media_id' => $media->id, 'type' => 'image']);
     msg($c, ['reply_to_id' => $m1->id]);
     $this->deleteJson("$this->t/conversations/$c->id")->assertOk();
-    expect(WhatsappConversation::ownedBy($this->tenant->id)->count())->toBe(0)->and(WhatsappMessage::ownedBy($this->tenant->id)->count())->toBe(0)->and(WhatsappMedia::ownedBy($this->tenant->id)->count())->toBe(0);
+    expect(WhatsappConversation::query()->count())->toBe(0)->and(WhatsappMessage::query()->count())->toBe(0)->and(WhatsappMedia::query()->count())->toBe(0);
     Storage::disk('chat-test')->assertMissing('f.png');
     Storage::disk('chat-test')->assertMissing('t.jpg');
     $log = Activity::where('log_name', 'whatsapp-chat')->pluck('event')->all();
@@ -386,8 +365,8 @@ it('archives, pins, assigns (same owner only) and deletes locally with its media
 
 it('reacts, edits and deletes-for-everyone only on eligible messages', function () {
     nodeOk();
-    $this->actingAs($this->super, 'central');
-    $c = conv(null);
+    $this->actingAs($this->super, 'admin');
+    $c = conv();
     $out = msg($c, ['direction' => 'out', 'status' => 'sent', 'wa_message_id' => 'OUT1', 'body' => 'old']);
     $in = msg($c, ['direction' => 'in', 'wa_message_id' => 'IN1']);
     $pending = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null]);
@@ -416,12 +395,9 @@ it('reacts, edits and deletes-for-everyone only on eligible messages', function 
 });
 
 it('streams media with safe headers, Range support and a plain 404 for missing or unready files', function () {
-    $this->actingAs($this->super, 'central');
+    $this->actingAs($this->super, 'admin');
     Storage::disk('chat-test')->put('a/b.png', '0123456789');
-    $mk = fn (array $o) => tap(new WhatsappMedia($o + ['disk' => 'chat-test', 'original_name' => 'My "photo".png', 'status' => 'ready']), function ($m) {
-        $m->tenant_id = null;
-        $m->save();
-    });
+    $mk = fn (array $o) => WhatsappMedia::create($o + ['disk' => 'chat-test', 'original_name' => 'My "photo".png', 'status' => 'ready']);
     $png = $mk(['path' => 'a/b.png', 'mime' => 'image/png']);
     $r = $this->get("$this->c/media/$png->id")->assertOk();
     expect($r->headers->get('Content-Type'))->toBe('image/png')->and($r->headers->get('X-Content-Type-Options'))->toBe('nosniff')->and($r->headers->get('Content-Disposition'))->toStartWith('inline')
@@ -444,13 +420,13 @@ it('streams media with safe headers, Range support and a plain 404 for missing o
     $th = $mk(['path' => null, 'status' => 'pending', 'thumbnail_path' => 'a/t.jpg']);
     $this->get("$this->c/media/$th->id?thumb=1")->assertOk();
     // permission: view without media
-    $v = CentralAdmin::create(['name' => 'V', 'phone' => '201000000055', 'password' => 'password', 'is_active' => true]);
-    $v->givePermissionTo(Permission::findOrCreate('whatsapp.chat.view', 'central'));
-    $this->actingAs($v, 'central')->get("$this->c/media/$png->id")->assertForbidden();
+    $v = Admin::create(['name' => 'V', 'phone' => '201000000055', 'password' => 'password', 'is_active' => true]);
+    $v->givePermissionTo(Permission::findOrCreate('whatsapp.chat.view', 'admin'));
+    $this->actingAs($v, 'admin')->get("$this->c/media/$png->id")->assertForbidden();
 });
 
 it('exposes upload limits and connection state', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $r = $this->getJson("$this->t/limits")->assertOk();
     expect($r->json('data.limits.image'))->toBe(16 * 1024 * 1024)->and($r->json('data.limits.document'))->toBe(100 * 1024 * 1024)->and($r->json('data.connected'))->toBeTrue();
 });
@@ -459,34 +435,32 @@ it('does not touch the OTP path: sendText still uses the legacy payload', functi
     Http::fake(['wa.test/*' => Http::response(['ok' => true])]);
     config(['services.whatsapp' => ['url' => 'http://wa.test', 'token' => 'tok', 'callback_secret' => 's']]);
     AuthSettings::for(null)->set('whatsapp.enabled', true);
-    app(WhatsappService::class)->sendText(null, '201001112222', 'code 123456');
+    app(WhatsappService::class)->sendText('201001112222', 'code 123456');
     Http::assertSent(fn ($r) => str_ends_with($r->url(), '/sessions/central/messages') && $r->data() === ['to' => '201001112222', 'text' => 'code 123456']);
 });
 
 it('job: skips rows that are not pending, never double sends, and fails the row from failed()', function () {
     nodeOk();
-    $c = conv(null);
+    $c = conv();
     $sent = msg($c, ['direction' => 'out', 'status' => 'sent', 'wa_message_id' => 'DONE']);
-    (new SendWhatsappMessage(null, $sent->id))->handle(app(ChatSendService::class));
+    (new SendWhatsappMessage($sent->id))->handle(app(ChatSendService::class));
     Http::assertNothingSent();
     $p = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null]);
-    (new SendWhatsappMessage(null, $p->id))->failed(new RuntimeException('x'));
+    (new SendWhatsappMessage($p->id))->failed(new RuntimeException('x'));
     expect($p->fresh()->status)->toBe('failed')->and($p->fresh()->error)->toBe('send_failed');
-    // wrong owner: the job cannot reach another owner's row
-    $q = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null]);
-    (new SendWhatsappMessage($this->tenant->id, $q->id))->handle(app(ChatSendService::class));
-    expect($q->fresh()->status)->toBe('pending');
+    // unknown row: nothing to send
+    (new SendWhatsappMessage(999999))->handle(app(ChatSendService::class));
     Http::assertNothingSent();
-    $mw = (new SendWhatsappMessage(null, 1))->middleware();
-    expect($mw[0])->toBeInstanceOf(WithoutOverlapping::class)->and($mw[0]->key)->toBe('wa-chat-send:central');
+    $mw = (new SendWhatsappMessage(1))->middleware();
+    expect($mw[0])->toBeInstanceOf(WithoutOverlapping::class)->and($mw[0]->key)->toBe('wa-chat-send');
 });
 
 it('job: fails the row when the session dropped before delivery', function () {
     nodeOk();
-    $c = conv(null);
+    $c = conv();
     $p = msg($c, ['direction' => 'out', 'status' => 'pending', 'wa_message_id' => null]);
     WhatsappSession::where('session_id', 'central')->update(['status' => 'disconnected']);
-    (new SendWhatsappMessage(null, $p->id))->handle(app(ChatSendService::class));
+    (new SendWhatsappMessage($p->id))->handle(app(ChatSendService::class));
     expect($p->fresh()->status)->toBe('failed');
     Http::assertNothingSent();
 });

@@ -4,7 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\DTOs\Reports\ReportFilter;
 
-/** Raw aggregate rows (arrays) per report. Money is already multiplied by tenants.currency_rate in central context. */
+/** Raw aggregate rows (arrays) per report. One shop, one currency (no rate conversion). */
 interface ReportRepositoryInterface
 {
     public function purchases(ReportFilter $f): array;
@@ -45,9 +45,6 @@ interface ReportRepositoryInterface
 
     /** @return array<string,int> status => count (all statuses) */
     public function statusCounts(ReportFilter $f): array;
-
-    /** Sales per tenant (central dashboard). */
-    public function tenantBreakdown(ReportFilter $f): array;
 
     public function newCustomers(ReportFilter $f): int;
 }

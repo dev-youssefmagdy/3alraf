@@ -27,15 +27,15 @@ class AiProviderDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('central')->user();
+        $u = auth('admin')->user();
         $dt->editColumn('name', fn (AiProvider $p) => e($p->name))
             ->addColumn('driver_label', fn (AiProvider $p) => e($p->driver->label()))
             ->addColumn('test_status', fn (AiProvider $p) => $p->last_tested_at ? $this->badge((bool) $p->last_test_ok, __('ai.test_ok'), __('ai.test_failed')) : '—')
             ->addColumn('status', fn (AiProvider $p) => $this->badge($p->is_active))
             ->addColumn('actions', function (AiProvider $p) use ($u) {
-                $h = $this->actionButtons(route('central.ai.providers.edit', $p), route('central.ai.providers.destroy', $p), (bool) $u?->can('ai_providers.edit'), (bool) $u?->can('ai_providers.delete'));
+                $h = $this->actionButtons(route('admin.ai.providers.edit', $p), route('admin.ai.providers.destroy', $p), (bool) $u?->can('ai_providers.edit'), (bool) $u?->can('ai_providers.delete'));
                 if ($u?->can('ai_providers.edit')) {
-                    $h = '<div class="flex items-center gap-2"><button type="button" data-ai-test="'.e(route('central.ai.providers.test', $p)).'" class="btn-sm btn-secondary">'.e(__('ai.test_connection')).'</button></div>'.$h;
+                    $h = '<div class="flex items-center gap-2"><button type="button" data-ai-test="'.e(route('admin.ai.providers.test', $p)).'" class="btn-sm btn-secondary">'.e(__('ai.test_connection')).'</button></div>'.$h;
                 }
 
                 return $h;

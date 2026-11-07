@@ -12,24 +12,23 @@ import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../account/presentation/about_page.dart';
 import '../../content/application/content_providers.dart';
-import '../../tenant/application/startup_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
-import '../../tenant/presentation/country_switcher.dart';
-import '../../tenant/presentation/language_picker.dart';
+import '../../startup/application/startup_controller.dart';
+import '../../startup/presentation/language_picker.dart';
+import '../../store/application/store_controller.dart';
 
 /// Side menu: catalog shortcuts, custom/static pages, blog, affiliate,
-/// track order, about / contact / rate app, country, language, theme.
+/// track order, about / contact / rate app, language, theme.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final tenant = ref.watch(tenantControllerProvider);
+    final store = ref.watch(storeControllerProvider);
     final locale = ref.watch(localeProvider);
     final version = ref.watch(appVersionProvider).value;
-    final name = tenant.store?.name ?? tenant.tenant?.name ?? '';
-    final whatsapp = tenant.store?.whatsapp;
+    final name = store.name;
+    final whatsapp = store.profile?.whatsapp;
     final customPages =
         ref.watch(customPagesProvider).asData?.value ?? const [];
     final pages = ref.watch(pagesProvider).asData?.value ?? const [];
@@ -66,7 +65,7 @@ class AppDrawer extends ConsumerWidget {
                     l10n.bundles,
                     AppRoutes.bundles,
                   ),
-                  if (tenant.store?.features['gift_finder'] ?? false)
+                  if (store.profile?.features['gift_finder'] ?? false)
                     _nav(
                       context,
                       Icons.card_giftcard_rounded,
@@ -95,7 +94,7 @@ class AppDrawer extends ConsumerWidget {
                           ),
                       ],
                     ),
-                  if (tenant.store?.hasBlog ?? true)
+                  if (store.profile?.hasBlog ?? true)
                     _nav(
                       context,
                       Icons.article_outlined,
@@ -170,18 +169,7 @@ class AppDrawer extends ConsumerWidget {
                       showThemePicker(context, ref);
                     },
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.public_rounded),
-                    title: Text(l10n.switchCountry),
-                    subtitle: name.isEmpty
-                        ? null
-                        : Text(l10n.currentStoreLabel(name)),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      showCountrySwitcher(ref);
-                    },
-                  ),
-                  if (tenant.availableLocales.length > 1)
+                  if (store.availableLocales.length > 1)
                     ListTile(
                       leading: const Icon(Icons.translate_rounded),
                       title: Text(l10n.language),

@@ -14,6 +14,6 @@ class WhatsappConversationFactory extends Factory
     {
         $phone = '2010'.fake()->unique()->numerify('########');
 
-        return ['tenant_id' => null, 'jid' => $phone.'@s.whatsapp.net', 'phone' => $phone, 'name' => fake()->name(), 'unread_count' => 0];
+        return ['jid' => $phone.'@s.whatsapp.net', 'phone' => $phone, 'name' => fake()->name(), 'unread_count' => 0];
     }
 }

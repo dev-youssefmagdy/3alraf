@@ -1,9 +1,9 @@
 @php($editing = $category->exists)
-<x-layouts.admin guard="central" :title="$editing ? __('admin.edit').': '.$category->name : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit').': '.$category->name : __('admin.add_new')">
     <x-card class="max-w-3xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif
-            data-validate-url="{{ route('central.categories.validate', $editing ? [$category] : []) }}"
-            action="{{ $editing ? route('central.categories.update', $category) : route('central.categories.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
+            data-validate-url="{{ route('admin.categories.validate', $editing ? [$category] : []) }}"
+            action="{{ $editing ? route('admin.categories.update', $category) : route('admin.categories.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
             @csrf
             <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$category->getTranslations('name')" />
             <x-translatable-tabs name="description" type="textarea" :label="__('admin.fields.description')" :languages="$languages" :values="$category->getTranslations('description')" />
@@ -22,7 +22,7 @@
                 <input id="f-image" type="file" name="image" accept="image/*" class="form-control">
             </div>
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$category->is_active" />
-            <x-form-actions :cancel="route('central.categories.index')" />
+            <x-form-actions :cancel="route('admin.categories.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

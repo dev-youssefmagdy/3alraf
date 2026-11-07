@@ -1,15 +1,14 @@
 @props(['title' => '', 'description' => null, 'image' => null, 'type' => 'website', 'jsonld' => null, 'noindex' => false, 'breadcrumbs' => [], 'canonicalPage' => null, 'preloadImage' => null])
 @php
-    $tenant = current_tenant();
     $locale = app()->getLocale();
     $seo = app(\App\Services\SeoSettingsService::class)->current();
     $isHome = request()->routeIs('storefront.home');
-    $suffix = ($seo['title_suffix'][$locale] ?? '') ?: $tenant->name;
+    $suffix = ($seo['title_suffix'][$locale] ?? '') ?: setting('name');
     $fullTitle = $isHome && ($seo['home_title'][$locale] ?? '') !== '' ? $seo['home_title'][$locale]
-        : (($title === '' || $title === $tenant->name) ? $tenant->name : $title.' | '.$suffix);
+        : (($title === '' || $title === setting('name')) ? setting('name') : $title.' | '.$suffix);
     $rawDesc = $isHome && ($seo['home_description'][$locale] ?? '') !== '' ? $seo['home_description'][$locale]
-        : ($description ?: (($title && $title !== $tenant->name ? $title.' - '.$tenant->name.'. ' : '').__('store.seo_default_desc')));
-    $desc = \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags((string) $rawDesc))), 158, '');
+        : ($description ?: (($title && $title !== setting('name') ? $title.' - '.setting('name').'. ' : '').__('store.seo_default_desc')));
+    $desc = \Illuminate\Support\Str::limit(\App\Support\SafeHtml::text((string) $rawDesc), 158, '');
     $pageNo = (int) request()->query('page', 1);
     $canonical = url()->current().($pageNo > 1 ? '?page='.$pageNo : '');
     $filtered = collect(request()->query())->except('page')->filter(fn ($v) => $v !== null && $v !== '' && $v !== [])->isNotEmpty();
@@ -21,7 +20,7 @@
     $sf = app(\App\Services\Storefront\StorefrontData::class);
     $menu = $sf->menu();
     $footer = $sf->footer();
-    $langs = \App\Models\Language::activeList()->filter(fn ($l) => in_array($l->code, $tenant->locales, true));
+    $langs = \App\Models\Language::activeList()->filter(fn ($l) => in_array($l->code, ((array) setting('locales', [])), true));
     $switchUrl = fn ($code) => $routeLocale
         ? url('/'.$code.(($rest = request()->path()) && ($pos = strpos($rest, '/')) !== false ? substr($rest, $pos) : '')).(request()->getQueryString() ? '?'.request()->getQueryString() : '')
         : url()->current().'?lang='.$code;
@@ -29,13 +28,13 @@
     $altUrl = fn ($code) => url('/'.$code.(($rest = request()->path()) && ($pos = strpos($rest, '/')) !== false ? substr($rest, $pos) : ''));
     $bcItems = collect($breadcrumbs)->values()->map(fn ($b, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $b[0], 'item' => $b[1]])->all();
     $orgSameAs = array_values(array_filter($seo['social']));
-    $org = array_filter(['@context' => 'https://schema.org', '@type' => $seo['org_type'] ?: 'Organization', '@id' => url('/').'#org', 'name' => $tenant->name, 'url' => url('/'.$tenant->default_locale),
+    $org = array_filter(['@context' => 'https://schema.org', '@type' => $seo['org_type'] ?: 'Organization', '@id' => url('/').'#org', 'name' => setting('name'), 'url' => url('/'.setting('default_locale')),
         'logo' => $abs($seo['org_logo'] ?: asset('logo-512.png')), 'image' => $abs($seo['org_logo'] ?: asset('logo-512.png')), 'telephone' => $seo['org_phone'] ?: null, 'email' => $seo['org_email'] ?: null,
         'sameAs' => $orgSameAs ?: null,
         'address' => ($seo['org_street'] || $seo['org_city'] || $seo['org_country']) ? array_filter(['@type' => 'PostalAddress', 'streetAddress' => $seo['org_street'], 'addressLocality' => $seo['org_city'],
             'addressRegion' => $seo['org_region'], 'postalCode' => $seo['org_postal'], 'addressCountry' => $seo['org_country']]) : null]);
     $lds = collect($jsonld ? (array_is_list($jsonld) ? $jsonld : [$jsonld]) : [])->filter()->when($isHome, fn ($c) => $c->prepend($org))->when($bcItems, fn ($c) => $c->push(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $bcItems]))->values();
-    $sfJs = ['symbol' => $tenant->currency_symbol, 'locale' => $locale, 'dir' => ($isRtl ?? false) ? 'rtl' : 'ltr', 'logged' => auth('web')->check(),
+    $sfJs = ['symbol' => setting('currency_symbol'), 'locale' => $locale, 'dir' => ($isRtl ?? false) ? 'rtl' : 'ltr', 'logged' => auth('web')->check(),
         'routes' => ['cart' => route('storefront.cart.show'), 'cartItems' => route('storefront.cart.add'), 'quote' => route('storefront.cart.quote'), 'suggest' => route('storefront.search.suggest'),
             'stockRequest' => route('storefront.stock-requests.store'), 'checkout' => route('storefront.checkout.create'), 'shipping' => route('storefront.checkout.shipping'), 'login' => route('storefront.login')],
         'i' => ['d' => __('store.d'), 'h' => __('store.h'), 'm' => __('store.m'), 's' => __('store.s'), 'free' => __('store.free'), 'cart_empty' => __('store.cart_empty'), 'remove' => __('store.remove'),
@@ -46,14 +45,14 @@
             'subtotal' => __('store.subtotal'), 'discount' => __('store.discount'), 'shipping' => __('store.shipping'), 'tax' => __('store.tax'), 'packaging' => __('store.packaging'), 'payment_fee' => __('store.payment_fee'), 'cod_fee' => __('store.cod_fee'), 'total' => __('store.total'), 'prepaid_now' => __('store.prepaid_now'), 'cod_balance' => __('store.cod_balance'),
             'request_now' => __('store.request_now'), 'variants_availability' => __('store.variants_availability'), 'unit' => __('store.unit_price'), 'qty' => __('store.qty')]];
 @endphp
-<x-layouts.base :title="$fullTitle" :full-title="$fullTitle" body-class="bg-slate-50" :site-name="$tenant->name">
+<x-layouts.base :title="$fullTitle" :full-title="$fullTitle" body-class="bg-slate-50" :site-name="setting('name')">
     <x-slot:head>
         <meta name="description" content="{{ $desc }}">
         <meta name="robots" content="{{ $robots }}">
         <link rel="canonical" href="{{ $canonical }}">
         @if ($routeLocale && $robots !== 'noindex,nofollow')
             @foreach ($langs as $l)<link rel="alternate" hreflang="{{ $l->code }}" href="{{ $altUrl($l->code) }}">@endforeach
-            <link rel="alternate" hreflang="x-default" href="{{ $altUrl($tenant->default_locale) }}">
+            <link rel="alternate" hreflang="x-default" href="{{ $altUrl(setting('default_locale')) }}">
         @endif
         <meta name="theme-color" content="#a8456c">
         @if (($mediaHost = parse_url(media_url('x'), PHP_URL_HOST)) && $mediaHost !== request()->getHost())<link rel="preconnect" href="{{ parse_url(media_url('x'), PHP_URL_SCHEME) }}://{{ $mediaHost }}" crossorigin>@endif
@@ -61,11 +60,11 @@
         @foreach (['google-site-verification' => 'google_verification', 'msvalidate.01' => 'bing_verification', 'yandex-verification' => 'yandex_verification', 'p:domain_verify' => 'pinterest_verification', 'facebook-domain-verification' => 'facebook_domain_verification'] as $metaName => $k)
             @if ($seo[$k])<meta name="{{ $metaName }}" content="{{ $seo[$k] }}">@endif
         @endforeach
-        <meta property="og:site_name" content="{{ $tenant->name }}"><meta property="og:type" content="{{ $type === 'product' ? 'product' : 'website' }}">
+        <meta property="og:site_name" content="{{ setting('name') }}"><meta property="og:type" content="{{ $type === 'product' ? 'product' : 'website' }}">
         <meta property="og:title" content="{{ $fullTitle }}"><meta property="og:description" content="{{ $desc }}"><meta property="og:url" content="{{ $canonical }}">
         <meta property="og:locale" content="{{ $ogLocale[$locale] ?? $locale }}">
         @foreach ($langs as $l)@if ($l->code !== $locale)<meta property="og:locale:alternate" content="{{ $ogLocale[$l->code] ?? $l->code }}">@endif @endforeach
-        <meta property="og:image" content="{{ $ogImage }}"><meta property="og:image:alt" content="{{ $title ?: $tenant->name }}">
+        <meta property="og:image" content="{{ $ogImage }}"><meta property="og:image:alt" content="{{ $title ?: setting('name') }}">
         <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{{ $fullTitle }}"><meta name="twitter:description" content="{{ $desc }}"><meta name="twitter:image" content="{{ $ogImage }}">
         @if ($seo['twitter_handle'])<meta name="twitter:site" content="{{ '@'.ltrim($seo['twitter_handle'], '@') }}">@endif
         @if ($preloadImage)<link rel="preload" as="image" href="{{ $preloadImage }}" fetchpriority="high">@endif
@@ -82,7 +81,7 @@
             <button type="button" class="rounded-lg border border-slate-200 p-2 lg:hidden" data-drawer-open aria-label="{{ __('store.menu') }}">
                 <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
-            <a href="{{ route('storefront.home') }}" class="flex shrink-0 items-center gap-2 text-xl font-extrabold text-brand-600"><img src="{{ asset('logo-sm.webp') }}" alt="{{ $tenant->name }}" width="67" height="56" fetchpriority="high" class="h-14 w-auto max-w-[240px] object-contain"></a>
+            <a href="{{ route('storefront.home') }}" class="flex shrink-0 items-center gap-2 text-xl font-extrabold text-brand-600"><img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') }}" width="67" height="56" fetchpriority="high" class="h-14 w-auto max-w-[240px] object-contain"></a>
 
             <form action="{{ route('storefront.search') }}" method="GET" class="relative order-last w-full lg:order-none lg:max-w-2xl lg:flex-1" data-search-form role="search">
                 <input type="search" name="q" value="{{ request('q') }}" autocomplete="off" placeholder="{{ __('store.search_placeholder') }}" class="form-control !rounded-full !py-2.5 !pe-12 ps-5" data-search-input>
@@ -192,7 +191,7 @@
 
     <footer class="mt-10 max-lg:mb-16 border-t border-slate-200 bg-brand-50 text-slate-600">
         <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div><a href="{{ route('storefront.home') }}" class="mb-3 inline-block"><img src="{{ asset('logo-sm.webp') }}" alt="{{ $tenant->name }}" width="58" height="48" loading="lazy" class="h-12 w-auto max-w-[200px] object-contain"></a><p class="text-sm leading-6 text-slate-500">{{ __('store.seo_default_desc') }}</p></div>
+            <div><a href="{{ route('storefront.home') }}" class="mb-3 inline-block"><img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') }}" width="58" height="48" loading="lazy" class="h-12 w-auto max-w-[200px] object-contain"></a><p class="text-sm leading-6 text-slate-500">{{ __('store.seo_default_desc') }}</p></div>
             <div><h2 class="mb-3 font-semibold text-slate-900">{{ __('store.about') }}</h2>
                 <ul class="space-y-2 text-sm">@foreach ($footer['pages'] as $fp)<li><a class="hover:text-slate-900" href="{{ route('storefront.pages.show', $fp['slug']) }}">{{ $fp['title'] }}</a></li>@endforeach @if ($footer['blog'] ?? false)<li><a class="hover:text-slate-900" href="{{ route('storefront.blog.index') }}">{{ __('growth.blog') }}</a></li>@endif</ul></div>
             <div><h2 class="mb-3 font-semibold text-slate-900">{{ __('store.customer_service') }}</h2>
@@ -211,7 +210,7 @@
                 <h2 class="mb-2 mt-5 font-semibold text-slate-900">{{ __('store.we_accept') }}</h2>
                 <div class="flex flex-wrap gap-2">@foreach ($footer['payments'] as $pm)<x-payment-icon :method="$pm" />@endforeach</div></div>
         </div>
-        <div class="border-t border-slate-200 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ $tenant->name }}. {{ __('store.rights') }}</div>
+        <div class="border-t border-slate-200 py-4 text-center text-xs text-slate-500">&copy; {{ now()->year }} {{ setting('name') }}. {{ __('store.rights') }}</div>
     </footer>
 
     {{-- out-of-stock request modal (opened by [data-stock-request]) --}}
@@ -224,7 +223,7 @@
             <input type="hidden" name="product_id"><input type="hidden" name="variant_id">
             <div><label class="form-label">{{ __('store.your_name') }}</label><input type="text" name="name" maxlength="120" required class="form-control" value="{{ auth('web')->user()?->name }}"></div>
             <div><label class="form-label">{{ __('store.your_phone') }}</label>
-                <div class="flex items-stretch" dir="ltr">@if ($dial = \App\Support\Phone::tenantCode())<span class="grid place-items-center rounded-s-lg border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600">{{ $dial }}</span>@endif<input type="tel" name="phone" maxlength="30" required class="form-control {{ $dial ? '!rounded-s-none' : '' }}"></div></div>
+                <div class="flex items-stretch" dir="ltr">@if ($dial = \App\Support\Phone::shopCode())<span class="grid place-items-center rounded-s-lg border border-e-0 border-slate-300 bg-slate-50 px-3 text-sm text-slate-600">{{ $dial }}</span>@endif<input type="tel" name="phone" maxlength="30" required class="form-control {{ $dial ? '!rounded-s-none' : '' }}"></div></div>
             <div><label class="form-label">{{ __('store.your_note') }}</label><textarea name="note" rows="2" maxlength="500" class="form-control"></textarea></div>
             <button type="submit" class="btn btn-primary w-full">{{ __('store.request_send') }}</button>
         </form>

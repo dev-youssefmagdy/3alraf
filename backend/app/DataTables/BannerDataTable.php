@@ -33,7 +33,7 @@ class BannerDataTable extends BaseDataTable
             ->addColumn('placement_label', fn (Banner $m) => e($m->placement->label()))
             ->addColumn('schedule', fn (Banner $m) => e(($m->starts_at?->format('Y-m-d H:i') ?? '…').' → '.($m->ends_at?->format('Y-m-d H:i') ?? '…')))
             ->addColumn('status', fn (Banner $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (Banner $m) => $this->tenantActions($m, 'tenant.banners', 'banners'));
+            ->addColumn('actions', fn (Banner $m) => $this->rowActions($m, 'admin.banners', 'banners'));
     }
 
     protected function rawColumns(): array

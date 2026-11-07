@@ -1,11 +1,11 @@
-<x-layouts.admin :title="__('whatsapp.chat.title')" :guard="$guard">
+<x-layouts.admin :title="__('whatsapp.chat.title')">
     <div id="wa-chat" class="relative flex h-[calc(100dvh-6.5rem)] min-h-[28rem] overflow-hidden rounded-xl border border-slate-200 bg-white"
-        data-base="{{ $base }}" data-channel="{{ $channel }}" data-connected="{{ $connected ? 1 : 0 }}" data-me="{{ $meId }}" data-guard="{{ $guard }}"
+        data-base="{{ $base }}" data-channel="{{ $channel }}" data-connected="{{ $connected ? 1 : 0 }}" data-me="{{ $meId }}" data-guard="admin"
         data-can-send="{{ $can['send'] ? 1 : 0 }}" data-can-manage="{{ $can['manage'] ? 1 : 0 }}" data-can-media="{{ $can['media'] ? 1 : 0 }}"
-        data-connection-url="{{ $can['connection'] ? route("$guard.whatsapp.index") : '' }}" data-customer-url="{{ $customerUrl }}"
+        data-connection-url="{{ $can['connection'] ? route("admin.whatsapp.index") : '' }}" data-customer-url="{{ $customerUrl }}"
         data-ws-key="{{ config('broadcasting.default') === 'reverb' ? config('broadcasting.connections.reverb.key') : '' }}"
         data-ws-host="{{ config('broadcasting.connections.reverb.options.host') }}" data-ws-port="{{ config('broadcasting.connections.reverb.options.port') }}"
-        data-ws-scheme="{{ config('broadcasting.connections.reverb.options.scheme') }}" data-auth-url="{{ route("$guard.broadcasting.auth") }}"
+        data-ws-scheme="{{ config('broadcasting.connections.reverb.options.scheme') }}" data-auth-url="{{ route("admin.broadcasting.auth") }}"
         data-admins='@json($admins)' data-i18n='@json(__('whatsapp.chat.ui'))' data-locale="{{ app()->getLocale() }}">
 
         {{-- conversation list --}}
@@ -27,7 +27,7 @@
             <div id="wa-offline" class="hidden bg-amber-50 px-3 py-1.5 text-xs text-amber-700">{{ __('whatsapp.chat.ui.offline') }}</div>
             <div id="wa-disc" class="{{ $connected ? 'hidden' : '' }} border-b border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 <strong>{{ __('whatsapp.chat.ui.not_connected_title') }}</strong>
-                @if ($can['connection'])<a class="ms-1 underline" href="{{ route("$guard.whatsapp.index") }}">{{ __('whatsapp.chat.ui.go_connect') }}</a>@endif
+                @if ($can['connection'])<a class="ms-1 underline" href="{{ route("admin.whatsapp.index") }}">{{ __('whatsapp.chat.ui.go_connect') }}</a>@endif
             </div>
             <ul id="wa-convs" class="min-h-0 flex-1 divide-y divide-slate-50 overflow-y-auto"></ul>
             <p id="wa-convs-empty" class="hidden p-6 text-center text-sm text-slate-500"></p>
@@ -42,7 +42,7 @@
                     </div>
                     <p id="wa-placeholder-text" class="text-sm text-slate-600">{{ $connected ? __('whatsapp.chat.ui.select_chat') : __('whatsapp.chat.ui.not_connected_help') }}</p>
                     @if (! $connected && $can['connection'])
-                        <a id="wa-placeholder-link" class="btn btn-primary mt-4 inline-block" href="{{ route("$guard.whatsapp.index") }}">{{ __('whatsapp.chat.ui.go_connect') }}</a>
+                        <a id="wa-placeholder-link" class="btn btn-primary mt-4 inline-block" href="{{ route("admin.whatsapp.index") }}">{{ __('whatsapp.chat.ui.go_connect') }}</a>
                     @endif
                 </div>
             </div>

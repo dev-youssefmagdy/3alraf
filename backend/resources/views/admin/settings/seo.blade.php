@@ -5,7 +5,7 @@
         'robots' => $seo['indexable'],
         'verified' => $seo['google_verification'] !== '',
         'analytics' => $seo['ga4_id'] !== '' || $seo['gtm_id'] !== '',
-        'home' => collect($tenant->locales)->every(fn ($l) => ($seo['home_title'][$l] ?? '') !== '' && ($seo['home_description'][$l] ?? '') !== ''),
+        'home' => collect($locales)->every(fn ($l) => ($seo['home_title'][$l] ?? '') !== '' && ($seo['home_description'][$l] ?? '') !== ''),
         'business' => $seo['org_logo'] !== '' && ($seo['org_phone'] !== '' || $seo['org_email'] !== '') && collect($seo['social'])->filter()->isNotEmpty(),
     ];
     $done = collect($checks)->filter()->count();
@@ -20,7 +20,7 @@
     $first = $languages->first()?->code;
     $copyBtn = fn ($v) => '<button type="button" class="btn btn-secondary btn-sm" data-copy="'.e($v).'" data-done="'.e(__('seo.general.copied')).'">'.e(__('seo.general.copy')).'</button>';
 @endphp
-<x-layouts.admin guard="tenant" :title="__('seo.title')">
+<x-layouts.admin :title="__('seo.title')">
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-900">{{ __('seo.title') }}</h1>
         <p class="mt-1 text-sm text-slate-500">{{ __('seo.subtitle') }}</p>
@@ -54,7 +54,7 @@
             </nav>
         </aside>
 
-        <form data-ajax-form data-method="PUT" data-validate-url="{{ route('tenant.seo.validate') }}" action="{{ route('tenant.seo.update') }}" method="POST" class="min-w-0 space-y-6" novalidate>
+        <form data-ajax-form data-method="PUT" data-validate-url="{{ route('admin.seo.validate') }}" action="{{ route('admin.seo.update') }}" method="POST" class="min-w-0 space-y-6" novalidate>
             @csrf
 
             {{-- 1. search appearance --}}
@@ -73,7 +73,7 @@
                         <div class="rounded-lg border border-slate-200 bg-white p-4" aria-live="polite">
                             <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{{ __('seo.general.preview') }}</p>
                             <p class="truncate text-xs text-slate-600" dir="ltr">{{ parse_url(url('/'), PHP_URL_HOST) }} › {{ $first }}</p>
-                            <p class="mt-0.5 truncate text-lg text-blue-800" data-prev-title>{{ ($seo['home_title'][$first] ?? '') ?: $tenant->name }}</p>
+                            <p class="mt-0.5 truncate text-lg text-blue-800" data-prev-title>{{ ($seo['home_title'][$first] ?? '') ?: $shopName }}</p>
                             <p class="line-clamp-2 text-sm text-slate-600" data-prev-desc>{{ ($seo['home_description'][$first] ?? '') ?: __('store.seo_default_desc') }}</p>
                             <p class="mt-2 text-xs text-slate-400"><span data-prev-tlen>0</span> / 60 · <span data-prev-dlen>0</span> / 160 {{ __('seo.general.chars') }}</p>
                         </div>
@@ -182,7 +182,7 @@
             <div class="sticky bottom-0 z-10 -mx-1 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
                 <div class="flex items-center gap-2">
                     <button type="submit" class="btn btn-primary">{{ __('admin.save') }}</button>
-                    <a href="{{ route('tenant.dashboard') }}" class="btn btn-secondary">{{ __('admin.cancel') }}</a>
+                    <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">{{ __('admin.cancel') }}</a>
                 </div>
             </div>
         </form>
@@ -213,7 +213,7 @@
             var t = document.querySelector('[name="home_title[{{ $first }}]"]'), d = document.querySelector('[name="home_description[{{ $first }}]"]');
             function sync() {
                 var tt = document.querySelector('[data-prev-title]'), dd = document.querySelector('[data-prev-desc]');
-                if (t) { tt.textContent = t.value || @js($tenant->name); document.querySelector('[data-prev-tlen]').textContent = t.value.length; }
+                if (t) { tt.textContent = t.value || @js($shopName); document.querySelector('[data-prev-tlen]').textContent = t.value.length; }
                 if (d) { dd.textContent = d.value || @js(__('store.seo_default_desc')); document.querySelector('[data-prev-dlen]').textContent = d.value.length; }
             }
             [t, d].forEach(function (el) { if (el) el.addEventListener('input', sync); }); sync();

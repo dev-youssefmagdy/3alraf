@@ -1,5 +1,7 @@
 # Growth N0/N1 gap-fix plan (sprint N1.5)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 CTO decisions for every gap reported by sprints N0 and N1. Contract for `prompts/30-growth-n15-gap-fixes.md`. Runs after N2, before N3.
 
 | # | Gap | Decision | Why |

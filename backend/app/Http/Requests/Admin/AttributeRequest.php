@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Central;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\AttributeType;
 use App\Http\Requests\Concerns\TranslatableRules;

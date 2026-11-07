@@ -17,9 +17,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
+use App\Models\Setting;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
 use App\Services\Stock\StockLedger;
@@ -27,39 +25,32 @@ use Database\Seeders\Support\PlaceholderImage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
-/** Per-tenant storefront demo: enabled products + prices + stock, banners, flash sale, sample orders & reviews. Runs after Operations/Orders seeders. */
-class TenantDemoSeeder extends Seeder
+/** Storefront demo: listed products + prices + stock, banners, flash sale, sample orders & reviews. Runs after Operations/Orders seeders. */
+class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (Tenant::whereIn('slug', ['egy', 'sa'])->get() as $t) {
-            app()->instance('currentTenant', $t);
-            app()->setLocale($t->default_locale);
-            $this->products($t);
-            $this->banners($t);
-            $this->flash($t);
-            $this->orders($t);
-            app()->forgetInstance('currentTenant');
-        }
+        app()->setLocale((string) setting('default_locale', 'ar'));
+        $this->products();
+        $this->banners();
+        $this->flash();
+        $this->orders();
     }
 
-    private function products(Tenant $t): void
+    private function products(): void
     {
-        if (TenantProduct::exists()) {
+        if (Product::whereNotNull('price')->exists()) {
             return;
         }
-        $rate = $t->slug === 'sa' ? 0.1 : 1;
+        $rate = setting('currency_code') === 'SAR' ? 0.1 : 1; // catalog base prices are EGP
         $ledger = app(StockLedger::class);
         $branch = Branch::where('is_default', true)->first() ?? Branch::first();
         foreach (Product::with('variants')->orderBy('id')->get() as $i => $p) {
             $price = round(($this->basePrice($p) * $rate) / 5) * 5 ?: 5;
-            $tp = TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'sale_price' => $i % 5 === 0 ? round($price * .9) : null, 'cost' => round($price * .7, 2), 'is_active' => true]);
+            $p->update(['price' => $price, 'sale_price' => $i % 5 === 0 ? round($price * .9) : null, 'cost' => round($price * .7, 2), 'is_active' => true]);
             $items = $p->isVariable() ? $p->variants : collect([null]);
             foreach ($items as $v) {
-                if ($v) {
-                    TenantProductVariant::create(['tenant_product_id' => $tp->id, 'product_variant_id' => $v->id, 'is_active' => true]);
-                }
-                $ledger->record($branch->id, $p->id, $v?->id ?? 0, StockMovementType::PURCHASE_IN, 40 + ($i % 5) * 10, (string) $tp->cost, null, 'Demo opening stock');
+                $ledger->record($branch->id, $p->id, $v?->id ?? 0, StockMovementType::PURCHASE_IN, 40 + ($i % 5) * 10, (string) $p->cost, null, 'Demo opening stock');
             }
         }
     }
@@ -78,7 +69,7 @@ class TenantDemoSeeder extends Seeder
         return (float) ($map[$p->slug] ?? 500);
     }
 
-    private function banners(Tenant $t): void
+    private function banners(): void
     {
         if (Banner::exists()) {
             return;
@@ -97,45 +88,45 @@ class TenantDemoSeeder extends Seeder
         foreach ($defs as $i => [$place, $en, $ar, $w, $h, $link]) {
             $images = [];
             foreach (['ar', 'en'] as $loc) {
-                $images[$loc] = PlaceholderImage::banner("tenants/{$t->id}/banners", $t->slug.'-'.$i.'-'.$loc, $en, $w, $h, $i);
+                $images[$loc] = PlaceholderImage::banner('banners', 'demo-'.$i.'-'.$loc, $en, $w, $h, $i);
             }
             Banner::create(['placement' => $place, 'title' => ['ar' => $ar, 'en' => $en], 'images' => $images, 'link_url' => $link, 'sort_order' => $i, 'is_active' => true]);
         }
     }
 
-    private function flash(Tenant $t): void
+    private function flash(): void
     {
         if (FlashSale::exists()) {
             return;
         }
         $fs = FlashSale::create(['name' => ['ar' => 'عرض اليوم', 'en' => 'Deal of the day'], 'starts_at' => now()->subHour(), 'ends_at' => now()->addDays(30), 'is_active' => true]);
-        foreach (TenantProduct::whereHas('product', fn ($q) => $q->where('type', 'simple'))->orderBy('id')->limit(4)->get() as $tp) {
-            FlashSaleItem::create(['tenant_id' => $t->id, 'flash_sale_id' => $fs->id, 'product_id' => $tp->product_id, 'product_variant_id' => 0, 'discount_type' => 'percent', 'value' => 15, 'qty_limit' => 20]);
+        foreach (Product::where('type', 'simple')->whereNotNull('price')->orderBy('id')->limit(4)->get() as $tp) {
+            FlashSaleItem::create(['flash_sale_id' => $fs->id, 'product_id' => $tp->id, 'product_variant_id' => 0, 'discount_type' => 'percent', 'value' => 15, 'qty_limit' => 20]);
         }
     }
 
-    private function orders(Tenant $t): void
+    private function orders(): void
     {
         if (Order::exists()) {
             return;
         }
         $placer = app(OrderPlacementService::class);
         $status = app(OrderStatusService::class);
-        $customer = Customer::where('email', "customer@{$t->slug}.test")->first();
+        $customer = Customer::where('email', 'customer@egy.test')->first();
         $city = City::orderBy('id')->first();
         $company = ShippingCompany::first();
         $cod = PaymentMethod::where('type', 'cod')->first();
-        $tps = TenantProduct::with('product.variants')->orderBy('id')->get();
-        // Plain COD demo orders need the carrier-collects-everything mode; restore the tenant's own setting afterwards.
-        $before = $t->settings;
-        $t->update(['settings' => array_merge($before ?? [], ['cod_collect_shipping_upfront' => false])]);
+        $tps = Product::with('variants')->whereNotNull('price')->orderBy('id')->get();
+        // Plain COD demo orders need the carrier-collects-everything mode; restore the store's own setting afterwards.
+        $before = setting('cod_collect_shipping_upfront');
+        Setting::put('cod_collect_shipping_upfront', false);
         $path = [OrderStatus::CONFIRMED, OrderStatus::PROCESSING, OrderStatus::SHIPPED, OrderStatus::DELIVERED];
         // final status index: -1 pending, 0..3 along $path, 9 cancelled
         $plans = [3, 3, 3, 3, 2, 1, 0, -1, -1, 9];
         foreach ($plans as $n => $final) {
             $lines = [];
             foreach ([$n * 3 % $tps->count(), ($n * 3 + 7) % $tps->count()] as $idx) {
-                $p = $tps[$idx]->product;
+                $p = $tps[$idx];
                 $lines[] = ['product_id' => $p->id, 'variant_id' => $p->isVariable() ? $p->variants->first()->id : 0, 'qty' => 1 + $n % 2];
             }
             $d = new CheckoutData($customer?->id, $customer?->name ?? 'Demo', '0100000000'.$n, $customer?->email, $city->id, 'Demo street '.$n, null, $company->id, $cod->id);
@@ -155,6 +146,6 @@ class TenantDemoSeeder extends Seeder
                 Review::firstOrCreate(['product_id' => $pid, 'customer_id' => $customer->id], ['order_id' => $order->id, 'rating' => 5 - $n % 2, 'body' => 'Great product, fast delivery.', 'status' => 'approved']);
             }
         }
-        $t->update(['settings' => $before]);
+        $before === null ? Setting::query()->where('key', 'cod_collect_shipping_upfront')->delete() : Setting::put('cod_collect_shipping_upfront', $before);
     }
 }

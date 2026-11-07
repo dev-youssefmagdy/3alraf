@@ -1,6 +1,6 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.'.$type.'s')[0]">
-    @include('tenant.erp._flash')
-    @php $n = fn ($v) => number_format((float) $v, 2); $u = 'tenant.erp.parties.'; @endphp
+<x-layouts.admin :title="__('erp.cards.'.$type.'s')[0]">
+    @include('admin.erp._flash')
+    @php $n = fn ($v) => number_format((float) $v, 2); $u = 'admin.erp.parties.'; @endphp
     <x-card class="mb-5">
         <div class="flex flex-wrap items-end gap-3 text-sm">
             <form method="GET" class="flex items-end gap-3"><label>{{ __('erp_ext.f.as_of') }}<input type="date" name="to" value="{{ $to }}" class="mt-1 block rounded border border-slate-300 px-2 py-1.5"></label><x-button type="submit" variant="secondary">{{ __('erp_ext.f.filter') }}</x-button></form>

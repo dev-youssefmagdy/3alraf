@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ProductVariant;
 use App\Enums\StockMovementType as T;
 use App\Models\Branch;
 use App\Models\Bundle;
@@ -9,9 +10,7 @@ use App\Models\GiftFinderSession;
 use App\Models\GrowthApproval;
 use App\Models\Product;
 use App\Models\SeasonalEvent;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Growth\ApprovalService;
 use App\Services\Growth\BundleAbService;
 use App\Services\Growth\BundleProposalService;
@@ -28,26 +27,14 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-        app(GrowthFeatures::class)->enableAll($t);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->off = function (string $key) {
-        $t = current_tenant();
-        $s = $t->settings;
-        $s['growth']['features'][$key] = false;
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
     $this->cat = fn (string $n) => Category::create(['name' => ['en' => $n, 'ar' => $n], 'slug' => strtolower($n).uniqid(), 'is_active' => true, 'path' => '0', 'depth' => 0]);
     $this->product = function (string $slug, string $price = '100.00', string $cost = '50', int $stock = 20, array $cats = []) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         if ($cats) {
             $pr->categories()->attach(array_map(fn ($c) => $c->id, $cats));
         }
@@ -57,7 +44,7 @@ beforeEach(function () {
 
         return $pr;
     };
-    $this->admin = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('id');
+    $this->admin = Admin::query()->where('email', 'owner@egy.test')->value('id');
     $this->svc = fn () => app(BundleProposalService::class);
 });
 
@@ -73,9 +60,7 @@ it('margin is computed by Laravel: picks the best discount that keeps the floor,
     // cost 84 of 100: full price ok (16%) but no discount keeps it -> no customer saving
     expect(($this->svc)()->price(collect([['price' => 100.0, 'cost' => 84.0]]))['rejected'])->toBe('no_customer_saving');
     // inclusive VAT is never revenue
-    $t = current_tenant();
-    $t->update(['settings' => $t->settings + ['tax_rate' => 14, 'prices_include_tax' => true]]);
-    app()->instance('currentTenant', $t->refresh());
+    settings(['tax_rate' => 14, 'prices_include_tax' => true]);
     expect(($this->svc)()->margin(114.0, 50.0)['net_revenue'])->toBe(100.0);
 });
 
@@ -105,7 +90,7 @@ it('approval re-checks the margin: a cost increase after the proposal blocks the
     $a = ($this->product)('a', '100', '40', 20, [$c1]);
     ($this->product)('b', '80', '30', 20, [$c2]);
     $r = ($this->svc)()->propose('complementary', [], 1);
-    TenantProduct::where('product_id', $a->id)->update(['cost' => 120]);
+    Product::whereKey($a->id)->update(['cost' => 120]);
     expect(fn () => app(ApprovalService::class)->approve($r['approval_ids'][0], $this->admin))->toThrow(ValidationException::class);
     expect(Bundle::count())->toBe(0)->and(GrowthApproval::find($r['approval_ids'][0])->status)->toBe(GrowthApproval::PENDING);
 });
@@ -114,11 +99,11 @@ it('bundle_engine OFF: pages 404, proposals blocked at approval; ON again resume
     [$c1, $c2] = [($this->cat)('Skin'), ($this->cat)('Hair')];
     ($this->product)('a', '100', '40', 20, [$c1]);
     ($this->product)('b', '80', '30', 20, [$c2]);
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/bundles')->assertOk();
+    ($this->owner)()->get('/admin/growth/bundles')->assertOk();
     $r = ($this->svc)()->propose('complementary', [], 1);
     ($this->off)('bundle_engine');
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/bundles')->assertNotFound();
-    ($this->owner)()->postJson('http://egy.3alraf.test/admin/growth/bundles/propose', ['mode' => 'budget_box'])->assertStatus(403)->assertJson(['error' => 'feature_disabled']);
+    ($this->owner)()->get('/admin/growth/bundles')->assertNotFound();
+    ($this->owner)()->postJson('/admin/growth/bundles/propose', ['mode' => 'budget_box'])->assertStatus(403)->assertJson(['error' => 'feature_disabled']);
     expect(fn () => app(ApprovalService::class)->approve($r['approval_ids'][0], $this->admin))->toThrow(ValidationException::class);
     expect(Bundle::count())->toBe(0);
 });
@@ -166,7 +151,7 @@ it('bundle A/B: stable split, one exposure per visitor, z-test winner, conclude 
     expect(app(BundleAbService::class)->expose($bundle->id, 'zzz'))->toBeNull();
 });
 
-it('seasonal calendar: Hijri dates, idempotent year creation, readiness, close needs the end date, tenant isolation', function () {
+it('seasonal calendar: Hijri dates, idempotent year creation, readiness, close needs the end date', function () {
     $svc = app(SeasonalCalendarService::class);
     expect($svc->ensureYear(2026))->toBe(8)->and($svc->ensureYear(2026))->toBe(0);
     $r = SeasonalEvent::where('key', 'ramadan')->where('year', 2026)->first();
@@ -192,13 +177,10 @@ it('seasonal calendar: Hijri dates, idempotent year creation, readiness, close n
     $svc->ensureYear(2027);
     expect($svc->lastMemory(SeasonalEvent::where('key', 'ramadan')->where('year', 2027)->first())->lessons)->toBe('Start earlier');
     // isolation
-    app()->instance('currentTenant', $this->other);
-    expect(SeasonalEvent::count())->toBe(0);
-    app()->instance('currentTenant', $this->tenant);
     // admin page + switch
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/seasonal?year=2026')->assertOk();
+    ($this->owner)()->get('/admin/growth/seasonal?year=2026')->assertOk();
     ($this->off)('seasonal_calendar');
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/seasonal')->assertNotFound();
+    ($this->owner)()->get('/admin/growth/seasonal')->assertNotFound();
 });
 
 it('seasonal bundle proposals use the event categories only', function () {
@@ -236,29 +218,25 @@ it('gift finder: never exceeds the budget, excludes out-of-stock, margin only br
     // tie on fit -> higher margin first
     $tie = app(GiftFinderService::class)->search(['budget' => 120]);
     expect(GiftFinderSession::count())->toBe(2);
-    // tenant isolation: the other tenant sees nothing of ours
-    app()->instance('currentTenant', $this->other);
-    expect(app(GiftFinderService::class)->search(['budget' => 500])['results'])->toBe([]);
-    app()->instance('currentTenant', $this->tenant);
     expect(fn () => app(GiftFinderService::class)->search(['budget' => 0]))->toThrow(ValidationException::class);
 });
 
 it('gift finder web + API endpoints, prepared cart, stats, and the switch', function () {
     $c = ($this->cat)('Skin');
     $p = ($this->product)('fit', '100', '40', 20, [$c]);
-    $this->get('http://egy.3alraf.test/en/gift-finder')->assertOk();
-    $j = $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150, 'category_id' => $c->id])->assertOk()->json('data');
+    $this->get('/en/gift-finder')->assertOk();
+    $j = $this->postJson('/en/gift-finder', ['budget' => 150, 'category_id' => $c->id])->assertOk()->json('data');
     expect($j['results'][0]['product_id'])->toBe($p->id);
-    $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => -5])->assertStatus(422);
-    $this->postJson('http://egy.3alraf.test/en/gift-finder/'.$j['token'].'/cart', [])->assertOk()->assertJsonPath('data.added.0', $p->id);
+    $this->postJson('/en/gift-finder', ['budget' => -5])->assertStatus(422);
+    $this->postJson('/en/gift-finder/'.$j['token'].'/cart', [])->assertOk()->assertJsonPath('data.added.0', $p->id);
     expect(GiftFinderSession::first()->cart_at)->not->toBeNull();
-    $this->postJson('http://egy.3alraf.test/api/v1/gift-finder', ['budget' => 150])->assertOk()->assertJsonPath('data.results.0.slug', 'fit');
+    $this->postJson('/api/v1/gift-finder', ['budget' => 150])->assertOk()->assertJsonPath('data.results.0.slug', 'fit');
     expect(app(GiftFinderService::class)->stats()['cart_rate'])->toBe(50.0);
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/gift-finder')->assertOk();
+    ($this->owner)()->get('/admin/growth/gift-finder')->assertOk();
     ($this->off)('gift_finder');
-    $this->get('http://egy.3alraf.test/en/gift-finder')->assertNotFound();
-    $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertStatus(403)->assertJson(['error' => 'feature_disabled']);
-    $this->postJson('http://egy.3alraf.test/api/v1/gift-finder', ['budget' => 150])->assertStatus(403);
+    $this->get('/en/gift-finder')->assertNotFound();
+    $this->postJson('/en/gift-finder', ['budget' => 150])->assertStatus(403)->assertJson(['error' => 'feature_disabled']);
+    $this->postJson('/api/v1/gift-finder', ['budget' => 150])->assertStatus(403);
 });
 
 it('gift finder: tuning comes from config, restriction words are normalised, and internal ranking fields never leak', function () {
@@ -280,8 +258,8 @@ it('gift finder: the prepared cart only adds products from that search session',
     $c = ($this->cat)('Skin');
     $a = ($this->product)('a', '100', '40', 20, [$c]);
     $outside = ($this->product)('outside', '900', '40', 20, [$c]);
-    $j = $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
-    $res = $this->postJson('http://egy.3alraf.test/en/gift-finder/'.$j['token'].'/cart', ['product_ids' => [$a->id, $outside->id]])->assertOk()->json('data');
+    $j = $this->postJson('/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
+    $res = $this->postJson('/en/gift-finder/'.$j['token'].'/cart', ['product_ids' => [$a->id, $outside->id]])->assertOk()->json('data');
     expect($res['added'])->toBe([$a->id])->and($res['added'])->not->toContain($outside->id);
 });
 
@@ -293,8 +271,8 @@ it('gift finder tags: untagged products stay visible until tagging starts; then 
     $svc = app(GiftFinderService::class);
     expect(collect($svc->search(['budget' => 150, 'recipient' => 'mother'])['results'])->pluck('slug')->sort()->values()->all())->toBe(['car', 'mens', 'womens']); // legacy: no tags yet
 
-    TenantProduct::where('product_id', $womens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['mother', 'sister'], 'gift_occasions' => ['mothers_day']]);
-    TenantProduct::where('product_id', $mens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['partner']]);
+    Product::whereKey($womens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['mother', 'sister'], 'gift_occasions' => ['mothers_day']]);
+    Product::whereKey($mens->id)->update(['gift_suitable' => true, 'gift_recipients' => ['partner']]);
     $r = $svc->search(['budget' => 150, 'recipient' => 'mother', 'occasion' => 'mothers_day']);
     expect(collect($r['results'])->pluck('slug')->all())->toBe(['womens'])                // men's item filtered for mother, car item never tagged as a gift
         ->and($r['results'][0]['recipient_match'])->toBeTrue()->and($r['results'][0]['occasion_match'])->toBeTrue()
@@ -320,15 +298,15 @@ it('gift finder: the tag suggester skips non-gifts and test products, narrows by
     $sofa = ($this->product)('sofa', '5000', '1', 5, [$big]);
     $perfume = ($this->product)('perfume', '300', '1', 5, [$beauty]);
     $mens = Product::create(['type' => 'simple', 'name' => ['en' => "Men's Perfume", 'ar' => 'عطر رجالي'], 'description' => ['en' => 'x'], 'slug' => 'mp', 'sku' => 'MP']);
-    TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $mens->id, 'price' => 300, 'cost' => 1, 'is_active' => true]);
+    listProduct($mens, ['price' => 300, 'cost' => 1, 'is_active' => true]);
     $mens->categories()->attach($beauty->id);
     $test = ($this->product)('x', '10', '1', 5);
     $test->setTranslations('name', ['en' => 'Test', 'ar' => 'تجربة'])->save();
     $kept = ($this->product)('kept', '300', '1', 5, [$beauty]);
-    TenantProduct::where('product_id', $kept->id)->update(['gift_recipients' => ['child']]);   // human-tagged (suitable stays false on purpose)
+    Product::whereKey($kept->id)->update(['gift_recipients' => ['child']]);   // human-tagged (suitable stays false on purpose)
 
     expect(app(\App\Services\Growth\GiftFinder\GiftTagSuggester::class)->applyToUntagged())->toBeGreaterThanOrEqual(2);
-    $tp = fn ($p) => TenantProduct::where('product_id', $p->id)->first();
+    $tp = fn ($p) => Product::whereKey($p->id)->first();
     expect($tp($sofa)->gift_suitable)->toBeFalse('sofa')->and($tp($test)->gift_suitable)->toBeFalse('test product')
         ->and($tp($perfume)->gift_suitable)->toBeTrue()->and($tp($perfume)->gift_recipients)->toContain('mother')
         ->and($tp($mens)->gift_recipients)->not->toContain('mother')->and($tp($mens)->gift_recipients)->toContain('partner')
@@ -350,26 +328,26 @@ it('gift finder: variable products come with their variants, and the cart needs 
         }
         $vs[$val->value] = $v;
     }
-    $j = $this->postJson('http://egy.3alraf.test/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
+    $j = $this->postJson('/en/gift-finder', ['budget' => 150])->assertOk()->json('data');
     $row = collect($j['results'])->firstWhere('slug', 'shirt');
     expect($row['simple'])->toBeFalse()->and($row['picker']['variants'])->toHaveCount(1)->and($row['picker']['variants'][0]['id'])->toBe($vs['Red']->id)   // out-of-stock Blue is not offered
         ->and($row['picker']['options'][0]['name'])->toBe('Color');
-    $cart = fn (array $body) => $this->postJson('http://egy.3alraf.test/en/gift-finder/'.$j['token'].'/cart', $body)->assertOk()->json('data');
+    $cart = fn (array $body) => $this->postJson('/en/gift-finder/'.$j['token'].'/cart', $body)->assertOk()->json('data');
     expect($cart(['product_ids' => [$p->id]])['skipped'])->toBe([$p->id]);                                              // no variant chosen
     expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => $vs['Blue']->id]])['skipped'])->toBe([$p->id]);   // out of stock
     expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => 999999]])['skipped'])->toBe([$p->id]);            // not this product's variant
     expect($cart(['product_ids' => [$p->id], 'variants' => [$p->id => $vs['Red']->id]])['added'])->toBe([$p->id]);
-    expect(\App\Models\CartItem::withoutGlobalScopes()->where('product_id', $p->id)->value('product_variant_id'))->toBe($vs['Red']->id);
+    expect(\App\Models\CartItem::query()->where('product_id', $p->id)->value('product_variant_id'))->toBe($vs['Red']->id);
 });
 
-it('gift finder admin: tags page saves per-product tags for this store only', function () {
+it('gift finder admin: tags page saves per-product tags', function () {
     $a = ($this->product)('a', '100', '40', 20);
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/gift-finder/tags')->assertOk()->assertSee($a->name);
-    $tpId = TenantProduct::where('product_id', $a->id)->value('id');
-    ($this->owner)()->post('http://egy.3alraf.test/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['mother'], 'occasions' => ['ramadan']]]])->assertRedirect();
-    $tp = TenantProduct::find($tpId);
+    ($this->owner)()->get('/admin/growth/gift-finder/tags')->assertOk()->assertSee($a->name);
+    $tpId = $a->id;
+    ($this->owner)()->post('/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['mother'], 'occasions' => ['ramadan']]]])->assertRedirect();
+    $tp = Product::find($tpId);
     expect($tp->gift_suitable)->toBeTrue()->and($tp->gift_recipients)->toBe(['mother'])->and($tp->gift_occasions)->toBe(['ramadan']);
-    ($this->owner)()->post('http://egy.3alraf.test/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['bogus']]]])->assertSessionHasErrors();
+    ($this->owner)()->post('/admin/growth/gift-finder/tags', ['tags' => [$tpId => ['suitable' => 1, 'recipients' => ['bogus']]]])->assertSessionHasErrors();
     ($this->off)('gift_finder');
-    ($this->owner)()->get('http://egy.3alraf.test/admin/growth/gift-finder/tags')->assertNotFound();
+    ($this->owner)()->get('/admin/growth/gift-finder/tags')->assertNotFound();
 });

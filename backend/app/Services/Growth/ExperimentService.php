@@ -7,7 +7,7 @@ use App\Models\GrowthExperimentResult;
 use App\Repositories\Contracts\GrowthExperimentRepositoryInterface;
 use Illuminate\Validation\ValidationException;
 
-/** Experiment & outcome log. Budget caps are bounded by the tenant guardrail; a cap is a ceiling, never a spend instruction. */
+/** Experiment & outcome log. Budget caps are bounded by the guardrail; a cap is a ceiling, never a spend instruction. */
 class ExperimentService
 {
     public const STATUSES = ['draft', 'running', 'paused', 'completed', 'cancelled'];
@@ -48,7 +48,7 @@ class ExperimentService
     {
         $r = $e->results()->create([
             'recorded_on' => $d['recorded_on'] ?? now()->toDateString(), 'metric' => mb_substr((string) $d['metric'], 0, 100), 'value' => $d['value'] ?? null,
-            'spend' => $d['spend'] ?? null, 'note' => isset($d['note']) ? mb_substr(PiiScrubber::text((string) $d['note']), 0, 300) : null, 'source' => $source, 'tenant_id' => $e->tenant_id,
+            'spend' => $d['spend'] ?? null, 'note' => isset($d['note']) ? mb_substr(PiiScrubber::text((string) $d['note']), 0, 300) : null, 'source' => $source,
         ]);
         $this->log->log('experiment.result', $source === 'admin' ? 'admin' : 'n8n', $actorId, null, $e, 'ok', ['metric' => $r->metric]);
 

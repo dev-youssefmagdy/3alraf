@@ -28,7 +28,7 @@ class AssetService
     private function ensureChart(): void
     {
         if (! Account::where('role_key', 'fixed_assets')->exists()) {
-            $this->coa->seed(current_tenant());
+            $this->coa->seed();
             app(AccountResolver::class)->flush();
         }
     }
@@ -55,14 +55,14 @@ class AssetService
         return DB::transaction(function () use ($d, $cost, $salvage, $paidFrom) {
             $a = FixedAsset::create(['name' => $d['name'], 'category' => $d['category'] ?? null, 'acquisition_date' => $d['acquisition_date'], 'cost' => $cost, 'salvage_value' => $salvage,
                 'useful_life_months' => (int) $d['useful_life_months'], 'method' => $d['method'] ?? 'straight_line', 'frequency' => 'monthly', 'branch_id' => $d['branch_id'] ?? null,
-                'supplier_id' => $d['supplier_id'] ?? null, 'status' => 'active', 'note' => $d['note'] ?? null, 'created_by' => auth('tenant')->id()]);
+                'supplier_id' => $d['supplier_id'] ?? null, 'status' => 'active', 'note' => $d['note'] ?? null, 'created_by' => auth('admin')->id()]);
             $b = $a->branch_id;
             $credit = ['account' => $paidFrom, 'credit' => $cost, 'branch_id' => $b, 'memo' => $a->name];
             if ($paidFrom === 'payable' && $a->supplier_id) {
                 $credit += ['party_type' => 'supplier', 'party_id' => $a->supplier_id];
             }
             $e = $this->journals->post(['entry_date' => $a->acquisition_date->toDateString(), 'type' => 'auto', 'description' => __('erp_ext.fa.memo.register').' - '.$a->name, 'source_type' => 'fixed_asset', 'source_id' => $a->id,
-                'idempotency_key' => 'asset:'.$a->id.':register', 'branch_id' => $b, 'created_by' => auth('tenant')->id()],
+                'idempotency_key' => 'asset:'.$a->id.':register', 'branch_id' => $b, 'created_by' => auth('admin')->id()],
                 [['account' => 'fixed_assets', 'debit' => $cost, 'branch_id' => $b, 'memo' => $a->name], $credit]);
             $a->update(['registration_entry_id' => $e->id]);
 
@@ -121,7 +121,7 @@ class AssetService
                 if (! $exists) {
                     $b = $a->branch_id;
                     $this->journals->post(['entry_date' => $m->copy()->endOfMonth()->toDateString(), 'type' => 'auto', 'description' => __('erp_ext.fa.memo.depreciation', ['period' => $ym]).' - '.$a->name,
-                        'source_type' => 'fixed_asset', 'source_id' => $a->id, 'idempotency_key' => $key, 'branch_id' => $b, 'created_by' => auth('tenant')->id()],
+                        'source_type' => 'fixed_asset', 'source_id' => $a->id, 'idempotency_key' => $key, 'branch_id' => $b, 'created_by' => auth('admin')->id()],
                         [['account' => 'depreciation_expense', 'debit' => $amt, 'branch_id' => $b, 'memo' => $a->name], ['account' => 'accumulated_depreciation', 'credit' => $amt, 'branch_id' => $b, 'memo' => $a->name]]);
                     $a->accumulated_depreciation = bcadd((string) $a->accumulated_depreciation, $amt, 4);
                     $n++;
@@ -169,7 +169,7 @@ class AssetService
                 $lines[] = ['account' => 'other_expense', 'debit' => bcmul($gain, '-1', 4), 'branch_id' => $b, 'memo' => $a->name];
             }
             $e = $this->journals->post(['entry_date' => $date, 'type' => 'auto', 'description' => __('erp_ext.fa.memo.disposal').' - '.$a->name, 'source_type' => 'fixed_asset', 'source_id' => $a->id,
-                'idempotency_key' => 'asset:'.$a->id.':dispose', 'branch_id' => $b, 'created_by' => auth('tenant')->id()], $lines);
+                'idempotency_key' => 'asset:'.$a->id.':dispose', 'branch_id' => $b, 'created_by' => auth('admin')->id()], $lines);
             $a->update(['status' => 'disposed', 'disposed_at' => $date, 'disposal_proceeds' => $proceeds, 'disposal_gain_loss' => $gain, 'disposal_entry_id' => $e->id]);
 
             return $a;
@@ -199,9 +199,9 @@ class AssetService
                 $lines[] = ['account' => 'accumulated_depreciation', 'credit' => $acc, 'branch_id' => $toBranchId, 'memo' => $a->name];
             }
             $this->journals->post(['entry_date' => $date ?? now()->toDateString(), 'type' => 'auto', 'description' => __('erp_ext.fa.memo.transfer').' - '.$a->name, 'source_type' => 'fixed_asset', 'source_id' => $a->id,
-                'idempotency_key' => 'asset:'.$a->id.':transfer:'.($from ?? 0).'>'.$toBranchId.':'.\Illuminate\Support\Str::uuid(), 'branch_id' => $toBranchId, 'created_by' => auth('tenant')->id()], $lines);
+                'idempotency_key' => 'asset:'.$a->id.':transfer:'.($from ?? 0).'>'.$toBranchId.':'.\Illuminate\Support\Str::uuid(), 'branch_id' => $toBranchId, 'created_by' => auth('admin')->id()], $lines);
             $a->update(['branch_id' => $toBranchId]);
-            AuditLog::create(['action' => 'asset.transferred', 'subject_type' => 'fixed_asset', 'subject_id' => $a->id, 'user_id' => auth('tenant')->id(), 'meta' => ['from' => $from, 'to' => $toBranchId]]);
+            AuditLog::create(['action' => 'asset.transferred', 'subject_type' => 'fixed_asset', 'subject_id' => $a->id, 'user_id' => auth('admin')->id(), 'meta' => ['from' => $from, 'to' => $toBranchId]]);
 
             return $a;
         });

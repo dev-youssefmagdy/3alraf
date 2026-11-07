@@ -4,7 +4,6 @@ import '../../../core/error/api_exception.dart';
 import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/cart_models.dart';
 import '../data/cart_repository.dart';
 
@@ -70,7 +69,7 @@ final cartCountProvider = Provider<int>(
 
 /// The cart of the active store (customer cart when signed in, else the guest
 /// cart of the persisted `X-Cart-Token`). Rebuilt - and so emptied and
-/// reloaded - on tenant switch, locale change and sign-in/out. Totals are
+/// reloaded - on locale change and sign-in/out. Totals are
 /// always the server's; nothing is computed here.
 class CartController extends Notifier<CartState> {
   int _gen = 0;
@@ -79,11 +78,9 @@ class CartController extends Notifier<CartState> {
 
   @override
   CartState build() {
-    final slug = ref.watch(tenantSlugProvider);
     ref.watch(localeProvider);
     ref.watch(authControllerProvider.select((s) => s.signedIn));
     _gen++;
-    if (slug == null) return const CartState();
     Future.microtask(load);
     return const CartState(loading: true);
   }

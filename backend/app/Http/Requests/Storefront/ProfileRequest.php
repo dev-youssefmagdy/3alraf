@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\Storefront;
 
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ProfileRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     protected function prepareForValidation(): void
     {
@@ -29,7 +29,7 @@ class ProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:190', Rule::unique('customers', 'email')->where('tenant_id', current_tenant()->id)->ignore(auth('web')->id())],
+            'email' => ['required', 'email', 'max:190', Rule::unique('customers', 'email')->ignore(auth('web')->id())],
             'phone' => ['nullable', 'string', 'max:30'],
             ...$this->phoneCodeRule(),
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],

@@ -4,7 +4,7 @@
 <body>
 <p class="np"><a href="#" onclick="window.print();return false">{{ __('erp_dist.print') }}</a></p>
 <h2>{{ __('erp_dist.statement_title') }}</h2>
-<p><b>{{ $owner->name }}</b> &middot; {{ rtrim(rtrim(number_format((float) $owner->ownership_percent, 4), '0'), '.') }}% &middot; {{ $tenant?->name }} &middot; {{ now()->toDateString() }}</p>
+<p><b>{{ $owner->name }}</b> &middot; {{ rtrim(rtrim(number_format((float) $owner->ownership_percent, 4), '0'), '.') }}% &middot; {{ $shopName }} &middot; {{ now()->toDateString() }}</p>
 @php $n = fn ($v) => number_format((float) $v, 2); $acc = 0; $paid = 0; @endphp
 <table><thead><tr><th>#</th><th>{{ __('erp.f.period') }}</th><th class="n">%</th><th class="n">{{ __('erp_ext.f.amount') }}</th><th>{{ __('erp_ext.f.status') }}</th></tr></thead><tbody>
 @foreach ($lines as $l)@php if ($l->distribution->status === 'posted') { $acc += (float) $l->amount; $paid += $l->paid ? (float) $l->amount : 0; } @endphp

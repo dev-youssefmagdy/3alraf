@@ -1,11 +1,12 @@
 <?php
 
 return [
-    'menu' => ['group' => 'AI', 'providers' => 'Providers', 'models' => 'Models', 'tenants' => 'Tenants AI', 'usage' => 'Usage & cost', 'market_trends' => 'Market trends', 'trends' => 'Trends', 'studio' => 'Studio', 'generators' => 'Generators', 'editor' => 'Product editor', 'assistant' => 'Assistant', 'settings' => 'AI Settings'],
+    'platform_card' => 'Quotas, models & features',
+    'menu' => ['group' => 'AI', 'providers' => 'Providers', 'models' => 'Models', 'usage' => 'Usage & cost', 'market_trends' => 'Market trends', 'trends' => 'Trends', 'studio' => 'Studio', 'generators' => 'Generators', 'editor' => 'Product editor', 'assistant' => 'Assistant', 'settings' => 'AI Settings'],
     'fields' => [
         'name' => 'Name', 'driver' => 'Vendor', 'api_key' => 'API key', 'base_url' => 'Base URL', 'provider' => 'Provider', 'model_id' => 'Model ID', 'label' => 'Label', 'kind' => 'Kind',
         'capabilities' => 'Capabilities', 'input_cost' => 'Input cost / 1M tokens', 'output_cost' => 'Output cost / 1M tokens', 'max_output' => 'Max output tokens',
-        'is_default' => 'Default for kind', 'tenant' => 'Tenant', 'country' => 'Country', 'ai_enabled' => 'AI enabled', 'monthly_token_quota' => 'Monthly token quota',
+        'is_default' => 'Default for kind', 'country' => 'Country', 'ai_enabled' => 'AI enabled', 'monthly_token_quota' => 'Monthly token quota',
         'monthly_image_quota' => 'Monthly image quota', 'monthly_video_quota' => 'Monthly video quota (secs)', 'features' => 'Features', 'allowed_models' => 'Allowed models',
         'date' => 'Date', 'feature' => 'Feature', 'model' => 'Model', 'default_model' => 'Default model', 'brand_voice' => 'Brand voice', 'forbidden_words' => 'Forbidden words (comma separated)',
         'default_platforms' => 'Default platforms', 'default_ai_model_id' => 'Default model', 'allowed_model_ids' => 'Allowed models', 'ai_provider_id' => 'Provider',
@@ -27,7 +28,7 @@ return [
     'chat' => [
         'new_chat' => 'New chat', 'conversations' => 'Conversations', 'message' => 'Message', 'title' => 'Title', 'placeholder' => 'Ask about sales, orders, stock, offers...',
         'send' => 'Send', 'stop' => 'Stop', 'stopped' => 'Stopped.', 'copy' => 'Copy', 'copied' => 'Copied', 'rename' => 'Rename', 'delete' => 'Delete', 'confirm_delete' => 'Delete this conversation?',
-        'model' => 'Model', 'quota' => 'Tokens this month', 'thinking' => 'Thinking...', 'no_models' => 'No AI model is available for your store. Contact the platform administrator.',
+        'model' => 'Model', 'quota' => 'Tokens this month', 'thinking' => 'Thinking...', 'no_models' => 'No AI model is available yet. Ask an administrator to add one under AI → Models.',
         'no_answer' => 'I could not complete that request. Please try a narrower question.', 'empty' => 'Ask me anything about your store. I can read your products, orders, offers, stock and reports (read-only).',
         'retry' => 'Retry', 'error' => 'Something went wrong.', 'rename_prompt' => 'New title',
         'tools' => ['search_products' => 'Searching products', 'get_product' => 'Reading product', 'list_bundles' => 'Reading bundles', 'list_offers' => 'Reading offers', 'search_orders' => 'Searching orders',
@@ -43,7 +44,7 @@ return [
         'confidence' => 'Confidence', 'sources' => 'Sources', 'why' => 'Why trending', 'price_range' => 'Est. price', 'keywords' => 'Search keywords', 'exists_zero' => 'You already have it (out of stock)',
         'open_product' => 'Open product', 'create_po' => 'Create purchase draft', 'dismiss' => 'Dismiss', 'po_settings' => 'Purchase draft settings', 'supplier' => 'Supplier', 'branch' => 'Branch', 'qty' => 'Qty',
         'po_created' => 'Purchase draft :n created.', 'po_note' => 'Created from AI trends - review before ordering.', 'no_lines' => 'No products to order.', 'need_supplier' => 'Add a supplier and a branch first.',
-        'throttled' => 'You refreshed recently. Try again in :m min.', 'no_web_model' => 'No web-search capable AI model is available. Ask the platform administrator to enable one for your store.',
+        'throttled' => 'You refreshed recently. Try again in :m min.', 'no_web_model' => 'No web-search capable AI model is available. Ask an administrator to enable one under AI → Models.',
         'bad_json' => 'The AI answer could not be understood. Please try again.', 'no_items' => 'No new opportunities found.', 'job_failed' => 'Could not refresh trends.', 'select_row' => 'Select rows',
     ],
     'market' => [
@@ -57,7 +58,7 @@ return [
         'fields' => ['countries' => 'Countries', 'countries.*' => 'Country', 'period' => 'Period', 'keyword' => 'Category / niche', 'count' => 'Results', 'ai_model_id' => 'AI model'],
     ],
     'errors' => [
-        'disabled' => 'AI is not enabled for your store or for this feature. Contact the platform administrator.',
+        'disabled' => 'AI is not enabled for this feature. An administrator can switch it on in Settings → General / AI settings.',
         'quota' => 'Your monthly AI quota is used up.',
         'throttled' => 'Too many AI requests. Please wait a moment and try again.',
         'unsupported' => 'This model or vendor does not support that operation.',
@@ -65,10 +66,10 @@ return [
         'model_unavailable' => 'The selected AI model is not available.',
     ],
     'editor' => [
-        'title' => 'AI Product Editor', 'intro' => 'Pick products, choose what to improve, review each proposal and accept only what you like. Your wording is stored for your store only; the central product is never changed.',
+        'title' => 'AI Product Editor', 'intro' => 'Pick products, choose what to improve, review each proposal and accept only what you like. Your wording is stored as a storefront overlay; the original product text is kept.',
         'search' => 'Search products by name or SKU', 'selected' => 'Selected products (max :n)', 'fields_t' => 'Fields', 'locales_t' => 'Languages', 'preset_t' => 'What should the AI do?', 'instruction' => 'Instruction (optional unless Custom)',
         'generate' => 'Generate proposals', 'working' => 'Working...', 'failed' => 'Failed', 'accept_sel' => 'Apply selected', 'reject_all' => 'Reject all', 'undo' => 'Undo', 'undone' => 'Undone',
-        'current' => 'Current', 'proposed' => 'Proposed', 'applied' => 'Applied', 'protected' => 'Tags, images, SKU, brand, categories and prices are owned by the central catalog or edited in Catalog and cannot be changed here.',
+        'current' => 'Current', 'proposed' => 'Proposed', 'applied' => 'Applied', 'protected' => 'Tags, images, SKU, brand and categories are edited on the Products page and prices on the Catalog page; they cannot be changed here.',
         'bulk' => 'Bulk batch: proposals are generated in the background (run the queue worker).', 'applied_ok' => 'Applied.', 'rejected_ok' => 'Rejected.', 'undo_ok' => 'Restored the previous text.', 'history' => 'Recent edits',
         'fields' => ['name' => 'Name', 'description' => 'Description', 'meta_title' => 'Meta title', 'meta_description' => 'Meta description'],
         'presets' => ['translate' => 'Translate to the selected languages', 'shorten' => 'Shorten', 'seo' => 'Improve SEO', 'marketing' => 'Marketing tone', 'rewrite' => 'Rewrite / improve', 'custom' => 'Custom instruction'],

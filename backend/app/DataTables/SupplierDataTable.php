@@ -29,7 +29,7 @@ class SupplierDataTable extends BaseDataTable
     {
         $dt->editColumn('name', fn (Supplier $m) => e($m->name))
             ->addColumn('status', fn (Supplier $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (Supplier $m) => $this->tenantActions($m, 'tenant.suppliers', 'suppliers'));
+            ->addColumn('actions', fn (Supplier $m) => $this->rowActions($m, 'admin.suppliers', 'suppliers'));
     }
 
     protected function rawColumns(): array

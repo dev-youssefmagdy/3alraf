@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\ShippingCompanyDataTable;
 use App\DTOs\ShippingCompanyData;
-use App\Http\Requests\Tenant\ShippingCompanyRequest;
+use App\Http\Requests\Admin\ShippingCompanyRequest;
 use App\Models\ShippingCompany;
 use App\Services\ShippingCompanyService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class ShippingCompanyController extends ResourceController
 {
     protected static string $perm = 'shipping';
-    protected static string $routeBase = 'tenant.shipping-companies';
-    protected static string $view = 'tenant.shipping-companies';
+    protected static string $routeBase = 'admin.shipping-companies';
+    protected static string $view = 'admin.shipping-companies';
     protected static string $titleKey = 'ops.shipping_companies';
     protected static string $requestClass = ShippingCompanyRequest::class;
     protected static string $dtoClass = ShippingCompanyData::class;

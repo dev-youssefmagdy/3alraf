@@ -5,13 +5,13 @@ namespace App\Services\Lists;
 use App\DTOs\ProductListData;
 use App\Enums\ProductListType;
 use App\Repositories\Contracts\ProductListItemRepositoryInterface;
-use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
-/** Admin pins (ordered) + the per-list limit (stored in tenant settings.list_limits). */
+/** Admin pins (ordered) + the per-list limit (setting `list_limits`). */
 class ProductListService
 {
-    public function __construct(private ProductListItemRepositoryInterface $items, private TenantRepositoryInterface $tenants, private ProductListResolver $resolver) {}
+    public function __construct(private ProductListItemRepositoryInterface $items, private ProductListResolver $resolver) {}
 
     /** @return array<string,array{pinned:\Illuminate\Support\Collection,limit:int}> */
     public function overview(): array
@@ -34,10 +34,9 @@ class ProductListService
             foreach ($d->productIds as $i => $pid) {
                 $this->items->create(['list_type' => $d->type->value, 'product_id' => $pid, 'sort_order' => $i]);
             }
-            $tenant = current_tenant();
-            $settings = $tenant->settings ?? [];
-            $settings['list_limits'][$d->type->value] = $d->limit;
-            $this->tenants->update($tenant, ['settings' => $settings]);
+            $limits = (array) setting('list_limits', []);
+            $limits[$d->type->value] = $d->limit;
+            Setting::put('list_limits', $limits);
         });
     }
 }

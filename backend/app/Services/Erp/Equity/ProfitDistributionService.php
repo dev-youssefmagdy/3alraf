@@ -11,7 +11,6 @@ use App\Models\Erp\Owner;
 use App\Models\Erp\Period;
 use App\Models\Erp\ProfitDistribution;
 use App\Models\Erp\ProfitDistributionLine;
-use App\Models\Tenant;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Accounting\PeriodService;
 use App\Services\Erp\Parties\PartyService;
@@ -115,7 +114,7 @@ class ProfitDistributionService
         $to = Carbon::parse($d['to'])->toDateString();
 
         return DB::transaction(function () use ($d, $from, $to, $userId) {
-            Tenant::whereKey(current_tenant()->id)->lockForUpdate()->first(); // serialises runs per tenant
+            \App\Services\Erp\Accounting\JournalService::lockLedger(); // serialises runs
             $ack = (bool) ($d['acknowledge_open'] ?? false);
             $fy = $this->assertReady($from, $to, $ack);
             $calc = $this->profit->compute($from, $to);

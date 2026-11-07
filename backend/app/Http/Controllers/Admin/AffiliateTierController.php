@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\AffiliateTierDataTable;
 use App\DTOs\AffiliateTierData;
-use App\Http\Requests\Tenant\AffiliateTierRequest;
+use App\Http\Requests\Admin\AffiliateTierRequest;
 use App\Models\AffiliateTier;
 use App\Services\AffiliateTierService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class AffiliateTierController extends ResourceController
 {
     protected static string $perm = 'affiliate_tiers';
-    protected static string $routeBase = 'tenant.affiliate-tiers';
-    protected static string $view = 'tenant.affiliate-tiers';
+    protected static string $routeBase = 'admin.affiliate-tiers';
+    protected static string $view = 'admin.affiliate-tiers';
     protected static string $titleKey = 'growth.tiers';
     protected static string $requestClass = AffiliateTierRequest::class;
     protected static string $dtoClass = AffiliateTierData::class;

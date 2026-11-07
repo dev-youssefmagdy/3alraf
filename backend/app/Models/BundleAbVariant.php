@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class BundleAbVariant extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'bundle_ab_variants';
 

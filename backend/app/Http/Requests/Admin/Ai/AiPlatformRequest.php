@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Central\Ai;
+namespace App\Http\Requests\Admin\Ai;
 
 use App\Enums\AiFeature;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class AiTenantRequest extends FormRequest
+class AiPlatformRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,7 +16,6 @@ class AiTenantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'ai_enabled' => ['nullable', 'boolean'],
             'monthly_token_quota' => ['nullable', 'integer', 'min:0', 'max:100000000000'],
             'monthly_image_quota' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'monthly_video_quota' => ['nullable', 'integer', 'min:0', 'max:10000000'],

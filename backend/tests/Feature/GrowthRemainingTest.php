@@ -12,9 +12,7 @@ use App\Models\MissedOpportunity;
 use App\Models\Product;
 use App\Models\SeasonalEvent;
 use App\Models\StockMovement;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Ai\AiAccess;
 use App\Services\Ai\AiGateway;
 use App\Services\Ai\StudioService;
@@ -36,22 +34,11 @@ beforeEach(function () {
     config(['growth.classifier.require_real_eval' => false]); // the real-data gate has its own tests (GrowthOpenItemsTest)
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(GrowthFeatures::class)->enableAll($this->tenant);
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
-    $this->owner = fn () => TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->off = function (string ...$keys) {
-        $t = current_tenant();
-        $s = $t->settings;
-        foreach ($keys as $k) {
-            $s['growth']['features'][$k] = false;
-        }
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->base = '';
+    $this->owner = fn () => Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
 });
 
 afterEach(fn () => Carbon::setTestNow());
@@ -59,14 +46,14 @@ afterEach(fn () => Carbon::setTestNow());
 // 1 ------------------------------------------------------------------------------------------------------------------------------------------
 it('edits owner, due date, note and status of a missed opportunity from the modal endpoint (ON) and is refused when OFF', function () {
     $m = MissedOpportunity::create(['rule' => 'abandoned_carts', 'dedupe_key' => 'k1', 'title' => 'T', 'evidence' => [], 'probable_cause' => 'c', 'confidence' => 'low', 'suggestion' => 's', 'status' => 'open']);
-    $page = $this->actingAs(($this->owner)(), 'tenant')->get("{$this->base}/admin/growth/missed")->assertOk();
+    $page = $this->actingAs(($this->owner)(), 'admin')->get("{$this->base}/admin/growth/missed")->assertOk();
     $page->assertSee('missed-edit-form', false);
-    $this->actingAs(($this->owner)(), 'tenant')->putJson("{$this->base}/admin/growth/missed/{$m->id}", ['owner' => 'Mona', 'due_on' => '2026-12-01', 'result_note' => 'called supplier', 'status' => 'accepted'])->assertOk();
+    $this->actingAs(($this->owner)(), 'admin')->putJson("{$this->base}/admin/growth/missed/{$m->id}", ['owner' => 'Mona', 'due_on' => '2026-12-01', 'result_note' => 'called supplier', 'status' => 'accepted'])->assertOk();
     $m->refresh();
     expect($m->owner)->toBe('Mona')->and($m->due_on->toDateString())->toBe('2026-12-01')->and($m->result_note)->toBe('called supplier')->and($m->status)->toBe('accepted');
     $this->assertDatabaseHas('growth_action_log', ['action' => 'missed.updated']);
     ($this->off)('missed_opportunities');
-    $this->actingAs(($this->owner)(), 'tenant')->putJson("{$this->base}/admin/growth/missed/{$m->id}", ['owner' => 'X'])->assertForbidden();
+    $this->actingAs(($this->owner)(), 'admin')->putJson("{$this->base}/admin/growth/missed/{$m->id}", ['owner' => 'X'])->assertForbidden();
     expect($m->fresh()->owner)->toBe('Mona');
 });
 
@@ -81,7 +68,7 @@ it('parses X-Attribution safely (whitelist, sanitising, size cap, garbage ignore
 
 it('stores API first-touch attribution on the cart and a later header does not overwrite it', function () {
     $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item', 'ar' => 'صنف'], 'description' => ['en' => 'x'], 'slug' => 'ap', 'sku' => 'AP', 'barcode' => app(BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => '100.00', 'cost' => 50, 'is_active' => true]);
+    listProduct($pr, ['price' => '100.00', 'cost' => 50, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, 20, 50);
     $enc = fn (array $a) => rtrim(strtr(base64_encode(json_encode($a)), '+/', '-_'), '=');
     $r = $this->postJson("{$this->base}/api/v1/cart/items", ['product_id' => $pr->id, 'variant_id' => 0, 'quantity' => 1], ['X-Attribution' => $enc(['utm_source' => 'instagram', 'utm_campaign' => 'eid'])])->assertOk();
@@ -170,7 +157,7 @@ it('computes FIFO stock age layers (golden values)', function () {
 
 it('feeds FIFO age and aged value into the inventory engine', function () {
     $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Old', 'ar' => 'قديم'], 'description' => ['en' => 'x'], 'slug' => 'old', 'sku' => 'OLD', 'barcode' => app(BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => '100.00', 'cost' => 50, 'is_active' => true]);
+    listProduct($pr, ['price' => '100.00', 'cost' => 50, 'is_active' => true]);
     $b = Branch::first()->id;
     app(StockLedger::class)->record($b, $pr->id, 0, T::PURCHASE_IN, 10, 50);
     StockMovement::query()->update(['created_at' => now()->subDays(120)]);
@@ -187,7 +174,7 @@ it('flags unconfirmed lunar dates, creates 7-day and 2-day reminders once, and s
     $svc->ensureYear(2026);
     $e = SeasonalEvent::where('key', 'ramadan')->where('year', 2026)->first();
     expect($e->needsConfirmation())->toBeTrue()->and(SeasonalEvent::where('key', 'valentine')->first()->needsConfirmation())->toBeFalse();
-    $page = $this->actingAs(($this->owner)(), 'tenant')->get("{$this->base}/admin/growth/seasonal?year=2026")->assertOk();
+    $page = $this->actingAs(($this->owner)(), 'admin')->get("{$this->base}/admin/growth/seasonal?year=2026")->assertOk();
     $page->assertSee(__('growth_hub.seasonal.confirm_date'));
     Carbon::setTestNow($e->starts_on->copy()->subDays(8));
     expect($svc->remindUnconfirmed())->toBe(0);
@@ -195,7 +182,7 @@ it('flags unconfirmed lunar dates, creates 7-day and 2-day reminders once, and s
     expect($svc->remindUnconfirmed())->toBe(1)->and($svc->remindUnconfirmed())->toBe(0);
     Carbon::setTestNow($e->starts_on->copy()->subDays(2));
     expect($svc->remindUnconfirmed())->toBe(1)->and(ImprovementTask::where('rule', 'hijri_confirm')->count())->toBe(2);
-    $this->actingAs(($this->owner)(), 'tenant')->postJson("{$this->base}/admin/growth/seasonal/{$e->id}/confirm")->assertOk();
+    $this->actingAs(($this->owner)(), 'admin')->postJson("{$this->base}/admin/growth/seasonal/{$e->id}/confirm")->assertOk();
     $e->refresh();
     expect($e->date_confirmed)->toBeTrue()->and($e->confirmed_at)->not->toBeNull();
     Carbon::setTestNow($e->starts_on->copy()->subDay());
@@ -214,7 +201,7 @@ it('treats an admin edit of the lunar dates as confirmation, and gates confirm/j
     ($this->off)('seasonal_calendar');
     $this->artisan('growth:operate')->assertSuccessful();
     expect(ImprovementTask::where('rule', 'hijri_confirm')->count())->toBe(0);
-    $this->actingAs(($this->owner)(), 'tenant')->postJson("{$this->base}/admin/growth/seasonal/{$r->id}/confirm")->assertForbidden();
+    $this->actingAs(($this->owner)(), 'admin')->postJson("{$this->base}/admin/growth/seasonal/{$r->id}/confirm")->assertForbidden();
 });
 
 // 9 ------------------------------------------------------------------------------------------------------------------------------------------
@@ -222,5 +209,5 @@ it('replays every n8n workflow HTTP node against the real routes (ON and OFF)', 
     if (! trim((string) shell_exec('command -v node'))) {
         $this->markTestSkipped('node not installed');
     }
-    $this->artisan('growth:n8n-selftest', ['--tenant' => 'egy'])->expectsOutputToContain('0 problem(s)')->assertSuccessful();
+    $this->artisan('growth:n8n-selftest')->expectsOutputToContain('0 problem(s)')->assertSuccessful();
 });

@@ -64,7 +64,7 @@ return [
         'verification_sent' => 'A verification code has been sent to your e-mail.', 'verified' => 'Your e-mail is verified.', 'already_verified' => 'This e-mail is already verified.',
         'invalid_code' => 'The code is invalid or has expired.', 'too_many' => 'Too many attempts. Please try again later.', 'account_deleted' => 'Your account has been deleted.',
         'unauthenticated' => 'Unauthenticated.', 'forbidden' => 'This action is not allowed.', 'not_found' => 'Not found.', 'server_error' => 'Something went wrong. Please try again.',
-        'tenant_not_found' => 'Store not found.', 'mail_expires' => 'This code expires in :minutes minutes.',
+        'mail_expires' => 'This code expires in :minutes minutes.',
         'mail_verify_subject' => 'Verify your e-mail - :store', 'mail_verify_line' => 'Your e-mail verification code is:',
         'mail_reset_subject' => 'Reset your password - :store', 'mail_reset_line' => 'Your password reset code is:',
     ],

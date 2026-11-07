@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('ops.stock')">
+<x-layouts.admin :title="__('ops.stock')">
     <div class="mb-4 grid gap-4 sm:grid-cols-2">
         <x-stat-card :label="__('ops.stock_value')" :value="number_format((float) $valuation, 2)" />
         <x-stat-card :label="__('ops.units_on_hand')" :value="number_format($units)" />
@@ -10,6 +10,6 @@
                 @foreach ($branches as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
             </select>
         </x-slot:actions>
-        <x-datatable :table="$table" :url="route('tenant.stock.datatable')" id="stock-table" />
+        <x-datatable :table="$table" :url="route('admin.stock.datatable')" id="stock-table" />
     </x-card>
 </x-layouts.admin>

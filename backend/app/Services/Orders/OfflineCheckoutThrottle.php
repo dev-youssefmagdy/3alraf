@@ -5,7 +5,6 @@ namespace App\Services\Orders;
 use App\Enums\OrderStatus;
 use App\Enums\ProofStatus;
 use App\Models\Order;
-use App\Providers\AppServiceProvider;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Layered anti-abuse limiter for OFFLINE (wallet) checkout attempts. All tiers are checked first; only when none is exhausted are all hit
- * (a blocked client cannot extend its own window). Keys use the RESOLVED tenant (never the raw X-Tenant header), the real client IP and
+ * (a blocked client cannot extend its own window). Keys use the real client IP and
  * NORMALISED phone / e-mail so "0100-123 4567" vs "+20 100 1234567" and "A+x@Gmail.com" vs "a@gmail.com" share one counter.
  */
 class OfflineCheckoutThrottle
@@ -53,16 +52,15 @@ class OfflineCheckoutThrottle
     public function attempt(Request $r, ?string $phone, ?string $email, ?int $customerId): void
     {
         $c = config('checkout.offline');
-        $t = AppServiceProvider::tenantKey($r);
         $tiers = [
-            'ip' => ["checkout-offline:ip:$t:{$r->ip()}", (int) $c['ip_attempts'], (int) $c['ip_window'] * 60],
-            'ip-day' => ["checkout-offline:ipd:$t:{$r->ip()}", (int) $c['ip_daily'], 86400],
+            'ip' => ["checkout-offline:ip:{$r->ip()}", (int) $c['ip_attempts'], (int) $c['ip_window'] * 60],
+            'ip-day' => ["checkout-offline:ipd:{$r->ip()}", (int) $c['ip_daily'], 86400],
         ];
         if ($p = self::phoneKey($phone)) {
-            $tiers['phone'] = ["checkout-offline:phone:$t:$p", (int) $c['contact_attempts'], (int) $c['contact_window'] * 60];
+            $tiers['phone'] = ["checkout-offline:phone:$p", (int) $c['contact_attempts'], (int) $c['contact_window'] * 60];
         }
         if ($e = self::emailKey($email)) {
-            $tiers['email'] = ["checkout-offline:email:$t:".sha1($e), (int) $c['contact_attempts'], (int) $c['contact_window'] * 60];
+            $tiers['email'] = ["checkout-offline:email:".sha1($e), (int) $c['contact_attempts'], (int) $c['contact_window'] * 60];
         }
 
         // hit FIRST (RateLimiter::hit is atomic and never extends a running window), then compare: a burst of parallel requests
@@ -81,11 +79,11 @@ class OfflineCheckoutThrottle
         }
     }
 
-    /** Pre-validate (no order placed, but the file is decoded and reuse is revealed): one looser per-IP tier per tenant. */
+    /** Pre-validate (no order placed, but the file is decoded and reuse is revealed): one looser per-IP tier. */
     public function attemptValidate(Request $r): void
     {
         $c = config('checkout.validate');
-        $key = 'checkout-offline:val:'.AppServiceProvider::tenantKey($r).':'.$r->ip();
+        $key = 'checkout-offline:val:'.$r->ip();
         if (RateLimiter::hit($key, (int) $c['window'] * 60) > (int) $c['attempts']) {
             $this->trip($r, 'validate', RateLimiter::availableIn($key));
         }
@@ -123,7 +121,7 @@ class OfflineCheckoutThrottle
     private function trip(Request $r, string $tier, int $retryAfter): never
     {
         $retryAfter = max(1, $retryAfter);
-        Log::warning('Offline checkout throttled', ['tier' => $tier, 'ip' => $r->ip(), 'tenant' => AppServiceProvider::tenantKey($r), 'retry_after' => $retryAfter]);
+        Log::warning('Offline checkout throttled', ['tier' => $tier, 'ip' => $r->ip(), 'retry_after' => $retryAfter]);
 
         throw new ThrottleRequestsException(__('orders.offline_throttled', ['minutes' => (int) ceil($retryAfter / 60)]), null, ['Retry-After' => $retryAfter, 'X-RateLimit-Remaining' => 0]);
     }

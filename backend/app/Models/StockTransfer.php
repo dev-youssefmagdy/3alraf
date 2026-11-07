@@ -4,12 +4,11 @@ namespace App\Models;
 
 use App\Enums\TransferStatus;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class StockTransfer extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected $fillable = ['number', 'from_branch_id', 'to_branch_id', 'status', 'note', 'sent_at', 'received_at', 'created_by'];
 

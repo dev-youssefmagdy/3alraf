@@ -10,7 +10,6 @@ use App\Http\Resources\Api\ReviewResource;
 use App\DTOs\ReviewData;
 use App\Models\Product;
 use App\Models\Review;
-use App\Models\TenantProduct;
 use App\Services\CustomerAddressService;
 use App\Services\ReviewService;
 use App\Services\Storefront\CardPresenter;
@@ -50,7 +49,7 @@ class AccountController extends ApiController
 
     public function toggleWishlist(Request $r, WishlistService $service, int $product): JsonResponse
     {
-        abort_unless(TenantProduct::where('product_id', $product)->where('is_active', true)->exists(), 404);
+        abort_unless(Product::whereKey($product)->where('is_active', true)->whereNotNull('price')->exists(), 404);
         $in = $service->toggle($r->user(), $product);
 
         return $this->respond(['in_wishlist' => $in], $in ? __('growth.wishlist_added') : __('growth.wishlist_removed'));

@@ -11,7 +11,7 @@ use App\Services\BarcodeService;
 use Database\Seeders\Support\PlaceholderImage;
 use Illuminate\Database\Seeder;
 
-/** Central catalog: brands, attributes, 3-level category tree (raneen-style sections), ~40 products incl. variants, local placeholder images. Idempotent by slug/code. */
+/** Master catalog: brands, attributes, 3-level category tree (raneen-style sections), ~40 products incl. variants, local placeholder images. Idempotent by slug/code. */
 class CatalogSeeder extends Seeder
 {
     /** slug => [ar, en, children[slug => [ar, en, children[slug => [ar, en]]]]] */

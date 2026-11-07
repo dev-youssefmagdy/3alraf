@@ -30,6 +30,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'root'])->name('storefront.root');
 Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
 Route::get('robots.txt', \App\Http\Controllers\Storefront\RobotsController::class)->name('storefront.robots');
+// Google OAuth redirect URI (registered at Google; outside the locale prefix)
+Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('storefront.google.callback');
 Route::get('l/{code}', TrackedLinkController::class)->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
 
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)
@@ -143,5 +145,5 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     });
 });
 
-// Custom pages `/{slug}` (reserved slugs: config/tenancy.php + App\Support\ReservedSlugs) must be registered AFTER everything above.
+// Custom pages `/{slug}` (reserved slugs: config/catalog.php + App\Support\ReservedSlugs) must be registered AFTER everything above.
 Route::get('{slug}', [CustomPageController::class, 'show'])->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')->name('storefront.custom-page');

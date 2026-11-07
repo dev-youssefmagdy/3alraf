@@ -19,7 +19,7 @@ class AiGateway
      */
     public function chat(AiModel $model, AiRequest $req, string $feature, array $tools = [], ?AiContext $ctx = null, ?array &$trace = null, ?callable $onTool = null): AiResponse
     {
-        $ctx ??= $this->contexts->forTenant();
+        $ctx ??= $this->contexts->make();
         $this->authorize($model, $feature, $ctx, 'tokens');
         $driver = $this->manager->for($model);
         $req->model = $model->model_id;
@@ -32,7 +32,7 @@ class AiGateway
 
     public function image(AiModel $model, string $prompt, string $feature, array $options = [], ?AiContext $ctx = null): AiResponse
     {
-        $ctx ??= $this->contexts->forTenant();
+        $ctx ??= $this->contexts->make();
         $this->authorize($model, $feature, $ctx, 'images');
 
         return $this->measure($model, $feature, $ctx, fn () => $this->manager->for($model)->image($model->model_id, $prompt, $options));
@@ -40,16 +40,16 @@ class AiGateway
 
     public function video(AiModel $model, string $prompt, string $feature, array $options = [], ?AiContext $ctx = null): AiResponse
     {
-        $ctx ??= $this->contexts->forTenant();
+        $ctx ??= $this->contexts->make();
         $this->authorize($model, $feature, $ctx, 'video');
 
         return $this->measure($model, $feature, $ctx, fn () => $this->manager->for($model)->video($model->model_id, $prompt, $options));
     }
 
-    /** Monthly usage for a tenant. */
-    public function usage(?int $tenantId): array
+    /** This month's usage of the shop. */
+    public function usage(): array
     {
-        $q = AiUsageLog::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('status', 'ok')->where('created_at', '>=', now()->startOfMonth());
+        $q = AiUsageLog::query()->where('status', 'ok')->where('created_at', '>=', now()->startOfMonth());
 
         return ['tokens' => (int) (clone $q)->selectRaw('COALESCE(SUM(tokens_in + tokens_out),0) t')->value('t'), 'images' => (int) (clone $q)->sum('images'), 'video' => (int) (clone $q)->sum('video_secs')];
     }
@@ -59,21 +59,17 @@ class AiGateway
         if (! $model->is_active || ! $model->provider?->is_active) {
             throw AiException::disabled();   // deactivated model/provider: stale conversations, queued drafts and old ids must not reach the vendor
         }
-        if ($ctx->tenantId === null) {
-            return;   // central (platform) calls: no tenant quota
-        }
-        $tenant = \App\Models\Tenant::find($ctx->tenantId);
-        $s = $this->access->settings($tenant);
+        $s = $this->access->settings();
         if (! $s || ! $s->featureOn($feature) || ! $s->modelAllowed($model->id)) {
             throw AiException::disabled();
         }
-        $used = $this->usage($ctx->tenantId);
+        $used = $this->usage();
         $quotas = ['tokens' => $s->monthly_token_quota, 'images' => $s->monthly_image_quota, 'video' => $s->monthly_video_quota];
         if ($quotas[$unit] !== null && $used[$unit] >= $quotas[$unit]) {
             $this->log($model, $feature, $ctx, new AiResponse, 0, 'quota');
             throw AiException::quota($unit);
         }
-        $key = 'ai:'.$ctx->tenantId;
+        $key = 'ai:shop';
         if (RateLimiter::tooManyAttempts($key, (int) config('ai.rate_per_minute', 30))) {
             throw AiException::throttled();
         }
@@ -99,17 +95,10 @@ class AiGateway
 
     private function log(AiModel $model, string $feature, AiContext $ctx, AiResponse $r, int $ms, string $status, ?string $err = null): void
     {
-        $user = null;
-        foreach (['tenant', 'central'] as $g) {
-            if (auth($g)->check()) {
-                $user = auth($g)->user();
-                break;
-            }
-        }
+        $user = auth('admin')->user();
         $log = new AiUsageLog(['user_type' => $user ? $user::class : null, 'user_id' => $user?->getAuthIdentifier(), 'feature' => $feature, 'ai_model_id' => $model->id,
             'tokens_in' => $r->tokensIn, 'tokens_out' => $r->tokensOut, 'images' => $r->images, 'video_secs' => $r->videoSecs,
             'est_cost' => $model->estimateCost($r->tokensIn, $r->tokensOut), 'latency_ms' => $ms, 'status' => $status, 'country' => $ctx->country, 'error' => $err]);
-        $log->tenant_id = $ctx->tenantId;
         $log->save();
     }
 }

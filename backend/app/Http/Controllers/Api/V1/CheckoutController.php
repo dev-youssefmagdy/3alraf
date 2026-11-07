@@ -47,7 +47,7 @@ class CheckoutController extends ApiController
     public function paymentMethods(): JsonResponse
     {
         return $this->list(PaymentMethodResource::collection(PaymentMethod::available()->orderBy('sort_order')->get()),
-            ['cod_collect_shipping_upfront' => current_tenant()->codCollectsShippingUpfront()]);
+            ['cod_collect_shipping_upfront' => (bool) setting('cod_collect_shipping_upfront', config('payments.cod_upfront_default', true))]);
     }
 
     /** Full quote with the strict checkout rules (stock, discount, shipping, COD prepay); 422 with field errors when something is wrong. */

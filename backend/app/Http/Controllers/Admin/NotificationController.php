@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Support\NotificationText;
@@ -41,19 +41,17 @@ class NotificationController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /** Same endpoints for both panels: guard from the route-name prefix (central.* / tenant.*). */
     private function admin(Request $r)
     {
-        return auth(str_starts_with((string) $r->route()->getName(), 'central.') ? 'central' : 'tenant')->user();
+        return auth('admin')->user();
     }
 
     private function present(DatabaseNotification $n): array
     {
         $d = $n->data;
         $url = match (true) {
-            isset($d['order_id']) => route('tenant.orders.show', $d['order_id']),
-            ($d['kind'] ?? '') === 'ad_cap_exceeded' => route('tenant.growth.lab.index'),
-            isset($d['tenant_id']) => route('central.tenants.edit', $d['tenant_id']),
+            isset($d['order_id']) => route('admin.orders.show', $d['order_id']),
+            ($d['kind'] ?? '') === 'ad_cap_exceeded' => route('admin.growth.lab.index'),
             default => '#',
         };
 

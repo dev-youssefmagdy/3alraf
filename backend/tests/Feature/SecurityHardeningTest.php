@@ -4,7 +4,6 @@ use App\Enums\AffiliateStatus;
 use App\Exceptions\IrreversibleMigrationException;
 use App\Models\Affiliate;
 use App\Models\Banner;
-use App\Models\CentralAdmin;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\CustomPage;
@@ -16,9 +15,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\ShippingCompany;
 use App\Models\StockAdjustmentItem;
 use App\Models\StockTransferItem;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Notifications\AuthCodeNotification;
 use App\Services\Api\AuthCodeService;
 use App\Services\Orders\OrderPaymentService;
@@ -37,23 +34,20 @@ use Spatie\Permission\PermissionRegistrar;
 beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    $this->central = 'http://3alraf.test/admin';
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    // a tenant role + staff account holding it
+    $this->t = '/admin';
+    $this->s = '/ar';
+    $this->api = '/api/v1';
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    // a custom role + staff account holding it
     $this->mkRole = function (string $name, array $perms): Role {
-        $r = Role::create(['name' => 't'.$this->tenant->id.':'.$name, 'guard_name' => 'tenant']);
+        $r = Role::create(['name' => ''.$name, 'guard_name' => 'admin']);
         $r->givePermissionTo($perms);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return $r;
     };
-    $this->mkStaff = function (string $email, ?Role $role): TenantAdmin {
-        $a = TenantAdmin::create(['name' => 'Staff', 'email' => $email, 'password' => 'password', 'is_active' => true]);
+    $this->mkStaff = function (string $email, ?Role $role): Admin {
+        $a = Admin::create(['name' => 'Staff', 'email' => $email, 'password' => 'password', 'is_active' => true]);
         $role && $a->assignRole($role);
 
         return $a;
@@ -70,15 +64,15 @@ it('stops a non-owner from assigning or touching the system role and from granti
     $manager = ($this->mkRole)('manager', ['admins.view', 'admins.create', 'admins.edit', 'admins.delete']);
     $big = ($this->mkRole)('big', ['admins.view', 'orders.view']);
     $small = ($this->mkRole)('small', ['admins.view']);
-    $ownerRole = Role::findByName('tenant-owner', 'tenant');
+    $ownerRole = Role::findByName('owner', 'admin');
     $staff = ($this->mkStaff)('mgr@egy.test', $manager);
-    $this->actingAs($staff, 'tenant');
+    $this->actingAs($staff, 'admin');
     $form = fn (array $roles, string $email = 'new@egy.test') => [...staffPhone($email), 'name' => 'N', 'email' => $email, 'password' => 'secret123', 'is_active' => 1, 'roles' => $roles];
 
     $this->postJson("{$this->t}/admins", $form([$ownerRole->id]))->assertStatus(422)->assertJsonValidationErrors('roles');
     $this->postJson("{$this->t}/admins", $form([$big->id]))->assertStatus(422)->assertJsonValidationErrors('roles');   // orders.view not held
     $this->postJson("{$this->t}/admins", $form([$small->id]))->assertOk();
-    expect(TenantAdmin::where('email', 'new@egy.test')->first()->hasRole($small))->toBeTrue();
+    expect(Admin::where('email', 'new@egy.test')->first()->hasRole($small))->toBeTrue();
 
     // the owner account (system role) cannot be opened, edited or deleted by a non-holder
     $this->get("{$this->t}/admins/{$this->owner->id}/edit")->assertForbidden();
@@ -90,16 +84,16 @@ it('stops a non-owner from assigning or touching the system role and from granti
     $this->get("{$this->t}/admins/create")->assertOk()->assertSee('small')->assertDontSee('value="'.$ownerRole->id.'"', false)->assertDontSee('big');
 
     // the owner can do all of it
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->postJson("{$this->t}/admins", $form([$ownerRole->id, $big->id], 'co@egy.test'))->assertOk();
-    expect(TenantAdmin::where('email', 'co@egy.test')->first()->hasRole('tenant-owner'))->toBeTrue();
+    expect(Admin::where('email', 'co@egy.test')->first()->hasRole('owner'))->toBeTrue();
 });
 
 it('lets a non-owner keep a role the account already holds while editing it', function () {
     $manager = ($this->mkRole)('manager', ['admins.view', 'admins.edit']);
     $big = ($this->mkRole)('big', ['orders.view']);
     $other = ($this->mkStaff)('o@egy.test', $big);
-    $this->actingAs(($this->mkStaff)('mgr@egy.test', $manager), 'tenant');
+    $this->actingAs(($this->mkStaff)('mgr@egy.test', $manager), 'admin');
     $this->putJson("{$this->t}/admins/{$other->id}", [...staffPhone('o@egy.test'), 'name' => 'Renamed', 'email' => 'o@egy.test', 'is_active' => 1, 'roles' => [$big->id]])->assertOk();
     expect($other->fresh()->name)->toBe('Renamed')->and($other->fresh()->hasRole($big))->toBeTrue();
 });
@@ -107,10 +101,10 @@ it('lets a non-owner keep a role the account already holds while editing it', fu
 // ---------------------------------------------------------------- (2) inactive accounts
 it('logs deactivated admins, customers and suspended affiliates out on their next request', function () {
     $staff = ($this->mkStaff)('s@egy.test', ($this->mkRole)('viewer', ['admins.view']));
-    $this->actingAs($staff, 'tenant')->get("{$this->t}/admins")->assertOk();
+    $this->actingAs($staff, 'admin')->get("{$this->t}/admins")->assertOk();
     $staff->forceFill(['is_active' => false])->saveQuietly();   // same instance the test guard holds
     $this->get("{$this->t}/admins")->assertRedirect();
-    expect(auth('tenant')->check())->toBeFalse();
+    expect(auth('admin')->check())->toBeFalse();
 
     $c = Customer::where('email', 'customer@egy.test')->first();
     $this->actingAs($c, 'web')->get("{$this->s}/account")->assertOk();
@@ -122,10 +116,10 @@ it('logs deactivated admins, customers and suspended affiliates out on their nex
     $a->forceFill(['status' => AffiliateStatus::SUSPENDED])->saveQuietly();
     $this->get("{$this->s}/affiliate")->assertRedirect();
 
-    $ca = CentralAdmin::create(['name' => 'C2', 'email' => 'c2@3alraf.test', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($ca, 'central')->get($this->central)->assertOk();
+    $ca = Admin::create(['name' => 'C2', 'email' => 'c2@3alraf.test', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($ca, 'admin')->get($this->t)->assertOk();
     $ca->forceFill(['is_active' => false])->saveQuietly();
-    $this->get($this->central)->assertRedirect();
+    $this->get($this->t)->assertRedirect();
 });
 
 it('rotates the remember token and deletes DB sessions on deactivation, suspension and password change', function () {
@@ -138,7 +132,7 @@ it('rotates the remember token and deletes DB sessions on deactivation, suspensi
     $c->forceFill(['remember_token' => 'old-token'])->saveQuietly();
     $sess('web', $c->id, 'cust-a');
     $sess('web', $c->id + 999, 'someone-else');
-    $sess('tenant', $c->id, 'admin-same-id');   // other guard, same numeric id: untouched
+    $sess('admin', $c->id, 'admin-same-id');   // other guard, same numeric id: untouched
 
     $c->update(['is_active' => false]);
     expect($c->fresh()->remember_token)->not->toBe('old-token')
@@ -149,7 +143,7 @@ it('rotates the remember token and deletes DB sessions on deactivation, suspensi
     $a->update(['status' => AffiliateStatus::SUSPENDED]);
     expect(DB::table('sessions')->where('id', 'aff-1')->exists())->toBeFalse();
 
-    $sess('tenant', $this->owner->id, 'owner-1');
+    $sess('admin', $this->owner->id, 'owner-1');
     $this->owner->update(['name' => 'Renamed']);   // unrelated change: nothing revoked
     expect(DB::table('sessions')->where('id', 'owner-1')->exists())->toBeTrue();
     $this->owner->update(['password' => 'brandnew123']);
@@ -159,7 +153,7 @@ it('rotates the remember token and deletes DB sessions on deactivation, suspensi
 it('deactivating a staff account through the admin UI revokes it', function () {
     $staff = ($this->mkStaff)('s@egy.test', null);
     $staff->forceFill(['remember_token' => 'tok'])->saveQuietly();
-    $this->actingAs($this->owner, 'tenant')->putJson("{$this->t}/admins/{$staff->id}", [...staffPhone('s@egy.test'), 'name' => 'S', 'email' => 's@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
+    $this->actingAs($this->owner, 'admin')->putJson("{$this->t}/admins/{$staff->id}", [...staffPhone('s@egy.test'), 'name' => 'S', 'email' => 's@egy.test', 'is_active' => 0, 'roles' => []])->assertOk();
     expect($staff->fresh()->is_active)->toBeFalse()->and($staff->fresh()->remember_token)->not->toBe('tok');
 });
 
@@ -171,7 +165,7 @@ it('accepts only http(s) or site-relative banner links and filters unsafe ones a
     foreach (['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html,x', '//evil.test', '/\\evil.test', 'vbscript:x', 'ar/page', ' https://x.test', "java\nscript:x"] as $bad) {
         expect(SafeUrl::isSafe($bad))->toBeFalse();
     }
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->postJson("{$this->t}/banners/validate", ['placement' => 'home_hero', 'link_url' => 'javascript:alert(1)'])->assertStatus(422)->assertJsonValidationErrors('link_url');
     $this->postJson("{$this->t}/banners/validate", ['placement' => 'home_hero', 'link_url' => '/ar/search'])->assertJsonMissingValidationErrors('link_url');
 
@@ -182,30 +176,29 @@ it('accepts only http(s) or site-relative banner links and filters unsafe ones a
 });
 
 // ---------------------------------------------------------------- (4) + (6) permission gates
-it('requires payment_methods.edit to toggle a method and reports.view for the central dashboard data + tenant switcher', function () {
+it('requires payment_methods.edit to toggle a method and reports.view for the dashboard data', function () {
     $pm = PaymentMethod::first();
-    $this->actingAs(($this->mkStaff)('v@egy.test', ($this->mkRole)('viewer', ['payment_methods.view'])), 'tenant');
+    $this->actingAs(($this->mkStaff)('v@egy.test', ($this->mkRole)('viewer', ['payment_methods.view'])), 'admin');
     $this->postJson("{$this->t}/payment-methods/{$pm->id}/toggle")->assertForbidden();
 
-    $ca = CentralAdmin::create(['name' => 'C2', 'email' => 'c2@3alraf.test', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($ca, 'central');
-    $this->get($this->central)->assertOk()->assertDontSee(__('reports.sales_trend'))->assertDontSee('switch-tenant');
-    $this->post("{$this->central}/switch-tenant", ['tenant_id' => $this->tenant->id])->assertForbidden();
-    expect(session('central_tenant_id'))->toBeNull();
+    $ca = Admin::create(['name' => 'C2', 'email' => 'c2@3alraf.test', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($ca, 'admin');
+    $this->get($this->t)->assertOk()->assertDontSee(__('reports.sales_trend'))->assertDontSee('switch-tenant');
 
-    $this->actingAs(CentralAdmin::where('email', 'admin@3alraf.test')->first(), 'central');
-    $this->get($this->central)->assertOk()->assertSee(__('reports.sales_trend'));
-    $this->post("{$this->central}/switch-tenant", ['tenant_id' => $this->tenant->id])->assertRedirect();
+    $this->actingAs(Admin::where('email', 'admin@3alraf.test')->first(), 'admin');
+    $this->get($this->t)->assertOk()->assertSee(__('reports.sales_trend'));
+    $this->post("{$this->t}/switch-tenant")->assertNotFound();   // the tenant switcher is gone
 });
 
 // ---------------------------------------------------------------- (5) limiters
-it('keys sensitive limiters by tenant + IP + route and ignores X-Tenant on subdomain hosts', function () {
+it('keys sensitive limiters by IP + route and ignores X-Tenant (also on legacy hosts)', function () {
     foreach (range(1, 10) as $i) {
         $this->postJson("{$this->api}/auth/login", ['email' => "u$i@x.test", 'password' => 'bad'], ['X-Tenant' => "rot$i"])->assertStatus(422);
     }
     $this->postJson("{$this->api}/auth/login", ['email' => 'z@x.test', 'password' => 'bad'], ['X-Tenant' => 'fresh'])->assertStatus(429);
-    // the header-tenant twin route shares the bucket
-    $this->postJson('http://3alraf.test/api/v1/auth/login', ['email' => 'z@x.test', 'password' => 'bad'], ['X-Tenant' => 'egy'])->assertStatus(429);
+    // no header and a legacy host share the bucket
+    $this->postJson('/api/v1/auth/login', ['email' => 'z@x.test', 'password' => 'bad'])->assertStatus(429);
+    $this->postJson('http://egy.3alraf.loc/api/v1/auth/login', ['email' => 'z@x.test', 'password' => 'bad'], ['X-Tenant' => 'egy'])->assertStatus(429);
     // another route has its own bucket
     $this->postJson("{$this->api}/affiliate/login", ['email' => 'z@x.test', 'password' => 'bad'])->assertStatus(422);
     // web login converted too
@@ -320,7 +313,7 @@ it('refuses to roll back the affiliate e-mail normalisation', function () {
 // ---------------------------------------------------------------- (15) custom pages API
 it('lists active custom pages and shows one with its product grid', function () {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Prod'], 'slug' => 'cp-prod', 'sku' => 'CPP', 'barcode' => '2000000000091', 'is_active' => true]);
-    TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     $page = CustomPage::create(['slug' => 'summer', 'title' => ['ar' => 'الصيف', 'en' => 'Summer'], 'filters' => [], 'is_active' => true]);
     $page->products()->attach($p->id, ['sort_order' => 1]);
     CustomPage::create(['slug' => 'hidden', 'title' => ['ar' => 'مخفي'], 'filters' => [], 'is_active' => false]);
@@ -331,5 +324,5 @@ it('lists active custom pages and shows one with its product grid', function () 
         ->assertJsonPath('data.page.slug', 'summer')->assertJsonPath('data.products.0.slug', 'cp-prod')->assertJsonPath('data.products.0.price', '100.00')
         ->assertJsonPath('meta.pagination.total', 1)->assertJsonMissingPath('data.page.filters');
     $this->getJson("{$this->api}/custom-pages/hidden")->assertNotFound();
-    $this->getJson('http://3alraf.test/api/v1/custom-pages', ['X-Tenant' => 'egy'])->assertOk()->assertJsonCount($list->count(), 'data');
+    $this->getJson('/api/v1/custom-pages', ['X-Tenant' => 'egy'])->assertOk()->assertJsonCount($list->count(), 'data');
 });

@@ -4,10 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** One WhatsApp account per owner: tenant_id NULL = the central platform. Credentials live only in the Node service's encrypted storage. */
+/** The store's single WhatsApp account (one row). Credentials live only in the Node service's encrypted storage. */
 class WhatsappSession extends Model
 {
-    protected $fillable = ['tenant_id', 'session_id', 'is_enabled', 'status', 'phone', 'storage_ref', 'last_connected_at', 'last_event_at', 'last_error'];
+    protected $fillable = ['session_id', 'is_enabled', 'status', 'phone', 'storage_ref', 'last_connected_at', 'last_event_at', 'last_error'];
 
     protected $hidden = ['storage_ref'];
 
@@ -16,14 +16,18 @@ class WhatsappSession extends Model
         return ['is_enabled' => 'bool', 'last_connected_at' => 'datetime', 'last_event_at' => 'datetime'];
     }
 
-    protected static function booted(): void
+    /** Fixed gateway session id. Kept as `central` (the id of the already paired device) so the phone never has to re-scan the QR code. */
+    public const SESSION_ID = 'central';
+
+    public static function id(): string
     {
-        static::saving(fn (self $s) => $s->owner_key = (int) $s->tenant_id);
+        return self::SESSION_ID;
     }
 
-    public static function idFor(?int $tenantId): string
+    /** The single session row (created on first use). */
+    public static function current(): self
     {
-        return $tenantId ? "tenant-$tenantId" : 'central';
+        return static::query()->firstOrCreate(['session_id' => self::SESSION_ID], ['storage_ref' => 'sessions/'.self::SESSION_ID]);
     }
 
     public function isConnected(): bool

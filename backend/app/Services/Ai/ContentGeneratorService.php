@@ -10,7 +10,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Services\Growth\ContentPackageService;
 use App\Services\BlogPostService;
 use App\Services\CustomPageService;
@@ -56,10 +56,9 @@ class ContentGeneratorService
         if (($i['kind'] ?? '') === self::PACKAGE) {
             return app(ContentPackageService::class)->prompt($i);
         }
-        $t = current_tenant();
-        $locales = (array) $t->locales;
+        $locales = (array) setting('locales', []);
         $names = '{"'.implode('":"...","', $locales).'":"..."}';
-        $lines = ['Store: '.$t->name.' | country '.$t->country.' | languages '.implode(', ', $locales).' | default language '.$t->default_locale.'.',
+        $lines = ['Store: '.setting('name').' | country '.setting('country').' | languages '.implode(', ', $locales).' | default language '.setting('default_locale').'.',
             'Topic: <data>'.Str::limit((string) $i['goal'], 300, '').'</data>'];
         if (! empty($i['tone'])) {
             $lines[] = 'Tone: '.$i['tone'].'.';
@@ -83,8 +82,8 @@ class ContentGeneratorService
         $cats = Category::where('is_active', true)->orderBy('id')->limit(60)->get()->map(fn ($c) => $c->id.': '.$c->name)->implode('; ');
         $brands = Brand::where('is_active', true)->orderBy('id')->limit(60)->get()->map(fn ($b) => $b->id.': '.$b->name)->implode('; ');
         $only = array_map('intval', (array) ($i['product_ids'] ?? []));
-        $prods = TenantProduct::with('product')->where('is_active', true)->when($only, fn ($q) => $q->whereIn('product_id', $only))->limit(40)->get()
-            ->filter(fn ($tp) => $tp->product)->map(fn ($tp) => $tp->product_id.': '.$tp->product->name)->implode('; ');
+        $prods = Product::query()->where('is_active', true)->when($only, fn ($q) => $q->whereIn('id', $only))->limit(40)->get()
+            ->map(fn ($p) => $p->id.': '.$p->name)->implode('; ');
 
         return "Categories: <data>".($cats ?: '-')."</data>\nBrands: <data>".($brands ?: '-')."</data>\nProducts you may pin (optional, max 24): <data>".($prods ?: '-').'</data>';
     }
@@ -98,7 +97,7 @@ class ContentGeneratorService
             return app(ContentPackageService::class)->validate($in, $inputs);
         }
         $r = ['errors' => [], 'warnings' => [], 'preview' => []];
-        $default = current_tenant()->default_locale;
+        $default = setting('default_locale');
         $d = ['slug' => $this->slug((string) ($in['slug'] ?? ''), $in['title'] ?? [])];
         $d['title'] = $this->text($in['title'] ?? [], $kind === 'custom_page' ? 80 : 120, false);
         if (empty($d['title'][$default] ?? '')) {
@@ -140,7 +139,7 @@ class ContentGeneratorService
         $ids = fn ($v) => array_values(array_unique(array_filter(array_map('intval', (array) $v))));
         $cats = Category::where('is_active', true)->whereIn('id', $ids($in['categories'] ?? []))->pluck('id')->all();
         $brands = Brand::where('is_active', true)->whereIn('id', $ids($in['brands'] ?? []))->pluck('id')->all();
-        $products = TenantProduct::where('is_active', true)->whereIn('product_id', array_slice($ids($in['product_ids'] ?? []), 0, 24))->pluck('product_id')->all();
+        $products = Product::where('is_active', true)->whereIn('id', array_slice($ids($in['product_ids'] ?? []), 0, 24))->pluck('id')->all();
         if (count($cats) < count($ids($in['categories'] ?? [])) || count($brands) < count($ids($in['brands'] ?? [])) || count($products) < count($ids($in['product_ids'] ?? []))) {
             $this->warn($r, 'unknown_ids_dropped');
         }
@@ -165,11 +164,11 @@ class ContentGeneratorService
         }
     }
 
-    /** Tenant locales only; plain text (optionally keeping line breaks). */
+    /** Shop locales only; plain text (optionally keeping line breaks). */
     private function text(mixed $v, int $max, bool $multiline): array
     {
         $out = [];
-        foreach ((array) current_tenant()->locales as $l) {
+        foreach ((array) setting('locales', []) as $l) {
             $s = is_array($v) && is_string($v[$l] ?? null) ? html_entity_decode(strip_tags($v[$l]), ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
             $s = $multiline ? preg_replace("/[ \t]+/u", ' ', str_replace("\r", '', $s)) : preg_replace('/\s+/u', ' ', $s);
             $out[$l] = Str::limit(trim($multiline ? preg_replace("/\n{3,}/", "\n\n", $s) : $s), $max, '');
@@ -181,7 +180,7 @@ class ContentGeneratorService
     private function html(mixed $v): array
     {
         $out = [];
-        foreach ((array) current_tenant()->locales as $l) {
+        foreach ((array) setting('locales', []) as $l) {
             $out[$l] = Str::limit(SafeHtml::clean(is_array($v) && is_string($v[$l] ?? null) ? $v[$l] : ''), 60000, '');
         }
 
@@ -222,7 +221,7 @@ class ContentGeneratorService
 
     private function url(string $kind, string $slug): string
     {
-        $l = current_tenant()->default_locale;
+        $l = setting('default_locale');
 
         return match ($kind) {
             'static_page' => url("/$l/page/$slug"),
@@ -251,7 +250,7 @@ class ContentGeneratorService
     public function editRoute(string $kind, int $id): string
     {
         return route(match ($kind) {
-            'static_page' => 'tenant.static-pages.edit', 'blog_post' => 'tenant.blog-posts.edit', default => 'tenant.custom-pages.edit',
+            'static_page' => 'admin.static-pages.edit', 'blog_post' => 'admin.blog-posts.edit', default => 'admin.custom-pages.edit',
         }, $id);
     }
 

@@ -14,8 +14,12 @@ const outbound = require('./outbound');
 
 const log = pino({ level: cfg.logLevel, redact: ['creds', 'authState', '*.password', '*.text'] }); // message bodies (OTPs) never logged
 
-// ids are `central` or `tenant-<n>`; anything else is rejected before touching the filesystem
-const ID_RE = /^(central|tenant-[1-9][0-9]{0,9})$/;
+// Single shop = one WhatsApp session with the fixed id `central` (the id of the already paired device, so the phone never re-scans the QR code).
+// Anything else is rejected before touching the filesystem. Ids of the retired multi-store layout (`tenant-<n>`) answer 410 and their auth
+// directories, if any are left on disk, are skipped (never started, never deleted) by restoreAll().
+const SESSION_ID = 'central';
+const ID_RE = /^central$/;
+const LEGACY_ID_RE = /^tenant-[1-9][0-9]{0,9}$/;
 const MAX_BACKOFF = 60_000;
 
 class Session {
@@ -48,6 +52,7 @@ class Session {
 const sessions = new Map();
 
 function get(id) {
+  if (LEGACY_ID_RE.test(id)) throw Object.assign(new Error(`session retired, use ${SESSION_ID}`), { code: 410 });
   if (!ID_RE.test(id)) throw Object.assign(new Error('invalid session id'), { code: 400 });
   if (!sessions.has(id)) sessions.set(id, new Session(id));
   return sessions.get(id);
@@ -226,10 +231,14 @@ async function setPresence(id, jid, state) {
   return { ok: true };
 }
 
-/** Restore every session that has persisted credentials (service restart: no new QR scan). */
+/** Restore the session if it has persisted credentials (service restart: no new QR scan). Legacy `tenant-<n>` dirs are logged and left alone. */
 async function restoreAll() {
   fs.mkdirSync(cfg.authRoot, { recursive: true, mode: 0o700 });
   for (const id of fs.readdirSync(cfg.authRoot)) {
+    if (LEGACY_ID_RE.test(id)) {
+      log.warn({ id }, 'ignoring retired session directory (single store uses "central"); safe to delete');
+      continue;
+    }
     if (ID_RE.test(id) && fs.existsSync(path.join(cfg.authRoot, id, 'creds.enc'))) {
       log.info({ id }, 'restoring session');
       await start(id).catch((e) => log.error({ id, err: e.message }, 'restore failed'));
@@ -247,4 +256,4 @@ async function shutdown() {
   }
 }
 
-module.exports = { get, start, stop, send, sendTyped, markRead, setPresence, restoreAll, shutdown, ID_RE, sessions };
+module.exports = { get, start, stop, send, sendTyped, markRead, setPresence, restoreAll, shutdown, SESSION_ID, ID_RE, LEGACY_ID_RE, sessions };

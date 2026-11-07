@@ -1,10 +1,10 @@
-<x-layouts.admin guard="tenant" :title="__('growth.product_lists')">
+<x-layouts.admin :title="__('growth.product_lists')">
     <div class="space-y-6">
         <p class="text-sm text-slate-500">{{ __('growth.lists_intro') }}</p>
         @foreach (\App\Enums\ProductListType::cases() as $type)
             @php($data = $lists[$type->value])
             <x-card :title="$type->label()">
-                <form data-ajax-form data-method="PUT" data-validate-url="{{ route('tenant.product-lists.validate', $type->value) }}" action="{{ route('tenant.product-lists.update', $type->value) }}" method="POST" class="space-y-3" novalidate>
+                <form data-ajax-form data-method="PUT" data-validate-url="{{ route('admin.product-lists.validate', $type->value) }}" action="{{ route('admin.product-lists.update', $type->value) }}" method="POST" class="space-y-3" novalidate>
                     @csrf
                     <div data-pin-list class="space-y-2">
                         <div class="flex flex-wrap gap-2">

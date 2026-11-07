@@ -3,23 +3,20 @@
 namespace App\Services;
 
 use App\DTOs\Orders\CodFeeConfig;
-use App\Models\Tenant;
-use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Models\Setting;
 
-/** Reads/writes the COD extra fee keys of tenants.settings (other settings keys are preserved). */
+/** Reads/writes the COD extra fee keys of the `settings` table (other keys are untouched). */
 class CodFeeSettingsService
 {
-    public function __construct(private TenantRepositoryInterface $tenants) {}
-
-    public function get(Tenant $tenant): CodFeeConfig
+    public function get(): CodFeeConfig
     {
-        return CodFeeConfig::fromSettings($tenant->settings);
+        return CodFeeConfig::fromSettings(Setting::map());
     }
 
-    public function update(Tenant $tenant, CodFeeConfig $data): CodFeeConfig
+    public function update(CodFeeConfig $data): CodFeeConfig
     {
-        $this->tenants->update($tenant, ['settings' => array_merge($tenant->settings ?? [], $data->toSettings())]);
+        Setting::putMany($data->toSettings());
 
-        return $this->get($tenant);
+        return $this->get();
     }
 }

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Exceptions\AiException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\AiTrendDismissRequest;
-use App\Http\Requests\Tenant\AiTrendDraftRequest;
-use App\Http\Requests\Tenant\AiTrendFilterRequest;
+use App\Http\Requests\Admin\AiTrendDismissRequest;
+use App\Http\Requests\Admin\AiTrendDraftRequest;
+use App\Http\Requests\Admin\AiTrendFilterRequest;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Supplier;
@@ -27,12 +27,12 @@ class AiTrendsController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.ai.trends', [
+        return view('admin.ai.trends', [
             'categories' => Category::query()->where('is_active', true)->get()->mapWithKeys(fn ($c) => [$c->id => $c->name])->all(),
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),
-            'models' => $this->access->modelsFor(current_tenant(), 'text'), 'webModel' => $this->trends->webModel(), 'country' => $this->trends->country(),
-            'canPurchase' => auth('tenant')->user()?->can('purchases.create'),
+            'models' => $this->access->modelsFor('text'), 'webModel' => $this->trends->webModel(), 'country' => $this->trends->country(),
+            'canPurchase' => auth('admin')->user()?->can('purchases.create'),
         ]);
     }
 
@@ -93,7 +93,7 @@ class AiTrendsController extends Controller implements HasMiddleware
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['success' => true, 'message' => __('ai.trends.po_created', ['n' => $po->number]), 'url' => route('tenant.purchases.edit', $po->id)]);
+        return response()->json(['success' => true, 'message' => __('ai.trends.po_created', ['n' => $po->number]), 'url' => route('admin.purchases.edit', $po->id)]);
     }
 
     public function export(AiTrendFilterRequest $r)
@@ -108,7 +108,7 @@ class AiTrendsController extends Controller implements HasMiddleware
 
     private function narrativeModel(?int $id)
     {
-        $models = $this->access->modelsFor(current_tenant(), 'text');
+        $models = $this->access->modelsFor('text');
 
         return $models->firstWhere('id', $id) ?? $models->firstWhere('id', $this->access->settings()?->default_ai_model_id) ?? $models->firstWhere('is_default', true) ?? $models->first();
     }

@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 
 class FlashSale extends Model
 {
-    use Audited, BelongsToTenant, HasTranslations;
+    use Audited, HasTranslations;
 
     protected array $translatable = ['name'];
 

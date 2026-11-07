@@ -28,7 +28,7 @@ class StaticPageDataTable extends BaseDataTable
         $dt->addColumn('title_label', fn (StaticPage $m) => e($m->title))
             ->filterColumn('title_label', fn ($q, $k) => $q->where('title', 'like', "%$k%"))
             ->addColumn('status', fn (StaticPage $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (StaticPage $m) => $this->tenantActions($m, 'tenant.static-pages', 'static_pages'));
+            ->addColumn('actions', fn (StaticPage $m) => $this->rowActions($m, 'admin.static-pages', 'static_pages'));
     }
 
     protected function rawColumns(): array

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\BundleAbRequest;
-use App\Http\Requests\Tenant\BundleProposeRequest;
+use App\Http\Requests\Admin\BundleAbRequest;
+use App\Http\Requests\Admin\BundleProposeRequest;
 use App\Models\Bundle;
 use App\Models\BundleAbTest;
 use App\Models\GrowthApproval;
@@ -31,7 +31,7 @@ class BundleEngineController extends Controller implements HasMiddleware
     {
         $abTests = app(GrowthFeatures::class)->active('bundle_ab') ? BundleAbTest::with('variants', 'bundle')->orderByDesc('id')->limit(30)->get()->each(fn ($t) => $t->results = $this->ab->results($t)) : collect();
 
-        return view('tenant.growth.bundles', [
+        return view('admin.growth.bundles', [
             'modes' => BundleProposalService::MODES, 'events' => SeasonalEvent::orderByDesc('year')->orderBy('starts_on')->limit(40)->get(),
             'pending' => GrowthApproval::where('type', 'bundle_draft')->where('status', GrowthApproval::PENDING)->orderByDesc('id')->limit(30)->get(),
             'report' => $this->metrics->report(now()->subDays(29), now()), 'bundles' => Bundle::orderByDesc('id')->limit(100)->get(['id', 'name']),
@@ -41,25 +41,25 @@ class BundleEngineController extends Controller implements HasMiddleware
 
     public function propose(BundleProposeRequest $r): JsonResponse
     {
-        $res = $this->proposals->propose($r->input('mode'), ['budgets' => $r->filled('budgets') ? preg_split('/[,\s،]+/u', $r->input('budgets')) : [], 'event_id' => $r->input('event_id')], auth('tenant')->id());
+        $res = $this->proposals->propose($r->input('mode'), ['budgets' => $r->filled('budgets') ? preg_split('/[,\s،]+/u', $r->input('budgets')) : [], 'event_id' => $r->input('event_id')], auth('admin')->id());
 
-        return $this->ok(__('growth_hub.bundles.proposed', ['n' => count($res['approval_ids']), 'rej' => count($res['rejected'])]), route('tenant.growth.bundles.index'), $res);
+        return $this->ok(__('growth_hub.bundles.proposed', ['n' => count($res['approval_ids']), 'rej' => count($res['rejected'])]), route('admin.growth.bundles.index'), $res);
     }
 
     public function abStart(BundleAbRequest $r, ImageUploadService $images): JsonResponse
     {
         $d = $r->validated();
         $d['image'] = $r->file('image') ? $images->storeSingle($r->file('image'), 'bundles') : null;
-        $this->ab->start((int) $d['bundle_id'], $d, (int) $d['split_b'], (int) $d['min_sample'], auth('tenant')->id());
+        $this->ab->start((int) $d['bundle_id'], $d, (int) $d['split_b'], (int) $d['min_sample'], auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.bundles.index'));
+        return $this->ok(__('admin.saved'), route('admin.growth.bundles.index'));
     }
 
     public function abConclude(int $id): JsonResponse
     {
         $w = request()->validate(['winner' => ['required', 'in:A,B']])['winner'];
-        $this->ab->conclude($id, $w, auth('tenant')->id());
+        $this->ab->conclude($id, $w, auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.bundles.index'));
+        return $this->ok(__('admin.saved'), route('admin.growth.bundles.index'));
     }
 }

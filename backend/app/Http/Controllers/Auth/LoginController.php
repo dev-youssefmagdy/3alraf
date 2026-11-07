@@ -10,18 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
-/** One login controller for the three guards; guard comes from the route name prefix (central./tenant./storefront.). */
+/** Storefront customer login (guard `web`, e-mail + password). Admins sign in through AdminLoginController. */
 class LoginController extends Controller
 {
     use GuardsLogins;
 
     private function guard(Request $r): string
     {
-        return match (explode('.', $r->route()->getName())[0]) {
-            'central' => 'central',
-            'tenant' => 'tenant',
-            default => 'web',
-        };
+        return 'web';
     }
 
     public function show(Request $request)
@@ -66,15 +62,11 @@ class LoginController extends Controller
 
     private function routePrefix(string $guard): string
     {
-        return ['central' => 'central.', 'tenant' => 'tenant.', 'web' => 'storefront.'][$guard];
+        return 'storefront.';
     }
 
     private function home(string $guard): string
     {
-        return match ($guard) {
-            'central' => route('central.dashboard'),
-            'tenant' => route('tenant.dashboard'),
-            default => route('storefront.home'),
-        };
+        return route('storefront.home');
     }
 }

@@ -16,8 +16,12 @@ class GrowthDispatchPending extends Command
     public function handle(GrowthFeatures $features, GrowthEventRepositoryInterface $repo): int
     {
         $n = 0;
-        $tenantIds = $features->tenantsWith('events_outbox')->pluck('id');
-        $repo->dueIds($tenantIds)
+        if (! $features->active('events_outbox')) {
+            $this->info('Queued: 0 (events_outbox is off)');
+
+            return self::SUCCESS;
+        }
+        $repo->dueIds()
             ->each(function ($id) use (&$n) {
                 DispatchGrowthEventJob::dispatch($id);
                 $n++;

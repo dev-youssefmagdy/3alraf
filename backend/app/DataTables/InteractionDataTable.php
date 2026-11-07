@@ -33,7 +33,7 @@ class InteractionDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $g = fn ($k) => __('growth_hub.inbox.'.$k);
-        $can = (bool) auth('tenant')->user()?->can('growth.manage');
+        $can = (bool) auth('admin')->user()?->can('growth.manage');
         $dt->addColumn('channel_label', fn (Interaction $r) => e($g('channels')[$r->channel] ?? $r->channel))
             ->editColumn('text_masked', function (Interaction $r) use ($g) {
                 $h = e($r->text_masked);
@@ -54,7 +54,7 @@ class InteractionDataTable extends BaseDataTable
                 }
                 $h = '';
                 foreach (['suggest', 'responded', 'close'] as $a) {
-                    $h .= '<button type="button" class="btn-sm btn-secondary me-1" data-gpost="'.e(route('tenant.growth.interactions.action', $r->id).'?action='.$a).'">'.e($g($a)).'</button>';
+                    $h .= '<button type="button" class="btn-sm btn-secondary me-1" data-gpost="'.e(route('admin.growth.interactions.action', $r->id).'?action='.$a).'">'.e($g($a)).'</button>';
                 }
 
                 $opt = fn (array $vals, ?string $cur, bool $blank = false) => ($blank ? '<option value="">-</option>' : '').collect($vals)->map(fn ($v) => '<option value="'.e($v).'"'.($v === $cur ? ' selected' : '').'>'.e($v).'</option>')->implode('');
@@ -63,7 +63,7 @@ class InteractionDataTable extends BaseDataTable
                     .'<select name="category" '.$sel.'>'.$opt(InteractionService::CATEGORIES, $r->reviewed_category ?? $r->category, true).'</select>'
                     .'<select name="intent" '.$sel.'>'.$opt(InteractionService::INTENTS, $r->reviewed_intent ?? $r->intent).'</select>'
                     .'<select name="sentiment" '.$sel.'>'.$opt(InteractionService::SENTIMENT, $r->reviewed_sentiment ?? $r->sentiment).'</select>'
-                    .'<button type="button" class="btn-sm btn-secondary" data-gpost="'.e(route('tenant.growth.interactions.review', $r->id)).'">'.e($g('review')).($r->reviewed_at ? ' &#10003;' : '').'</button></div>';
+                    .'<button type="button" class="btn-sm btn-secondary" data-gpost="'.e(route('admin.growth.interactions.review', $r->id)).'">'.e($g('review')).($r->reviewed_at ? ' &#10003;' : '').'</button></div>';
 
                 return $h;
             });

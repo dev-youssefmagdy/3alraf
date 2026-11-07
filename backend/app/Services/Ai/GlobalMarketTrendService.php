@@ -32,7 +32,7 @@ class GlobalMarketTrendService
 
     public function webModels(): Collection
     {
-        return $this->access->modelsFor(current_tenant(), 'text')->filter(fn ($m) => $m->can('web_search'))->values();
+        return $this->access->modelsFor('text')->filter(fn ($m) => $m->can('web_search'))->values();
     }
 
     public function pickModel(?int $id = null): ?AiModel
@@ -45,7 +45,7 @@ class GlobalMarketTrendService
 
     private function tag(MarketTrendQuery $q): string
     {
-        return current_tenant()->id.'-'.$q->key();
+        return $q->key();
     }
 
     /** @return array{items:array,generated_at:?string,stale:bool,running:bool,error:?string} items re-evaluated against live stock */
@@ -61,11 +61,10 @@ class GlobalMarketTrendService
             'running' => (bool) Cache::get("ai-mkt:running:$tag"), 'error' => Cache::get("ai-mkt:error:$tag")];
     }
 
-    /** Fresh cache hit and not forced = no job. Forced refresh is throttled 1 per 10 min per tenant. */
+    /** Fresh cache hit and not forced = no job. Forced refresh is throttled 1 per 10 min. */
     public function requestRefresh(MarketTrendQuery $q): string
     {
         $st = $this->state($q);
-        $tid = current_tenant()->id;
         $tag = $this->tag($q);
         if (! $q->force && ! $st['stale']) {
             return 'cached';
@@ -75,7 +74,7 @@ class GlobalMarketTrendService
         }
         $model = $this->pickModel($q->modelId) ?? throw new AiException(__('ai.trends.no_web_model'), 'model');
         if ($q->force) {
-            $key = "ai-mkt:refresh:$tid";
+            $key = 'ai-mkt:refresh';
             if (RateLimiter::tooManyAttempts($key, 1)) {
                 throw new AiException(__('ai.trends.throttled', ['m' => max(1, (int) ceil(RateLimiter::availableIn($key) / 60))]), 'throttled');
             }
@@ -83,7 +82,7 @@ class GlobalMarketTrendService
         }
         Cache::put("ai-mkt:running:$tag", true, now()->addMinutes(5));
         Cache::forget("ai-mkt:error:$tag");
-        RunGlobalMarketTrendsJob::dispatch($tid, $q->countries, $q->period, $q->keyword, $q->count, $model->id);
+        RunGlobalMarketTrendsJob::dispatch($q->countries, $q->period, $q->keyword, $q->count, $model->id);
 
         return 'queued';
     }
@@ -95,11 +94,11 @@ class GlobalMarketTrendService
         Cache::forget("ai-mkt:running:$tag");
     }
 
-    /** Runs inside the tenant context. Throws AiException (user-safe message); malformed output is never stored. */
+    /** Runs in the job. Throws AiException (user-safe message); malformed output is never stored. */
     public function generate(MarketTrendQuery $q, ?AiModel $model = null): AiTrendSnapshot
     {
         $model ??= $this->pickModel($q->modelId) ?? throw new AiException(__('ai.trends.no_web_model'), 'model');
-        $ctx = $this->contexts->forTenant();
+        $ctx = $this->contexts->make();
         $list = implode(', ', array_map(fn ($c) => $c.' ('.MarketCountries::name($c).', '.MarketCountries::currency($c).')', $q->countries));
         $kw = $q->keyword !== '' ? '<data>'.str_ireplace(['<data>', '</data>'], '', $q->keyword).'</data>' : 'any category';
         $prompt = "Find the products trending RIGHT NOW in the online market during the last {$q->period} days in these countries (ISO-2, name, currency): {$list}.\n"

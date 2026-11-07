@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\ExpenseCategoryDataTable;
 use App\DTOs\ExpenseCategoryData;
-use App\Http\Requests\Tenant\ExpenseCategoryRequest;
+use App\Http\Requests\Admin\ExpenseCategoryRequest;
 use App\Models\ExpenseCategory;
 use App\Services\ExpenseCategoryService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class ExpenseCategoryController extends ResourceController
 {
     protected static string $perm = 'expense_categories';
-    protected static string $routeBase = 'tenant.expense-categories';
-    protected static string $view = 'tenant.expense-categories';
+    protected static string $routeBase = 'admin.expense-categories';
+    protected static string $view = 'admin.expense-categories';
     protected static string $titleKey = 'ops.expense_categories';
     protected static string $requestClass = ExpenseCategoryRequest::class;
     protected static string $dtoClass = ExpenseCategoryData::class;
@@ -26,11 +26,11 @@ class ExpenseCategoryController extends ResourceController
 
     protected function formData(Model $model): array
     {
-        if (! auth('tenant')->user()?->can('erp.expenses.manage')) {
+        if (! auth('admin')->user()?->can('erp.expenses.manage')) {
             return ['erpAccounts' => []];
         }
         if (! \App\Models\Erp\Account::exists()) {
-            app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed(current_tenant());
+            app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed();
         }
 
         return ['erpAccounts' => \App\Models\Erp\Account::where('is_group', false)->where('is_active', true)->whereIn('type', ['expense', 'asset'])

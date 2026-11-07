@@ -1,7 +1,5 @@
 import 'package:app/core/network/network_providers.dart';
 import 'package:app/features/auth/application/auth_controller.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,32 +62,28 @@ void main() {
     () async {
       final env = TestEnv(extra: authApi());
       final c = await env.container();
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
-      await env.secrets.write('cart_token:egy', 'guest-cart');
+      await bootStore(c);
+      await env.secrets.write('cart_token', 'guest-cart');
 
       await c
           .read(authControllerProvider.notifier)
           .login('a@b.co', 'password1');
 
-      expect(env.secrets.data['auth_token:egy'], '12|secret');
+      expect(env.secrets.data['auth_token'], '12|secret');
       expect(c.read(authControllerProvider).signedIn, isTrue);
       expect(c.read(authControllerProvider).customer?.name, 'Mona');
       final merge = env.requestsTo('/cart/merge').single;
       expect(merge.headers['Authorization'], 'Bearer 12|secret');
       expect(merge.headers['X-Cart-Token'], 'guest-cart');
-      expect(env.secrets.data.containsKey('cart_token:egy'), isFalse);
+      expect(env.secrets.data.containsKey('cart_token'), isFalse);
     },
   );
 
   test('session is restored from secure storage', () async {
     final env = TestEnv(extra: authApi());
     final c = await env.container();
-    await env.secrets.write('auth_token:egy', 'saved');
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await env.secrets.write('auth_token', 'saved');
+    await bootStore(c);
     expect(c.read(authControllerProvider).signedIn, isTrue);
     expect(c.read(authControllerProvider).customer?.email, 'mona@x.test');
   });
@@ -97,13 +91,11 @@ void main() {
   test('logout revokes remotely and clears the token', () async {
     final env = TestEnv(extra: authApi());
     final c = await env.container();
-    await env.secrets.write('auth_token:egy', 'saved');
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await env.secrets.write('auth_token', 'saved');
+    await bootStore(c);
     await c.read(authControllerProvider.notifier).logout();
     expect(env.requestsTo('/auth/logout'), hasLength(1));
-    expect(env.secrets.data.containsKey('auth_token:egy'), isFalse);
+    expect(env.secrets.data.containsKey('auth_token'), isFalse);
     expect(c.read(authControllerProvider).signedIn, isFalse);
   });
 
@@ -123,7 +115,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'تسجيل الدخول'));
     await tester.pumpAndSettle();
     expect(find.text('These credentials do not match.'), findsOneWidget);
-    expect(env.secrets.data.containsKey('auth_token:egy'), isFalse);
+    expect(env.secrets.data.containsKey('auth_token'), isFalse);
   });
 
   testWidgets('guest -> login -> returns to where the user came from', (
@@ -143,7 +135,7 @@ void main() {
     // Back on the wishlist tab.
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(WishlistPage), findsOneWidget);
-    expect(env.secrets.data['auth_token:egy'], '12|secret');
+    expect(env.secrets.data['auth_token'], '12|secret');
   });
 
   testWidgets('register then verify the e-mail with the code', (tester) async {
@@ -209,13 +201,13 @@ void main() {
   ) async {
     bigScreen(tester);
     final env = TestEnv(
-      prefs: {'onboarding_done': true, 'tenant_slug': 'egy'},
+      prefs: {'onboarding_done': true},
       extra: (o) => o.path == '/wishlist'
           ? errorEnvelope(401, 'Unauthenticated.')
           : authApi()(o),
     );
     await env.init();
-    await env.secrets.write('auth_token:egy', 'stale');
+    await env.secrets.write('auth_token', 'stale');
     await tester.pumpWidget(envApp(env));
     await settle(tester);
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -232,7 +224,7 @@ void main() {
     await settle(tester);
 
     expect(container.read(authControllerProvider).signedIn, isFalse);
-    expect(env.secrets.data.containsKey('auth_token:egy'), isFalse);
+    expect(env.secrets.data.containsKey('auth_token'), isFalse);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text('انتهت جلستك. سجّل الدخول مرة أخرى.'), findsOneWidget);
   });

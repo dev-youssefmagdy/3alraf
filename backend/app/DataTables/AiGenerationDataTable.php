@@ -35,7 +35,7 @@ class AiGenerationDataTable extends BaseDataTable
         $dt->addColumn('type_label', fn (AiGeneration $g) => e(($g->output['kind'] ?? null) ? __('ai.gen.kinds.'.$g->output['kind']) : $g->type->label()))
             ->addColumn('summary', function (AiGeneration $g) {
                 $d = (array) ($g->output['draft'] ?? []);
-                $l = current_tenant()->default_locale;
+                $l = setting('default_locale');
                 $s = $d['code'] ?? ($d['name'][$l] ?? $d['title'][$l] ?? ($d['name'] ?? $d['title'] ?? null));
 
                 return e(is_array($s) ? (string) (array_values(array_filter($s))[0] ?? '') : (string) ($s ?? \Illuminate\Support\Str::limit((string) ($g->inputs['goal'] ?? ''), 60)));
@@ -47,7 +47,7 @@ class AiGenerationDataTable extends BaseDataTable
             })
             ->addColumn('model_label', fn (AiGeneration $g) => e($g->aiModel?->label ?? '—'))
             ->editColumn('created_at', fn (AiGeneration $g) => $g->created_at?->format('Y-m-d H:i'))
-            ->addColumn('actions', fn (AiGeneration $g) => '<a href="'.e(route('tenant.ai.generators.show', $g->id)).'" class="btn-sm btn-secondary">'.e(__('ai.gen.review')).'</a>');
+            ->addColumn('actions', fn (AiGeneration $g) => '<a href="'.e(route('admin.ai.generators.show', $g->id)).'" class="btn-sm btn-secondary">'.e(__('ai.gen.review')).'</a>');
     }
 
     protected function rawColumns(): array

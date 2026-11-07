@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Branch;
 use App\Models\Customer;
@@ -17,12 +17,12 @@ class ReportController extends ErpController
     public const REPORTS = ['trial-balance', 'general-ledger', 'profit-loss', 'balance-sheet'];
 
     /** Links to report pages that live in their own section. [title key, route, permission] */
-    public const EXTERNAL = [['profit_distribution', 'tenant.erp.profits.report', 'erp.profits.view'], ['asset_register', 'tenant.erp.assets.index', 'erp.assets.manage'],
-        ['customer_ageing', 'tenant.erp.parties.ageing:customer', 'erp.accounts.view'], ['supplier_ageing', 'tenant.erp.parties.ageing:supplier', 'erp.accounts.view']];
+    public const EXTERNAL = [['profit_distribution', 'admin.erp.profits.report', 'erp.profits.view'], ['asset_register', 'admin.erp.assets.index', 'erp.assets.manage'],
+        ['customer_ageing', 'admin.erp.parties.ageing:customer', 'erp.accounts.view'], ['supplier_ageing', 'admin.erp.parties.ageing:supplier', 'erp.accounts.view']];
 
     private function canBranch(): bool
     {
-        return (bool) auth('tenant')->user()?->can('erp.branches.view');
+        return (bool) auth('admin')->user()?->can('erp.branches.view');
     }
 
     private function filter(Request $r, string $report): ErpReportFilter
@@ -35,7 +35,7 @@ class ReportController extends ErpController
         }
         $f = ErpReportFilter::fromRequest($r, $this->canBranch());
         if ($f->branchId) {
-            Branch::findOrFail($f->branchId); // another tenant's id -> 404
+            Branch::findOrFail($f->branchId); // unknown id -> 404
         }
         if ($f->accountId) {
             Account::findOrFail($f->accountId);
@@ -48,13 +48,13 @@ class ReportController extends ErpController
     {
         $this->allow('erp.reports.view');
         $this->ensureSetup();
-        $u = auth('tenant')->user();
+        $u = auth('admin')->user();
         $groups = [];
         foreach (ReportCatalog::META as $key => [$group, , $branchOnly]) {
             if ($branchOnly && ! $this->canBranch()) {
                 continue;
             }
-            $groups[$group][] = ['key' => $key, 'url' => route('tenant.erp.reports.show', $key)];
+            $groups[$group][] = ['key' => $key, 'url' => route('admin.erp.reports.show', $key)];
         }
         $external = collect(self::EXTERNAL)->filter(fn ($e) => $u->can($e[2]))->map(function ($e) {
             [$route, $p] = array_pad(explode(':', $e[1], 2), 2, null);
@@ -62,7 +62,7 @@ class ReportController extends ErpController
             return ['key' => $e[0], 'url' => route($route, $p ? ['type' => $p] : [])];
         })->all();
 
-        return view('tenant.erp.reports-index', compact('groups', 'external'));
+        return view('admin.erp.reports-index', compact('groups', 'external'));
     }
 
     public function show(Request $r, string $report, ReportCatalog $cat)
@@ -73,9 +73,9 @@ class ReportController extends ErpController
         $data = $cat->run($report, $f);
         $legacy = in_array($report, self::REPORTS, true);
 
-        return view($legacy ? 'tenant.erp.report' : 'tenant.erp.report-table', [
+        return view($legacy ? 'admin.erp.report' : 'admin.erp.report-table', [
             'report' => $report, 'rep' => $data, 'f' => $f, 'from' => $f->from, 'to' => $f->to, 'branchId' => $f->branchId, 'accountId' => $f->accountId, 'canBranch' => $this->canBranch(),
-            'canExport' => (bool) auth('tenant')->user()->can('erp.reports.export'), 'filters' => ReportCatalog::META[$report][1], 'data' => $legacy ? $this->legacyData($report, $f) : null,
+            'canExport' => (bool) auth('admin')->user()->can('erp.reports.export'), 'filters' => ReportCatalog::META[$report][1], 'data' => $legacy ? $this->legacyData($report, $f) : null,
             'branches' => $this->canBranch() ? Branch::orderBy('id')->get() : collect(),
             'accounts' => in_array('account', ReportCatalog::META[$report][1], true) ? Account::where('is_group', false)->orderBy('code')->get() : collect(),
             'customers' => in_array('customer', ReportCatalog::META[$report][1], true) ? Customer::orderBy('name')->limit(500)->get(['id', 'name']) : collect(),

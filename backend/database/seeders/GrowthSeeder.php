@@ -7,23 +7,13 @@ use App\Models\Affiliate;
 use App\Models\AffiliateTier;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
-use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
-/** Demo data for tenant `egy`: commission tiers, static pages, a custom page, an approved affiliate (aff@egy.test / password). */
+/** Demo data: commission tiers, static pages, a custom page, an approved affiliate (aff@egy.test / password). */
 class GrowthSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (Tenant::whereIn('slug', ['egy', 'sa'])->get() as $t) {
-            $this->seedTenant($t);
-        }
-    }
-
-    private function seedTenant(Tenant $t): void
-    {
-        app()->instance('currentTenant', $t);
-
         foreach ([['Starter', 0, 5], ['Silver', 1000, 7], ['Gold', 5000, 10]] as [$name, $min, $pct]) {
             AffiliateTier::firstOrCreate(['min_sales' => $min], ['name' => $name, 'percent' => $pct]);
         }
@@ -36,9 +26,7 @@ class GrowthSeeder extends Seeder
         }
         CustomPage::firstOrCreate(['slug' => 'offers'], ['title' => ['ar' => 'العروض', 'en' => 'Offers'], 'filters' => ['flash_sale' => true, 'sort' => 'price_asc'], 'is_active' => true]);
 
-        $a = Affiliate::firstOrCreate(['email' => "aff@{$t->slug}.test"], ['name' => 'Demo Affiliate', 'password' => 'password', 'status' => AffiliateStatus::APPROVED, 'approved_at' => now()]);
+        $a = Affiliate::firstOrCreate(['email' => 'aff@egy.test'], ['name' => 'Demo Affiliate', 'password' => 'password', 'status' => AffiliateStatus::APPROVED, 'approved_at' => now()]);
         $a->forceFill(['status' => AffiliateStatus::APPROVED])->save();
-
-        app()->forgetInstance('currentTenant');
     }
 }

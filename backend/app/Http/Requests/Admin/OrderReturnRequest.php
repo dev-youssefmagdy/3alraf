@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 class OrderReturnRequest extends BaseRequest
 {
@@ -14,7 +14,7 @@ class OrderReturnRequest extends BaseRequest
             'reason_code' => ['nullable', 'in:'.implode(',', \App\Services\Growth\ReturnIntelService::CODES)],
             'restock' => ['nullable', 'boolean'],
             'refund_shipping' => ['nullable', 'boolean'],
-            'branch_id' => ['nullable', $this->tenantExists('branches', true)],
+            'branch_id' => ['nullable', $this->existsRule('branches', true)],
             'return_shipping_cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
         ];
     }

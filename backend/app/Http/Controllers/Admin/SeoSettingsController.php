@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\SeoSettingsRequest;
+use App\Http\Requests\Admin\SeoSettingsRequest;
 use App\Models\Language;
 use App\Services\SeoSettingsService;
 use Illuminate\Http\JsonResponse;
@@ -21,18 +21,18 @@ class SeoSettingsController extends Controller implements HasMiddleware
 
     public function edit()
     {
-        $tenant = current_tenant();
-        $tenantLocales = Language::activeList()->filter(fn ($l) => in_array($l->code, $tenant->locales, true))->values();
+        $locales = (array) setting('locales', []);
+        $languages = Language::activeList()->filter(fn ($l) => in_array($l->code, $locales, true))->values();
 
-        return view('tenant.settings.seo', ['seo' => $this->service->get($tenant), 'languages' => $tenantLocales, 'tenant' => $tenant,
+        return view('admin.settings.seo', ['seo' => $this->service->get(), 'languages' => $languages, 'locales' => $locales, 'shopName' => (string) setting('name'),
             'sitemapUrl' => route('storefront.sitemap'), 'robotsUrl' => url('/robots.txt')]);
     }
 
     public function update(SeoSettingsRequest $request): JsonResponse
     {
-        $this->service->update(current_tenant(), $request->validated());
+        $this->service->update($request->validated());
 
-        return $this->ok(__('admin.saved'), route('tenant.seo.edit'));
+        return $this->ok(__('admin.saved'), route('admin.seo.edit'));
     }
 
     public function validateForm(SeoSettingsRequest $request): JsonResponse

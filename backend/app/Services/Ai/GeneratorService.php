@@ -72,7 +72,7 @@ class GeneratorService
     {
         $g = $this->repo->create(['user_id' => $userId, 'type' => self::typeFor($d->kind), 'status' => AiGenerationStatus::QUEUED, 'inputs' => $d->toInputs(),
             'ai_model_id' => $this->studio->model('text', $d->textModelId)?->id]);
-        RunAiGenerationJob::dispatch($g->id, current_tenant()->id);
+        RunAiGenerationJob::dispatch($g->id);
 
         return $g->fresh();
     }
@@ -104,7 +104,7 @@ class GeneratorService
     public function generate(AiGeneration $g): void
     {
         $i = (array) $g->inputs;
-        $ctx = $this->contexts->forTenant();
+        $ctx = $this->contexts->make();
         $model = $this->studio->model('text', $i['text_model_id'] ?? null);
         if (! $model) {
             throw new AiException(__('ai.studio.no_text_model'), 'model');
@@ -133,11 +133,11 @@ class GeneratorService
         }
     }
 
-    /** Product Truth Guard over every generated draft (Growth tenants, when real products are attached). @return array{draft:array,removed:array,flagged:array} */
+    /** Product Truth Guard over every generated draft (Growth on, when real products are attached). @return array{draft:array,removed:array,flagged:array} */
     private function truth(array $i, array $draft): array
     {
         $ids = array_values(array_filter((array) ($i['product_ids'] ?? [])));
-        if (! $ids || ! app(\App\Services\Growth\GrowthFeatures::class)->active('truth_guard', current_tenant())) {
+        if (! $ids || ! app(\App\Services\Growth\GrowthFeatures::class)->active('truth_guard')) {
             return ['draft' => $draft, 'removed' => [], 'flagged' => []];
         }
         $g = app(\App\Services\Growth\TruthGuardService::class)->guardDraft($draft, $ids, ['slug', 'url', 'sort', 'image_prompt', 'placement', 'code', 'type', 'scope', 'discount_type', 'starts_at', 'ends_at', 'item']);
@@ -237,7 +237,7 @@ class GeneratorService
                 'static_page', 'custom_page', 'blog_post', 'content_package' => $this->content->create($kind, $v['draft'], $g->id),
             };
             $g->forceFill(['status' => AiGenerationStatus::APPROVED, 'target_type' => $model::class, 'target_id' => $model->getKey(), 'reviewed_by' => $userId, 'reviewed_at' => now(), 'reject_reason' => null])->save();
-            activity('ai_generator')->performedOn($g)->causedBy(auth('tenant')->user())->withProperties(['kind' => $kind, 'target_type' => $model::class, 'target_id' => $model->getKey()])->log('approved');
+            activity('ai_generator')->performedOn($g)->causedBy(auth('admin')->user())->withProperties(['kind' => $kind, 'target_type' => $model::class, 'target_id' => $model->getKey()])->log('approved');
 
             return $g;
         });
@@ -252,7 +252,7 @@ class GeneratorService
                 throw new AiException(__('ai.gen.not_draft'), 'state');
             }
             $g->forceFill(['status' => AiGenerationStatus::REJECTED, 'reject_reason' => Str::limit(strip_tags($reason), 500, ''), 'reviewed_by' => $userId, 'reviewed_at' => now()])->save();
-            activity('ai_generator')->performedOn($g)->causedBy(auth('tenant')->user())->withProperties(['reason' => $g->reject_reason])->log('rejected');
+            activity('ai_generator')->performedOn($g)->causedBy(auth('admin')->user())->withProperties(['reason' => $g->reject_reason])->log('rejected');
 
             return $g;
         });
@@ -278,7 +278,7 @@ class GeneratorService
         file_put_contents($tmp, $bytes);
         try {
             $files = [];
-            foreach ((array) current_tenant()->locales as $l) {
+            foreach ((array) setting('locales', []) as $l) {
                 $files[$l] = new UploadedFile($tmp, 'banner.png', null, null, true);
             }
 
@@ -385,7 +385,7 @@ class GeneratorService
                 continue;
             }
             $av = $this->repo->available($pid, $vid);
-            if ($av <= 0 && ! (current_tenant()->settings['allow_backorder'] ?? false)) {
+            if ($av <= 0 && ! setting('allow_backorder', false)) {
                 continue;
             }
             $lines[] = '- key '.$o['key'].' | '.$it['name'].' | price '.$it['price'].' | cost '.$it['cost'].' | available '.$av;
@@ -399,20 +399,21 @@ class GeneratorService
 
     private function prompt(array $i): string
     {
-        $t = current_tenant();
-        $locales = implode(', ', (array) $t->locales);
-        $lines = ['Store: '.$t->name.' | country '.$t->country.' | currency '.$t->currency_code.' | languages '.$locales.' | now '.now($t->timezone ?: null)->toDateTimeString().'.',
+        $shopLocales = (array) setting('locales', []);
+        $currency = setting('currency_code');
+        $locales = implode(', ', $shopLocales);
+        $lines = ['Store: '.setting('name').' | country '.setting('country').' | currency '.$currency.' | languages '.$locales.' | now '.now(setting('timezone') ?: null)->toDateTimeString().'.',
             'Goal: '.$i['goal'].(! empty($i['season']) ? '. Season/event: '.$i['season'] : '').'. Minimum margin: '.$i['margin_floor'].'% ((net price - cost) / net price).'];
         if (! empty($i['brief'])) {
             $lines[] = 'Brief: <data>'.Str::limit($i['brief'], 1500, '').'</data>';
         }
         $lines[] = "Catalog:\n<data>".$this->catalogFacts($i).'</data>';
-        $names = '{"'.implode('":"...","', (array) $t->locales).'":"..."}';
+        $names = '{"'.implode('":"...","', $shopLocales).'":"..."}';
         $lines[] = match ($i['kind']) {
             'banner' => "Return {\"placement\":\"home_hero|home_strip|category_tile|popup\",\"title\":$names,\"link_url\":\"/relative-or-https-url\",\"starts_at\":\"YYYY-MM-DD HH:MM\",\"ends_at\":\"YYYY-MM-DD HH:MM\",\"image_prompt\":\"English visual description, no text in the image\"}. Titles max 60 chars.",
-            'flash_sale' => "Return {\"name\":$names,\"starts_at\":\"YYYY-MM-DD HH:MM\",\"ends_at\":\"YYYY-MM-DD HH:MM\",\"items\":[{\"item\":\"<catalog key>\",\"discount_type\":\"percent|price\",\"value\":number,\"qty_limit\":integer|null}]}. percent = % off; price = final price in {$t->currency_code}. 2-8 items; the final price must keep the minimum margin; qty_limit must not exceed 'available'.",
+            'flash_sale' => "Return {\"name\":$names,\"starts_at\":\"YYYY-MM-DD HH:MM\",\"ends_at\":\"YYYY-MM-DD HH:MM\",\"items\":[{\"item\":\"<catalog key>\",\"discount_type\":\"percent|price\",\"value\":number,\"qty_limit\":integer|null}]}. percent = % off; price = final price in {$currency}. 2-8 items; the final price must keep the minimum margin; qty_limit must not exceed 'available'.",
             'discount_code' => "Return {\"code\":\"UPPERCASE4-20\",\"type\":\"percent|fixed\",\"value\":number,\"min_order\":number,\"max_discount\":number|null,\"usage_limit\":integer|null,\"per_customer_limit\":integer|null,\"starts_at\":\"YYYY-MM-DD HH:MM\",\"ends_at\":\"YYYY-MM-DD HH:MM\",\"scope\":\"all|products\",\"product_ids\":[product ids from catalog keys],\"free_shipping\":false}. The discount must never push a covered product under the minimum margin.",
-            'bundle' => "Return {\"name\":$names,\"description\":$names,\"price\":number,\"starts_at\":null,\"ends_at\":null,\"items\":[{\"item\":\"<catalog key>\",\"quantity\":integer}]}. 2-5 items, quantity within 'available', price in {$t->currency_code} lower than the sum of item prices but at least the minimum margin over the sum of costs.",
+            'bundle' => "Return {\"name\":$names,\"description\":$names,\"price\":number,\"starts_at\":null,\"ends_at\":null,\"items\":[{\"item\":\"<catalog key>\",\"quantity\":integer}]}. 2-5 items, quantity within 'available', price in {$currency} lower than the sum of item prices but at least the minimum margin over the sum of costs.",
         };
 
         return implode("\n", $lines);

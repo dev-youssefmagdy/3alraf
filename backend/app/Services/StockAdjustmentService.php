@@ -23,7 +23,7 @@ class StockAdjustmentService
     public function create(StockAdjustmentData $dto): StockAdjustment
     {
         return DB::transaction(function () use ($dto) {
-            $a = $this->adjustments->create(['branch_id' => $dto->branchId, 'type' => $dto->type, 'reason' => $dto->reason, 'note' => $dto->note, 'created_by' => auth('tenant')->id()]);
+            $a = $this->adjustments->create(['branch_id' => $dto->branchId, 'type' => $dto->type, 'reason' => $dto->reason, 'note' => $dto->note, 'created_by' => auth('admin')->id()]);
             $a->update(['number' => sprintf('ADJ-%06d', $a->id)]);
             $type = $dto->type === AdjustmentType::INCREASE ? StockMovementType::ADJUSTMENT_IN : StockMovementType::ADJUSTMENT_OUT;
             foreach ($dto->items as $i) {

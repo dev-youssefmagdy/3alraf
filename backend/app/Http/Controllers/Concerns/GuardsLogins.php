@@ -16,7 +16,7 @@ trait GuardsLogins
 
     protected function lockoutKey(string $guard, string $email): string
     {
-        return 'login-lock:'.(current_tenant()?->id ?? 'central').':'.$guard.':'.mb_strtolower(trim($email));
+        return 'login-lock:'.$guard.':'.mb_strtolower(trim($email));
     }
 
     protected function assertNotLockedOut(string $guard, string $email): void
@@ -42,7 +42,7 @@ trait GuardsLogins
     {
         Auth::guard($guard)->logout();
 
-        $others = collect(['web', 'tenant', 'central', 'affiliate'])->reject(fn ($g) => $g === $guard)->contains(fn ($g) => Auth::guard($g)->check());
+        $others = collect(['web', 'admin', 'affiliate'])->reject(fn ($g) => $g === $guard)->contains(fn ($g) => Auth::guard($g)->check());
         if ($others) {
             $request->session()->regenerateToken();
         } else {

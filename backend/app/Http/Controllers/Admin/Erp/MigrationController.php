@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Erp\AuditLog;
 use App\Models\Erp\BackfillRun;
@@ -24,7 +24,7 @@ class MigrationController extends ErpController
             ->reject(fn ($f) => $resolved->contains(fn ($r) => $r->subject_type === $f->subject_type && (int) $r->subject_id === (int) $f->subject_id && $r->id > $f->id))
             ->unique(fn ($f) => $f->subject_type.'#'.$f->subject_id)->values();
 
-        return view('tenant.erp.migration', ['failures' => $failures, 'runs' => BackfillRun::orderByDesc('id')->limit(30)->get(), 'auto' => $s->bool('auto_posting_enabled'), 'openingDate' => OpeningState::openingDate(),
+        return view('admin.erp.migration', ['failures' => $failures, 'runs' => BackfillRun::orderByDesc('id')->limit(30)->get(), 'auto' => $s->bool('auto_posting_enabled'), 'openingDate' => OpeningState::openingDate(),
             'recon' => $recon, 'missing' => $missing, 'benign' => array_keys(__('erp.bf.benign'))]);
     }
 
@@ -37,7 +37,7 @@ class MigrationController extends ErpController
     {
         $this->allow('erp.settings.manage');
 
-        return $this->page($runner->run(current_tenant()));
+        return $this->page($runner->run());
     }
 
     public function detect(BackfillService $svc)
@@ -50,11 +50,11 @@ class MigrationController extends ErpController
     public function postMissing(BackfillService $svc)
     {
         $this->allow('erp.settings.manage');
-        $res = $svc->missing(true, auth('tenant')->id());
+        $res = $svc->missing(true, auth('admin')->id());
         $n = array_sum(array_column($res, 'created'));
         $f = array_sum(array_column($res, 'failed'));
 
-        return redirect()->route('tenant.erp.migration.index')->with('status', __('erp.bf.posted_missing', ['n' => $n, 'f' => $f]));
+        return redirect()->route('admin.erp.migration.index')->with('status', __('erp.bf.posted_missing', ['n' => $n, 'f' => $f]));
     }
 
     public function toggle(Request $r, ErpSettings $s)
@@ -62,7 +62,7 @@ class MigrationController extends ErpController
         $this->allow('erp.settings.manage');
         $on = $r->boolean('enabled');
         $s->set('auto_posting_enabled', $on);
-        AuditLog::create(['action' => $on ? 'auto_posting.enabled' : 'auto_posting.disabled', 'subject_type' => 'erp_settings', 'subject_id' => 0, 'user_id' => auth('tenant')->id(), 'meta' => ['by' => 'admin']]);
+        AuditLog::create(['action' => $on ? 'auto_posting.enabled' : 'auto_posting.disabled', 'subject_type' => 'erp_settings', 'subject_id' => 0, 'user_id' => auth('admin')->id(), 'meta' => ['by' => 'admin']]);
 
         return back()->with('status', __('erp.saved'));
     }
@@ -77,7 +77,7 @@ class MigrationController extends ErpController
         } catch (\Throwable $e) {
             return back()->withErrors(['erp' => __('erp_acc.retry_failed', ['error' => $e->getMessage()])]);
         }
-        AuditLog::create(['action' => 'posting.resolved', 'subject_type' => $log->subject_type, 'subject_id' => $log->subject_id, 'user_id' => auth('tenant')->id(), 'meta' => ['failure' => $log->id, 'found' => $ok]]);
+        AuditLog::create(['action' => 'posting.resolved', 'subject_type' => $log->subject_type, 'subject_id' => $log->subject_id, 'user_id' => auth('admin')->id(), 'meta' => ['failure' => $log->id, 'found' => $ok]]);
 
         return back()->with('status', __('erp_acc.retried'));
     }

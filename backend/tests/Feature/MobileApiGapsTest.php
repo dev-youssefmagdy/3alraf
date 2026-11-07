@@ -1,7 +1,7 @@
 <?php
 
 // Mobile API gap closure (docs/mobile-app/PLAN.md section 2): blog, tag/brand/category pages, stock requests, launch, ambassador, invoice/proof,
-// store info, tenant directory, account deletion, devices, app-config.
+// store info, legacy store list, account deletion, devices, app-config.
 
 use App\Models\Affiliate;
 use App\Models\BlogPost;
@@ -18,8 +18,6 @@ use App\Models\ShippingCompany;
 use App\Models\SmallBatchTest;
 use App\Models\StockRequest;
 use App\Models\Tag;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Enums\StockMovementType as T;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthFeatures;
@@ -34,12 +32,8 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
     Storage::fake('media');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->api = 'http://egy.3alraf.test/api/v1';
-    $this->hdr = 'http://3alraf.test/api/v1';
-    $this->sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
+    codUpfront(false);
+    $this->api = '/api/v1';
     $this->customer = Customer::where('email', 'customer@egy.test')->first();
     $this->auth = fn () => ['Authorization' => 'Bearer '.$this->customer->createToken('t', ['customer'])->plainTextToken];
     $this->cat = Category::create(['name' => ['ar' => 'أجهزة', 'en' => 'Devices'], 'description' => ['ar' => 'وصف', 'en' => 'Desc'], 'slug' => 'devices', 'path' => 'x', 'depth' => 0, 'is_active' => true]);
@@ -53,7 +47,7 @@ beforeEach(function () {
     $this->mk = function (string $slug, Brand $brand) use ($branch) {
         $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'brand_id' => $brand->id]);
         $p->categories()->attach($this->cat->id);
-        TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+        listProduct($p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
         app(StockLedger::class)->record($branch->id, $p->id, 0, T::PURCHASE_IN, 50, '60.00');
 
         return $p;
@@ -62,9 +56,8 @@ beforeEach(function () {
     $this->p2 = ($this->mk)('lgx', $this->lg);
     $this->p1->tags()->attach($this->tag->id);
     $this->growthOn = function () {
-        app(GrowthAccess::class)->set($this->tenant, true);
-        app(GrowthFeatures::class)->enableAll($this->tenant);
-        app()->instance('currentTenant', $this->tenant->refresh());
+        app(GrowthAccess::class)->set(true);
+        app(GrowthFeatures::class)->enableAll();
     };
 });
 
@@ -75,19 +68,17 @@ function ok($r)
 
 // ------------------------------------------------------------------ blog
 
-it('serves published blog posts only, per tenant, paginated, with content on the detail', function () {
+it('serves published blog posts only, paginated, with content on the detail', function () {
     BlogPost::create(['slug' => 'hello', 'title' => ['ar' => 'مرحبا', 'en' => 'Hello'], 'excerpt' => ['en' => 'ex'], 'content' => ['ar' => '<p>نص</p>', 'en' => '<p>Body</p>'], 'is_active' => true, 'published_at' => now()->subDay()]);
     BlogPost::create(['slug' => 'draft', 'title' => ['en' => 'Draft'], 'content' => ['en' => 'x'], 'is_active' => false]);
     BlogPost::create(['slug' => 'future', 'title' => ['en' => 'Future'], 'content' => ['en' => 'x'], 'is_active' => true, 'published_at' => now()->addDay()]);
-    BlogPost::create(['tenant_id' => $this->sa->id, 'slug' => 'ksa-only', 'title' => ['en' => 'KSA'], 'content' => ['en' => 'x'], 'is_active' => true, 'published_at' => now()->subDay()]);
 
     $r = ok($this->getJson("{$this->api}/blog", ['Accept-Language' => 'en']))->assertJsonCount(1, 'data')->assertJsonPath('data.0.slug', 'hello')->assertJsonPath('data.0.title', 'Hello')->assertJsonPath('meta.pagination.total', 1);
     expect($r->json('data.0'))->not->toHaveKey('content');
     ok($this->getJson("{$this->api}/blog/hello", ['Accept-Language' => 'en']))->assertJsonPath('data.content', '<p>Body</p>');
     $this->getJson("{$this->api}/blog/draft")->assertNotFound()->assertJsonPath('message', 'Not found.');   // no model class names in the message
     $this->getJson("{$this->api}/blog/future")->assertNotFound();
-    $this->getJson("{$this->api}/blog/ksa-only")->assertNotFound();   // other tenant's post
-    ok($this->getJson("{$this->hdr}/blog", ['X-Tenant' => 'egy']))->assertJsonCount(1, 'data');
+    ok($this->getJson("{$this->api}/blog", ['X-Tenant' => 'egy']))->assertJsonCount(1, 'data');   // X-Tenant of old builds is ignored
 });
 
 // ------------------------------------------------------------------ catalog meta + filters
@@ -131,7 +122,7 @@ it('stores a back-in-stock request, de-duplicates it and validates', function ()
 
 // ------------------------------------------------------------------ small-batch launch
 
-it('serves the small-batch launch page behind its feature flag, per tenant, and signs up', function () {
+it('serves the small-batch launch page behind its feature flag and signs up', function () {
     $mkTest = fn (array $o = []) => SmallBatchTest::create($o + ['code' => 'abcd1234', 'name' => 'Test', 'mode' => 'interest', 'description' => 'd', 'status' => 'running', 'preorder' => false]);
     $mkTest();
     $this->getJson("{$this->api}/launch/abcd1234")->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
@@ -141,8 +132,6 @@ it('serves the small-batch launch page behind its feature flag, per tenant, and 
     $this->getJson("{$this->api}/launch/zzzzzzzz")->assertNotFound();
     $mkTest(['code' => 'draft123', 'status' => 'draft']);
     $this->getJson("{$this->api}/launch/draft123")->assertNotFound();
-    $mkTest(['code' => 'ksa12345', 'tenant_id' => $this->sa->id]);
-    $this->getJson("{$this->api}/launch/ksa12345")->assertNotFound();   // tenant isolation
 
     $this->postJson("{$this->api}/launch/abcd1234", [])->assertStatus(422)->assertJsonStructure(['errors' => ['contact', 'consent']]);
     ok($this->postJson("{$this->api}/launch/abcd1234", ['contact' => '01000000555', 'consent' => true]))->assertCreated()->assertJsonPath('data.created', true);
@@ -167,7 +156,7 @@ it('lets an approved affiliate join the ambassador program, create links and rea
     ok($this->postJson("{$this->api}/affiliate/ambassador/join", ['disclosure' => 'Paid partner', 'terms_accepted' => true], $h))->assertCreated()->assertJsonPath('data.status', 'active');
 
     $l = ok($this->postJson("{$this->api}/affiliate/ambassador/links", ['product_id' => $this->p1->id, 'channel' => 'instagram'], $h))->assertCreated()->assertJsonPath('data.channel', 'instagram');
-    expect($l->json('data.url'))->toContain('egy.3alraf.test/l/');
+    expect($l->json('data.url'))->toContain(config('app.url').'/l/');
     $this->postJson("{$this->api}/affiliate/ambassador/links", ['product_id' => 999999, 'channel' => 'instagram'], $h)->assertStatus(422);
     $s = ok($this->getJson("{$this->api}/affiliate/ambassador", $h))->assertJsonPath('data.enrolled', true)->assertJsonCount(1, 'data.links');
     expect($s->json('data.report'))->toHaveKeys(['valid_orders', 'pending_orders', 'window_days'])->not->toHaveKey('margin_after_rewards')->not->toHaveKey('commission_cost');
@@ -183,7 +172,7 @@ it('streams the order invoice PDF and the uploaded proof by public token', funct
     $r = $this->get("{$this->api}/orders/$token/invoice")->assertOk();
     expect($r->headers->get('Content-Type'))->toContain('application/pdf')->and($r->headers->get('Content-Disposition'))->toContain('attachment');
     $this->get("{$this->api}/orders/nope/invoice")->assertNotFound();
-    $this->get("http://sa.3alraf.test/api/v1/orders/$token/invoice")->assertNotFound();   // other tenant cannot read it
+    $this->get("http://sa.3alraf.loc/api/v1/orders/$token/invoice")->assertOk();   // legacy host: api/* served directly, same store
 
     $this->getJson("{$this->api}/orders/$token/proof")->assertNotFound();   // nothing uploaded yet
     $order = Order::where('public_token', $token)->first();
@@ -193,14 +182,14 @@ it('streams the order invoice PDF and the uploaded proof by public token', funct
     expect($p->headers->get('Cache-Control'))->toContain('no-store');
 });
 
-// ------------------------------------------------------------------ store info + tenant directory + app config
+// ------------------------------------------------------------------ store info + legacy store list + app config
 
 it('returns branding, contact, social, footer pages and app links in the store payload', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], [
+    settings([
         'seo' => ['org_phone' => '+20 100 000 0000', 'org_email' => 'hi@egy.test', 'social' => ['instagram' => 'https://instagram.com/x']],
         'app_links' => ['ios' => 'https://apps.apple.com/x', 'android' => ''],
         'branding' => ['colors' => ['primary' => '#112233', 'accent' => 'javascript:evil']],
-    ])]);
+    ]);
     Cache::flush();
     $d = ok($this->getJson("{$this->api}/store"))->assertJsonPath('data.slug', 'egy')->assertJsonPath('data.colors.primary', '#112233')->assertJsonPath('data.colors.accent', '#D7B987')
         ->assertJsonPath('data.contact.whatsapp', '201000000000')->assertJsonPath('data.contact.email', 'hi@egy.test')->assertJsonPath('data.social.instagram', 'https://instagram.com/x')
@@ -208,19 +197,19 @@ it('returns branding, contact, social, footer pages and app links in the store p
     expect($d['logo_url'])->toContain('logo.png')->and($d['footer'])->toHaveKeys(['pages', 'has_blog', 'payment_methods'])->and($d['footer']['pages'])->not->toBeEmpty()->and($d['colors'])->toHaveKey('danger');
 });
 
-it('lists active tenants with flag, languages and logo and serves app-config', function () {
-    $e = collect($this->getJson('http://3alraf.test/api/v1/tenants')->assertOk()->assertJsonPath('success', true)->json('data'))->firstWhere('slug', 'egy');
+it('lists the store on the legacy /tenants alias with flag, languages and logo and serves app-config', function () {
+    $e = collect($this->getJson('/api/v1/tenants')->assertOk()->assertJsonPath('success', true)->json('data'))->firstWhere('slug', 'egy');
     expect($e['flag'])->not->toBe('')->and($e['languages'])->toBeArray()->not->toBeEmpty()->and($e['logo_url'])->toContain('logo.png');
 
     config(['mobile.min_version' => '1.2.0', 'mobile.latest_version' => '1.4.0', 'mobile.store_urls.android' => 'https://play.google.com/x']);
-    $c = $this->getJson('http://3alraf.test/api/v1/app-config?version=1.1.0')->assertOk()->assertJsonPath('success', true)->assertJsonPath('data.min_version', '1.2.0')
+    $c = $this->getJson('/api/v1/app-config?version=1.1.0')->assertOk()->assertJsonPath('success', true)->assertJsonPath('data.min_version', '1.2.0')
         ->assertJsonPath('data.store_urls.android', 'https://play.google.com/x')->assertJsonPath('data.store_urls.ios', null)->assertJsonPath('data.maintenance', false)->assertJsonPath('data.maintenance_message', null)
         ->assertJsonPath('data.update_required', true)->assertJsonPath('data.update_available', true);
-    $this->getJson('http://3alraf.test/api/v1/app-config?version=1.4.0')->assertJsonPath('data.update_required', false)->assertJsonPath('data.update_available', false);
-    $this->getJson('http://3alraf.test/api/v1/app-config')->assertJsonPath('data.update_required', null);
+    $this->getJson('/api/v1/app-config?version=1.4.0')->assertJsonPath('data.update_required', false)->assertJsonPath('data.update_available', false);
+    $this->getJson('/api/v1/app-config')->assertJsonPath('data.update_required', null);
     config(['mobile.maintenance' => true]);
-    $this->getJson('http://3alraf.test/api/v1/app-config', ['Accept-Language' => 'en'])->assertJsonPath('data.maintenance', true)->assertJsonPath('data.maintenance_message', config('mobile.maintenance_message.en'));
-    $this->getJson('http://3alraf.test/api/v1/app-config', ['Accept-Language' => 'ar'])->assertJsonPath('data.maintenance_message', config('mobile.maintenance_message.ar'));
+    $this->getJson('/api/v1/app-config', ['Accept-Language' => 'en'])->assertJsonPath('data.maintenance', true)->assertJsonPath('data.maintenance_message', config('mobile.maintenance_message.en'));
+    $this->getJson('/api/v1/app-config', ['Accept-Language' => 'ar'])->assertJsonPath('data.maintenance_message', config('mobile.maintenance_message.ar'));
 });
 
 // ------------------------------------------------------------------ account deletion + change password
@@ -263,22 +252,21 @@ it('changes the password in-app through PUT auth/me and revokes other sessions',
 
 // ------------------------------------------------------------------ devices
 
-it('registers and removes push tokens per tenant', function () {
+it('registers and removes push tokens (one row per token, whatever host or X-Tenant)', function () {
     $tok = str_repeat('f', 60);
     $this->postJson("{$this->api}/devices", [])->assertStatus(422)->assertJsonStructure(['errors' => ['token', 'platform']]);
     $this->postJson("{$this->api}/devices", ['token' => $tok, 'platform' => 'windows'])->assertStatus(422);
     ok($this->postJson("{$this->api}/devices", ['token' => $tok, 'platform' => 'ios', 'locale' => 'ar', 'app_version' => '1.0.0']))->assertCreated()->assertJsonPath('data.bound_to_customer', false);
     ok($this->postJson("{$this->api}/devices", ['token' => $tok, 'platform' => 'ios'], ($this->auth)()))->assertCreated()->assertJsonPath('data.bound_to_customer', true);   // upsert, not a duplicate
     $d = Device::sole();
-    expect($d->customer_id)->toBe($this->customer->id)->and($d->tenant_id)->toBe($this->tenant->id);
-    $this->postJson("{$this->api}/devices", ['token' => $tok, 'platform' => 'ios'], ['X-Tenant' => 'sa'])->assertCreated();   // subdomain host wins; same tenant
+    expect($d->customer_id)->toBe($this->customer->id);
+    $this->postJson("{$this->api}/devices", ['token' => $tok, 'platform' => 'ios'], ['X-Tenant' => 'sa'])->assertCreated();   // X-Tenant ignored: same row
     expect(Device::count())->toBe(1);
-    // the same token registered in another store is a separate row and cannot be removed through this store
-    $this->postJson('http://sa.3alraf.test/api/v1/devices', ['token' => $tok, 'platform' => 'ios'])->assertCreated();
-    expect(Device::withoutGlobalScopes()->count())->toBe(2);
+    $this->postJson('http://sa.3alraf.loc/api/v1/devices', ['token' => $tok, 'platform' => 'ios'])->assertCreated();   // legacy host: same store, same row
+    expect(Device::query()->count())->toBe(1);
     $this->deleteJson("{$this->api}/devices", [])->assertStatus(422);
     ok($this->deleteJson("{$this->api}/devices", ['token' => $tok]));
-    expect(Device::withoutGlobalScopes()->count())->toBe(1)->and(Device::withoutGlobalScopes()->first()->tenant_id)->toBe($this->sa->id);
+    expect(Device::query()->count())->toBe(0);
     ok($this->deleteJson("{$this->api}/devices", ['token' => $tok]));   // idempotent
     expect(app(\App\Services\Push\PushDispatcher::class))->toBeInstanceOf(\App\Services\Push\LogPushDispatcher::class);
 });

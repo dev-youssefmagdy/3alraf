@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 class BundleAbRequest extends BaseRequest
 {
     public function rules(): array
     {
         return [
-            'bundle_id' => ['required', 'integer', 'exists:bundles,id,tenant_id,'.current_tenant()->id],
+            'bundle_id' => ['required', 'integer', 'exists:bundles,id'],
             'name' => ['nullable', 'array'], 'name.*' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'array'], 'description.*' => ['nullable', 'string', 'max:500'],
             'image' => ['nullable', 'image', 'max:2048'],

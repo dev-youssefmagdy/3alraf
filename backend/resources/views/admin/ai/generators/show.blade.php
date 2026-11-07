@@ -1,4 +1,4 @@
-<x-layouts.admin guard="tenant" :title="__('ai.gen.title')">
+<x-layouts.admin :title="__('ai.gen.title')">
     @php
         $s = fn ($k, $a = []) => __('ai.gen.'.$k, $a);
         $inp = 'block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-50';
@@ -9,17 +9,17 @@
         $dis = $open ? '' : 'disabled';
         $img = collect($g['media'])->firstWhere('state', 'ready');
         $target = $g['target_type'] && $g['target_id'] ? match ($kind) {
-            'banner' => route('tenant.banners.edit', $g['target_id']), 'flash_sale' => route('tenant.flash-sales.edit', $g['target_id']),
-            'discount_code' => route('tenant.discount-codes.edit', $g['target_id']), 'bundle' => route('tenant.bundles.edit', $g['target_id']),
-            'static_page' => route('tenant.static-pages.edit', $g['target_id']), 'custom_page' => route('tenant.custom-pages.edit', $g['target_id']), 'blog_post' => route('tenant.blog-posts.edit', $g['target_id']), 'content_package' => route('tenant.growth.content.index'), default => null } : null;
+            'banner' => route('admin.banners.edit', $g['target_id']), 'flash_sale' => route('admin.flash-sales.edit', $g['target_id']),
+            'discount_code' => route('admin.discount-codes.edit', $g['target_id']), 'bundle' => route('admin.bundles.edit', $g['target_id']),
+            'static_page' => route('admin.static-pages.edit', $g['target_id']), 'custom_page' => route('admin.custom-pages.edit', $g['target_id']), 'blog_post' => route('admin.blog-posts.edit', $g['target_id']), 'content_package' => route('admin.growth.content.index'), default => null } : null;
         $isContent = in_array($kind, ['static_page', 'custom_page', 'blog_post'], true);
         $isPkg = $kind === 'content_package';
         $pk = fn ($k) => __('growth_hub.content.package.'.$k);
         $listKeys = ['hooks', 'reel_scripts', 'tiktok_scripts', 'stories', 'ad_copy', 'ctas', 'bundle_ideas', 'photo_briefs'];
     @endphp
-    <div id="gv" class="space-y-4" data-id="{{ $g['id'] }}" data-base="{{ route('tenant.ai.generators.show', $g['id']) }}" data-pending="{{ $g['pending'] ? 1 : 0 }}" data-open="{{ $open ? 1 : 0 }}">
+    <div id="gv" class="space-y-4" data-id="{{ $g['id'] }}" data-base="{{ route('admin.ai.generators.show', $g['id']) }}" data-pending="{{ $g['pending'] ? 1 : 0 }}" data-open="{{ $open ? 1 : 0 }}">
         <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ route('tenant.ai.generators.index') }}" class="text-sm text-brand-700">&larr; {{ $s('back') }}</a>
+            <a href="{{ route('admin.ai.generators.index') }}" class="text-sm text-brand-700">&larr; {{ $s('back') }}</a>
             <h2 class="text-lg font-semibold text-slate-800">#{{ $g['id'] }} {{ $kind ? $s('kinds.'.$kind) : '' }}</h2>
             <span class="badge {{ $g['status'] === 'approved' ? 'badge-success' : ($g['status'] === 'draft' && ! $g['expired'] ? 'badge-warning' : 'badge-muted') }}">{{ $g['expired'] ? $s('expired_badge') : $g['status_label'] }}</span>
             @if ($target)<a href="{{ $target }}" class="ms-auto text-sm text-brand-700 underline">{{ $s('open_target') }}</a>@endif
@@ -55,7 +55,7 @@
             @endif
             @if ($kind === 'bundle')
                 <div class="grid gap-3 sm:grid-cols-2">@foreach ($locales as $l)<label class="{{ $lbl }}">{{ $s('description') }} ({{ strtoupper($l) }})<textarea data-k="description.{{ $l }}" rows="2" maxlength="1000" {{ $dis }} class="{{ $inp }}">{{ $d['description'][$l] ?? '' }}</textarea></label>@endforeach</div>
-                <label class="{{ $lbl }} max-w-xs">{{ $s('price') }} ({{ current_tenant()->currency_code }})<input type="number" step="0.01" data-k="price" value="{{ $d['price'] ?? '' }}" {{ $dis }} class="{{ $inp }}"></label>
+                <label class="{{ $lbl }} max-w-xs">{{ $s('price') }} ({{ setting('currency_code') }})<input type="number" step="0.01" data-k="price" value="{{ $d['price'] ?? '' }}" {{ $dis }} class="{{ $inp }}"></label>
             @endif
 
             @if ($kind === 'discount_code')

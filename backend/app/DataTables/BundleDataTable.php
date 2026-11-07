@@ -31,7 +31,7 @@ class BundleDataTable extends BaseDataTable
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('period', fn (Bundle $m) => ($m->starts_at || $m->ends_at) ? ($m->starts_at?->format('Y-m-d H:i') ?? '…').' → '.($m->ends_at?->format('Y-m-d H:i') ?? '…') : '—')
             ->addColumn('status', fn (Bundle $m) => $m->isLive() ? $this->badge(true, __('orders.flash.running')) : $this->badge(false, null, $m->is_active ? __('orders.flash.scheduled') : __('admin.inactive')))
-            ->addColumn('actions', fn (Bundle $m) => $this->tenantActions($m, 'tenant.bundles', 'bundles'));
+            ->addColumn('actions', fn (Bundle $m) => $this->rowActions($m, 'admin.bundles', 'bundles'));
     }
 
     protected function rawColumns(): array

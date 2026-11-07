@@ -1,5 +1,7 @@
 # Growth N11: open-items analysis and plan (contract for prompts/33-growth-n11-open-items.md)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 ## Analysis (verified against code/DB/tests)
 
 ### A. Demo seeder failure (blocks demos)

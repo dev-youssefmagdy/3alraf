@@ -29,7 +29,7 @@ class GrowthApprovalDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $can = (bool) auth('tenant')->user()?->can('growth.approve');
+        $can = (bool) auth('admin')->user()?->can('growth.approve');
         $cls = ['pending' => 'badge-warning', 'approved' => 'badge-success', 'rejected' => 'badge-muted', 'expired' => 'badge-muted'];
         $dt->addColumn('details', fn (GrowthApproval $a) => '<code class="text-xs">'.e(\Illuminate\Support\Str::limit(json_encode($a->payload, JSON_UNESCAPED_UNICODE), 140)).'</code>'.($a->reason ? '<div class="text-xs text-slate-500">'.e($a->reason).'</div>' : ''))
             ->editColumn('title', fn (GrowthApproval $a) => e($a->title))
@@ -37,8 +37,8 @@ class GrowthApprovalDataTable extends BaseDataTable
             ->addColumn('status_label', fn (GrowthApproval $a) => '<span class="badge '.($cls[$a->status] ?? 'badge-muted').'">'.e(__('growth_hub.approvals.statuses.'.$a->status)).'</span>')
             ->editColumn('created_at', fn (GrowthApproval $a) => $a->created_at?->format('Y-m-d H:i'))
             ->addColumn('actions', fn (GrowthApproval $a) => $can && $a->isPending()
-                ? '<div class="flex gap-2"><button type="button" class="btn-sm btn-primary" data-gpost="'.e(route('tenant.growth.approvals.approve', $a->id)).'" data-confirm="'.e(__('growth_hub.approvals.approve_confirm')).'">'.e(__('growth_hub.approvals.approve')).'</button>'
-                    .'<button type="button" class="btn-sm btn-danger" data-gpost="'.e(route('tenant.growth.approvals.reject', $a->id)).'" data-reason="1">'.e(__('growth_hub.approvals.reject')).'</button></div>' : '');
+                ? '<div class="flex gap-2"><button type="button" class="btn-sm btn-primary" data-gpost="'.e(route('admin.growth.approvals.approve', $a->id)).'" data-confirm="'.e(__('growth_hub.approvals.approve_confirm')).'">'.e(__('growth_hub.approvals.approve')).'</button>'
+                    .'<button type="button" class="btn-sm btn-danger" data-gpost="'.e(route('admin.growth.approvals.reject', $a->id)).'" data-reason="1">'.e(__('growth_hub.approvals.reject')).'</button></div>' : '');
     }
 
     protected function rawColumns(): array

@@ -18,9 +18,7 @@ use App\Models\MissedOpportunity;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\BarcodeService;
 use App\Services\Growth\AdCapService;
 use App\Services\Growth\AmbassadorService;
@@ -49,27 +47,16 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(GrowthFeatures::class)->enableAll($this->tenant);
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
-    $this->owner = fn () => TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->off = function (string ...$keys) {
-        $t = current_tenant();
-        $s = $t->settings;
-        foreach ($keys as $key) {
-            $s['growth']['features'][$key] = false;
-        }
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->base = '';
+    $this->owner = fn () => Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
     $this->product = function (string $slug = 'serum', string $price = '100.00', int $stock = 50, $cost = 50) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, 50);
-        TenantProduct::where('product_id', $pr->id)->update(['cost' => $cost]);
+        Product::whereKey($pr->id)->update(['cost' => $cost]);
 
         return $pr;
     };
@@ -100,7 +87,7 @@ function n9Call($test, string $method, string $path, ?array $body, array $c, arr
         $server['HTTP_'.strtoupper(str_replace('-', '_', $k))] = $v;
     }
 
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
+    return $test->call($method, '/api/integration/v1/'.$path, [], [], [], $server, $raw);
 }
 
 // 1 ------------------------------------------------------------------------------------------------------------------------------------------
@@ -116,8 +103,7 @@ it('refuses to approve an item whose module switch is OFF and keeps it pending (
         expect($e->errors())->toHaveKey('feature_disabled');
     }
     expect($a->fresh()->status)->toBe(GrowthApproval::PENDING);
-    app(GrowthFeatures::class)->enableAll($this->tenant->refresh());
-    app()->instance('currentTenant', $this->tenant->refresh());
+    app(GrowthFeatures::class)->enableAll();
     expect($svc->approve($a->id, ($this->owner)()->id)->status)->toBe(GrowthApproval::APPROVED);
 });
 
@@ -211,7 +197,7 @@ it('keeps every growth admin page and API list endpoint at a bounded query count
     $urls = [];
     foreach (app('router')->getRoutes()->getRoutes() as $r) {
         $name = (string) $r->getName();
-        if (str_starts_with($name, 'tenant.growth.') && in_array('GET', $r->methods(), true) && ! str_contains($r->uri(), '{') && ! str_contains($name, 'settings')) {
+        if (str_starts_with($name, 'admin.growth.') && in_array('GET', $r->methods(), true) && ! str_contains($r->uri(), '{') && ! str_contains($name, 'settings')) {
             $urls[] = $this->base.'/'.$r->uri();
         }
     }
@@ -222,7 +208,7 @@ it('keeps every growth admin page and API list endpoint at a bounded query count
             $q = 0;
             DB::flushQueryLog();
             DB::enableQueryLog();
-            $this->actingAs($admin, 'tenant')->get($u, ['HTTP_ACCEPT' => str_contains($u, 'datatable') ? 'application/json' : 'text/html']);
+            $this->actingAs($admin, 'admin')->get($u, ['HTTP_ACCEPT' => str_contains($u, 'datatable') ? 'application/json' : 'text/html']);
             $log = DB::getQueryLog();
             $out[$u] = count($log);
             $sig[$u] = collect($log)->map(fn ($l) => preg_replace('/\d+/', '?', substr($l['query'], 0, 90)))->countBy()->sortDesc()->take(3)->all();
@@ -255,7 +241,7 @@ it('keeps every growth admin page and API list endpoint at a bounded query count
 
 it('uses logical (RTL-safe) utilities in every growth view and renders dir=rtl in Arabic', function () {
     $bad = [];
-    $files = array_merge(glob(resource_path('views/tenant/growth/*.php')), glob(resource_path('views/storefront/{gift-finder,small-batch}.blade.php'), GLOB_BRACE));
+    $files = array_merge(glob(resource_path('views/admin/growth/*.php')), glob(resource_path('views/storefront/{gift-finder,small-batch}.blade.php'), GLOB_BRACE));
     foreach ($files as $f) {
         foreach (preg_split('/\R/', file_get_contents($f)) as $i => $line) {
             if (preg_match('/\b(ml|mr|pl|pr)-(\d|px|auto)|\btext-(left|right)\b|(?<![\w:-])(left|right)-\d|\brounded-(l|r)(-|\b)|\bborder-(l|r)\b|\bfloat-(left|right)\b/', $line, $m)) {
@@ -266,7 +252,7 @@ it('uses logical (RTL-safe) utilities in every growth view and renders dir=rtl i
     expect($bad)->toBe([]);
     $admin = ($this->owner)();
     foreach (['brief', 'approvals', 'interactions', 'missed', 'gift-finder', 'bundles', 'lab', 'ambassadors', 'inventory'] as $page) {
-        $res = $this->actingAs($admin, 'tenant')->withSession(['admin_locale' => 'ar'])->get($this->base.'/admin/growth/'.$page);
+        $res = $this->actingAs($admin, 'admin')->withSession(['admin_locale' => 'ar'])->get($this->base.'/admin/growth/'.$page);
         $res->assertOk();
         expect($res->getContent())->toContain('dir="rtl"');
     }
@@ -323,18 +309,18 @@ it('pages the interactions and missed lists server-side (Yajra), gated by their 
     }
     $admin = ($this->owner)();
     $q = ['draw' => 1, 'start' => 100, 'length' => 25, 'columns' => [['data' => 'text_masked', 'name' => 'text_masked', 'searchable' => 'true', 'orderable' => 'false']]];
-    $r = $this->actingAs($admin, 'tenant')->getJson($this->base.'/admin/growth/interactions/datatable?'.http_build_query($q))->assertOk();
+    $r = $this->actingAs($admin, 'admin')->getJson($this->base.'/admin/growth/interactions/datatable?'.http_build_query($q))->assertOk();
     expect($r->json('recordsTotal'))->toBe(130)->and(count($r->json('data')))->toBe(25); // beyond the old 100-row cap
-    $s = $this->actingAs($admin, 'tenant')->getJson($this->base.'/admin/growth/interactions/datatable?'.http_build_query($q + ['search' => ['value' => 'msg 129']]))->assertOk();
+    $s = $this->actingAs($admin, 'admin')->getJson($this->base.'/admin/growth/interactions/datatable?'.http_build_query($q + ['search' => ['value' => 'msg 129']]))->assertOk();
     expect($s->json('recordsFiltered'))->toBe(1);
-    $this->actingAs($admin, 'tenant')->getJson($this->base.'/admin/growth/missed/datatable?draw=1&start=0&length=10')->assertOk();
+    $this->actingAs($admin, 'admin')->getJson($this->base.'/admin/growth/missed/datatable?draw=1&start=0&length=10')->assertOk();
     ($this->off)('interactions', 'missed_opportunities');
-    $this->actingAs($admin, 'tenant')->getJson($this->base.'/admin/growth/interactions/datatable')->assertStatus(403);
-    $this->actingAs($admin, 'tenant')->getJson($this->base.'/admin/growth/missed/datatable')->assertStatus(403);
+    $this->actingAs($admin, 'admin')->getJson($this->base.'/admin/growth/interactions/datatable')->assertStatus(403);
+    $this->actingAs($admin, 'admin')->getJson($this->base.'/admin/growth/missed/datatable')->assertStatus(403);
 });
 
 // 11 -----------------------------------------------------------------------------------------------------------------------------------------
-it('alerts once per day when ad spend exceeds the daily cap and lets the tenant override lab thresholds', function () {
+it('alerts once per day when ad spend exceeds the daily cap and lets the owner override lab thresholds', function () {
     $p = ($this->product)();
     $lab = app(ExperimentLabService::class);
     $e = $lab->create(['name' => 'T', 'product_id' => $p->id, 'hypothesis' => 'h', 'audience' => 'a', 'angle' => 'Simple routine', 'budget_cap' => 5000], null);
@@ -348,12 +334,11 @@ it('alerts once per day when ad spend exceeds the daily cap and lets the tenant 
     expect($this->owner->__invoke()->notifications()->where('data->kind', 'ad_cap_exceeded')->count())->toBe(1);
     $brief = app(BriefService::class)->daily(Carbon::parse($day));
     expect(collect($brief['recommendations'])->pluck('kind'))->toContain('ad_cap_exceeded');
-    // per-tenant lab thresholds
+    // lab threshold overrides
     expect($lab->cfg('min_days'))->toBe(7.0);
-    app(GrowthConfig::class)->update($this->tenant, ['lab_min_days' => 3, 'lab_min_orders' => 2]);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    app(GrowthConfig::class)->update(['lab_min_days' => 3, 'lab_min_orders' => 2]);
     expect($lab->cfg('min_days'))->toBe(3.0)->and($lab->cfg('min_orders'))->toBe(2.0)->and($lab->cfg('min_clicks'))->toBe(100.0);
-    expect(fn () => app(GrowthConfig::class)->update($this->tenant, ['lab_min_days' => 500]))->toThrow(ValidationException::class);
+    expect(fn () => app(GrowthConfig::class)->update(['lab_min_days' => 500]))->toThrow(ValidationException::class);
     // OFF: no alert is raised from the lab import (lab itself is gated; the service no-ops without breach data)
     expect(app(AdCapService::class)->breach(now()->subDays(5)->toDateString()))->toBeNull();
 });
@@ -379,11 +364,3 @@ it('lets the owner cancel an unshipped order with a reason code (web + API) only
     expect($o2->fresh()->status->value)->toBe('pending');
 });
 
-it('prunes interactions in a different tenant untouched by customer erasure (tenant scope)', function () {
-    $c = Customer::create(['name' => 'T', 'email' => 't@example.com', 'phone' => '01077778888', 'password' => 'password123']);
-    app(InteractionService::class)->ingest(['channel' => 'email', 'external_id' => 'ts1', 'text' => 'hi', 'contact' => 't@example.com']);
-    $other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    Interaction::withoutGlobalScopes()->create(['tenant_id' => $other->id, 'channel' => 'email', 'external_id' => 'ts2', 'text_masked' => 'x', 'text_hash' => 'h', 'status' => 'new', 'received_at' => now(), 'customer_id' => $c->id]);
-    app(GrowthRetentionService::class)->eraseCustomer($this->tenant, $c);
-    expect(Interaction::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->count())->toBe(0)->and(Interaction::withoutGlobalScopes()->where('tenant_id', $other->id)->count())->toBe(1);
-});

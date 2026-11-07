@@ -7,10 +7,6 @@ return [
         'proof_uploaded' => 'تم رفع إثبات دفع للطلب :number',
         'payment_received' => 'تم استلام دفع إلكتروني للطلب :number (:total)',
         'return_requested' => 'طلب مرتجع :return للطلب :number',
-        'tenant_created' => 'تم إنشاء متجر جديد: :name',
-        'tenant_status' => 'المتجر :name تم :state',
-        'tenant_active' => 'تفعيله',
-        'tenant_inactive' => 'إيقافه',
     ],
     'admin_mail' => ['greeting' => 'مرحباً :name،', 'view' => 'افتح في لوحة التحكم', 'customer' => 'العميل', 'total' => 'الإجمالي', 'payment' => 'الدفع'],
     'customer' => [

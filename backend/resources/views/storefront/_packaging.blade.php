@@ -19,7 +19,7 @@
                     <span class="flex min-w-0 flex-1 flex-col gap-1">
                         <span class="text-sm font-bold leading-snug text-slate-900">{{ $o->name }}</span>
                         @if ($o->description)<span class="line-clamp-2 text-xs leading-relaxed text-slate-500">{{ $o->description }}</span>@endif
-                        <span class="mt-1"><bdi dir="ltr" class="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">+ {{ \App\Support\Money::format((string) $o->price, current_tenant()->currency_code) }}</bdi></span>
+                        <span class="mt-1"><bdi dir="ltr" class="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">+ {{ \App\Support\Money::format((string) $o->price, setting('currency_code')) }}</bdi></span>
                     </span>
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-transparent transition peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white" aria-hidden="true">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>

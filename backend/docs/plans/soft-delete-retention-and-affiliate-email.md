@@ -1,5 +1,7 @@
 # Plan — 60-day soft-delete purge + unique affiliate e-mail
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 ## 1. Automatic purge of soft-deleted records after 2 months
 - Config `config/retention.php`: `soft_delete_days` (env `SOFT_DELETE_RETENTION_DAYS`, default 60) and the list of purgeable models.
 - Inventory every model using SoftDeletes (brands, categories, products, variants, cities, branches, suppliers, shipping companies, payment methods, orders, customers, discount codes, tenants, …). For each, decide the purge rule by inspecting FKs:

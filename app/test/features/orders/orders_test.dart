@@ -5,8 +5,6 @@ import 'package:app/features/orders/application/orders_controller.dart';
 import 'package:app/features/orders/application/payment_poller.dart';
 import 'package:app/features/orders/data/order_models.dart';
 import 'package:app/features/orders/presentation/payment_page.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -106,11 +104,9 @@ void main() {
       },
     );
     final c = await env.container();
-    await env.secrets.write('auth_token:egy', '12|secret');
+    await env.secrets.write('auth_token', '12|secret');
     c.listen(ordersControllerProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick(150);
     var s = c.read(ordersControllerProvider);
     expect(s.orders.length, 1);
@@ -195,11 +191,9 @@ void main() {
       },
     );
     final c = await env.container();
-    await env.secrets.write('auth_token:egy', '12|secret');
+    await env.secrets.write('auth_token', '12|secret');
     c.listen(addressesProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick(150);
     expect(c.read(addressesProvider).items.single.isDefault, isTrue);
 

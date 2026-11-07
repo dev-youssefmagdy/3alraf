@@ -3,16 +3,16 @@
 namespace App\Services\Growth\GiftFinder;
 
 use App\Models\Category;
-use App\Models\TenantProduct;
+use App\Models\Product;
 
 /** Rule-based first pass of the Gift Finder tags. It never overwrites a product a human already tagged; the owner reviews and edits in the admin. */
 class GiftTagSuggester
 {
     /** @return array{gift_suitable:bool,gift_recipients:array,gift_occasions:array} */
-    public function suggest(TenantProduct $tp): array
+    public function suggest(Product $tp): array
     {
         $cfg = config('gift_finder.suggest');
-        $p = $tp->product;
+        $p = $tp;
         $name = implode(' ', $p->getTranslations('name'));
         if (collect($p->getTranslations('name'))->contains(fn ($n) => preg_match($cfg['skip_name_pattern'], trim((string) $n)))) {   // each language on its own: the pattern is anchored
             return ['gift_suitable' => false, 'gift_recipients' => [], 'gift_occasions' => []];
@@ -39,8 +39,8 @@ class GiftTagSuggester
     public function applyToUntagged(): int
     {
         $n = 0;
-        TenantProduct::with('product.categories')->where('gift_suitable', false)->get()->each(function (TenantProduct $tp) use (&$n) {
-            if ($tp->gift_recipients || $tp->gift_occasions || ! $tp->product) {
+        Product::with('categories')->whereNotNull('price')->where('gift_suitable', false)->get()->each(function (Product $tp) use (&$n) {
+            if ($tp->gift_recipients || $tp->gift_occasions) {
                 return;
             }
             $tags = $this->suggest($tp);

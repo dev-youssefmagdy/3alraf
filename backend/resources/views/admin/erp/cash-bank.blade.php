@@ -1,5 +1,5 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.cash_bank')[0]">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.cards.cash_bank')[0]">
+    @include('admin.erp._flash')
     @php $n = fn ($v) => number_format((float) $v, 2); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; $tok = fn () => \Illuminate\Support\Str::uuid(); @endphp
     <x-card :title="__('erp_acc.cb.balances')" class="mb-5">
         <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -13,7 +13,7 @@
     <div class="grid gap-4 lg:grid-cols-3">
         @foreach (['vat', 'carrier', 'payout'] as $kind)
         <x-card :title="__('erp_acc.cb.'.$kind)">
-            <form method="POST" action="{{ route('tenant.erp.cash-bank.'.$kind) }}" class="grid gap-3">@csrf<input type="hidden" name="ref" value="{{ $tok() }}">
+            <form method="POST" action="{{ route('admin.erp.cash-bank.'.$kind) }}" class="grid gap-3">@csrf<input type="hidden" name="ref" value="{{ $tok() }}">
                 @if ($kind === 'payout')
                     <label class="text-sm">{{ __('erp_acc.cb.source') }}<select name="source" class="{{ $in }}">@foreach (\App\Services\Erp\Cash\SettlementService::PAYOUT_SOURCES as $s)<option value="{{ $s }}">{{ __('erp_acc.roles.'.$s) }}</option>@endforeach</select></label>
                 @endif

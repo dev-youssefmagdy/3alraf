@@ -34,7 +34,7 @@ class ProductService
         return DB::transaction(function () use ($product, $dto) {
             $product = $this->products->update($product, $this->payload($dto, $product));
             $product = $this->finish($product, $dto);
-            $this->qr->queueCatalogProduct($product->id); // slug / variants / status may have changed: refresh every tenant's codes
+            $this->qr->queueCatalogProduct($product->id); // slug / variants / status / price may have changed: refresh the QR codes
 
             return $product;
         });
@@ -75,6 +75,13 @@ class ProductService
             'barcode' => $barcode,
             'weight' => $dto->weight,
             'is_active' => $dto->isActive,
+            'price' => $dto->price,
+            'sale_price' => $dto->price === null ? null : $dto->salePrice,
+            'cost' => $dto->cost ?? $product?->cost ?? '0', // products.cost is NOT NULL (default 0): a blank field keeps the current cost
+            'min_stock_alert_qty' => $dto->minStockAlert,
+            'gift_suitable' => $dto->giftSuitable,
+            'gift_recipients' => $dto->giftRecipients ?: null,
+            'gift_occasions' => $dto->giftOccasions ?: null,
         ];
     }
 

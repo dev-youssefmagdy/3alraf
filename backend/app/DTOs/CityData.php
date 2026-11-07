@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\CityRequest;
+use App\Http\Requests\Admin\CityRequest;
 
 final readonly class CityData
 {

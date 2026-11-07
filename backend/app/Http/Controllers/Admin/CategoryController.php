@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\CategoryData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\CategoryRequest;
+use App\Http\Requests\Admin\CategoryRequest;
 use App\Models\Category;
 use App\Models\Language;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
@@ -31,38 +31,38 @@ class CategoryController extends Controller implements HasMiddleware
     /** Tree UI (depth-first list with indentation, collapsible by CSS/JS). */
     public function index()
     {
-        return view('central.categories.index', ['tree' => $this->categories->flatTree()]);
+        return view('admin.categories.index', ['tree' => $this->categories->flatTree()]);
     }
 
     public function create(Request $request)
     {
-        return view('central.categories.form', $this->formData(new Category(['is_active' => true, 'sort_order' => 0, 'parent_id' => $request->integer('parent') ?: null])));
+        return view('admin.categories.form', $this->formData(new Category(['is_active' => true, 'sort_order' => 0, 'parent_id' => $request->integer('parent') ?: null])));
     }
 
     public function store(CategoryRequest $request): JsonResponse
     {
         $this->service->create(CategoryData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.categories.index'));
+        return $this->ok(__('admin.saved'), route('admin.categories.index'));
     }
 
     public function edit(Category $category)
     {
-        return view('central.categories.form', $this->formData($category));
+        return view('admin.categories.form', $this->formData($category));
     }
 
     public function update(CategoryRequest $request, Category $category): JsonResponse
     {
         $this->service->update($category, CategoryData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.categories.index'));
+        return $this->ok(__('admin.saved'), route('admin.categories.index'));
     }
 
     public function destroy(Category $category): JsonResponse
     {
         $this->service->delete($category);
 
-        return $this->ok(__('admin.deleted'), route('central.categories.index'));
+        return $this->ok(__('admin.deleted'), route('admin.categories.index'));
     }
 
     public function validateForm(CategoryRequest $request, ?Category $category = null): JsonResponse

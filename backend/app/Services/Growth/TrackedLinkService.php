@@ -4,7 +4,6 @@ namespace App\Services\Growth;
 
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\TenantProduct;
 use App\Models\TrackedLink;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +13,7 @@ class TrackedLinkService
 {
     public function create(int $productId, ?string $channel, ?int $interactionId, ?string $campaign): TrackedLink
     {
-        if (! TenantProduct::where('product_id', $productId)->where('is_active', true)->exists()) {
+        if (! Product::whereKey($productId)->where('is_active', true)->exists()) {
             throw ValidationException::withMessages(['product_id' => __('growth_hub.links.bad_product')]);
         }
         do {
@@ -44,7 +43,7 @@ class TrackedLinkService
             $q['utm_medium'] = 'paid';
         }
 
-        return route('storefront.product.show', ['locale' => current_tenant()->default_locale, 'slug' => $slug]).'?'.http_build_query($q);
+        return route('storefront.product.show', ['locale' => setting('default_locale'), 'slug' => $slug]).'?'.http_build_query($q);
     }
 
     public function click(TrackedLink $l, ?string $ua): void

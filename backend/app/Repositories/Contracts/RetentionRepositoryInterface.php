@@ -6,13 +6,13 @@ use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 
-/** Cross-tenant, scope-free reads/deletes used only by the soft-delete retention job. */
+/** Scope-free reads/deletes used only by the soft-delete retention job. */
 interface RetentionRepositoryInterface
 {
-    /** Chunked walk over soft-deleted rows of $modelClass with deleted_at < $cutoff (all tenants). */
+    /** Chunked walk over soft-deleted rows of $modelClass with deleted_at < $cutoff. */
     public function eachExpired(string $modelClass, CarbonInterface $cutoff, int $chunk, Closure $callback): void;
 
-    /** True when any row of $table has $column = $id (raw table: includes soft-deleted rows and every tenant). */
+    /** True when any row of $table has $column = $id (raw table: includes soft-deleted rows). */
     public function referenced(string $table, string $column, int $id): bool;
 
     /** @param  array<int,array{0:string,1:string}>  $refs  [table, column] pairs */

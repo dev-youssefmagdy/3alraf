@@ -34,10 +34,10 @@ class PaymentMethodDataTable extends BaseDataTable
             ->addColumn('fee', fn (PaymentMethod $m) => e(rtrim(rtrim((string) $m->fee_percent, '0'), '.').'% + '.$this->money($m->fee_fixed).' ('.$m->fee_bearer->label().')'))
             ->addColumn('status', fn (PaymentMethod $m) => $this->badge($m->is_active))
             ->addColumn('actions', function (PaymentMethod $m) {
-                $u = auth('tenant')->user();
+                $u = auth('admin')->user();
                 $toggle = $u?->can('payment_methods.edit')
-                    ? '<button type="button" class="btn-sm btn-secondary" data-post-action="'.e(route('tenant.payment-methods.toggle', $m->id)).'">'.e($m->is_active ? __('ops.deactivate') : __('ops.activate')).'</button>' : '';
-                $actions = $this->tenantActions($m, 'tenant.payment-methods', 'payment_methods');
+                    ? '<button type="button" class="btn-sm btn-secondary" data-post-action="'.e(route('admin.payment-methods.toggle', $m->id)).'">'.e($m->is_active ? __('ops.deactivate') : __('ops.activate')).'</button>' : '';
+                $actions = $this->rowActions($m, 'admin.payment-methods', 'payment_methods');
                 if ($m->type === \App\Enums\PaymentMethodType::COD) { // default COD can be deactivated, never deleted
                     $actions = preg_replace('/<button[^>]*data-delete[^>]*>.*?<\/button>/', '', $actions);
                 }

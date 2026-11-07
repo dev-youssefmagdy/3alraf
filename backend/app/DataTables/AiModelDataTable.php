@@ -35,13 +35,13 @@ class AiModelDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('central')->user();
+        $u = auth('admin')->user();
         $dt->editColumn('label', fn (AiModel $m) => e($m->label))->editColumn('model_id', fn (AiModel $m) => e($m->model_id))
             ->addColumn('provider_name', fn (AiModel $m) => e($m->provider?->name))
             ->addColumn('kind_label', fn (AiModel $m) => e($m->kind->label()))
             ->addColumn('default', fn (AiModel $m) => $m->is_default ? '<span class="badge badge-success">'.e(__('ai.fields.is_default')).'</span>' : '')
             ->addColumn('status', fn (AiModel $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (AiModel $m) => $this->actionButtons(route('central.ai.models.edit', $m), route('central.ai.models.destroy', $m), (bool) $u?->can('ai_models.edit'), (bool) $u?->can('ai_models.delete')));
+            ->addColumn('actions', fn (AiModel $m) => $this->actionButtons(route('admin.ai.models.edit', $m), route('admin.ai.models.destroy', $m), (bool) $u?->can('ai_models.edit'), (bool) $u?->can('ai_models.delete')));
     }
 
     protected function rawColumns(): array

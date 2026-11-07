@@ -36,7 +36,7 @@ return [
     ],
 
     // "Continue with Google": ONE platform-level OAuth client; empty client id = feature off (button hidden, routes 404).
-    // Redirect URI registered once in Google: https://{APP_CENTRAL_DOMAIN}/auth/google/callback (see docs/PROGRESS.md).
+    // Redirect URI registered once in Google: {APP_URL}/auth/google/callback.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

@@ -28,7 +28,6 @@ jobs:
       DB_DATABASE: 3alraf_test
       DB_USERNAME: root
       DB_PASSWORD: root
-      APP_CENTRAL_DOMAIN: 3alraf.test
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2

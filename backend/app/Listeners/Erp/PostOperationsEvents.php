@@ -35,43 +35,43 @@ class PostOperationsEvents
 
     public function onPurchaseReceived(PurchaseReceived $e): void
     {
-        $this->guard->run($e->purchase->tenant_id, 'purchase_order', $e->purchase->id, 'purchase.received', fn () => $this->purchases->received($e->purchase));
+        $this->guard->run('purchase_order', $e->purchase->id, 'purchase.received', fn () => $this->purchases->received($e->purchase));
     }
 
     public function onPurchaseCancelled(PurchaseCancelled $e): void
     {
-        $this->guard->run($e->purchase->tenant_id, 'purchase_order', $e->purchase->id, 'purchase.cancelled', fn () => $this->purchases->cancelled($e->purchase));
+        $this->guard->run('purchase_order', $e->purchase->id, 'purchase.cancelled', fn () => $this->purchases->cancelled($e->purchase));
     }
 
     public function onStockAdjusted(StockAdjusted $e): void
     {
-        $this->guard->run($e->adjustment->tenant_id, 'stock_adjustment', $e->adjustment->id, 'stock.adjusted', fn () => $this->stock->adjusted($e->adjustment));
+        $this->guard->run('stock_adjustment', $e->adjustment->id, 'stock.adjusted', fn () => $this->stock->adjusted($e->adjustment));
     }
 
     public function onTransferMoved(StockTransferMoved $e): void
     {
         $t = $e->transfer;
-        $this->guard->run($t->tenant_id, 'stock_transfer', $t->id, 'transfer.'.$e->stage, fn () => $e->stage === 'sent' ? $this->stock->transferSent($t) : $this->stock->transferReceived($t));
+        $this->guard->run('stock_transfer', $t->id, 'transfer.'.$e->stage, fn () => $e->stage === 'sent' ? $this->stock->transferSent($t) : $this->stock->transferReceived($t));
     }
 
     public function onExpenseSaved(ExpenseSaved $e): void
     {
-        $this->guard->run($e->expense->tenant_id, 'expense', $e->expense->id, 'expense.saved', fn () => $this->expenses->sync($e->expense));
+        $this->guard->run('expense', $e->expense->id, 'expense.saved', fn () => $this->expenses->sync($e->expense));
     }
 
     public function onExpenseDeleted(ExpenseDeleted $e): void
     {
-        $this->guard->run($e->expense->tenant_id, 'expense', $e->expense->id, 'expense.deleted', fn () => $this->expenses->deleted($e->expense));
+        $this->guard->run('expense', $e->expense->id, 'expense.deleted', fn () => $this->expenses->deleted($e->expense));
     }
 
     public function onAffiliatePayoutPaid(\App\Events\Erp\AffiliatePayoutPaid $e): void
     {
         $p = $e->payout;
-        $this->guard->run($p->tenant_id, 'affiliate_payout', $p->id, 'affiliate.payout_paid', fn () => $this->affiliates->payoutPaid($p));
+        $this->guard->run('affiliate_payout', $p->id, 'affiliate.payout_paid', fn () => $this->affiliates->payoutPaid($p));
     }
 
     public function onAmbassadorRewardsPaid(\App\Events\Erp\AmbassadorRewardsPaid $e): void
     {
-        $this->guard->run($e->tenantId, 'ambassador_rewards', $e->affiliateId, 'ambassador.rewards_paid', fn () => $this->affiliates->rewardsPaid($e->affiliateId, $e->amount, $e->ref, $e->paidFrom));
+        $this->guard->run('ambassador_rewards', $e->affiliateId, 'ambassador.rewards_paid', fn () => $this->affiliates->rewardsPaid($e->affiliateId, $e->amount, $e->ref, $e->paidFrom));
     }
 }

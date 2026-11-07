@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\Format;
 
-/** Stores uploads on the `media` (CDN) disk as AVIF (profile-sized, <= the profile byte limit) + 400px AVIF thumbnail, plus a WebP fallback sibling for browsers without AVIF. Names = content hash + random suffix (unique per upload => immutable for CDN caching and never shared between two owners, so deleting one owner's file cannot break another), namespaced tenants/{id}/ or catalog/. All encoding lives in Images\ImageOptimizer. */
+/** Stores uploads on the `media` (CDN) disk as AVIF (profile-sized, <= the profile byte limit) + 400px AVIF thumbnail, plus a WebP fallback sibling for browsers without AVIF. Names = content hash + random suffix (unique per upload => immutable for CDN caching and never shared between two owners, so deleting one owner's file cannot break another), namespaced catalog/ (files uploaded before the single-store conversion keep their stored paths). All encoding lives in Images\ImageOptimizer. */
 class ImageUploadService
 {
     public function __construct(private ?ImageOptimizer $optimizer = null)
@@ -27,12 +27,10 @@ class ImageUploadService
         return Storage::disk(config('media.disk'));
     }
 
-    /** Tenant uploads live under tenants/{id}/, central (no tenant) ones under catalog/. */
+    /** Every new upload lives under catalog/. */
     private function namespace(): string
     {
-        $t = current_tenant();
-
-        return $t ? "tenants/{$t->id}/" : 'catalog/';
+        return 'catalog/';
     }
 
     /**

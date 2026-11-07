@@ -4,7 +4,7 @@
     $pinnedIds = old('product_ids', $pinned);
 @endphp
 <x-resource-form :route="$route" :editing="$editing" :model="$model" width="max-w-5xl">
-    <x-input name="slug" :label="__('admin.fields.slug_short')" :value="$model->slug" :hint="__('growth.custom_slug_hint', ['url' => tenant_url(current_tenant(), '/…')])" required />
+    <x-input name="slug" :label="__('admin.fields.slug_short')" :value="$model->slug" :hint="__('growth.custom_slug_hint', ['url' => url('/…')])" required />
     <x-translatable-tabs name="title" :label="__('growth.fields.title')" :languages="$languages" :values="$model->getTranslations('title')" />
     <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$model->is_active" />
 

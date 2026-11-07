@@ -32,7 +32,7 @@ class AffiliateCommissionService
         return Money::max('0', $sales);
     }
 
-    /** Highest tier with min_sales <= sales (per tenant). */
+    /** Highest tier with min_sales <= sales. */
     public function tierFor(string $sales): ?AffiliateTier
     {
         return AffiliateTier::query()->whereRaw('min_sales <= ?', [$sales])->orderByDesc('min_sales')->first();
@@ -91,7 +91,7 @@ class AffiliateCommissionService
 
     public function returnWindowDays(): int
     {
-        return (int) (current_tenant()?->settings['affiliate_return_window_days'] ?? self::DEFAULT_RETURN_WINDOW_DAYS);
+        return (int) setting('affiliate_return_window_days', self::DEFAULT_RETURN_WINDOW_DAYS);
     }
 
     /** Pending -> approved once the order is delivered and the return window elapsed. Returns number approved. */

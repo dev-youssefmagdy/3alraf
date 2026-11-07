@@ -8,6 +8,7 @@
 - Not converted: QR codes (`*/qr/*.png`, must stay crisp), SVG (not an accepted upload type), private-disk files (payment proofs, receipts), external URLs.
 - Views use `<x-media-img>` (`<picture>` AVIF + WebP fallback, explicit width/height, first/LCP image eager+`fetchpriority=high`, rest lazy). The CDN vhost already sends `Cache-Control: public, max-age=31536000, immutable` (file names are unique per upload).
 - `MediaPaths::family()`: avif/webp × main/thumb live and die together (`media:prune-orphans`, soft-delete purge, replace/delete).
+- Paths (single store, 2026-11): new uploads go under `catalog/{dir}/…` and QR codes under `qr/…` (no per-store prefix). Files uploaded before the conversion keep their stored `tenants/{n}/…` paths; they stay valid, `ImageOptimizer::profileForPath()` strips that legacy prefix and `media:prune-orphans` still scans the legacy root.
 
 ## Server requirements
 PHP GD built with libavif (`php -r 'var_dump(gd_info()["AVIF Support"]);'` → true). Debian/Ubuntu: PHP ≥ 8.1 packages ship it; else install `libavif-dev` and rebuild GD (`--with-avif`). Queue workers/php-fpm must be the same PHP build and **the web/worker user must be able to write `storage/app/media`** (run the command as that user: `sudo -u www-data php artisan …`).

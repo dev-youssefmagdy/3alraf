@@ -20,18 +20,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Outgoing chat pipeline for ONE owner (tenant id, null = central). Every method takes the owner from the authenticated
- * panel; the Node session id is always WhatsappSession::idFor($owner). Message content is never logged.
+ * Outgoing chat pipeline of the shop's single WhatsApp session (Node session id = WhatsappSession::id()). Message content is never logged.
  * OTP traffic does not pass through here (it keeps using WhatsappService::sendText).
  */
 class ChatSendService
 {
     public function __construct(private NodeClient $node, private WhatsappService $wa) {}
 
-    /** @throws WhatsappUnavailable when the owner's session is not usable */
-    public function assertConnected(?int $tenantId): WhatsappSession
+    /** @throws WhatsappUnavailable when the session is not usable */
+    public function assertConnected(): WhatsappSession
     {
-        $s = $this->wa->session($tenantId);
+        $s = $this->wa->session();
         if (! $s->is_enabled || ! $s->isConnected()) {
             throw new WhatsappUnavailable('WhatsApp is not connected');
         }
@@ -40,13 +39,12 @@ class ChatSendService
     }
 
     /** Find or create the 1:1 conversation for an E.164 digit string (no network call: Node validates the number on first send). */
-    public function conversationForPhone(?int $tenantId, string $digits): WhatsappConversation
+    public function conversationForPhone(string $digits): WhatsappConversation
     {
         $jid = $digits.'@s.whatsapp.net';
-        $conv = WhatsappConversation::ownedBy($tenantId)->where(fn ($q) => $q->where('jid', $jid)->orWhere('phone', $digits))->first();
+        $conv = WhatsappConversation::query()->where(fn ($q) => $q->where('jid', $jid)->orWhere('phone', $digits))->first();
         if (! $conv) {
             $conv = new WhatsappConversation(['jid' => $jid, 'phone' => $digits, 'unread_count' => 0]);
-            $conv->tenant_id = $tenantId;
             $conv->save();
         }
 
@@ -57,11 +55,11 @@ class ChatSendService
      * Create the pending row, broadcast it, and queue the send.
      * $d: type, text?, caption?, location?{lat,lng,name?,address?}, contacts?[{name,phone}], poll?{name,options[],selectable_count?}, reply_to_id?
      */
-    public function queue(?int $tenantId, WhatsappConversation $conv, array $d, ?UploadedFile $file, string $guard, int $adminId): WhatsappMessage
+    public function queue(WhatsappConversation $conv, array $d, ?UploadedFile $file, string $guard, int $adminId): WhatsappMessage
     {
         $type = $d['type'];
-        $reply = ! empty($d['reply_to_id']) ? WhatsappMessage::ownedBy($tenantId)->where('conversation_id', $conv->id)->find($d['reply_to_id']) : null;
-        $media = $file ? $this->storeUpload($tenantId, $file, $type) : null;
+        $reply = ! empty($d['reply_to_id']) ? WhatsappMessage::query()->where('conversation_id', $conv->id)->find($d['reply_to_id']) : null;
+        $media = $file ? $this->storeUpload($file, $type) : null;
 
         $body = $caption = $payload = null;
         match (true) {
@@ -72,31 +70,30 @@ class ChatSendService
             $type === 'poll' => [$body, $payload] = [$d['poll']['name'], ['options' => array_values($d['poll']['options']), 'selectable_count' => (int) ($d['poll']['selectable_count'] ?? 1)]],
         };
 
-        $msg = DB::transaction(function () use ($tenantId, $conv, $type, $body, $caption, $payload, $reply, $media, $guard, $adminId) {
+        $msg = DB::transaction(function () use ($conv, $type, $body, $caption, $payload, $reply, $media, $guard, $adminId) {
             $msg = new WhatsappMessage([
                 'conversation_id' => $conv->id, 'direction' => 'out', 'type' => $type, 'body' => $body, 'caption' => $caption, 'payload' => $payload,
                 'reply_to_id' => $reply?->id, 'media_id' => $media?->id, 'status' => 'pending', 'sent_by_admin_id' => $adminId, 'sent_by_guard' => $guard, 'wa_timestamp' => now(),
             ]);
-            $msg->tenant_id = $tenantId;
             $msg->save();
-            $fresh = WhatsappConversation::ownedBy($tenantId)->lockForUpdate()->find($conv->id);
+            $fresh = WhatsappConversation::query()->lockForUpdate()->find($conv->id);
             $fresh->fill(['last_message_id' => $msg->id, 'last_message_at' => now(), 'last_message_preview' => $this->preview($msg)])->save();
 
             return $msg;
         });
 
-        ChatMessageReceived::dispatch($tenantId, $msg->load('media')->toChat(), $msg->conversation()->first()->toChat());
-        SendWhatsappMessage::dispatch($tenantId, $msg->id);
+        ChatMessageReceived::dispatch($msg->load('media')->toChat(), $msg->conversation()->first()->toChat());
+        SendWhatsappMessage::dispatch($msg->id);
 
         return $msg;
     }
 
     /** Failed -> pending again, same row (no duplicate bubble). */
-    public function resend(?int $tenantId, WhatsappMessage $msg): WhatsappMessage
+    public function resend(WhatsappMessage $msg): WhatsappMessage
     {
         $msg->forceFill(['status' => 'pending', 'error' => null, 'created_at' => now()])->save();
-        ChatMessageUpdated::dispatch($tenantId, $msg->load('media')->toChat());
-        SendWhatsappMessage::dispatch($tenantId, $msg->id);
+        ChatMessageUpdated::dispatch($msg->load('media')->toChat());
+        SendWhatsappMessage::dispatch($msg->id);
 
         return $msg;
     }
@@ -105,37 +102,37 @@ class ChatSendService
      * Queue worker entry: send one pending row. Never throws for Node/validation problems (the row becomes `failed`),
      * and never sends twice (only a pending row without a wa id is eligible).
      */
-    public function deliver(?int $tenantId, int $messageId): void
+    public function deliver(int $messageId): void
     {
-        $msg = WhatsappMessage::ownedBy($tenantId)->with(['conversation', 'media', 'replyTo'])->find($messageId);
+        $msg = WhatsappMessage::query()->with(['conversation', 'media', 'replyTo'])->find($messageId);
         if (! $msg || $msg->direction !== 'out' || $msg->status !== 'pending' || $msg->wa_message_id) {
             return;
         }
-        $sid = WhatsappSession::idFor($tenantId);
+        $sid = WhatsappSession::id();
         try {
-            $this->assertConnected($tenantId);
-            $resp = $this->node->sendTyped($sid, $this->payload($tenantId, $msg, $sid));
+            $this->assertConnected();
+            $resp = $this->node->sendTyped($sid, $this->payload($msg, $sid));
         } catch (WhatsappUnavailable $e) {
-            $this->fail($tenantId, $msg, $e->getMessage());
+            $this->fail($msg, $e->getMessage());
 
             return;
         } catch (\Throwable $e) {
-            $this->fail($tenantId, $msg, 'send_failed');
+            $this->fail($msg, 'send_failed');
             report($e);
 
             return;
         }
-        $this->finalize($tenantId, $msg, $resp);
+        $this->finalize($msg, $resp);
     }
 
-    public function fail(?int $tenantId, WhatsappMessage $msg, string $reason): void
+    public function fail(WhatsappMessage $msg, string $reason): void
     {
         $msg->refresh();
         if ($msg->status !== 'pending') {
             return; // echo/receipt already proved it left
         }
         $msg->forceFill(['status' => 'failed', 'error' => mb_substr($reason, 0, 190)])->save();
-        ChatMessageUpdated::dispatch($tenantId, $msg->load('media')->toChat());
+        ChatMessageUpdated::dispatch($msg->load('media')->toChat());
     }
 
     /**
@@ -143,19 +140,19 @@ class ChatSendService
      * keep the (possibly further advanced) status; if an echo row was inserted with this id first (no matching pending row),
      * it is merged into ours so the thread never shows the message twice.
      */
-    private function finalize(?int $tenantId, WhatsappMessage $msg, array $resp): void
+    private function finalize(WhatsappMessage $msg, array $resp): void
     {
         $waId = is_string($resp['message_id'] ?? null) && $resp['message_id'] !== '' ? mb_substr($resp['message_id'], 0, 100) : null;
-        DB::transaction(function () use ($tenantId, $msg, $waId, $resp) {
-            $row = WhatsappMessage::ownedBy($tenantId)->lockForUpdate()->find($msg->id);
+        DB::transaction(function () use ($msg, $waId, $resp) {
+            $row = WhatsappMessage::query()->lockForUpdate()->find($msg->id);
             if (! $row) {
                 return;
             }
             if ($waId && ! $row->wa_message_id) {
-                $dup = WhatsappMessage::ownedBy($tenantId)->where('wa_message_id', $waId)->where('id', '!=', $row->id)->first();
+                $dup = WhatsappMessage::query()->where('wa_message_id', $waId)->where('id', '!=', $row->id)->first();
                 if ($dup) {
-                    WhatsappConversation::ownedBy($tenantId)->where('last_message_id', $dup->id)->update(['last_message_id' => $row->id]);
-                    WhatsappMessage::ownedBy($tenantId)->where('reply_to_id', $dup->id)->update(['reply_to_id' => $row->id]);
+                    WhatsappConversation::query()->where('last_message_id', $dup->id)->update(['last_message_id' => $row->id]);
+                    WhatsappMessage::query()->where('reply_to_id', $dup->id)->update(['reply_to_id' => $row->id]);
                     WhatsappReaction::where('message_id', $dup->id)->update(['message_id' => $row->id]);
                     $dup->delete();
                 }
@@ -169,38 +166,38 @@ class ChatSendService
                 $row->wa_timestamp = Carbon::createFromTimestamp((int) $resp['timestamp']);
             }
             $row->save();
-            $this->adoptJid($tenantId, $row->conversation_id, $resp['to_jid'] ?? null);
+            $this->adoptJid($row->conversation_id, $resp['to_jid'] ?? null);
         });
-        ChatMessageUpdated::dispatch($tenantId, $msg->fresh()->load('media')->toChat());
+        ChatMessageUpdated::dispatch($msg->fresh()->load('media')->toChat());
     }
 
     /** A new-chat-by-phone conversation starts with a provisional jid; Node tells us the real one (may be @lid). */
-    private function adoptJid(?int $tenantId, int $convId, mixed $jid): void
+    private function adoptJid(int $convId, mixed $jid): void
     {
         if (! is_string($jid) || ! preg_match('/^[0-9A-Za-z._:-]{1,64}@(s\.whatsapp\.net|lid)$/', $jid)) {
             return;
         }
-        $conv = WhatsappConversation::ownedBy($tenantId)->lockForUpdate()->find($convId);
+        $conv = WhatsappConversation::query()->lockForUpdate()->find($convId);
         if (! $conv || $conv->jid === $jid) {
             return;
         }
-        $existing = WhatsappConversation::ownedBy($tenantId)->where('jid', $jid)->where('id', '!=', $conv->id)->first();
+        $existing = WhatsappConversation::query()->where('jid', $jid)->where('id', '!=', $conv->id)->first();
         if (! $existing) {
             $conv->update(['jid' => $jid]);
 
             return;
         }
-        WhatsappMessage::ownedBy($tenantId)->where('conversation_id', $conv->id)->update(['conversation_id' => $existing->id]);
+        WhatsappMessage::query()->where('conversation_id', $conv->id)->update(['conversation_id' => $existing->id]);
         $existing->fill(['last_message_id' => $conv->last_message_id, 'last_message_at' => $conv->last_message_at, 'last_message_preview' => $conv->last_message_preview])->save();
         $conv->delete();
-        ChatConversationUpdated::dispatch($tenantId, $existing->toChat());
+        ChatConversationUpdated::dispatch($existing->toChat());
     }
 
     /** Typed Node payload. `to` is the phone (Node does the onWhatsApp lookup) until the conversation has a confirmed message, then the jid. */
-    private function payload(?int $tenantId, WhatsappMessage $msg, string $sid): array
+    private function payload(WhatsappMessage $msg, string $sid): array
     {
         $conv = $msg->conversation;
-        $confirmed = WhatsappMessage::ownedBy($tenantId)->where('conversation_id', $conv->id)->whereNotNull('wa_message_id')->exists();
+        $confirmed = WhatsappMessage::query()->where('conversation_id', $conv->id)->whereNotNull('wa_message_id')->exists();
         $p = ['to' => (! $confirmed && $conv->phone && str_ends_with($conv->jid, '@s.whatsapp.net')) ? $conv->phone : $conv->jid, 'type' => $msg->type];
 
         switch ($msg->type) {
@@ -238,58 +235,58 @@ class ChatSendService
     }
 
     /** Send an emoji reaction (empty = remove). Synchronous: tiny payload. @throws WhatsappUnavailable */
-    public function react(?int $tenantId, WhatsappMessage $target, string $emoji): void
+    public function react(WhatsappMessage $target, string $emoji): void
     {
-        $this->assertConnected($tenantId);
-        $this->node->sendTyped(WhatsappSession::idFor($tenantId), [
+        $this->assertConnected();
+        $this->node->sendTyped(WhatsappSession::id(), [
             'to' => $target->conversation()->value('jid'), 'type' => 'reaction',
             'reaction' => ['message_id' => $target->wa_message_id, 'from_me' => $target->direction === 'out', 'emoji' => $emoji],
         ]);
         $emoji === ''
             ? WhatsappReaction::where(['message_id' => $target->id, 'reactor_jid' => 'me'])->delete()
             : WhatsappReaction::updateOrCreate(['message_id' => $target->id, 'reactor_jid' => 'me'], ['emoji' => $emoji]);
-        ChatMessageUpdated::dispatch($tenantId, $target->load('media')->toChat());
+        ChatMessageUpdated::dispatch($target->load('media')->toChat());
     }
 
     /** Edit one of our text messages. @throws WhatsappUnavailable */
-    public function edit(?int $tenantId, WhatsappMessage $msg, string $text): void
+    public function edit(WhatsappMessage $msg, string $text): void
     {
-        $this->assertConnected($tenantId);
-        $this->node->sendTyped(WhatsappSession::idFor($tenantId), [
+        $this->assertConnected();
+        $this->node->sendTyped(WhatsappSession::id(), [
             'to' => $msg->conversation()->value('jid'), 'type' => 'edit', 'edit' => ['message_id' => $msg->wa_message_id, 'text' => $text],
         ]);
         $msg->forceFill(['body' => $text, 'edited_at' => now()])->save();
-        $this->refreshPreview($tenantId, $msg);
-        ChatMessageUpdated::dispatch($tenantId, $msg->load('media')->toChat());
+        $this->refreshPreview($msg);
+        ChatMessageUpdated::dispatch($msg->load('media')->toChat());
     }
 
     /** Delete for everyone; the row stays as a tombstone, like inbound revokes. @throws WhatsappUnavailable */
-    public function revoke(?int $tenantId, WhatsappMessage $msg): void
+    public function revoke(WhatsappMessage $msg): void
     {
-        $this->assertConnected($tenantId);
-        $this->node->sendTyped(WhatsappSession::idFor($tenantId), [
+        $this->assertConnected();
+        $this->node->sendTyped(WhatsappSession::id(), [
             'to' => $msg->conversation()->value('jid'), 'type' => 'delete', 'delete' => ['message_id' => $msg->wa_message_id, 'from_me' => $msg->direction === 'out'],
         ]);
         $msg->forceFill(['deleted_at' => now(), 'body' => null, 'caption' => null, 'payload' => null])->save();
-        $this->refreshPreview($tenantId, $msg);
-        ChatMessageUpdated::dispatch($tenantId, $msg->load('media')->toChat());
+        $this->refreshPreview($msg);
+        ChatMessageUpdated::dispatch($msg->load('media')->toChat());
     }
 
     /** Reset unread and tell Node to send read receipts for the latest incoming messages (Node failure is non-fatal). @return bool whether Node was told */
-    public function markRead(?int $tenantId, WhatsappConversation $conv): bool
+    public function markRead(WhatsappConversation $conv): bool
     {
-        $keys = WhatsappMessage::ownedBy($tenantId)->where('conversation_id', $conv->id)->where('direction', 'in')->whereNotNull('wa_message_id')
+        $keys = WhatsappMessage::query()->where('conversation_id', $conv->id)->where('direction', 'in')->whereNotNull('wa_message_id')
             ->orderByDesc('id')->limit(max(1, min(50, $conv->unread_count ?: 1)))->pluck('wa_message_id')->map(fn ($id) => ['id' => $id])->all();
         $hadUnread = $conv->unread_count > 0;
         $conv->update(['unread_count' => 0]);
         if ($hadUnread) {
-            ChatConversationUpdated::dispatch($tenantId, $conv->toChat());
+            ChatConversationUpdated::dispatch($conv->toChat());
         }
         if (! $keys || ! $hadUnread) {
             return false;
         }
         try {
-            $this->node->markRead(WhatsappSession::idFor($tenantId), $conv->jid, $keys);
+            $this->node->markRead(WhatsappSession::id(), $conv->jid, $keys);
 
             return true;
         } catch (WhatsappUnavailable) {
@@ -297,12 +294,12 @@ class ChatSendService
         }
     }
 
-    private function refreshPreview(?int $tenantId, WhatsappMessage $msg): void
+    private function refreshPreview(WhatsappMessage $msg): void
     {
-        $conv = WhatsappConversation::ownedBy($tenantId)->where('last_message_id', $msg->id)->first();
+        $conv = WhatsappConversation::query()->where('last_message_id', $msg->id)->first();
         if ($conv) {
             $conv->update(['last_message_preview' => $this->preview($msg)]);
-            ChatConversationUpdated::dispatch($tenantId, $conv->toChat());
+            ChatConversationUpdated::dispatch($conv->toChat());
         }
     }
 
@@ -314,18 +311,17 @@ class ChatSendService
     }
 
     /** Sniffed MIME + size already validated by the request; store on the private disk under a random name. */
-    private function storeUpload(?int $tenantId, UploadedFile $file, string $type): WhatsappMedia
+    private function storeUpload(UploadedFile $file, string $type): WhatsappMedia
     {
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) ?: 'application/octet-stream';
         $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'video/mp4' => 'mp4', 'audio/ogg' => 'ogg', 'audio/mpeg' => 'mp3', 'audio/mp4' => 'm4a', 'application/pdf' => 'pdf'][$mime] ?? 'bin';
         $disk = config('whatsapp_chat.disk');
-        $path = MediaPaths::dir((int) $tenantId).'/out-'.bin2hex(random_bytes(16)).'.'.$ext;
+        $path = MediaPaths::dir().'/out-'.bin2hex(random_bytes(16)).'.'.$ext;
         Storage::disk($disk)->put($path, file_get_contents($file->getRealPath()));
         $name = preg_replace('/[\x00-\x1F\x7F\\\\\/]+/u', '_', basename(str_replace('\\', '/', (string) $file->getClientOriginalName())));
         $name = mb_substr($name !== '' && $name !== '.' && $name !== '..' ? $name : 'file.'.$ext, 0, 200);
 
         $media = new WhatsappMedia(['disk' => $disk, 'path' => $path, 'mime' => $mime, 'size' => $file->getSize(), 'original_name' => $name, 'sha256' => hash_file('sha256', $file->getRealPath()), 'status' => 'ready']);
-        $media->tenant_id = $tenantId;
         $media->save();
 
         return $media;

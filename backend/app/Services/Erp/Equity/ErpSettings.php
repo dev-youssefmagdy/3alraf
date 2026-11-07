@@ -4,11 +4,11 @@ namespace App\Services\Erp\Equity;
 
 use App\Models\Erp\ErpSetting;
 
-/** Per-tenant ERP policy settings (erp_settings key/value json). Defaults are the safest values. */
+/** ERP policy settings (erp_settings key/value json). Defaults are the safest values. */
 class ErpSettings
 {
     public const DEFAULTS = [
-        'auto_posting_enabled' => true,                    // listeners post only when true (false for tenants that pre-date the ERP until backfilled/enabled)
+        'auto_posting_enabled' => true,                    // listeners post only when true (false for a shop that pre-dates the ERP until backfilled/enabled)
         'opening_date' => null,                            // set by erp:backfill: documents confirmed before it live in the opening balances
         'reserve_percent' => '0',                          // % of distributable profit (after prior losses) moved to the reserves account
         'distribution_min_cash_buffer' => '0',             // cash that must stay in the business after distributions
@@ -23,18 +23,11 @@ class ErpSettings
         'journal_requires_second_poster' => false,         // maker-checker: a manual journal draft must be posted by another user
     ];
 
-    private array $cache = [];
-
-    private function tenantKey(): int
-    {
-        return current_tenant()?->id ?? 0;
-    }
+    private ?array $cache = null;
 
     public function all(): array
     {
-        $t = $this->tenantKey();
-
-        return $this->cache[$t] ??= array_merge(self::DEFAULTS, ErpSetting::pluck('value', 'key')->all());
+        return $this->cache ??= array_merge(self::DEFAULTS, ErpSetting::pluck('value', 'key')->all());
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -68,6 +61,6 @@ class ErpSettings
             return;
         }
         ErpSetting::updateOrCreate(['key' => $key], ['value' => $value]);
-        unset($this->cache[$this->tenantKey()]);
+        $this->cache = null;
     }
 }

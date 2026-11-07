@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\FreesUniqueOnDelete;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /** Fixed-price pack of products (docs/CALCULATIONS.md "Bundles"). Expanded into component order lines at quote/placement. */
 class Bundle extends Model
 {
-    use Audited, BelongsToTenant, FreesUniqueOnDelete, HasTranslations, SoftDeletes;
+    use Audited, FreesUniqueOnDelete, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'description'];
 

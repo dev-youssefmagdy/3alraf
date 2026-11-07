@@ -32,7 +32,7 @@ class ExpenseDataTable extends BaseDataTable
             ->addColumn('branch_label', fn (Expense $m) => e($m->branch?->name ?? '—'))
             ->editColumn('amount', fn (Expense $m) => $this->money($m->amount))
             ->editColumn('note', fn (Expense $m) => e(\Illuminate\Support\Str::limit((string) $m->note, 60)))
-            ->addColumn('actions', fn (Expense $m) => ($m->attachment_url ? '<a href="'.e($m->attachment_url).'" target="_blank" class="btn-sm btn-secondary me-1">'.e(__('ops.fields.attachment')).'</a>' : '').$this->tenantActions($m, 'tenant.expenses', 'expenses'));
+            ->addColumn('actions', fn (Expense $m) => ($m->attachment_url ? '<a href="'.e($m->attachment_url).'" target="_blank" class="btn-sm btn-secondary me-1">'.e(__('ops.fields.attachment')).'</a>' : '').$this->rowActions($m, 'admin.expenses', 'expenses'));
     }
 
     protected function rawColumns(): array

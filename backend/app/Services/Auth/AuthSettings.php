@@ -5,7 +5,7 @@ namespace App\Services\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Runtime auth/WhatsApp settings, stored in the auth_settings table (one namespace per owner: tenant id, or null = central).
+ * Runtime auth/WhatsApp settings, stored in the auth_settings table (one row per key).
  * The defaults below are only the initial values persisted on first read; nothing is read from .env or config files.
  */
 final class AuthSettings
@@ -28,18 +28,18 @@ final class AuthSettings
 
     private array $cache = [];
 
-    private function __construct(private readonly ?int $tenantId) {}
+    private function __construct() {}
 
-    public static function for(?int $tenantId): self
+    public static function for(): self
     {
-        return new self($tenantId);
+        return new self;
     }
 
     public function get(string $key): mixed
     {
         abort_unless(array_key_exists($key, self::DEFAULTS), 500, "Unknown auth setting $key");
         if (! array_key_exists($key, $this->cache)) {
-            $row = DB::table('auth_settings')->where('owner_key', (int) $this->tenantId)->where('key', $key)->first();
+            $row = DB::table('auth_settings')->where('key', $key)->first();
             if (! $row) {
                 $this->write($key, self::DEFAULTS[$key]);
             }
@@ -65,8 +65,8 @@ final class AuthSettings
     private function write(string $key, mixed $value): void
     {
         DB::table('auth_settings')->upsert(
-            [['tenant_id' => $this->tenantId, 'owner_key' => (int) $this->tenantId, 'key' => $key, 'value' => json_encode($value), 'created_at' => now(), 'updated_at' => now()]],
-            ['owner_key', 'key'], ['value', 'updated_at'],
+            [['key' => $key, 'value' => json_encode($value), 'created_at' => now(), 'updated_at' => now()]],
+            ['key'], ['value', 'updated_at'],
         );
     }
 }

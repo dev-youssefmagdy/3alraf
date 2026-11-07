@@ -106,7 +106,7 @@ class ApprovalService
 
     public function expireDue(): int
     {
-        return $this->repo->expireDue(app(GrowthFeatures::class)->tenantsWith('approvals')->pluck('id'));
+        return app(GrowthFeatures::class)->active('approvals') ? $this->repo->expireDue() : 0;
     }
 
     private function assertDecidable(GrowthApproval $a): void

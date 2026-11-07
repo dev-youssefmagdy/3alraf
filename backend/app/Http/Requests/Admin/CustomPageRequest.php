@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Support\ReservedSlugs;
 use Illuminate\Validation\Rule;
@@ -10,7 +10,7 @@ class CustomPageRequest extends BaseRequest
     public function rules(): array
     {
         return $this->translatable('title') + [
-            'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('custom_pages', 'slug')->where('tenant_id', current_tenant()->id)->ignore($this->id()),
+            'slug' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('custom_pages', 'slug')->ignore($this->id()),
                 function ($a, $v, $fail) {
                     if (ReservedSlugs::isReserved((string) $v)) {
                         $fail(__('growth.slug_reserved'));
@@ -29,7 +29,7 @@ class CustomPageRequest extends BaseRequest
             'filters.flash_sale' => ['nullable', 'boolean'],
             'filters.sort' => ['nullable', Rule::in(['newest', 'price_asc', 'price_desc', 'best_selling'])],
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'distinct', Rule::exists('tenant_products', 'product_id')->where('tenant_id', current_tenant()->id)],
+            'product_ids.*' => ['integer', 'distinct', Rule::exists('products', 'id')->whereNull('deleted_at')],
         ];
     }
 

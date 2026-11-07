@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\ProductListType;
 use Illuminate\Validation\Rule;
@@ -14,7 +14,7 @@ class ProductListRequest extends BaseRequest
         return [
             'limit' => ['required', 'integer', 'between:1,60'],
             'product_ids' => ['nullable', 'array', 'max:60'],
-            'product_ids.*' => ['integer', 'distinct', Rule::exists('tenant_products', 'product_id')->where('tenant_id', current_tenant()->id)],
+            'product_ids.*' => ['integer', 'distinct', Rule::exists('products', 'id')->whereNull('deleted_at')],
         ];
     }
 

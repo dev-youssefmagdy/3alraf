@@ -23,7 +23,7 @@ class InventoryReport extends ReportBase
         // legacy "confirmed" recognition only: COGS already booked for orders whose stock is still on hand (deducted at shipping) - ledger is
         // legitimately lower by that amount. Under the default (shipped/delivered) policy COGS is booked when stock leaves, so this is 0.
         $committed = DB::table('orders')->join('erp_journal_entries as e', fn ($j) => $j->on('e.source_id', '=', 'orders.id')->where('e.source_type', 'order')->where('e.idempotency_key', 'like', 'order:%:confirm%'))
-            ->whereIn('orders.status', ['confirmed', 'processing'])->where('orders.stock_deducted', false)->where('e.status', 'posted')->whereColumn('e.tenant_id', 'orders.tenant_id')
+            ->whereIn('orders.status', ['confirmed', 'processing'])->where('orders.stock_deducted', false)->where('e.status', 'posted')
             ->when($branchId, fn ($q) => $q->where('orders.branch_id', $branchId))->groupBy('orders.branch_id')->selectRaw('orders.branch_id as b, SUM(orders.cogs) as v')->pluck('v', 'b');
         $rows = [];
         $get = function (int $b) use (&$rows) {

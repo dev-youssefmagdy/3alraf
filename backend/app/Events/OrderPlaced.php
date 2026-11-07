@@ -12,6 +12,6 @@ class OrderPlaced
 
     public function __construct(public Order $order, public ?int $actorId = null)
     {
-        $this->actorId ??= auth('tenant')->id();
+        $this->actorId ??= auth('admin')->id();
     }
 }

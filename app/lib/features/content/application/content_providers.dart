@@ -65,7 +65,7 @@ class BlogState {
 final blogControllerProvider =
     NotifierProvider.autoDispose<BlogController, BlogState>(BlogController.new);
 
-/// Paged blog list (infinite scroll), rebuilt on tenant / language change.
+/// Paged blog list (infinite scroll), rebuilt on language change.
 class BlogController extends Notifier<BlogState> {
   int _gen = 0;
 

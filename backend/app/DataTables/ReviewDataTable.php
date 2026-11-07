@@ -28,7 +28,7 @@ class ReviewDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('tenant')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('product_name', fn (Review $m) => e($m->product?->name))
             ->addColumn('customer_name', fn (Review $m) => e($m->customer?->name))
             ->editColumn('rating', fn (Review $m) => str_repeat('★', $m->rating).str_repeat('☆', 5 - $m->rating))
@@ -38,14 +38,14 @@ class ReviewDataTable extends BaseDataTable
                 $h = '<div class="flex gap-2">';
                 if ($u?->can('reviews.edit')) {
                     if ($m->status !== ReviewStatus::APPROVED) {
-                        $h .= '<button type="button" data-post-action="'.e(route('tenant.reviews.approve', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.approve')).'</button>';
+                        $h .= '<button type="button" data-post-action="'.e(route('admin.reviews.approve', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.approve')).'</button>';
                     }
                     if ($m->status !== ReviewStatus::REJECTED) {
-                        $h .= '<button type="button" data-post-action="'.e(route('tenant.reviews.reject', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.reject')).'</button>';
+                        $h .= '<button type="button" data-post-action="'.e(route('admin.reviews.reject', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.reject')).'</button>';
                     }
                 }
                 if ($u?->can('reviews.delete')) {
-                    $h .= '<button type="button" data-delete="'.e(route('tenant.reviews.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
+                    $h .= '<button type="button" data-delete="'.e(route('admin.reviews.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
                 }
 
                 return $h.'</div>';

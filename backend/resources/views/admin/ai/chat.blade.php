@@ -1,7 +1,7 @@
-<x-layouts.admin guard="tenant" :title="__('ai.menu.assistant')">
+<x-layouts.admin :title="__('ai.menu.assistant')">
     @php($pct = $quota['quota'] ? min(100, round($quota['used'] / $quota['quota'] * 100)) : null)
     <div id="ai-chat" class="flex h-[calc(100vh-9rem)] min-h-[28rem] gap-4"
-         data-stream="{{ route('tenant.ai.chat.stream') }}" data-conv="{{ url('admin/ai/chat/conversations') }}">
+         data-stream="{{ route('admin.ai.chat.stream') }}" data-conv="{{ url('admin/ai/chat/conversations') }}">
         <aside class="hidden w-64 shrink-0 flex-col rounded-xl border border-slate-200 bg-white md:flex">
             <div class="flex items-center justify-between border-b border-slate-200 p-3">
                 <span class="text-sm font-semibold text-slate-700">{{ __('ai.chat.conversations') }}</span>

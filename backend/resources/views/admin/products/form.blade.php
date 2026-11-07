@@ -8,16 +8,45 @@
     $attrJson = $attributes->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'values' => $a->values->map(fn ($v) => ['id' => $v->id, 'name' => $v->value, 'color' => $v->color_hex])->all()])->values();
     $usedValueIds = collect($variantRows)->pluck('values')->flatten()->unique()->values();
 @endphp
-<x-layouts.admin guard="central" :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')">
     <form data-ajax-form @if ($editing) data-method="PUT" @endif
-        data-validate-url="{{ route('central.products.validate', $editing ? [$product] : []) }}"
-        action="{{ $editing ? route('central.products.update', $product) : route('central.products.store') }}" method="POST" enctype="multipart/form-data" class="grid gap-5 lg:grid-cols-3" novalidate>
+        data-validate-url="{{ route('admin.products.validate', $editing ? [$product] : []) }}"
+        action="{{ $editing ? route('admin.products.update', $product) : route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="grid gap-5 lg:grid-cols-3" novalidate>
         @csrf
         <div class="space-y-5 lg:col-span-2">
             <x-card :title="__('admin.general')" class="space-y-4">
                 <div class="space-y-4">
                     <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$product->getTranslations('name')" />
                     <x-translatable-tabs name="description" type="textarea" :rows="6" :label="__('admin.fields.description')" :languages="$languages" :values="$product->getTranslations('description')" />
+                </div>
+            </x-card>
+
+            <x-card :title="__('admin.pricing')">
+                <p class="mb-3 text-xs text-slate-500">{{ __('admin.pricing_hint') }}</p>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <x-input name="price" type="number" step="0.01" min="0" :label="__('admin.fields.price')" :value="$product->price" />
+                    <x-input name="sale_price" type="number" step="0.01" min="0" :label="__('admin.fields.sale_price')" :value="$product->sale_price" />
+                    <x-input name="cost" type="number" step="0.01" min="0" :label="__('admin.fields.cost')" :value="$product->cost" />
+                    <x-input name="min_stock_alert_qty" type="number" step="1" min="0" :label="__('stock_requests.min_alert')" :value="$product->min_stock_alert_qty" :hint="__('stock_requests.min_alert_hint')" />
+                </div>
+                @if ($editing && $product->price !== null)
+                    @can('catalog.edit')<a href="{{ route('admin.catalog.edit', $product) }}" class="mt-3 inline-block text-sm text-brand-600 hover:underline">{{ __('admin.list_in_store') }} &rarr;</a>@endcan
+                @endif
+            </x-card>
+
+            <x-card :title="__('admin.gift')">
+                @php($giftR = (array) old('gift_recipients', $product->gift_recipients ?? []))
+                @php($giftO = (array) old('gift_occasions', $product->gift_occasions ?? []))
+                <div class="space-y-3">
+                    <x-checkbox name="gift_suitable" :label="__('growth_hub.gift.tag_suitable')" :checked="$product->gift_suitable" />
+                    <div data-field>
+                        <div class="form-label">{{ __('growth_hub.gift.tag_recipients') }}</div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\Growth\GiftFinderService::RECIPIENTS as $o)<x-checkbox name="gift_recipients[]" :value="$o" :bool="false" :label="__('growth_hub.gift.recipients.'.$o)" :checked="in_array($o, $giftR, true)" />@endforeach</div>
+                    </div>
+                    <div data-field>
+                        <div class="form-label">{{ __('growth_hub.gift.tag_occasions') }}</div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\Growth\GiftFinderService::OCCASIONS as $o)<x-checkbox name="gift_occasions[]" :value="$o" :bool="false" :label="__('growth_hub.gift.occasions.'.$o)" :checked="in_array($o, $giftO, true)" />@endforeach</div>
+                    </div>
                 </div>
             </x-card>
 
@@ -52,12 +81,12 @@
                         </tr></thead>
                         <tbody data-repeater-list>
                             @foreach ($variantRows as $i => $v)
-                                @include('central.products._variant-row', ['i' => $i, 'v' => $v])
+                                @include('admin.products._variant-row', ['i' => $i, 'v' => $v])
                             @endforeach
                         </tbody>
                     </table>
                     <template data-repeater-template>
-                        <table><tbody>@include('central.products._variant-row', ['i' => '__INDEX__', 'v' => []])</tbody></table>
+                        <table><tbody>@include('admin.products._variant-row', ['i' => '__INDEX__', 'v' => []])</tbody></table>
                     </template>
                     <p data-empty class="py-3 text-sm text-slate-400">{{ __('admin.no_variants_yet') }}</p>
                 </div>
@@ -107,14 +136,14 @@
                     <div data-simple-section>
                         <x-input name="barcode" :label="__('admin.fields.barcode')" :value="$product->barcode" maxlength="13" :hint="__('admin.barcode_hint')" />
                         @if ($product->barcode)
-                            <img src="{{ route('central.barcode', $product->barcode) }}?h=50" alt="{{ $product->barcode }}" class="mt-2 h-12">
+                            <img src="{{ route('admin.barcode', $product->barcode) }}?h=50" alt="{{ $product->barcode }}" class="mt-2 h-12">
                         @endif
                     </div>
                     <x-input name="weight" type="number" step="0.001" min="0" :label="__('admin.fields.weight')" :value="$product->weight" />
                 </div>
             </x-card>
 
-            <x-form-actions :cancel="route('central.products.index')" />
+            <x-form-actions :cancel="route('admin.products.index')" />
         </div>
     </form>
 </x-layouts.admin>

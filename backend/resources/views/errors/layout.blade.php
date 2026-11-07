@@ -1,16 +1,21 @@
 @php
-    // Self-contained (no DB/layout dependencies beyond the optional tenant) so it still renders during a 500.
+    // Self-contained (no layout dependencies; settings are read defensively) so it still renders during a 500.
     $code = (int) ($code ?? 500);
-    $tenant = app()->bound('currentTenant') ? app('currentTenant') : null;
+    try {
+        $siteLocale = (string) setting('default_locale', 'ar');
+        $siteName = (string) (setting('name') ?: config('app.name'));
+    } catch (\Throwable) {
+        [$siteLocale, $siteName] = ['ar', config('app.name')];
+    }
     $supported = ['ar', 'en'];
     $seg = request()->segment(1);
-    $locale = in_array($seg, $supported, true) ? $seg : ($tenant && in_array($tenant->default_locale, $supported, true) ? $tenant->default_locale : 'ar');
+    $locale = in_array($seg, $supported, true) ? $seg : (in_array($siteLocale, $supported, true) ? $siteLocale : 'ar');
     $key = \Illuminate\Support\Facades\Lang::has("errors.$code", $locale) ? (string) $code : 'generic';
     $title = __("errors.$key.title", [], $locale);
     $text = __("errors.$key.text", [], $locale);
     $rtl = $locale === 'ar';
-    $homeUrl = $tenant ? url('/'.($locale)) : central_url('/');
-    $name = $tenant->name ?? config('app.name');
+    $homeUrl = url('/'.$locale);
+    $name = $siteName;
     $retryable = in_array($code, [419, 429, 500, 503], true);
 @endphp
 <!DOCTYPE html>

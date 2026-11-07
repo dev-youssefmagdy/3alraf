@@ -153,7 +153,7 @@ return [
         'reserve_percent' => 'نسبة الاحتياطي', 'distribution_min_cash_buffer' => 'الحد الأدنى للنقدية بعد التوزيع', 'tax_rate' => 'نسبة الضريبة', 'tax_account_id' => 'حساب الضريبة',
         'costing_policy' => 'سياسة التكلفة', 'revenue_policy' => 'سياسة الإيراد', 'revenue_recognition' => 'نقطة الاعتراف بالإيراد', 'landed_costs' => 'تكاليف الشراء الإضافية',
         'from_currency' => 'العملة المصدر', 'to_currency' => 'العملة الهدف', 'rate' => 'السعر', 'effective_date' => 'تاريخ السريان',
-        'ownership_percent' => 'نسبة الملكية', 'phone' => 'الهاتف', 'is_eligible' => 'مستحق للأرباح', 'tenant_admin_id' => 'المستخدم',
+        'ownership_percent' => 'نسبة الملكية', 'phone' => 'الهاتف', 'is_eligible' => 'مستحق للأرباح', 'admin_id' => 'المستخدم',
         'retain_percent' => 'نسبة المحتجز', 'retain_amount' => 'المبلغ المحتجز', 'overrides' => 'التعديلات', 'overrides.*' => 'مبلغ المالك', 'acknowledge_open' => 'إقرار الفترة المفتوحة',
         'cost' => 'التكلفة', 'salvage_value' => 'القيمة التخريدية', 'useful_life_months' => 'العمر الإنتاجي (شهور)', 'method' => 'طريقة الإهلاك', 'acquisition_date' => 'تاريخ الاقتناء',
         'category' => 'الفئة', 'paid_from' => 'مدفوع من', 'supplier_id' => 'المورد', 'proceeds' => 'حصيلة البيع', 'into' => 'إلى حساب', 'fee' => 'الرسوم', 'source' => 'الرصيد المصدر',

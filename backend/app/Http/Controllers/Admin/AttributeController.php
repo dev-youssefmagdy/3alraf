@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\AttributeDataTable;
 use App\DTOs\AttributeData;
 use App\Enums\AttributeType;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\AttributeRequest;
+use App\Http\Requests\Admin\AttributeRequest;
 use App\Models\Attribute;
 use App\Models\Language;
 use App\Services\AttributeService;
@@ -30,7 +30,7 @@ class AttributeController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.attributes.index', ['table' => new AttributeDataTable]);
+        return view('admin.attributes.index', ['table' => new AttributeDataTable]);
     }
 
     public function datatable(AttributeDataTable $table): JsonResponse
@@ -40,26 +40,26 @@ class AttributeController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.attributes.form', $this->formData(new Attribute(['type' => AttributeType::SELECT, 'sort_order' => 0])));
+        return view('admin.attributes.form', $this->formData(new Attribute(['type' => AttributeType::SELECT, 'sort_order' => 0])));
     }
 
     public function store(AttributeRequest $request): JsonResponse
     {
         $this->service->create(AttributeData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.attributes.index'));
+        return $this->ok(__('admin.saved'), route('admin.attributes.index'));
     }
 
     public function edit(Attribute $attribute)
     {
-        return view('central.attributes.form', $this->formData($attribute->load('values')));
+        return view('admin.attributes.form', $this->formData($attribute->load('values')));
     }
 
     public function update(AttributeRequest $request, Attribute $attribute): JsonResponse
     {
         $this->service->update($attribute, AttributeData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.attributes.index'));
+        return $this->ok(__('admin.saved'), route('admin.attributes.index'));
     }
 
     public function destroy(Attribute $attribute): JsonResponse

@@ -5,7 +5,6 @@ namespace App\Services\Reports;
 use App\DTOs\Reports\ReportFilter;
 use App\Enums\FeeBearer;
 use App\Enums\OrderStatus;
-use App\Models\Tenant;
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Support\Money;
 use Illuminate\Support\Str;
@@ -21,7 +20,7 @@ class ReportService
     /** Reports that ignore the date range (snapshot of now). */
     public const SNAPSHOT = ['stock'];
 
-    /** Reports where a branch filter is meaningful (tenant context only). */
+    /** Reports where a branch filter is meaningful. */
     public const BRANCHABLE = ['sales', 'net-profit', 'purchases', 'discounts', 'shipping', 'cod-settlement', 'payment-fees', 'returns', 'refunds', 'expenses', 'stock', 'products', 'categories', 'flash-sales', 'customers', 'payment-methods'];
 
     public function __construct(private ReportRepositoryInterface $repo) {}
@@ -36,9 +35,6 @@ class ReportService
         abort_unless(self::exists($key), 404);
         $r = $this->{'build'.Str::studly($key)}($f);
         $columns = $r['columns'];
-        if ($f->central && $f->tenantIds === null && ! empty($r['rows']) && array_key_exists('tenant', $r['rows'][0])) {
-            array_unshift($columns, $this->col('tenant', 'text'));
-        }
 
         return [
             'key' => $key, 'title' => __("reports.titles.$key"), 'cards' => $r['cards'], 'columns' => $columns, 'rows' => $r['rows'],
@@ -48,14 +44,10 @@ class ReportService
 
     public function currency(ReportFilter $f): string
     {
-        if ($f->central) {
-            return config('tenancy.base_currency');
-        }
-
-        return current_tenant()?->currency_symbol ?: (current_tenant()?->currency_code ?? '');
+        return setting('currency_symbol') ?: (setting('currency_code') ?? '');
     }
 
-    /** Dashboard payload for the tenant/central home page. */
+    /** Dashboard payload for the admin home page. */
     public function dashboard(ReportFilter $f): array
     {
         $sales = $this->repo->sales($f);
@@ -84,11 +76,6 @@ class ReportService
             'topProducts' => ['columns' => $products['columns'], 'rows' => array_slice($products['rows'], 0, 5)],
             'currency' => $this->currency($f),
         ];
-        if ($f->central && $f->tenantIds === null) {
-            $tb = $this->repo->tenantBreakdown($f);
-            $d['tenants'] = ['columns' => [$this->col('tenant', 'text'), $this->col('currency', 'text'), $this->col('orders', 'int'), $this->col('sales', 'money'), $this->col('profit', 'money')], 'rows' => $tb];
-            $d['tenantChart'] = $this->bar($tb, 'tenant', [['sales', 'sales']]);
-        }
 
         return $d;
     }
@@ -268,11 +255,11 @@ class ReportService
 
     private function buildStock(ReportFilter $f): array
     {
-        $thr = Tenant::withTrashed()->get()->mapWithKeys(fn ($t) => [$t->id => (int) ($t->settings['low_stock_threshold'] ?? 5)])->all();
+        $thr = (int) setting('low_stock_threshold', 5);
         $rows = array_map(function ($r) use ($thr) {
             $avail = $r['on_hand'] - $r['reserved'];
 
-            return $r + ['available' => $avail, 'avg_cost' => (float) $r['on_hand'] > 0 ? Money::div($r['value'], $r['on_hand']) : '0.00', 'status' => $avail <= ($thr[$r['tenant_id']] ?? 5) ? 'low' : 'ok'];
+            return $r + ['available' => $avail, 'avg_cost' => (float) $r['on_hand'] > 0 ? Money::div($r['value'], $r['on_hand']) : '0.00', 'status' => $avail <= $thr ? 'low' : 'ok'];
         }, $this->repo->stock($f));
         $low = array_values(array_filter($rows, fn ($r) => $r['status'] === 'low'));
         $view = array_map(fn ($r) => ['status' => __('reports.status.'.$r['status'])] + $r, $rows);

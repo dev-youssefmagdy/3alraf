@@ -5,9 +5,7 @@ namespace App\Providers;
 use App\Repositories\Contracts\LanguageRepositoryInterface;
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Repositories\Eloquent\ReportRepository;
-use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Repositories\Eloquent\LanguageRepository;
-use App\Repositories\Eloquent\TenantRepository;
 use App\Repositories\Contracts\BrandRepositoryInterface;
 use App\Repositories\Eloquent\BrandRepository;
 use App\Repositories\Contracts\AttributeRepositoryInterface;
@@ -16,8 +14,6 @@ use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Eloquent\CategoryRepository;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Repositories\Eloquent\ProductRepository;
-use App\Repositories\Contracts\TenantProductRepositoryInterface;
-use App\Repositories\Eloquent\TenantProductRepository;
 use App\Repositories\Contracts\CityRepositoryInterface;
 use App\Repositories\Eloquent\CityRepository;
 use App\Repositories\Contracts\BranchRepositoryInterface;
@@ -90,7 +86,7 @@ class RepositoryServiceProvider extends ServiceProvider
     public array $bindings = [
         \App\Repositories\Contracts\AiProviderRepositoryInterface::class => \App\Repositories\Eloquent\AiProviderRepository::class,
         \App\Repositories\Contracts\AiModelRepositoryInterface::class => \App\Repositories\Eloquent\AiModelRepository::class,
-        \App\Repositories\Contracts\AiTenantSettingRepositoryInterface::class => \App\Repositories\Eloquent\AiTenantSettingRepository::class,
+        \App\Repositories\Contracts\AiSettingRepositoryInterface::class => \App\Repositories\Eloquent\AiSettingRepository::class,
         AffiliateRepositoryInterface::class => AffiliateRepository::class,
         AffiliateTierRepositoryInterface::class => AffiliateTierRepository::class,
         AffiliatePayoutRepositoryInterface::class => AffiliatePayoutRepository::class,
@@ -102,13 +98,11 @@ class RepositoryServiceProvider extends ServiceProvider
         ProductListItemRepositoryInterface::class => ProductListItemRepository::class,
         WishlistItemRepositoryInterface::class => WishlistItemRepository::class,
         LanguageRepositoryInterface::class => LanguageRepository::class,
-        TenantRepositoryInterface::class => TenantRepository::class,
         BrandRepositoryInterface::class => BrandRepository::class,
         \App\Repositories\Contracts\TagRepositoryInterface::class => \App\Repositories\Eloquent\TagRepository::class,
         AttributeRepositoryInterface::class => AttributeRepository::class,
         CategoryRepositoryInterface::class => CategoryRepository::class,
         ProductRepositoryInterface::class => ProductRepository::class,
-        TenantProductRepositoryInterface::class => TenantProductRepository::class,
         CityRepositoryInterface::class => CityRepository::class,
         BranchRepositoryInterface::class => BranchRepository::class,
         ReportRepositoryInterface::class => ReportRepository::class,

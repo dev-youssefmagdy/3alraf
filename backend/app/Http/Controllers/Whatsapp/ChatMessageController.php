@@ -47,7 +47,7 @@ class ChatMessageController extends Controller implements HasMiddleware
         $conv = $this->conversation($request, $conversation);
         $v = $request->validate(['limit' => ['nullable', 'integer', 'between:1,100'], 'before' => ['nullable', 'integer', 'min:1'], 'after' => ['nullable', 'integer', 'min:1']]);
         $limit = $v['limit'] ?? 40;
-        $q = WhatsappMessage::ownedBy($this->owner($request))->where('conversation_id', $conv->id)->with(['media', 'replyTo', 'reactions']);
+        $q = WhatsappMessage::query()->where('conversation_id', $conv->id)->with(['media', 'replyTo', 'reactions']);
 
         if (! empty($v['after'])) {
             $rows = (clone $q)->where('id', '>', $v['after'])->orderBy('id')->limit($limit + 1)->get();
@@ -70,14 +70,13 @@ class ChatMessageController extends Controller implements HasMiddleware
     /** POST conversations/{id}/messages -> 202 {data: message(pending)}. See SendChatMessageRequest for the body. */
     public function store(SendChatMessageRequest $request, int $conversation): JsonResponse
     {
-        $owner = $this->owner($request);
         $conv = $this->conversation($request, $conversation);
         try {
-            $this->send->assertConnected($owner);
+            $this->send->assertConnected();
         } catch (WhatsappUnavailable) {
             return $this->fail('not_connected', __('whatsapp.chat.errors.not_connected'), 409);
         }
-        $msg = $this->send->queue($owner, $conv, $request->validated(), $request->file('file'), $this->guardName($request), (int) $request->user($this->guardName($request))->getKey());
+        $msg = $this->send->queue($conv, $request->validated(), $request->file('file'), $this->guardName($request), (int) $request->user($this->guardName($request))->getKey());
         $this->audit($request, 'message.sent', $msg, ['conversation_id' => $conv->id, 'type' => $msg->type]);
 
         return response()->json(['data' => self::present($msg->load(['media', 'replyTo']))], 202);
@@ -90,12 +89,12 @@ class ChatMessageController extends Controller implements HasMiddleware
             return $this->fail('not_resendable', __('whatsapp.chat.errors.not_resendable'), 422);
         }
         try {
-            $this->send->assertConnected($this->owner($request));
+            $this->send->assertConnected();
         } catch (WhatsappUnavailable) {
             return $this->fail('not_connected', __('whatsapp.chat.errors.not_connected'), 409);
         }
 
-        return response()->json(['data' => self::present($this->send->resend($this->owner($request), $msg)->load(['media', 'replyTo']))], 202);
+        return response()->json(['data' => self::present($this->send->resend($msg)->load(['media', 'replyTo']))], 202);
     }
 
     /** POST messages/{id}/react {emoji: ""|emoji} (empty removes our reaction) */
@@ -107,7 +106,7 @@ class ChatMessageController extends Controller implements HasMiddleware
             return $this->fail('not_sent_yet', __('whatsapp.chat.errors.not_actionable'), 422);
         }
 
-        return $this->wa(fn () => $this->send->react($this->owner($request), $msg, (string) ($v['emoji'] ?? '')), $msg);
+        return $this->wa(fn () => $this->send->react($msg, (string) ($v['emoji'] ?? '')), $msg);
     }
 
     /** PUT messages/{id} {text} - edit our own text message (WhatsApp allows ~15 minutes). */
@@ -119,7 +118,7 @@ class ChatMessageController extends Controller implements HasMiddleware
             return $this->fail('not_editable', __('whatsapp.chat.errors.not_editable'), 422);
         }
 
-        return $this->wa(fn () => $this->send->edit($this->owner($request), $msg, $v['text']), $msg);
+        return $this->wa(fn () => $this->send->edit($msg, $v['text']), $msg);
     }
 
     /** DELETE messages/{id} - delete for everyone (our own sent messages only); the row stays as a tombstone. */
@@ -129,7 +128,7 @@ class ChatMessageController extends Controller implements HasMiddleware
         if ($msg->direction !== 'out' || ! $msg->wa_message_id || $msg->deleted_at) {
             return $this->fail('not_deletable', __('whatsapp.chat.errors.not_deletable'), 422);
         }
-        $res = $this->wa(fn () => $this->send->revoke($this->owner($request), $msg), $msg);
+        $res = $this->wa(fn () => $this->send->revoke($msg), $msg);
         if ($res->getStatusCode() === 200) {
             $this->audit($request, 'message.deleted', $msg, ['conversation_id' => $msg->conversation_id]);
         }
@@ -139,7 +138,7 @@ class ChatMessageController extends Controller implements HasMiddleware
 
     private function message(Request $r, int $id): WhatsappMessage
     {
-        return WhatsappMessage::ownedBy($this->owner($r))->findOrFail($id);
+        return WhatsappMessage::query()->findOrFail($id);
     }
 
     private function wa(\Closure $fn, WhatsappMessage $msg): JsonResponse

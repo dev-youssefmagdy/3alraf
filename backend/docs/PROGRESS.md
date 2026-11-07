@@ -1,5 +1,7 @@
 # Progress log (each phase appends a short summary: what exists, key class names, routes)
 
+> **Single store since 2026-11.** Entries before "Single-store conversion" (at the end) describe the multi-tenant era (`tenants`, `tenant_id`, central/tenant panels and guards, subdomains); names such as `Tenant\*` controllers, `tenant.*` routes, `current_tenant()` or `config/tenancy.php` no longer exist.
+
 ## Phase 1 Foundation (done)
 - Pkgs: datatables(yajra), spatie permission+activitylog, picqer barcode, endroid qr, intervention image, pest; npm: jquery, toastr, datatables.net-dt, tailwind4 (vite builds OK).
 - Tenancy: `tenants`, `languages`, `central_admins`, `tenant_admins`, `customers` tables; `BelongsToTenant` (scope+auto tenant_id+fillable), `current_tenant()`, `tenant_url()`, `selected_tenant_id()` (app/Support/helpers.php); middleware `tenant.resolve`(host `{slug}.APP_CENTRAL_DOMAIN`), `set.locale`(storefront /{locale}), `admin.locale`(session), CentralContext.
@@ -388,3 +390,11 @@ Adversarial review of the uncommitted diff; regression tests in `tests/Feature/R
 - Performance/a11y: separate storefront Vite entry (`resources/js/storefront.js`, `resources/css/storefront.css` scanning only storefront views; admin bundle no longer loaded on the public site), optimised logos (`logo-sm.webp`, `logo-192/512.png`, `favicon-48.png`), LCP image preload/fetchpriority, sized images, AA-contrast brand tokens (brand-600 `#a8456c`, slate-400/500 darker), skip link, single h1, heading order, labelled controls.
 - Tests: `tests/Feature/SeoTest.php` (9).
 - Gaps: HTTPS/HTTP2/compression/cache-header Lighthouse audits depend on the production web server (not measurable on `php artisan serve`); noindex pages intentionally fail Lighthouse `is-crawlable`; tags are not consent-gated.
+
+## Single-store conversion (2026-11, `REMOVE_MULTI_TENANCY_PLAN.md`)
+- One shop on one host (`APP_URL`): admin `/admin` (`routes/admin.php`, names `admin.*`, guard/provider `admin`, model `App\Models\Admin`), storefront `/{locale}` (`storefront.*`), mobile API `/api/v1` once (X-Tenant ignored), integration API without tenant. `LegacyHostRedirect` 301s `{any}.APP_HOST` → APP_URL (serves `webhooks/*`, `api/*` directly).
+- DB: migration `2026_12_31_000000_convert_to_single_store.php` dropped every `tenant_id`/`owner_key`, recreated unique indexes, merged central + tenant admins (by phone) and roles (guard `admin`, role `owner`), moved `tenant_products(_variants)` columns onto `products`/`product_variants`, copied the tenant row into `settings` (`App\Models\Setting`, helper `setting()`), `ai_tenant_settings` → `ai_settings`, rewrote morph types.
+- Panel: former tenant panel kept whole + central pages added (Catalog: Products/Categories/Brands/Tags/Attributes; Settings → General/Languages; AI: Providers/Models/Usage; Finance → ERP anomalies). Lang group `erp_central` → `erp_audit`.
+- Services/commands: no `--tenant` options or per-tenant loops; one currency (no `currency_rate`); WhatsApp single session `central` (Node gateway 410 for legacy `tenant-<n>`); Flutter app without country picker (`legacy_storage_migration.dart` moves old per-slug keys once).
+- Compat kept on purpose: `GET /api/v1/tenants` (`LegacyStoreListController`, `MOBILE_LEGACY_STORE_SLUG`), legacy upload paths `tenants/{n}/…` (read only), legacy hosts in nginx (`deploy/nginx/app.conf` legacy block).
+- Config/env: `APP_CENTRAL_DOMAIN` removed (`config('app.host')` from APP_URL), `SESSION_DOMAIN=null`; docs: REQUIREMENTS §2 rewritten, historical banners on `docs/prompts`, `docs/plans`, `docs/qa`.

@@ -6,17 +6,16 @@ use App\Exceptions\AccountingException;
 use App\Models\Erp\Account;
 use App\Models\Erp\AuditLog;
 use App\Models\Erp\JournalEntry;
-use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
  * The ONLY writer of journals and account balances. Every posting is atomic, balanced (bcmath, scale 4),
- * period-guarded and idempotent per (tenant, idempotency_key).
+ * period-guarded and idempotent per idempotency_key.
  *
  * $lines item: ['account' => id|role_key, 'debit' => '0', 'credit' => '0', 'branch_id'?, 'party_type'?, 'party_id'?, 'memo'?,
- *               'original_amount'?, 'original_currency'?]  (amounts in the tenant base currency)
+ *               'original_amount'?, 'original_currency'?]  (amounts in the shop currency, setting('currency_code'))
  * $data: entry_date, description, type (manual|auto|opening|adjusting|closing), branch_id?, currency?, exchange_rate?,
  *        source_type?, source_id?, idempotency_key?, created_by?, attachment?
  */
@@ -84,14 +83,30 @@ class JournalService
         return is_numeric($v) ? number_format((float) $v, 8, '.', '') : '0';
     }
 
-    /** Run $fn atomically while holding the tenant row lock: serialises money-moving user actions (payments, receipts, advances) per tenant. */
+    /** Run $fn atomically while holding the ledger lock: serialises money-moving user actions (payments, receipts, advances). */
     public function exclusive(callable $fn): mixed
     {
         return DB::transaction(function () use ($fn) {
-            Tenant::whereKey(current_tenant()?->id ?? throw new AccountingException('No tenant context.'))->lockForUpdate()->first();
+            self::lockLedger();
 
             return $fn();
         });
+    }
+
+    /** settings row used as the ledger mutex (created on first use). */
+    public const LOCK_KEY = 'erp_ledger_lock';
+
+    /**
+     * Row lock (SELECT ... FOR UPDATE on one `settings` row) held until the surrounding transaction ends: serialises journal numbering,
+     * money-moving actions and profit-distribution runs. Must be called inside a DB transaction.
+     */
+    public static function lockLedger(): void
+    {
+        $lock = fn () => DB::table('settings')->where('key', self::LOCK_KEY)->lockForUpdate()->first();
+        if (! $lock()) {
+            DB::table('settings')->insertOrIgnore(['key' => self::LOCK_KEY, 'value' => 'null', 'encrypted' => 0, 'created_at' => now(), 'updated_at' => now()]);
+            $lock();
+        }
     }
 
     public function postDraft(JournalEntry $entry, ?int $userId = null): JournalEntry
@@ -184,7 +199,6 @@ class JournalService
 
     private function persist(array $data, array $lines, string $status): JournalEntry
     {
-        $tenant = current_tenant() ?? throw new AccountingException('No tenant context.');
         $clean = [];
         foreach ($lines as $l) {
             $dr = (string) ($l['debit'] ?? 0);
@@ -202,15 +216,15 @@ class JournalService
         $this->assertBalanced($clean);
         $ids = array_values(array_unique(array_column($clean, 'account_id')));
         if (Account::whereIn('id', $ids)->count() !== count($ids)) {
-            throw new AccountingException(__('erp.errors.line_invalid')); // unknown / foreign-tenant account id
+            throw new AccountingException(__('erp.errors.line_invalid')); // unknown account id
         }
 
-        Tenant::whereKey($tenant->id)->lockForUpdate()->first(); // serialises numbering per tenant
+        self::lockLedger(); // serialises numbering
         $total = array_reduce($clean, fn ($c, $l) => bcadd($c, $l['debit'], self::SCALE), '0');
         $date = Carbon::parse($data['entry_date'] ?? now())->toDateString();
         $entry = JournalEntry::create([
             'number' => $this->nextNumber(), 'status' => $status, 'type' => $data['type'] ?? 'manual', 'entry_date' => $date, 'branch_id' => $data['branch_id'] ?? null,
-            'currency' => $data['currency'] ?? $tenant->currency_code, 'exchange_rate' => $data['exchange_rate'] ?? 1, 'source_type' => $data['source_type'] ?? null,
+            'currency' => $data['currency'] ?? setting('currency_code'), 'exchange_rate' => $data['exchange_rate'] ?? 1, 'source_type' => $data['source_type'] ?? null,
             'source_id' => $data['source_id'] ?? null, 'idempotency_key' => $data['idempotency_key'] ?? null, 'reverses_id' => $data['reverses_id'] ?? null,
             'description' => $data['description'] ?? null, 'attachment' => $data['attachment'] ?? null, 'total' => $total, 'created_by' => $data['created_by'] ?? null,
         ]);

@@ -1,6 +1,6 @@
 {{-- Admin form shell: layout + card + AJAX form (validate -> submit). Slot = fields. --}}
 @props(['route', 'editing' => false, 'model' => null, 'title' => null, 'width' => 'max-w-2xl', 'back' => null])
-<x-layouts.admin guard="tenant" :title="$title ?? ($editing ? __('admin.edit') : __('admin.add_new'))">
+<x-layouts.admin :title="$title ?? ($editing ? __('admin.edit') : __('admin.add_new'))">
     <x-card :class="$width">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif
             data-validate-url="{{ route($route.'.validate', $editing ? [$model->id] : []) }}"

@@ -1,6 +1,5 @@
-@php($tenant = current_tenant())
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}" dir="{{ $tenant?->isRtl(app()->getLocale()) ? 'rtl' : 'ltr' }}">
+<html lang="{{ app()->getLocale() }}" dir="{{ \App\Models\Language::activeList()->firstWhere('code', app()->getLocale())?->isRtl() ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('orders.invoice') }} {{ $order->number }}</title>
@@ -17,10 +16,10 @@
     </style>
 </head>
 <body>
-    <div class="actions"><button onclick="window.print()">{{ __('orders.print') }}</button> <a class="btn" href="{{ ($public ?? false) ? route('storefront.orders.invoice.pdf', ['locale' => app()->getLocale(), 'token' => $order->public_token]) : route('tenant.orders.invoice.pdf', $order->id) }}">PDF</a></div>
+    <div class="actions"><button onclick="window.print()">{{ __('orders.print') }}</button> <a class="btn" href="{{ ($public ?? false) ? route('storefront.orders.invoice.pdf', ['locale' => app()->getLocale(), 'token' => $order->public_token]) : route('admin.orders.invoice.pdf', $order->id) }}">PDF</a></div>
     <div class="sheet">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div><h1 style="margin:0">{{ $tenant?->name }}</h1><div style="color:#64748b;font-size:14px">{{ __('orders.invoice') }} #{{ $order->number }}<br>{{ $order->placed_at?->format('Y-m-d H:i') }}</div></div>
+            <div><h1 style="margin:0">{{ setting('name') }}</h1><div style="color:#64748b;font-size:14px">{{ __('orders.invoice') }} #{{ $order->number }}<br>{{ $order->placed_at?->format('Y-m-d H:i') }}</div></div>
             <div style="text-align:end;font-size:14px"><strong>{{ $order->customer_name }}</strong><br><bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi><br>{{ $order->city?->name }} - {{ $order->address }}</div>
         </div>
         <table>

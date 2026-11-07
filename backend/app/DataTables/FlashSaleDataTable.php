@@ -32,7 +32,7 @@ class FlashSaleDataTable extends BaseDataTable
             ->addColumn('period', fn (FlashSale $m) => $m->starts_at->format('Y-m-d H:i').' → '.$m->ends_at->format('Y-m-d H:i'))
             ->editColumn('sold_sum', fn (FlashSale $m) => (int) $m->sold_sum)
             ->addColumn('status', fn (FlashSale $m) => $m->isRunning() ? $this->badge(true, __('orders.flash.running')) : $this->badge(false, null, $m->is_active ? ($m->starts_at->isFuture() ? __('orders.flash.scheduled') : __('orders.flash.ended')) : __('admin.inactive')))
-            ->addColumn('actions', fn (FlashSale $m) => $this->tenantActions($m, 'tenant.flash-sales', 'flash_sales'));
+            ->addColumn('actions', fn (FlashSale $m) => $this->rowActions($m, 'admin.flash-sales', 'flash_sales'));
     }
 
     protected function rawColumns(): array

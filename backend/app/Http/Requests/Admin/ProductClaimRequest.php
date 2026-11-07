@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Services\Growth\BrandMemoryService;
 use Illuminate\Validation\Rule;
@@ -10,7 +10,7 @@ class ProductClaimRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'product_id' => ['required', 'integer', 'exists:tenant_products,product_id,tenant_id,'.current_tenant()->id],
+            'product_id' => ['required', 'integer', 'exists:products,id'],
             'type' => ['required', Rule::in(BrandMemoryService::CLAIM_TYPES)],
             'claim' => ['required', 'string', 'max:300'],
         ];

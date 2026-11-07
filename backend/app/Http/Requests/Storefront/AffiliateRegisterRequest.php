@@ -3,12 +3,12 @@
 namespace App\Http\Requests\Storefront;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use App\Models\Affiliate;
 
 class AffiliateRegisterRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     public function after(): array
     {

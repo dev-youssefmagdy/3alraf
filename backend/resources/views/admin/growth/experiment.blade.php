@@ -1,16 +1,16 @@
-<x-layouts.admin guard="tenant" :title="$exp->name">
+<x-layouts.admin :title="$exp->name">
     <div class="space-y-4">
         <x-card :title="$exp->name">
             @can('growth.manage')
-                @include('tenant.growth._experiment-form', ['action' => route('tenant.growth.experiments.update', $exp->id), 'method' => 'PUT'])
-                <button type="button" data-delete="{{ route('tenant.growth.experiments.destroy', $exp->id) }}" class="btn-sm btn-danger mt-4">{{ __('admin.delete') }}</button>
+                @include('admin.growth._experiment-form', ['action' => route('admin.growth.experiments.update', $exp->id), 'method' => 'PUT'])
+                <button type="button" data-delete="{{ route('admin.growth.experiments.destroy', $exp->id) }}" class="btn-sm btn-danger mt-4">{{ __('admin.delete') }}</button>
             @else
                 <p class="text-sm text-slate-700">{{ $exp->hypothesis }}</p>
             @endcan
         </x-card>
         <x-card :title="__('growth_hub.experiments.results')">
             @can('growth.manage')
-                <form data-ajax-form action="{{ route('tenant.growth.experiments.results', $exp->id) }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-5" novalidate>
+                <form data-ajax-form action="{{ route('admin.growth.experiments.results', $exp->id) }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-5" novalidate>
                     @csrf
                     <x-input name="metric" :label="__('growth_hub.fields.metric')" :value="$exp->metric" required />
                     <x-input name="value" type="number" step="0.0001" :label="__('growth_hub.fields.value')" />

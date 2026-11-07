@@ -16,7 +16,7 @@ class CustomerOrderNotification extends Notification
 {
     public function __construct(private Order $order, private string $kind, private ?string $status = null, private ?OrderReturn $return = null)
     {
-        $this->locale($order->locale ?: $order->tenant?->default_locale ?: config('app.locale'));
+        $this->locale($order->locale ?: setting('default_locale') ?: config('app.locale'));
     }
 
     public function order(): Order
@@ -37,7 +37,7 @@ class CustomerOrderNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $o = $this->order;
-        $store = $o->tenant?->name ?? config('app.name');
+        $store = setting('name') ?: config('app.name');
         $statusLabel = $this->status ? __('orders.enums.order_status.'.$this->status) : '';
         $p = ['number' => $o->number, 'status' => $statusLabel, 'return' => $this->return?->number, 'store' => $store,
             'amount' => Money::format((string) ($this->return?->refund_amount ?? 0), $o->currency)];
@@ -48,10 +48,10 @@ class CustomerOrderNotification extends Notification
             ->line(__("$key.line", $p))
             ->line(__('notifications.customer.order').': '.$o->number)
             ->line(__('notifications.customer.total').': '.Money::format((string) $o->total, $o->currency))
-            ->action(__('notifications.customer.view'), tenant_url($o->tenant, ($this->locale ?? app()->getLocale()).'/order/'.$o->public_token))
+            ->action(__('notifications.customer.view'), url('/'.($this->locale ?? app()->getLocale()).'/order/'.$o->public_token))
             ->line(__('notifications.customer.thanks', ['store' => $store]));
-        if ($o->tenant?->settings['support_email'] ?? false) {
-            $mail->replyTo($o->tenant->settings['support_email']);
+        if ($support = setting('support_email')) {
+            $mail->replyTo($support);
         }
 
         return $mail;

@@ -6,7 +6,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
-/** Thin REST client for the Node WhatsApp service. Knows session ids only; carries no business or tenant logic. */
+/** Thin REST client for the Node WhatsApp service. Knows session ids only; carries no business logic. */
 class NodeClient
 {
     private function http(): PendingRequest

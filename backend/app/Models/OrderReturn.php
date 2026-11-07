@@ -4,12 +4,11 @@ namespace App\Models;
 
 use App\Enums\ReturnStatus;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderReturn extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected $fillable = ['number', 'order_id', 'status', 'reason', 'restock', 'branch_id', 'refund_shipping', 'return_value', 'refund_amount', 'refund_from', 'refund_online', 'return_shipping_cost', 'returned_cogs', 'approved_at', 'refunded_at', 'reason_code'];
 

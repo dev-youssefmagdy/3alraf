@@ -1,10 +1,8 @@
-import 'package:app/core/network/network_providers.dart';
+import 'package:app/features/store/application/store_controller.dart';
 import 'package:app/features/auth/application/auth_controller.dart';
 import 'package:app/features/auth/presentation/login_page.dart';
 import 'package:app/features/catalog/application/catalog_providers.dart';
 import 'package:app/features/catalog/data/catalog_models.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:app/features/wishlist/application/wishlist_controller.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -154,9 +152,7 @@ void main() {
   test('catalog repository: params, pagination, stock request body', () async {
     final env = TestEnv(extra: api(listingTwoPages: true));
     final c = await env.container();
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     final repo = c.read(catalogRepositoryProvider);
     final page = await repo.catalog(
       const CatalogQuery(brand: 'sony', brandIds: {2, 1}, priceMax: '50'),
@@ -170,17 +166,12 @@ void main() {
     expect(q, contains('price_max=50'));
   });
 
-  test('nothing survives a tenant switch: home refetches with the new '
-      'X-Tenant, listing and wishlist are rebuilt', () async {
-    final env = TestEnv(
-      tenants: [tenantJson('egy'), tenantJson('sa')],
-      extra: api(),
-    );
+  test('a language change refetches home and rebuilds listings', () async {
+    final env = TestEnv(extra: api());
     final c = await env.container();
-    final tenants = c.read(tenantControllerProvider.notifier);
-    await tenants.select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await c.read(homeProvider.future);
-    expect(header(env.requestsTo('/home').last, 'X-Tenant'), 'egy');
+    expect(header(env.requestsTo('/home').last, 'Accept-Language'), 'ar');
 
     const scope = ListingScope(category: 'skincare');
     c.listen(listingProvider(scope), (_, _) {});
@@ -188,15 +179,14 @@ void main() {
     expect(c.read(listingProvider(scope)).items, isNotEmpty);
     final before = env.requestsTo('/catalog').length;
 
-    await tenants.switchTo(Tenant.fromJson(tenantJson('sa')));
+    await c.read(storeControllerProvider.notifier).chooseLocale('en');
     await c.read(homeProvider.future);
-    expect(header(env.requestsTo('/home').last, 'X-Tenant'), 'sa');
+    expect(header(env.requestsTo('/home').last, 'Accept-Language'), 'en');
     expect(env.requestsTo('/home').length, 2);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     final catalog = env.requestsTo('/catalog');
     expect(catalog.length, greaterThan(before));
-    expect(header(catalog.last, 'X-Tenant'), 'sa');
-    expect(c.read(apiContextProvider).tenantSlug, 'sa');
+    expect(header(catalog.last, 'Accept-Language'), 'en');
   });
 
   test('wishlist: loads for a signed-in customer, toggle removes optimistic '
@@ -215,11 +205,9 @@ void main() {
       },
     );
     final c = await env.container();
-    await env.secrets.write('auth_token:egy', '12|secret');
+    await env.secrets.write('auth_token', '12|secret');
     c.listen(wishlistProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(c.read(wishlistProvider).ids, {1, 2});
 

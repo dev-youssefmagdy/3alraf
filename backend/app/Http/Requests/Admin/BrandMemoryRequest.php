@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use App\Services\Growth\BrandMemoryService;
 use Illuminate\Validation\Rule;

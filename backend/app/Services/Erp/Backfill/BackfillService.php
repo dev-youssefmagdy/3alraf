@@ -15,7 +15,6 @@ use App\Models\StockLevel;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\Expense;
-use App\Models\Tenant;
 use App\Services\Erp\Accounting\AccountResolver;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
@@ -29,7 +28,6 @@ use App\Services\Erp\Posting\ReturnPoster;
 use App\Services\Erp\Posting\SalesPoster;
 use App\Services\Erp\Posting\StockPoster;
 use App\Services\Erp\Reports\InventoryReport;
-use App\Services\Tenancy\TenantContext;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -42,7 +40,6 @@ use Throwable;
  *
  * Documents confirmed before --from are carried by auditable opening-balance entries (receivable per customer, carrier COD receivable,
  * supplier payable, inventory per branch against `opening_equity`); cash/bank can not be inferred and is left to a manual opening journal.
- * Everything is evaluated for the CURRENT tenant (run inside TenantContext).
  */
 class BackfillService
 {
@@ -69,63 +66,61 @@ class BackfillService
      * @param  ?callable  $progress  fn(string $event 'start'|'tick'|'end', string $type, int $n)
      * @return array{status:string,counts:array,opening:array,run:?BackfillRun}
      */
-    public function run(Tenant $tenant, string $from, bool $dry = false, array $only = [], ?callable $progress = null, string $by = 'cli', ?int $userId = null): array
+    public function run(string $from, bool $dry = false, array $only = [], ?callable $progress = null, string $by = 'cli', ?int $userId = null): array
     {
-        return TenantContext::run($tenant, function () use ($tenant, $from, $dry, $only, $progress, $by, $userId) {
-            $types = $only ? array_values(array_intersect(self::TYPES, $only)) : self::TYPES;
-            $settings = app(ErpSettings::class);
-            $existing = $settings->get('opening_date');
-            if ($existing && $existing !== $from && in_array('opening', $types, true)) {
-                throw new RuntimeException(__('erp.bf.err_opening_date', ['date' => $existing]));
-            }
-            $closed = $this->closedPeriods($from);
-            if ($closed && ! $dry) {
-                throw new RuntimeException(__('erp.bf.err_closed', ['periods' => implode(', ', $closed)]));
-            }
+        $types = $only ? array_values(array_intersect(self::TYPES, $only)) : self::TYPES;
+        $settings = app(ErpSettings::class);
+        $existing = $settings->get('opening_date');
+        if ($existing && $existing !== $from && in_array('opening', $types, true)) {
+            throw new RuntimeException(__('erp.bf.err_opening_date', ['date' => $existing]));
+        }
+        $closed = $this->closedPeriods($from);
+        if ($closed && ! $dry) {
+            throw new RuntimeException(__('erp.bf.err_closed', ['periods' => implode(', ', $closed)]));
+        }
 
-            $run = null;
-            if (! $dry) {
-                $this->seed($from);
-                if (in_array('opening', $types, true)) {
-                    $settings->set('opening_date', $from);
-                }
-                $run = BackfillRun::create(['from_date' => $from, 'started_at' => now(), 'status' => 'running', 'dry_run' => false, 'options' => ['only' => $only],
-                    'triggered_by' => $by, 'user_id' => $userId]);
+        $run = null;
+        if (! $dry) {
+            $this->seed($from);
+            if (in_array('opening', $types, true)) {
+                $settings->set('opening_date', $from);
             }
-            $counts = [];
-            $opening = [];
-            try {
-                foreach ($types as $type) {
-                    if ($type === 'opening') {
-                        $opening = $this->opening($from, $dry, $counts, $progress, false);
+            $run = BackfillRun::create(['from_date' => $from, 'started_at' => now(), 'status' => 'running', 'dry_run' => false, 'options' => ['only' => $only],
+                'triggered_by' => $by, 'user_id' => $userId]);
+        }
+        $counts = [];
+        $opening = [];
+        try {
+            foreach ($types as $type) {
+                if ($type === 'opening') {
+                    $opening = $this->opening($from, $dry, $counts, $progress, false);
 
-                        continue;
-                    }
-                    $counts[$type] = $this->process($type, $from, $dry, $progress, $by === 'cli' ? null : $userId);
+                    continue;
                 }
-                if (in_array('opening', $types, true)) {
-                    $opening += $this->opening($from, $dry, $counts, $progress, true); // inventory last: needs the documents in the ledger
-                }
-            } catch (Throwable $e) {
-                if ($run) {
-                    $run->update(['status' => 'failed', 'finished_at' => now(), 'counts' => $counts + ['error' => $e->getMessage()]]);
-                }
-                throw $e;
+                $counts[$type] = $this->process($type, $from, $dry, $progress, $by === 'cli' ? null : $userId);
             }
-
-            $failed = array_sum(array_column($counts, 'failed'));
-            $status = $dry ? 'dry_run' : ($failed ? 'partial' : 'completed');
+            if (in_array('opening', $types, true)) {
+                $opening += $this->opening($from, $dry, $counts, $progress, true); // inventory last: needs the documents in the ledger
+            }
+        } catch (Throwable $e) {
             if ($run) {
-                $run->update(['status' => $status, 'finished_at' => now(), 'counts' => $counts]);
-                AuditLog::create(['action' => 'backfill.finished', 'subject_type' => 'backfill_run', 'subject_id' => $run->id, 'user_id' => $userId, 'meta' => ['from' => $from, 'status' => $status, 'counts' => $counts]]);
-                if ($status === 'completed' && ! $only && ! $settings->bool('auto_posting_enabled')) {
-                    $settings->set('auto_posting_enabled', true);
-                    AuditLog::create(['action' => 'auto_posting.enabled', 'subject_type' => 'erp_settings', 'subject_id' => 0, 'user_id' => $userId, 'meta' => ['by' => 'backfill']]);
-                }
+                $run->update(['status' => 'failed', 'finished_at' => now(), 'counts' => $counts + ['error' => $e->getMessage()]]);
             }
+            throw $e;
+        }
 
-            return ['status' => $status, 'counts' => $counts, 'opening' => $opening, 'run' => $run, 'closed' => $closed];
-        });
+        $failed = array_sum(array_column($counts, 'failed'));
+        $status = $dry ? 'dry_run' : ($failed ? 'partial' : 'completed');
+        if ($run) {
+            $run->update(['status' => $status, 'finished_at' => now(), 'counts' => $counts]);
+            AuditLog::create(['action' => 'backfill.finished', 'subject_type' => 'backfill_run', 'subject_id' => $run->id, 'user_id' => $userId, 'meta' => ['from' => $from, 'status' => $status, 'counts' => $counts]]);
+            if ($status === 'completed' && ! $only && ! $settings->bool('auto_posting_enabled')) {
+                $settings->set('auto_posting_enabled', true);
+                AuditLog::create(['action' => 'auto_posting.enabled', 'subject_type' => 'erp_settings', 'subject_id' => 0, 'user_id' => $userId, 'meta' => ['by' => 'backfill']]);
+            }
+        }
+
+        return ['status' => $status, 'counts' => $counts, 'opening' => $opening, 'run' => $run, 'closed' => $closed];
     }
 
     /** @return array<int,string> names of closed periods that the backfill would have to post into */
@@ -137,7 +132,7 @@ class BackfillService
     private function seed(string $from): void
     {
         if (! Account::where('role_key', 'receivable')->exists()) {
-            app(CoaTemplate::class)->seed(current_tenant());
+            app(CoaTemplate::class)->seed();
             app(AccountResolver::class)->flush();
         }
         $periods = app(PeriodService::class);
@@ -417,7 +412,7 @@ class BackfillService
                     $carrier[$o->branch_id ?? 0] = Money::add($carrier[$o->branch_id ?? 0] ?? '0', (string) $o->cod_amount);
                 }
                 if (Money::cmp((string) $o->paid_amount, '0') > 0 || Money::cmp((string) $o->refunded_amount, '0') > 0) {
-                    $baselines[] = ['tenant_id' => $o->tenant_id, 'order_id' => $o->id, 'paid_amount' => Money::round((string) $o->paid_amount), 'refunded_amount' => Money::round((string) $o->refunded_amount),
+                    $baselines[] = ['order_id' => $o->id, 'paid_amount' => Money::round((string) $o->paid_amount), 'refunded_amount' => Money::round((string) $o->refunded_amount),
                         'created_at' => now(), 'updated_at' => now()];
                 }
             }
@@ -527,7 +522,7 @@ class BackfillService
 
     // ------------------------------------------------------------------ missing documents
 
-    /** Scope of the missing-journal scan: from the opening date, else the first journal's date, else the tenant's creation. */
+    /** Scope of the missing-journal scan: from the opening date, else the first journal's date, else the first order's date. */
     public function scanFrom(): string
     {
         $d = OpeningState::openingDate();
@@ -536,7 +531,7 @@ class BackfillService
         }
         $first = JournalEntry::min('created_at');
 
-        return substr((string) ($first ?? current_tenant()?->created_at ?? now()), 0, 10);
+        return substr((string) ($first ?? \App\Models\Order::withTrashed()->min('created_at') ?? now()), 0, 10);
     }
 
     /**

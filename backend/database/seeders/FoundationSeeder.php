@@ -2,40 +2,41 @@
 
 namespace Database\Seeders;
 
-use App\Models\CentralAdmin;
+use App\Models\Admin;
+use App\Models\Setting;
 use App\Services\Auth\SuperAdminProvisioner;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 
-/** Minimal base (egy only, no catalog): what the test suite seeds. DatabaseSeeder extends it with the full demo. */
+/** Minimal base (general settings, admins, demo operations; no catalog): what the test suite seeds. DatabaseSeeder extends it with the full demo. */
 class FoundationSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([LanguageSeeder::class, PermissionSeeder::class]);
 
+        Setting::putMany($this->generalSettings());
+
         // demo phones (fake +20 numbers); real super admins are created with `php artisan admin:provision-super`
-        $admin = app(SuperAdminProvisioner::class)->provision(null, 'Super Admin', '201000000001', 'password');
+        $admin = app(SuperAdminProvisioner::class)->provision('Super Admin', '201000000001', 'password');
+        // demo super admin = the former platform super admin (otp_exempt is set by the provisioner, like the conversion does)
         $admin->update(['email' => 'admin@3alraf.test']);
 
-        foreach ($this->tenants() as [$slug, $name, $country, $cur, $rate, $tz]) {
-            $t = Tenant::updateOrCreate(['slug' => $slug], [
-                'name' => $name, 'country' => $country, 'currency_code' => $cur, 'currency_symbol' => $cur,
-                'currency_rate' => $rate, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => $tz, 'is_active' => true,
-            ]);
-            $ta = app(SuperAdminProvisioner::class)->provision($t->id, ucfirst($slug).' Owner', '2010000001'.sprintf('%02d', $t->id % 100), 'password');
-            $ta->update(['email' => "owner@{$slug}.test"]);
-        }
+        $owner = Admin::query()->firstOrNew(['phone' => '201000000101']);
+        $owner->fill(['name' => 'Owner', 'email' => 'owner@egy.test', 'password' => 'password', 'is_active' => true])->save();
+        $owner->assignRole(Role::findByName('owner', PermissionSeeder::GUARD));
 
         $this->call([OperationsSeeder::class, OrdersSeeder::class, GrowthSeeder::class]);
         $this->demo();
     }
 
-    /** @return array<int,array> slug, name, country, currency, rate-to-base, timezone */
-    protected function tenants(): array
+    /** @return array<string,mixed> Settings → General */
+    protected function generalSettings(): array
     {
-        return [['egy', 'Egypt Store', 'EG', 'EGP', 1, 'Africa/Cairo']];
+        return [
+            'name' => 'Egypt Store', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'EGP',
+            'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Africa/Cairo',
+        ];
     }
 
     protected function demo(): void {}

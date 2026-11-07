@@ -6,7 +6,7 @@ use App\Enums\StockMovementType as T;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 use App\Models\BlogPost;
 use App\Models\CustomPage;
 use App\Models\StaticPage;
@@ -16,9 +16,7 @@ use App\Models\Bundle;
 use App\Models\DiscountCode;
 use App\Models\FlashSale;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Ai\GeneratorService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -31,21 +29,18 @@ use Spatie\Permission\PermissionRegistrar;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    RateLimiter::clear('ai:1');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
+    RateLimiter::clear('ai:shop');
     $p = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'oa-gen', 'api_key' => 'sk-test-1234567', 'is_active' => true]);
     $this->text = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'gpt-gen', 'label' => 'T', 'kind' => 'text', 'capabilities' => ['json_mode' => true], 'is_active' => true]);
     $this->image = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'img-gen', 'label' => 'I', 'kind' => 'image', 'is_active' => true]);
-    AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => $this->tenant->id], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
+    AiSetting::query()->updateOrCreate([], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
         'default_ai_model_id' => $this->text->id, 'monthly_token_quota' => null, 'monthly_image_quota' => null, 'brand_voice' => null, 'forbidden_words' => []]);
     app(\App\Services\Ai\AiAccess::class)->forget();
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin/ai/generators';
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->base = '/admin/ai/generators';
     $this->product = function (string $slug, string $price = '100.00', string $cost = '50', int $stock = 20) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         if ($stock > 0) {
             app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, $cost);
         }
@@ -112,12 +107,10 @@ it('custom page: unknown ids are dropped, reserved slug blocked, approve pins pr
     expect(collect(AiGeneration::find($res->json('data.id'))->output['errors'])->pluck('code')->all())->toContain('slug_reserved');
 });
 
-it('content drafts are tenant-isolated and need the approve permission to approve', function () {
+it('content drafts are stored and readable by the owner', function () {
     $r = ($this->gen)('static_page', ['slug' => 'iso', 'title' => ['en' => 'I'], 'content' => ['en' => 'x']], ['kind' => 'static_page']);
     $id = $r->json('data.id');
-    app()->instance('currentTenant', $this->other);
-    expect(AiGeneration::find($id))->toBeNull();
-    app()->instance('currentTenant', $this->tenant);
+    expect(AiGeneration::find($id))->not->toBeNull();
     ($this->owner)()->getJson("{$this->base}/$id/json")->assertOk()->assertJsonPath('data.kind', 'static_page');
 });
 

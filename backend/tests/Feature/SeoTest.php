@@ -1,16 +1,14 @@
 <?php
 
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Product;
+use App\Models\Admin;
 use App\Services\SeoSettingsService;
 use Database\Seeders\FoundationSeeder;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    $this->s = 'http://egy.3alraf.test';
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->s = rtrim(config('app.url'), '/');   // absolute: canonical / sitemap URLs are asserted literally
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 });
 
 function seoPayload(array $o = []): array
@@ -20,14 +18,14 @@ function seoPayload(array $o = []): array
 
 it('saves SEO settings, normalises ids and shows them on the form', function () {
     ($this->owner)()->putJson("{$this->s}/admin/seo", seoPayload(['home_title' => ['en' => 'Best Egypt Store'], 'social' => ['facebook' => 'https://facebook.com/egy']]))->assertSuccessful();
-    $seo = app(SeoSettingsService::class)->get($this->tenant->fresh());
+    $seo = app(SeoSettingsService::class)->get();
     expect($seo['ga4_id'])->toBe('G-ABC123DEF4')->and($seo['home_title']['en'])->toBe('Best Egypt Store')->and($seo['social']['facebook'])->toBe('https://facebook.com/egy');
     ($this->owner)()->get("{$this->s}/admin/seo")->assertOk()->assertSee('G-ABC123DEF4')->assertSee(__('seo.title'));
 });
 
 it('extracts the verification code when a whole meta tag is pasted', function () {
     ($this->owner)()->putJson("{$this->s}/admin/seo", seoPayload(['google_verification' => '<meta name="google-site-verification" content="ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" />']))->assertSuccessful();
-    expect(app(SeoSettingsService::class)->get($this->tenant->fresh())['google_verification'])->toBe('ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ');
+    expect(app(SeoSettingsService::class)->get()['google_verification'])->toBe('ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ');
 });
 
 it('rejects ids that could break out of the inline script', function () {
@@ -44,7 +42,7 @@ it('requires login for the settings page', function () {
 
 it('renders verification meta, tracking ids, hreflang, canonical and social tags on the storefront', function () {
     ($this->owner)()->putJson("{$this->s}/admin/seo", seoPayload(['home_title' => ['en' => 'Best Egypt Store'], 'home_description' => ['en' => 'Appliances, mobiles and fashion with fast delivery.'], 'twitter_handle' => 'egystore']))->assertSuccessful();
-    auth('tenant')->logout();
+    auth('admin')->logout();
     $html = $this->get("{$this->s}/en")->assertOk()->getContent();
     expect($html)->toContain('<title>Best Egypt Store</title>')
         ->and($html)->toContain('name="google-site-verification" content="abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"')
@@ -67,7 +65,7 @@ it('emits no tracking script when nothing is configured and noindex on private p
 it('serves robots.txt with the sitemap and blocks everything while indexing is off', function () {
     $this->get("{$this->s}/robots.txt")->assertOk()->assertHeader('Content-Type', 'text/plain; charset=UTF-8')->assertSee('Sitemap: '.$this->s.'/sitemap.xml', false)->assertSee('Disallow: /*/checkout', false);
     ($this->owner)()->putJson("{$this->s}/admin/seo", ['indexable' => 0])->assertSuccessful();
-    auth('tenant')->logout();
+    auth('admin')->logout();
     $this->get("{$this->s}/robots.txt")->assertSee('Disallow: /', false)->assertDontSee('Sitemap:', false);
     $this->get("{$this->s}/en")->assertSee('noindex,nofollow', false);
 });
@@ -82,7 +80,7 @@ it('adds Product and BreadcrumbList structured data to product pages', function 
     $cat->update(['path' => (string) $cat->id]);
     $p = \App\Models\Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Phone X'], 'slug' => 'phone-x', 'sku' => 'PX1', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
     $p->categories()->attach($cat->id);
-    \App\Models\TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 10, 'is_active' => true]);
+    listProduct($p, ['price' => 100, 'cost' => 10, 'is_active' => true]);
     $slug = $p->slug;
     $html = $this->get("{$this->s}/en/product/{$slug}")->assertOk()->getContent();
     expect($html)->toContain('"@type":"Product"')->and($html)->toContain('"priceValidUntil"')->and($html)->toContain('"@type":"BreadcrumbList"')->and($html)->toContain('property="og:type" content="product"');

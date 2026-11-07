@@ -26,7 +26,7 @@ class OwnerService
     private function ensureChart(): void
     {
         if (! Account::where('role_key', 'owner_capital')->exists()) {
-            $this->coa->seed(current_tenant());
+            $this->coa->seed();
             app(AccountResolver::class)->flush();
         }
     }
@@ -47,15 +47,15 @@ class OwnerService
     public function save(array $d, ?Owner $owner = null): Owner
     {
         return DB::transaction(function () use ($d, $owner) {
-            // serialise concurrent percentage edits per tenant
+            // serialise concurrent percentage edits
             Owner::lockForUpdate()->get(['id']);
-            if (! empty($d['tenant_admin_id'])) {
-                \App\Models\TenantAdmin::findOrFail($d['tenant_admin_id']);
+            if (! empty($d['admin_id'])) {
+                \App\Models\Admin::findOrFail($d['admin_id']);
             }
             $this->assertPercent((string) ($d['ownership_percent'] ?? 0), $owner?->id);
             $owner ??= new Owner;
             $owner->fill(['name' => $d['name'], 'phone' => $d['phone'] ?? null, 'ownership_percent' => $d['ownership_percent'] ?? 0,
-                'is_eligible' => (bool) ($d['is_eligible'] ?? false), 'tenant_admin_id' => $d['tenant_admin_id'] ?? null])->save();
+                'is_eligible' => (bool) ($d['is_eligible'] ?? false), 'admin_id' => $d['admin_id'] ?? null])->save();
 
             return $owner;
         });
@@ -105,14 +105,14 @@ class OwnerService
             };
             $entry = $this->journals->post([
                 'entry_date' => $date, 'type' => 'auto', 'description' => __('erp_ext.own.t.'.$type).' - '.$owner->name, 'source_type' => 'owner', 'source_id' => $owner->id,
-                'idempotency_key' => $ref ? 'owner:'.$owner->id.':'.$type.':'.$ref : null, 'branch_id' => $branchId, 'created_by' => auth('tenant')->id(),
+                'idempotency_key' => $ref ? 'owner:'.$owner->id.':'.$type.':'.$ref : null, 'branch_id' => $branchId, 'created_by' => auth('admin')->id(),
             ], $lines);
             if ($ref && ($t = OwnerTransaction::where('journal_entry_id', $entry->id)->first())) {
                 return $t; // replay of the same form token
             }
 
             return OwnerTransaction::create(['owner_id' => $owner->id, 'type' => $type, 'amount' => $amount, 'txn_date' => $date, 'journal_entry_id' => $entry->id,
-                'branch_id' => $branchId, 'account_role' => $account, 'note' => $note, 'created_by' => auth('tenant')->id()]);
+                'branch_id' => $branchId, 'account_role' => $account, 'note' => $note, 'created_by' => auth('admin')->id()]);
         });
     }
 
@@ -160,7 +160,7 @@ class OwnerService
 
         return $this->journals->post([
             'entry_date' => $date, 'type' => 'auto', 'description' => $m.' - '.$branch->name, 'source_type' => 'branch_capital', 'source_id' => $branch->id,
-            'idempotency_key' => $key, 'branch_id' => null, 'created_by' => auth('tenant')->id(), // per-line branches (a NULL source line must stay head office)
+            'idempotency_key' => $key, 'branch_id' => null, 'created_by' => auth('admin')->id(), // per-line branches (a NULL source line must stay head office)
         ], [
             ['account' => $account, 'debit' => $amount, 'branch_id' => $branch->id, 'memo' => $m],
             ['account' => $account, 'credit' => $amount, 'branch_id' => $fromBranchId, 'memo' => $m],

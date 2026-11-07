@@ -8,9 +8,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Storage;
@@ -19,15 +17,13 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->t = '/admin';
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج', 'en' => 'Widget'], 'slug' => 'p1', 'sku' => 'WID-1', 'barcode' => '2000000000008']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, StockMovementType::PURCHASE_IN, 10, '60.00');
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($this->owner, 'tenant');
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->owner, 'admin');
     $this->payload = fn (array $o = []) => array_merge([
         'items' => [['product_id' => $this->product->id, 'variant_id' => 0, 'qty' => 2]],
         'name' => 'Ali', 'phone' => '1001234567', 'city_id' => City::first()->id, 'address' => 'Street 1',
@@ -57,16 +53,16 @@ it('quotes and places an order for a customer through the storefront pipeline', 
     $res = $this->postJson("{$this->t}/pos/orders", ($this->payload)(['customer_id' => $c->id]))->assertOk();
     $order = Order::latest('id')->first();
     expect($order->customer_id)->toBe($c->id)->and((string) $order->subtotal)->toBe('200.00')->and($order->items)->toHaveCount(1);
-    $res->assertJsonPath('redirect', route('tenant.orders.show', $order->id));
+    $res->assertJsonPath('redirect', route('admin.orders.show', $order->id));
     $this->getJson("{$this->t}/orders/datatable")->assertOk()->assertJsonFragment(['customer_name' => 'Ali'])->assertSee($order->number);
 });
 
 it('requires a customer and the pos.use permission', function () {
     $this->postJson("{$this->t}/pos/orders", ($this->payload)())->assertStatus(422)->assertJsonValidationErrors('customer_id');
 
-    $clerk = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'Clerk', 'email' => 'clerk@egy.test', 'password' => 'secret-123', 'is_active' => true]);
+    $clerk = Admin::query()->create(['name' => 'Clerk', 'email' => 'clerk@egy.test', 'password' => 'secret-123', 'is_active' => true]);
     $clerk->givePermissionTo('orders.view');
-    $this->actingAs($clerk, 'tenant');
+    $this->actingAs($clerk, 'admin');
     $this->get("{$this->t}/pos")->assertForbidden();
     $this->postJson("{$this->t}/pos/orders", ($this->payload)())->assertForbidden();
 });

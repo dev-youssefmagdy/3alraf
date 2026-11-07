@@ -154,6 +154,10 @@ return [
     | available to. By default, the cookie will be available to the root
     | domain without subdomains. Typically, this shouldn't be changed.
     |
+    | Single store: keep SESSION_DOMAIN null (host-only cookie on APP_URL).
+    | Legacy shop subdomains are 301-redirected by LegacyHostRedirect before
+    | any session starts, so they never need a shared cookie domain.
+    |
     */
 
     'domain' => env('SESSION_DOMAIN'),

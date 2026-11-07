@@ -37,7 +37,7 @@ class ImageOptimizer
         return $p;
     }
 
-    /** Profile for a stored path, from its upload directory (tenants/{id}/{dir}/… or catalog/{dir}/… or {dir}/…) and `_thumb` suffix. */
+    /** Profile for a stored path, from its upload directory (catalog/{dir}/…, {dir}/… or a legacy per-store prefix {prefix}/{n}/{dir}/…) and `_thumb` suffix. */
     public static function profileForPath(string $path): string
     {
         if (preg_match('/_thumb\.[A-Za-z0-9]+$/', $path)) {

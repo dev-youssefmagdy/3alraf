@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\SmallBatchDecisionRequest;
-use App\Http\Requests\Tenant\SmallBatchRequest;
+use App\Http\Requests\Admin\SmallBatchDecisionRequest;
+use App\Http\Requests\Admin\SmallBatchRequest;
 use App\Models\SmallBatchTest;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Services\Growth\SmallBatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -26,28 +26,28 @@ class SmallBatchController extends Controller implements HasMiddleware
     {
         $rows = SmallBatchTest::orderByDesc('id')->limit(100)->get()->each(fn ($t) => $t->stats = $this->svc->stats($t));
 
-        return view('tenant.growth.small-batch', ['rows' => $rows, 'products' => TenantProduct::with('product')->where('is_active', true)->get()]);
+        return view('admin.growth.small-batch', ['rows' => $rows, 'products' => Product::where('is_active', true)->get()]);
     }
 
     public function store(SmallBatchRequest $r): JsonResponse
     {
-        $this->svc->create($r->validated(), auth('tenant')->id());
+        $this->svc->create($r->validated(), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.batch.index'));
+        return $this->ok(__('admin.saved'), route('admin.growth.batch.index'));
     }
 
     public function open(int $id): JsonResponse
     {
-        $this->svc->open(SmallBatchTest::findOrFail($id), auth('tenant')->id());
+        $this->svc->open(SmallBatchTest::findOrFail($id), auth('admin')->id());
 
-        return $this->ok(__('admin.saved'), route('tenant.growth.batch.index'));
+        return $this->ok(__('admin.saved'), route('admin.growth.batch.index'));
     }
 
     public function decide(SmallBatchDecisionRequest $r, int $id): JsonResponse
     {
         $d = $r->validated();
-        $res = $this->svc->decide(SmallBatchTest::findOrFail($id), $d['decision'], $d['note'] ?? null, auth('tenant')->id());
+        $res = $this->svc->decide(SmallBatchTest::findOrFail($id), $d['decision'], $d['note'] ?? null, auth('admin')->id());
 
-        return $this->ok($res instanceof SmallBatchTest ? __('admin.saved') : __('growth_hub.batch.sent_for_approval'), route('tenant.growth.batch.index'));
+        return $this->ok($res instanceof SmallBatchTest ? __('admin.saved') : __('growth_hub.batch.sent_for_approval'), route('admin.growth.batch.index'));
     }
 }

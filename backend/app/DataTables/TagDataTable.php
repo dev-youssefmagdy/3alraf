@@ -26,11 +26,11 @@ class TagDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('central')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('name_label', fn (Tag $b) => e($b->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (Tag $b) => $this->badge($b->is_active))
-            ->addColumn('actions', fn (Tag $b) => $this->actionButtons(route('central.tags.edit', $b), route('central.tags.destroy', $b), $u?->can('tags.edit'), $u?->can('tags.delete')))
+            ->addColumn('actions', fn (Tag $b) => $this->actionButtons(route('admin.tags.edit', $b), route('admin.tags.destroy', $b), $u?->can('tags.edit'), $u?->can('tags.delete')))
             ->rawColumns($this->rawColumns());
     }
 

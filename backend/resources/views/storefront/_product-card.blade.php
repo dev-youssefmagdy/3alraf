@@ -1,1 +1,1 @@
-<x-product-card :tp="$tp" />
+<x-product-card :product="$item" />

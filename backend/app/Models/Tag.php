@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Global (central catalog) product tag, e.g. "new", "eco". Shared by all tenants; storefront shows it on active products only. */
+/** Master catalog product tag, e.g. "new", "eco"; storefront shows it on active products only. */
 class Tag extends Model
 {
     use HasTranslations, SoftDeletes;

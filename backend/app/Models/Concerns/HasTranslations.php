@@ -59,7 +59,7 @@ trait HasTranslations
         if (! $fallback) {
             return null;
         }
-        foreach ([config('app.fallback_locale'), function_exists('current_tenant') ? current_tenant()?->default_locale : null] as $l) {
+        foreach ([config('app.fallback_locale'), \App\Models\Setting::get('default_locale')] as $l) {
             if ($l && ($t[$l] ?? '') !== '') {
                 return $t[$l];
             }

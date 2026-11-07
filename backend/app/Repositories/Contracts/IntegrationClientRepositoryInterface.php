@@ -8,6 +8,6 @@ interface IntegrationClientRepositoryInterface extends RepositoryInterface
 
     public function prefixExists(string $prefix): bool;
 
-    /** Live (non-revoked) clients with a webhook for a tenant. */
-    public function webhookTargets(int $tenantId): \Illuminate\Support\Collection;
+    /** Live (non-revoked) clients with a webhook. */
+    public function webhookTargets(): \Illuminate\Support\Collection;
 }

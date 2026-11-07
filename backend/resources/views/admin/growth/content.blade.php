@@ -1,11 +1,11 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.content.title')">
+<x-layouts.admin :title="__('growth_hub.content.title')">
     @php $c = fn ($k) => __('growth_hub.content.'.$k); $inp = 'block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm'; @endphp
     <div class="space-y-4" id="ct">
         <p class="text-sm text-slate-600">{{ $c('hint') }} {{ $c('ai_note') }}</p>
-        <a href="{{ route('tenant.ai.generators.index') }}" class="inline-block text-sm text-brand-700 underline">{{ $c('generate') }}</a>
+        <a href="{{ route('admin.ai.generators.index') }}" class="inline-block text-sm text-brand-700 underline">{{ $c('generate') }}</a>
         <x-card :title="$c('calendar')">
             @can('growth.manage')
-                <form data-ajax-form action="{{ route('tenant.growth.content.schedule') }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-5" novalidate>
+                <form data-ajax-form action="{{ route('admin.growth.content.schedule') }}" method="POST" class="mb-4 grid gap-3 sm:grid-cols-5" novalidate>
                     @csrf
                     <label class="text-sm text-slate-600 sm:col-span-2">{{ $c('fields.content_asset_id') }}<select name="content_asset_id" class="{{ $inp }}">@foreach ($assets as $a)<option value="{{ $a->id }}">#{{ $a->id }} {{ $c('types.'.$a->type) }} - {{ \Illuminate\Support\Str::limit($a->title ?: $a->body, 40) }}</option>@endforeach</select></label>
                     <label class="text-sm text-slate-600">{{ $c('fields.channel') }}<select name="channel" class="{{ $inp }}">@foreach ($channels as $ch)<option value="{{ $ch }}">{{ ucfirst($ch) }}</option>@endforeach</select></label>

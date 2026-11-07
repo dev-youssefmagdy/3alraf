@@ -12,7 +12,7 @@ use App\Services\Erp\Backfill\OpeningState;
 use App\Support\Money;
 
 /**
- * Orders -> ledger. Revenue, VAT and COGS are recognised ONCE, at the tenant's recognition point (RevenueRecognition: shipped by default,
+ * Orders -> ledger. Revenue, VAT and COGS are recognised ONCE, at the recognition point (RevenueRecognition: shipped by default,
  * delivered, or legacy confirmed). All amounts are read from the order (CALCULATIONS.md); COGS is `orders.cogs`, which OrderStatusService
  * re-values at shipment to the cost the stock ledger actually removed (sale_out), so ledger inventory == stock valuation.
  *

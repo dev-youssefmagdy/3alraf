@@ -1,7 +1,7 @@
-<x-layouts.admin :guard="$guard" :title="__('access.roles')">
+<x-layouts.admin :title="__('access.roles')">
     <x-card>
         <x-slot:actions>
-            @can('roles.create')<x-button :href="route($guard.'.roles.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            @can('roles.create')<x-button :href="route('admin.roles.create')">{{ __('admin.add_new') }}</x-button>@endcan
         </x-slot:actions>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -17,8 +17,8 @@
                         <td class="text-end">
                             @unless ($r['system'])
                                 <div class="flex justify-end gap-2">
-                                    @can('roles.edit')<a href="{{ route($guard.'.roles.edit', $r['id']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan
-                                    @can('roles.delete')<button type="button" data-delete="{{ route($guard.'.roles.destroy', $r['id']) }}" class="btn-sm btn-danger">{{ __('admin.delete') }}</button>@endcan
+                                    @can('roles.edit')<a href="{{ route('admin.roles.edit', $r['id']) }}" class="btn-sm btn-secondary">{{ __('admin.edit') }}</a>@endcan
+                                    @can('roles.delete')<button type="button" data-delete="{{ route('admin.roles.destroy', $r['id']) }}" class="btn-sm btn-danger">{{ __('admin.delete') }}</button>@endcan
                                 </div>
                             @endunless
                         </td>

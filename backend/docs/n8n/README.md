@@ -5,9 +5,10 @@ Importable templates live in `docs/n8n/workflows/` (21 JSON files, inactive on i
 ## Setup
 1. In Laravel admin > Growth > Integration, create a client (scopes: only what you need: `read`, `events:read`, `proposals:write`, `ingest:write`; any scope containing price/refund/stock/budget/payout/discount is refused). Copy the token and HMAC secret once.
 2. n8n credential (type HTTP Header Auth), name exactly **3alraf Integration Bearer**: `Authorization` = `Bearer <token>`. Optional alert credential **3alraf Owner Alerts** (your Slack/Telegram/Email node).
-3. n8n env: `GROWTH_API_BASE=https://<shop-host>/api/integration/v1`, `GROWTH_HMAC_SECRET=<secret>`, `NODE_FUNCTION_ALLOW_BUILTIN=crypto`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. Use separate values for staging and production (separate Laravel client per environment; never share a secret).
+3. n8n env: `GROWTH_API_BASE=https://<shop-host>/api/integration/v1` (the one site host = `APP_URL`; old `{slug}.<host>` addresses still answer `/api/*` but are deprecated), `GROWTH_HMAC_SECRET=<secret>`, optional `GROWTH_ADMIN_URL=https://<shop-host>/admin` (links in owner messages; default = `GROWTH_API_BASE` host + `/admin`), `NODE_FUNCTION_ALLOW_BUILTIN=crypto`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. Use separate values for staging and production (separate Laravel client per environment; never share a secret).
 4. Import `00-error-handler.json` first, then the others; every workflow points its error workflow to "3alraf - 00 Error handler". Activate only the workflows whose Laravel feature switch you turned on.
-5. Signing: header `X-Timestamp` (unix seconds, 5 min window) and `X-Signature` = hex HMAC-SHA256(secret, `"{timestamp}.{raw body}"`). The "Sign" Code node implements it. POSTs send `Idempotency-Key` (7-day replay window; pass a unique key for intentionally repeated identical posts).
+5. Single store: the client token carries no shop. Every event payload is `{event_id, type, store: {name, country, currency, locale}, occurred_at, data}` (`store` replaced the old `tenant` slug); `GET /ping` returns `{store, client, scopes, server_time}`.
+6. Signing: header `X-Timestamp` (unix seconds, 5 min window) and `X-Signature` = hex HMAC-SHA256(secret, `"{timestamp}.{raw body}"`). The "Sign" Code node implements it. POSTs send `Idempotency-Key` (7-day replay window; pass a unique key for intentionally repeated identical posts).
 
 ## Workflow to feature map (every built switch is covered)
 | File | Schedule / trigger | Feature keys |
@@ -45,8 +46,8 @@ Each workflow first calls `GET /features` and stops quietly when its keys are no
 `GET /api/integration/v1/health` (any valid client): `status` ok|degraded, database, outbox_pending, outbox_dead, oldest_pending_at. Alert on degraded or a growing oldest_pending_at. Dead events can be replayed from Growth > Events.
 
 ## Data retention and erasure
-`php artisan growth:prune [--tenant=slug] [--dry-run]` (nightly) deletes: interactions > 180d, small-batch signups (hashed+masked contacts) > 180d, ad-day rows > 730d, growth action log > 730d, delivered/dead events > 60d, expired idempotency records. Windows: `config/growth.php` `retention`.
-Erasure on request: `php artisan growth:prune --tenant=egy --erase-thread=<thread or external id>` and/or `--erase-contact=<phone or email as submitted>` (writes a `data_erasure` log entry without the identifier). Raw customer text is never stored (masked before save); events carry ids/amounts only.
+`php artisan growth:prune [--dry-run]` (nightly) deletes: interactions > 180d, small-batch signups (hashed+masked contacts) > 180d, ad-day rows > 730d, growth action log > 730d, delivered/dead events > 60d, expired idempotency records. Windows: `config/growth.php` `retention`.
+Erasure on request: `php artisan growth:prune --erase-thread=<thread or external id>` and/or `--erase-contact=<phone or email as submitted>` (writes a `data_erasure` log entry without the identifier). Raw customer text is never stored (masked before save); events carry ids/amounts only.
 
 ## Backup / restore test (quarterly)
 1. `mysqldump` the database nightly + keep `storage/app` offsite; export n8n workflows and credentials (`n8n export:workflow --all`, `export:credentials` encrypted) and keep `N8N_ENCRYPTION_KEY` separately.
@@ -56,7 +57,7 @@ Erasure on request: `php artisan growth:prune --tenant=egy --erase-thread=<threa
 `docs/CALCULATIONS.md` had no N6 section; the inventory and return-reason rules were added there in N7. Mobile API docs stay in `docs/api/openapi.json`; the integration API is in `docs/api/integration-openapi.json`.
 
 ## Offline self-test and real-n8n dry-run checklist (N10)
-**Offline (no n8n needed):** `php artisan growth:n8n-selftest --tenant=egy` runs every "Sign ..." Code node of `docs/n8n/workflows/*.json` through node (`docs/n8n/selftest-runner.cjs`, same JS and HMAC n8n runs), sends each built request through the real routes with a throwaway client (all scopes), once with all features ON and once OFF, and asserts: HMAC accepted (no 401), route exists (no 404-route/405), no 500, ON = authenticated and not forbidden, OFF = 403 `feature_disabled` for feature-gated routes. All changes are rolled back; refuses to run in production. Use a migrated (preferably separate) database. Wrapped by `tests/Feature/GrowthRemainingTest.php`.
+**Offline (no n8n needed):** `php artisan growth:n8n-selftest` runs every "Sign ..." Code node of `docs/n8n/workflows/*.json` through node (`docs/n8n/selftest-runner.cjs`, same JS and HMAC n8n runs), sends each built request through the real routes with a throwaway client (all scopes), once with all features ON and once OFF, and asserts: HMAC accepted (no 401), route exists (no 404-route/405), no 500, ON = authenticated and not forbidden, OFF = 403 `feature_disabled` for feature-gated routes. All changes are rolled back; refuses to run in production. Use a migrated (preferably separate) database. Wrapped by `tests/Feature/GrowthRemainingTest.php`.
 **It does not prove n8n itself.** The checklist below has NOT been run live by the development team; run it once on your n8n:
 1. Set n8n env `GROWTH_API_BASE`, `GROWTH_HMAC_SECRET`, `NODE_FUNCTION_ALLOW_BUILTIN=crypto` and create credential `3alraf Integration Bearer` (Header Auth) from a client created in Admin > Growth > Integrations.
 2. Import `00-error-handler`, then `01-health-monitor`; execute 01 manually: GET /features, /ping and /health must all return 200 (green).

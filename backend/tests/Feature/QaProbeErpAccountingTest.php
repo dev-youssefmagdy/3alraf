@@ -22,9 +22,7 @@ use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockMovement;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Backfill\BackfillService;
@@ -40,12 +38,10 @@ use Database\Seeders\FoundationSeeder;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);
     $this->branch = Branch::first();
     $this->product = tap(Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => 'qa'], 'slug' => 'qa-p', 'sku' => 'QAP', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]), function ($p) {
-        TenantProduct::create(['product_id' => $p->id, 'price' => '100', 'cost' => '60', 'is_active' => true]);
+        listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, 100, '60');
     });
     $this->place = fn (int $qty = 2) => app(OrderPlacementService::class)->place(new CheckoutData(
@@ -60,7 +56,7 @@ beforeEach(function () {
     };
     $this->bal = fn (string $role) => (float) Account::where('role_key', $role)->value('current_balance');
     $this->ship = fn (Order $o) => ($this->to)($o, S::CONFIRMED, S::PROCESSING, S::SHIPPED);
-    $this->actingAs(TenantAdmin::first(), 'tenant');
+    $this->actingAs(Admin::first(), 'admin');
 });
 
 it('REG ERP-001: a COD return refund is paid from cash, never credited to the Carrier COD receivable', function () {
@@ -170,7 +166,7 @@ it('REG ERP-006: branch capital allocation is a zero-sum internal move with a re
 it('REG ERP-007: an auto entry cannot be reversed by hand; repost and "post missing" restore a live, corrected entry', function () {
     $o = ($this->ship)(($this->place)());
     $e = JournalEntry::where('idempotency_key', SalesPoster::confirmKey($o))->first();
-    $this->post('http://egy.3alraf.test/admin/erp/journals/'.$e->id.'/reverse', ['reason' => 'x'])->assertSessionHasErrors('erp');
+    $this->post('/admin/erp/journals/'.$e->id.'/reverse', ['reason' => 'x'])->assertSessionHasErrors('erp');
     expect($e->fresh()->status)->toBe('posted');
     // repost: reversed + versioned corrected entry
     app(\App\Services\Erp\Posting\DocumentPoster::class)->repost($e, null, 'fix');

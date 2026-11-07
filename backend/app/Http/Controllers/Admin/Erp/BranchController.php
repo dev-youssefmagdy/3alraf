@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Branch;
 use App\Services\Erp\Accounting\BranchTransferService;
@@ -20,7 +20,7 @@ class BranchController extends ErpController
         $f = ErpReportFilter::fromRequest($r, true);
         $f->branchId = null;
 
-        return view('tenant.erp.branches', ['rows' => $svc->overview($f), 'f' => $f, 'branches' => Branch::orderBy('id')->get(), 'canTransfer' => (bool) auth('tenant')->user()->can('erp.journals.create')]);
+        return view('admin.erp.branches', ['rows' => $svc->overview($f), 'f' => $f, 'branches' => Branch::orderBy('id')->get(), 'canTransfer' => (bool) auth('admin')->user()->can('erp.journals.create')]);
     }
 
     public function transfer(Request $r, BranchTransferService $svc)
@@ -28,13 +28,13 @@ class BranchController extends ErpController
         $this->allow('erp.branches.view');
         $this->allow('erp.journals.create');
         $this->ensureSetup();
-        $v = $r->validate(['from_branch' => ['required', 'integer', $this->tenantExists('branches', true)], 'to_branch' => ['required', 'integer', $this->tenantExists('branches', true)], 'amount' => ErpRules::money(),
+        $v = $r->validate(['from_branch' => ['required', 'integer', $this->existsRule('branches', true)], 'to_branch' => ['required', 'integer', $this->existsRule('branches', true)], 'amount' => ErpRules::money(),
             'date' => ErpRules::date(false), 'note' => ['nullable', 'string', 'max:200'], 'role' => ['nullable', 'in:cash,bank,pos_cash'], 'ref' => ['nullable', 'string', 'max:60']]);
 
         return $this->guarded(function () use ($svc, $v) {
-            $svc->cash((int) $v['from_branch'], (int) $v['to_branch'], ErpRules::amount($v['amount']), $v['date'] ?? null, $v['note'] ?? null, $v['role'] ?? 'cash', $v['ref'] ?? null, auth('tenant')->id());
+            $svc->cash((int) $v['from_branch'], (int) $v['to_branch'], ErpRules::amount($v['amount']), $v['date'] ?? null, $v['note'] ?? null, $v['role'] ?? 'cash', $v['ref'] ?? null, auth('admin')->id());
 
-            return redirect()->route('tenant.erp.branches.index')->with('status', __('erp_rep.bt.done'));
+            return redirect()->route('admin.erp.branches.index')->with('status', __('erp_rep.bt.done'));
         });
     }
 }

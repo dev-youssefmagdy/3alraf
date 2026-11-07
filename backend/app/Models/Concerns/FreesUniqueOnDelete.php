@@ -3,7 +3,7 @@
 namespace App\Models\Concerns;
 
 /**
- * Soft-deleted rows must not keep a tenant-unique value (discount code, customer e-mail) reserved:
+ * Soft-deleted rows must not keep a unique value (discount code, customer e-mail) reserved:
  * on soft delete the value is tombstoned ("value#del{id}"), so the unique index is free again and
  * validation (which ignores nothing special) simply sees the original value as available.
  * Use with SoftDeletes; set $freedOnDelete = ['code'] on the model.

@@ -2,13 +2,11 @@
 
 namespace App\Models\Erp;
 
-use App\Models\Concerns\BelongsToTenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use Illuminate\Database\Eloquent\Model;
 
 class ProfitDistribution extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'erp_profit_distributions';
 
@@ -37,12 +35,12 @@ class ProfitDistribution extends Model
 
     public function creator()
     {
-        return $this->belongsTo(TenantAdmin::class, 'created_by');
+        return $this->belongsTo(Admin::class, 'created_by');
     }
 
     public function approver()
     {
-        return $this->belongsTo(TenantAdmin::class, 'approved_by');
+        return $this->belongsTo(Admin::class, 'approved_by');
     }
 
     public function entry()

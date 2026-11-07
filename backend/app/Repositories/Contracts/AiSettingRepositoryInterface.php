@@ -2,11 +2,12 @@
 
 namespace App\Repositories\Contracts;
 
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 
-interface AiTenantSettingRepositoryInterface extends RepositoryInterface
+interface AiSettingRepositoryInterface extends RepositoryInterface
 {
-    public function forTenant(int $tenantId): AiTenantSetting;
+    /** The single AI settings row (unsaved new instance when none exists yet). */
+    public function current(): AiSetting;
 
-    public function save(int $tenantId, array $data): AiTenantSetting;
+    public function save(array $data): AiSetting;
 }

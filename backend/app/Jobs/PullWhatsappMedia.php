@@ -22,7 +22,7 @@ class PullWhatsappMedia implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public ?int $tenantId, public int $mediaId, public string $token) {}
+    public function __construct(public int $mediaId, public string $token) {}
 
     public function backoff(): array
     {
@@ -31,11 +31,11 @@ class PullWhatsappMedia implements ShouldQueue
 
     public function handle(NodeClient $node): void
     {
-        $media = WhatsappMedia::ownedBy($this->tenantId)->find($this->mediaId);
+        $media = WhatsappMedia::query()->find($this->mediaId);
         if (! $media || $media->status === 'ready') {
             return;
         }
-        $sid = WhatsappSession::idFor($this->tenantId);
+        $sid = WhatsappSession::id();
         $pulled = $node->pullMedia($sid, $this->token); // WhatsappUnavailable -> retry
         if ($pulled === null) {
             $this->finish($media, 'expired');
@@ -54,7 +54,7 @@ class PullWhatsappMedia implements ShouldQueue
             $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: 'application/octet-stream';
             // `.bin` for anything unknown: the stored name never depends on remote input
             $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'video/mp4' => 'mp4', 'audio/ogg' => 'ogg', 'audio/mpeg' => 'mp3', 'audio/mp4' => 'm4a', 'application/pdf' => 'pdf'][$mime] ?? 'bin';
-            $path = MediaPaths::dir($media->owner_key).'/'.bin2hex(random_bytes(16)).'.'.$ext;
+            $path = MediaPaths::dir().'/'.bin2hex(random_bytes(16)).'.'.$ext;
             $h = fopen($tmp, 'rb');
             try {
                 Storage::disk($media->disk)->put($path, $h);
@@ -71,7 +71,7 @@ class PullWhatsappMedia implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        if ($media = WhatsappMedia::ownedBy($this->tenantId)->find($this->mediaId)) {
+        if ($media = WhatsappMedia::query()->find($this->mediaId)) {
             $this->finish($media, $e instanceof WhatsappUnavailable ? 'expired' : 'failed');
         }
     }
@@ -84,8 +84,8 @@ class PullWhatsappMedia implements ShouldQueue
 
     private function broadcast(WhatsappMedia $media): void
     {
-        if ($msg = WhatsappMessage::ownedBy($this->tenantId)->where('media_id', $media->id)->first()) {
-            ChatMessageUpdated::dispatch($this->tenantId, $msg->load('media')->toChat());
+        if ($msg = WhatsappMessage::query()->where('media_id', $media->id)->first()) {
+            ChatMessageUpdated::dispatch($msg->load('media')->toChat());
         }
     }
 }

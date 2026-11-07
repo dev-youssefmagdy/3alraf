@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\AffiliateTierRequest;
+use App\Http\Requests\Admin\AffiliateTierRequest;
 use App\Support\Money;
 
 final readonly class AffiliateTierData

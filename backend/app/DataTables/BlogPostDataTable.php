@@ -30,7 +30,7 @@ class BlogPostDataTable extends BaseDataTable
             ->filterColumn('title_label', fn ($q, $k) => $q->where('title', 'like', "%$k%"))
             ->editColumn('published_at', fn (BlogPost $m) => $m->published_at?->format('Y-m-d H:i'))
             ->addColumn('status', fn (BlogPost $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (BlogPost $m) => $this->tenantActions($m, 'tenant.blog-posts', 'blog_posts'));
+            ->addColumn('actions', fn (BlogPost $m) => $this->rowActions($m, 'admin.blog-posts', 'blog_posts'));
     }
 
     protected function rawColumns(): array

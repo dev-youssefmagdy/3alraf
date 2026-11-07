@@ -10,9 +10,7 @@ use App\Models\GrowthExperimentResult;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SmallBatchTest;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Models\TrackedLink;
 use App\Services\Growth\AmbassadorService;
 use App\Services\Growth\ApprovalService;
@@ -30,27 +28,15 @@ use Illuminate\Validation\ValidationException;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
-    foreach ([$this->tenant, $this->other] as $t) {
-        app(GrowthAccess::class)->set($t, true);
-        app(GrowthFeatures::class)->enableAll($t);
-    }
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
-    $this->off = function (string $key) {
-        $t = current_tenant();
-        $s = $t->settings;
-        $s['growth']['features'][$key] = false;
-        $t->update(['settings' => $s]);
-        app()->instance('currentTenant', $t->refresh());
-    };
+    app(GrowthAccess::class)->set(true);
+    app(GrowthFeatures::class)->enableAll();
+    $this->base = '';
+    $this->off = fn (string ...$keys) => growthFeatures(false, ...$keys);
     $this->product = function (string $slug = 'serum', string $price = '100.00', int $stock = 50, $cost = 50) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, 50);
-        TenantProduct::where('product_id', $pr->id)->update(['cost' => $cost]); // the ledger syncs the average cost: pin it for the test
+        Product::whereKey($pr->id)->update(['cost' => $cost]); // the ledger syncs the average cost: pin it for the test
 
         return $pr;
     };
@@ -81,15 +67,12 @@ function labCall($test, string $method, string $path, ?array $body, array $c, ar
         $server['HTTP_'.strtoupper(str_replace('-', '_', $k))] = $v;
     }
 
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
+    return $test->call($method, '/api/integration/v1/'.$path, [], [], [], $server, $raw);
 }
 
-function labClient(array $scopes, ?Tenant $tenant = null): array
+function labClient(array $scopes): array
 {
-    $prev = current_tenant();
-    app()->instance('currentTenant', $tenant ?? $prev);
     $r = app(IntegrationClientService::class)->create('n8n', $scopes, null, null);
-    app()->instance('currentTenant', $prev);
 
     return $r;
 }
@@ -112,7 +95,7 @@ it('guards the product pick by stock, cost and margin, and blocks start until cl
     expect($lab->start($e->fresh(), null)->status)->toBe('running');
 });
 
-it('imports ad results idempotently, mirrors spend, and isolates tenants', function () {
+it('imports ad results idempotently, and mirrors spend', function () {
     $e = ($this->exp)(($this->product)());
     $c = labClient(['ingest:write', 'read']);
     $body = ['rows' => [['date' => now()->subDay()->toDateString(), 'spend' => 20, 'impressions' => 1000, 'clicks' => 30, 'creative' => 'v1', 'campaign_id' => 'c9']]];
@@ -123,7 +106,6 @@ it('imports ad results idempotently, mirrors spend, and isolates tenants', funct
     expect(\App\Models\ExperimentAdDay::count())->toBe(1)->and((float) GrowthExperimentResult::where('metric', 'ad_spend')->sum('spend'))->toBe(25.0);
     labCall($this, 'POST', "experiments/{$e->id}/ad-results", ['rows' => [['date' => now()->addDay()->toDateString(), 'spend' => -1]]], $c, ['Idempotency-Key' => 'a3'])->assertStatus(422);
     labCall($this, 'POST', "experiments/{$e->id}/ad-results", $body, labClient(['read']), ['Idempotency-Key' => 'a4'])->assertStatus(403);
-    labCall($this, 'POST', "experiments/{$e->id}/ad-results", $body, labClient(['ingest:write'], $this->other), ['Idempotency-Key' => 'a5'])->assertStatus(404);
 });
 
 it('gives no recommendation before the minimum sample and labels ROAS as not profit', function () {
@@ -171,7 +153,7 @@ it('requires an approval, a scale-candidate recommendation and a bounded step fo
     $a = $lab->requestBudgetIncrease($e->fresh(), 1250, 'good', null);
     expect((float) $e->fresh()->budget_cap)->toBe(1000.0); // nothing applied yet
     expect(fn () => $lab->requestBudgetIncrease($e->fresh(), 1200, null, null))->toThrow(ValidationException::class); // one pending at a time
-    app(ApprovalService::class)->approve($a->id, TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('id'));
+    app(ApprovalService::class)->approve($a->id, Admin::query()->where('email', 'owner@egy.test')->value('id'));
     expect((float) $e->fresh()->budget_cap)->toBe(1250.0);
 });
 
@@ -196,11 +178,8 @@ it('runs the small-batch lab: terms, consent, dedupe, limited stock, decision ga
     expect($svc->stats($t->fresh())['gate'])->toBe('ready');
     $a = $svc->decide($t->fresh(), 'reorder', 'go', 1);
     expect($a)->toBeInstanceOf(GrowthApproval::class)->and($t->fresh()->decision)->toBeNull();
-    app(ApprovalService::class)->approve($a->id, TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->value('id'));
+    app(ApprovalService::class)->approve($a->id, Admin::query()->where('email', 'owner@egy.test')->value('id'));
     expect($t->fresh()->decision)->toBe('reorder');
-    // other tenant cannot reach this test
-    app()->instance('currentTenant', $this->other);
-    expect(SmallBatchTest::count())->toBe(0);
 });
 
 it('enrols only approved affiliates, refuses fake-review rewards, and reports valid / pending / excluded orders', function () {
@@ -222,8 +201,8 @@ it('enrols only approved affiliates, refuses fake-review rewards, and reports va
     expect($r['valid_orders'])->toBe(1)->and($r['pending_orders'])->toBe(1)->and($r['excluded_orders'])->toBe(2)->and($r['reward_cost'])->toBe(5.0)->and($r['by_channel']['instagram']['clicks'])->toBe(1)
         ->and($r['margin_after_rewards'])->toBe(55.0)->and($r['disclosure'])->toBe('#ad');
     // admin idea library refuses artificial engagement
-    $owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($owner, 'tenant');
+    $owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($owner, 'admin');
     $this->postJson("{$this->base}/admin/growth/ambassadors/ideas", ['title' => 'Boost', 'body' => 'Buy likes and fake reviews'])->assertStatus(422);
     $this->postJson("{$this->base}/admin/growth/ambassadors/ideas", ['title' => 'Unboxing', 'body' => 'Film an honest unboxing'])->assertOk();
 });
@@ -238,26 +217,26 @@ it('gates every N5 surface by its switch (admin 404, API 403, public page and li
     $al = app(AmbassadorService::class)->link($amb, $p->id, 'tiktok');
     $el = app(ExperimentLabService::class)->link($e, 'paid');
     $c = labClient(['read', 'ingest:write']);
-    $owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($owner, 'tenant');
+    $owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($owner, 'admin');
     foreach (['lab', "lab/{$e->id}", 'small-batch', 'ambassadors'] as $pg) {
         $this->get("{$this->base}/admin/growth/$pg")->assertOk();
     }
     $this->get("{$this->base}/en/launch/{$t->code}")->assertOk();
     labCall($this, 'GET', "experiments/{$e->id}/lab", null, $c)->assertOk();
     ($this->off)('experiment_lab');
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/lab")->assertNotFound();
     labCall($this, 'GET', "experiments/{$e->id}/lab", null, $c)->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
     labCall($this, 'POST', "experiments/{$e->id}/ad-results", ['rows' => [['date' => now()->toDateString(), 'spend' => 1]]], $c, ['Idempotency-Key' => 'g1'])->assertStatus(403);
     $this->get("{$this->base}/l/{$el->code}")->assertNotFound();
     $this->get("{$this->base}/l/{$al->code}")->assertRedirect(); // ambassadors still on
     ($this->off)('small_batch_lab');
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/small-batch")->assertNotFound();
     $this->get("{$this->base}/en/launch/{$t->code}")->assertNotFound();
     ($this->off)('ambassadors');
-    $this->actingAs($owner, 'tenant');
+    $this->actingAs($owner, 'admin');
     $this->get("{$this->base}/admin/growth/ambassadors")->assertNotFound();
     $this->get("{$this->base}/l/{$al->code}")->assertNotFound();
     expect(app(GrowthFeatures::class)->active('experiment_lab'))->toBeFalse();

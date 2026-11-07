@@ -2,11 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Tenant;
 use App\Services\Affiliates\AffiliateCommissionService;
 use Illuminate\Console\Command;
 
-/** Pending affiliate commissions -> approved once the order is delivered and the tenant's return window has passed. */
+/** Pending affiliate commissions -> approved once the order is delivered and the return window has passed. */
 class ApproveAffiliateCommissions extends Command
 {
     protected $signature = 'affiliates:approve-commissions';
@@ -15,12 +14,7 @@ class ApproveAffiliateCommissions extends Command
 
     public function handle(AffiliateCommissionService $service): int
     {
-        foreach (Tenant::where('is_active', true)->get() as $tenant) {
-            app()->instance('currentTenant', $tenant);
-            $n = $service->approveDue();
-            $this->line("{$tenant->slug}: $n approved");
-        }
-        app()->forgetInstance('currentTenant');
+        $this->line($service->approveDue().' approved');
 
         return self::SUCCESS;
     }

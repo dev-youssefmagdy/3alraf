@@ -23,7 +23,7 @@ class IdempotencyService
 
         try {
             $row = IntegrationRequest::withoutGlobalScopes()->create([
-                'tenant_id' => $client->tenant_id, 'integration_client_id' => $client->id, 'idempotency_key' => $key, 'request_hash' => $hash,
+                'integration_client_id' => $client->id, 'idempotency_key' => $key, 'request_hash' => $hash,
                 'method' => $request->method(), 'path' => mb_substr($request->path(), 0, 160),
             ]);
         } catch (UniqueConstraintViolationException) {

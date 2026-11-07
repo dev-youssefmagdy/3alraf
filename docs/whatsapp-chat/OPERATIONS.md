@@ -15,10 +15,10 @@ Run `php artisan migrate` (chat tables, permissions seed, thread index).
 `php artisan whatsapp:chat-prune [--days=N] [--dry-run]` removes messages (and their media files) older than the retention window; scheduled daily 04:20.
 
 ## Permissions
-`whatsapp.chat.view` (read, mark read), `.send` (send/react/edit/delete/presence), `.manage` (archive/pin/assign/delete locally), `.media` (download media; also needs view). Auto-granted to super-admin and tenant owner; assign to other roles in Roles UI.
+`whatsapp.chat.view` (read, mark read), `.send` (send/react/edit/delete/presence), `.manage` (archive/pin/assign/delete locally), `.media` (download media; also needs view). Auto-granted to super-admin and owner; assign to other roles in Roles UI.
 
 ## Security notes
-Owner always comes from the route/panel, never request input; every query uses `->ownedBy()`. Media is served only via `media.show` (nosniff, CSP sandbox, inline only for safe types). Node callbacks are HMAC-signed with a 5-minute window; ingest is idempotent so replays inside the window are no-ops. Message bodies are never logged (audit log stores ids/types only). Laravel never fetches URLs supplied by Node; it pulls only `/sessions/{own id}/media/{hex token}` from the configured Node URL. Customer linking is by exact phone match inside the same tenant, only when unambiguous.
+Single store: one session (`central`), no owner scoping; the session id is never taken from request input. Media is served only via `media.show` (nosniff, CSP sandbox, inline only for safe types). Node callbacks are HMAC-signed with a 5-minute window; ingest is idempotent so replays inside the window are no-ops. Message bodies are never logged (audit log stores ids/types only). Laravel never fetches URLs supplied by Node; it pulls only `/sessions/{own id}/media/{hex token}` from the configured Node URL. Customer linking is by exact phone match, only when unambiguous.
 
 ## Troubleshooting
 - Messages stay "pending": queue worker not running, or Node not connected (409 `not_connected`).

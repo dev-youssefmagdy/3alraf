@@ -1,9 +1,9 @@
 # SEO, Search Console & Analytics — setup guide
 
-Everything below is configured per store in **Admin panel → Reports & Settings → SEO & Analytics**
+Everything below is configured in **Admin panel → Reports & Settings → SEO & Analytics**
 (`/admin/seo`, permission `settings.view` to open, `settings.edit` to save).
-Settings are stored in `tenants.settings.seo` (encrypted JSON column), validated by
-`App\Http\Requests\Tenant\SeoSettingsRequest` and read through `App\Services\SeoSettingsService`.
+Settings are stored in the `settings` table under key `seo` (encrypted, `setting('seo')`), validated by
+`App\Http\Requests\Admin\SeoSettingsRequest` and read through `App\Services\SeoSettingsService`.
 
 ## What the platform already does for you (no setup)
 
@@ -13,7 +13,7 @@ Settings are stored in `tenants.settings.seo` (encrypted JSON column), validated
 | Canonical URLs | One canonical per page (pagination keeps `?page=N`; filters/sort/search params are dropped) |
 | Language SEO | `hreflang` for every store language + `x-default`, also repeated in `sitemap.xml` |
 | Indexing control | Cart, checkout, account, order, login, register, affiliate pages and filtered/search results are `noindex`; everything else `index,follow,max-image-preview:large` |
-| `robots.txt` | Generated per store at `/robots.txt`: blocks private paths, advertises the sitemap; `Disallow: /` while "Allow search engines" is OFF |
+| `robots.txt` | Generated at `/robots.txt`: blocks private paths, advertises the sitemap; `Disallow: /` while "Allow search engines" is OFF |
 | `sitemap.xml` | Home, categories, brands, products (with images), bundles, static pages, blog, custom pages; `lastmod`; hreflang alternates |
 | Social cards | Open Graph + Twitter card on every page (product image, category image or your default share image) |
 | Structured data (JSON-LD) | `Organization`/`Store` + `WebSite` + SearchAction (home), `Product` + `Offer` + `AggregateRating` (product), `BreadcrumbList` (product, category, brand, pages, blog), `BlogPosting` (blog) |
@@ -97,7 +97,7 @@ Several Lighthouse / PageSpeed audits depend on the web server, not on the Larav
 5. Keep `Server: ` / `X-Powered-By` minimal, add `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ## Per-page overrides
-- Product: *Meta title* / *Meta description* fields on the product (central catalogue).
+- Product: *Meta title* / *Meta description* fields on the product (Catalog → Products).
 - Blog post: *Meta description* field.
 - Home page: SEO & Analytics → Search appearance.
 - Everything else falls back to the generated title/description.

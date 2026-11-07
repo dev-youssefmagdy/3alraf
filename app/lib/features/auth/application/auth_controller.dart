@@ -48,19 +48,12 @@ class AuthController extends Notifier<AuthState> {
     return AuthState.signedOut;
   }
 
-  String? get _slug => ref.read(apiContextProvider).tenantSlug;
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
-  /// Loads the persisted session of the active tenant. The profile is
-  /// fetched in the background; an expired token flips back to signed out
-  /// through the 401 handler.
+  /// Loads the persisted session. The profile is fetched in the background;
+  /// an expired token flips back to signed out through the 401 handler.
   Future<void> restore() async {
-    final slug = _slug;
-    if (slug == null) {
-      state = AuthState.signedOut;
-      return;
-    }
-    final token = await ref.read(sessionStorageProvider).authToken(slug);
+    final token = await ref.read(sessionStorageProvider).authToken();
     if (token == null || token.isEmpty) {
       state = AuthState.signedOut;
       return;
@@ -68,7 +61,7 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState(signedIn: true);
     try {
       final me = await _repo.me();
-      if (_slug == slug) {
+      if (state.signedIn) {
         state = AuthState(signedIn: true, customer: me);
         unawaited(ref.read(pushRegistrarProvider).register());
       }
@@ -110,15 +103,13 @@ class AuthController extends Notifier<AuthState> {
   /// Persists the token, then merges the guest cart into the customer's
   /// (`cart/merge`). The guest token is dropped once the merge succeeded.
   Future<void> _finish(AuthResult result) async {
-    final slug = _slug;
-    if (slug == null) return;
     final storage = ref.read(sessionStorageProvider);
-    await storage.saveAuthToken(slug, result.token);
-    final guest = await storage.cartToken(slug);
+    await storage.saveAuthToken(result.token);
+    final guest = await storage.cartToken();
     if (guest != null && guest.isNotEmpty) {
       try {
         await _repo.mergeCart();
-        await storage.clearCartToken(slug);
+        await storage.clearCartToken();
       } on ApiException {
         // Keep the guest token; the server may already have adopted it.
       }
@@ -130,11 +121,9 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
-    final slug = _slug;
-    if (slug == null) return;
     await ref.read(pushRegistrarProvider).unregister();
     await _repo.logout();
-    await ref.read(sessionStorageProvider).clearAuthToken(slug);
+    await ref.read(sessionStorageProvider).clearAuthToken();
     state = AuthState.signedOut;
   }
 
@@ -163,20 +152,18 @@ class AuthController extends Notifier<AuthState> {
 
   /// `DELETE /auth/me`, then drops every local trace of the session.
   Future<void> deleteAccount({String? password, bool confirm = false}) async {
-    final slug = _slug;
-    if (slug == null) return;
     await ref.read(pushRegistrarProvider).unregister();
     await _repo.deleteAccount(password: password, confirm: confirm);
     final storage = ref.read(sessionStorageProvider);
-    await storage.clearAuthToken(slug);
-    await storage.clearCartToken(slug);
+    await storage.clearAuthToken();
+    await storage.clearCartToken();
     state = AuthState.signedOut;
   }
 
   void updateCustomer(Customer customer) =>
       state = AuthState(signedIn: true, customer: customer);
 
-  /// Local-only reset (tenant switch / 401). Secrets are cleared by callers.
+  /// Local-only reset. Secrets are cleared by callers.
   void reset() => state = AuthState.signedOut;
 
   /// Token was rejected by the server (already removed from storage).

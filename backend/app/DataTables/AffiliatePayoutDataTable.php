@@ -28,7 +28,7 @@ class AffiliatePayoutDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('tenant')->user();
+        $u = auth('admin')->user();
         $dt->addColumn('affiliate_name', fn (AffiliatePayout $m) => e($m->affiliate?->name))
             ->editColumn('amount', fn (AffiliatePayout $m) => $this->money($m->amount))
             ->editColumn('created_at', fn (AffiliatePayout $m) => $m->created_at->format('Y-m-d H:i'))
@@ -38,8 +38,8 @@ class AffiliatePayoutDataTable extends BaseDataTable
                     return '';
                 }
 
-                return '<div class="flex gap-2"><button type="button" data-post-action="'.e(route('tenant.affiliate-payouts.pay', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.mark_paid')).'</button>'
-                    .'<button type="button" data-post-action="'.e(route('tenant.affiliate-payouts.reject', $m->id)).'" class="btn-sm btn-danger">'.e(__('growth.reject')).'</button></div>';
+                return '<div class="flex gap-2"><button type="button" data-post-action="'.e(route('admin.affiliate-payouts.pay', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.mark_paid')).'</button>'
+                    .'<button type="button" data-post-action="'.e(route('admin.affiliate-payouts.reject', $m->id)).'" class="btn-sm btn-danger">'.e(__('growth.reject')).'</button></div>';
             });
     }
 

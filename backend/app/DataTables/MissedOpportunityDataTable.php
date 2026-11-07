@@ -31,7 +31,7 @@ class MissedOpportunityDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $m = fn ($k) => __('growth_hub.missed.'.$k);
-        $can = (bool) auth('tenant')->user()?->can('growth.manage');
+        $can = (bool) auth('admin')->user()?->can('growth.manage');
         $dt->editColumn('title', fn (MissedOpportunity $o) => e($o->title))
             ->addColumn('detail', function (MissedOpportunity $o) use ($m) {
                 $ev = collect($o->evidence)->map(fn ($e) => e($e['metric'].' = '.$e['value'].' ('.$e['period'].')'))->implode(', ');
@@ -44,10 +44,10 @@ class MissedOpportunityDataTable extends BaseDataTable
                 if (! $can) {
                     return '';
                 }
-                $h = '<button type="button" class="btn-sm btn-primary me-1 mb-1" data-missed-edit data-url="'.e(route('tenant.growth.missed.update', $o->id)).'" data-status="'.e($o->status).'" data-owner="'.e((string) $o->owner).'" data-due="'.e($o->due_on?->toDateString() ?? '').'" data-note="'.e((string) $o->result_note).'">'.e(__('admin.edit')).'</button>';
+                $h = '<button type="button" class="btn-sm btn-primary me-1 mb-1" data-missed-edit data-url="'.e(route('admin.growth.missed.update', $o->id)).'" data-status="'.e($o->status).'" data-owner="'.e((string) $o->owner).'" data-due="'.e($o->due_on?->toDateString() ?? '').'" data-note="'.e((string) $o->result_note).'">'.e(__('admin.edit')).'</button>';
                 foreach ($m('statuses') as $k => $label) {
                     if ($k !== $o->status) {
-                        $h .= '<button type="button" class="btn-sm btn-secondary me-1 mb-1" data-gpost="'.e(route('tenant.growth.missed.status', $o->id).'?status='.$k).'">'.e($label).'</button>';
+                        $h .= '<button type="button" class="btn-sm btn-secondary me-1 mb-1" data-gpost="'.e(route('admin.growth.missed.status', $o->id).'?status='.$k).'">'.e($label).'</button>';
                     }
                 }
 

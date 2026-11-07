@@ -26,9 +26,11 @@ class TrendService
 {
     public const PERIODS = [7, 30, 90];
     public const TTL_HOURS = 24;
-    public const REFRESH_SECONDS = 600;     // manual refresh: one per 10 min per tenant
+    public const REFRESH_SECONDS = 600;     // manual refresh: one per 10 min
     public const LOW_DAYS = 14;             // days of stock under which "restock" is suggested
     public const MAX_ITEMS = 20;
+    public const RUNNING_KEY = 'ai-trends:running';
+    public const ERROR_KEY = 'ai-trends:error';
 
     public function __construct(private AiTrendRepositoryInterface $repo, private AiGateway $gateway, private AiAccess $access, private AiContextFactory $contexts, private PurchaseService $purchases) {}
 
@@ -77,7 +79,7 @@ class TrendService
         if (! $model) {
             throw new AiException(__('ai.errors.model_unavailable'), 'model');
         }
-        $ctx = $this->contexts->forTenant();
+        $ctx = $this->contexts->make();
         $top = array_map(fn ($r) => Arr::only($r, ['name', 'sku', 'qty', 'prev_qty', 'growth_pct', 'margin_pct', 'available', 'days_of_stock']), array_slice($rows, 0, 15));
         foreach ($top as &$t) {
             $t['name'] = '<data>'.str_ireplace(['<data>', '</data>'], '', (string) $t['name']).'</data>';
@@ -92,23 +94,21 @@ class TrendService
 
     public function country(): ?string
     {
-        return current_tenant()?->country;
+        return setting('country');
     }
 
     /** @return array{snapshot:?AiTrendSnapshot,stale:bool,running:bool,error:?string} */
     public function market(): array
     {
         $s = $this->repo->latestSnapshot('market', $this->country());
-        $tid = current_tenant()->id;
 
         return ['snapshot' => $s, 'stale' => ! $s || ! $s->generated_at || $s->generated_at->lt(now()->subHours(self::TTL_HOURS)),
-            'running' => (bool) Cache::get("ai-trends:running:$tid"), 'error' => Cache::get("ai-trends:error:$tid")];
+            'running' => (bool) Cache::get(self::RUNNING_KEY), 'error' => Cache::get(self::ERROR_KEY)];
     }
 
-    /** Queue a refresh. Cache hit (fresh, not forced) = no job. Manual refresh is throttled per tenant. */
+    /** Queue a refresh. Cache hit (fresh, not forced) = no job. Manual refresh is throttled. */
     public function requestRefresh(bool $force): string
     {
-        $tid = current_tenant()->id;
         $m = $this->market();
         if (! $force && ! $m['stale']) {
             return 'cached';
@@ -117,32 +117,32 @@ class TrendService
             return 'running';
         }
         if ($force) {
-            $key = "ai-trends:refresh:$tid";
+            $key = 'ai-trends:refresh';
             if (RateLimiter::tooManyAttempts($key, 1)) {
                 throw new AiException(__('ai.trends.throttled', ['m' => max(1, (int) ceil(RateLimiter::availableIn($key) / 60))]), 'throttled');
             }
             RateLimiter::hit($key, self::REFRESH_SECONDS);
         }
-        Cache::put("ai-trends:running:$tid", true, now()->addMinutes(5));
-        Cache::forget("ai-trends:error:$tid");
-        RunMarketTrendsJob::dispatch($tid);
+        Cache::put(self::RUNNING_KEY, true, now()->addMinutes(5));
+        Cache::forget(self::ERROR_KEY);
+        RunMarketTrendsJob::dispatch();
 
         return 'queued';
     }
 
     public function webModel(): ?AiModel
     {
-        $models = $this->access->modelsFor(current_tenant(), 'text')->filter(fn ($m) => $m->can('web_search'));
+        $models = $this->access->modelsFor('text')->filter(fn ($m) => $m->can('web_search'));
         $default = $this->access->settings()?->default_ai_model_id;
 
         return $models->firstWhere('id', $default) ?? $models->firstWhere('is_default', true) ?? $models->first();
     }
 
-    /** Runs inside the tenant context (job or test). Throws AiException with a user-safe message. */
+    /** Runs in the job (or a test). Throws AiException with a user-safe message. */
     public function generateMarket(?AiModel $model = null): AiTrendSnapshot
     {
         $model ??= $this->webModel() ?? throw new AiException(__('ai.trends.no_web_model'), 'model');
-        $ctx = $this->contexts->forTenant();
+        $ctx = $this->contexts->make();
         $mix = $this->repo->catalogMix();
         $wrap = fn (array $l) => implode(', ', array_map(fn ($x) => '<data>'.str_ireplace(['<data>', '</data>'], '', $x).'</data>', $l)) ?: '-';
         $prompt = "Find products that are trending RIGHT NOW in the online market of country {$ctx->country} (currency {$ctx->currency}) that a store like ours could stock.\n"

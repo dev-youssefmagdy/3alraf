@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToWhatsappOwner;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WhatsappMessage extends Model
 {
-    use BelongsToWhatsappOwner, HasFactory;
+    use HasFactory;
 
     public const TYPES = ['text', 'image', 'video', 'audio', 'ptt', 'document', 'sticker', 'location', 'live_location', 'contact', 'poll', 'unsupported'];
 

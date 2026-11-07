@@ -6,19 +6,15 @@ import '../../../core/error/api_exception.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../catalog/application/catalog_providers.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/affiliate_models.dart';
 import '../data/affiliate_repository.dart';
 
-final affiliateRepositoryProvider = Provider<AffiliateRepository>((ref) {
-  final slug = ref.watch(tenantSlugProvider);
-  return AffiliateRepository(
+final affiliateRepositoryProvider = Provider<AffiliateRepository>(
+  (ref) => AffiliateRepository(
     ref.watch(dioProvider),
-    () async => slug == null
-        ? null
-        : ref.read(sessionStorageProvider).affiliateToken(slug),
-  );
-});
+    () => ref.read(sessionStorageProvider).affiliateToken(),
+  ),
+);
 
 class AffiliateState {
   const AffiliateState({
@@ -42,21 +38,18 @@ final affiliateControllerProvider =
       AffiliateController.new,
     );
 
-/// Affiliate session (separate token from the customer). Rebuilt on tenant
-/// switch, so a token never crosses stores.
+/// Affiliate session (separate token from the customer).
 class AffiliateController extends Notifier<AffiliateState> {
   @override
   AffiliateState build() {
-    final slug = ref.watch(tenantSlugProvider);
-    if (slug == null) return AffiliateState.signedOut;
-    Future.microtask(() => _restore(slug));
+    Future.microtask(_restore);
     return AffiliateState.loading;
   }
 
   AffiliateRepository get _repo => ref.read(affiliateRepositoryProvider);
 
-  Future<void> _restore(String slug) async {
-    final token = await ref.read(sessionStorageProvider).affiliateToken(slug);
+  Future<void> _restore() async {
+    final token = await ref.read(sessionStorageProvider).affiliateToken();
     if (!ref.mounted) return;
     if (token == null || token.isEmpty) {
       state = AffiliateState.signedOut;
@@ -68,7 +61,7 @@ class AffiliateController extends Notifier<AffiliateState> {
     } on ApiException catch (e) {
       if (!ref.mounted) return;
       if (e.isUnauthorized) {
-        await ref.read(sessionStorageProvider).clearAffiliateToken(slug);
+        await ref.read(sessionStorageProvider).clearAffiliateToken();
         state = AffiliateState.signedOut;
       } else {
         // Keep the session; the dashboard shows the error and retries.
@@ -78,10 +71,8 @@ class AffiliateController extends Notifier<AffiliateState> {
   }
 
   Future<void> login(String email, String password) async {
-    final slug = ref.read(tenantSlugProvider);
-    if (slug == null) return;
     final r = await _repo.login(email, password);
-    await ref.read(sessionStorageProvider).saveAffiliateToken(slug, r.token);
+    await ref.read(sessionStorageProvider).saveAffiliateToken(r.token);
     state = AffiliateState(signedIn: true, profile: r.profile);
   }
 
@@ -102,19 +93,14 @@ class AffiliateController extends Notifier<AffiliateState> {
   }
 
   Future<void> logout() async {
-    final slug = ref.read(tenantSlugProvider);
-    if (slug == null) return;
     await _repo.logout();
-    await ref.read(sessionStorageProvider).clearAffiliateToken(slug);
+    await ref.read(sessionStorageProvider).clearAffiliateToken();
     state = AffiliateState.signedOut;
   }
 
   /// A 401 from any affiliate call means the token is dead.
   Future<void> expire() async {
-    final slug = ref.read(tenantSlugProvider);
-    if (slug != null) {
-      await ref.read(sessionStorageProvider).clearAffiliateToken(slug);
-    }
+    await ref.read(sessionStorageProvider).clearAffiliateToken();
     if (ref.mounted) state = AffiliateState.signedOut;
   }
 }

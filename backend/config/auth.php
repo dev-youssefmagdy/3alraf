@@ -42,17 +42,14 @@ return [
             'driver' => 'session',
             'provider' => 'customers',
         ],
-        'central' => [
-            'driver' => 'session',
-            'provider' => 'central_admins',
-        ],
         'affiliate' => [
             'driver' => 'session',
             'provider' => 'affiliates',
         ],
-        'tenant' => [
+        // Admin panel (/admin): one account type for every admin
+        'admin' => [
             'driver' => 'session',
-            'provider' => 'tenant_admins',
+            'provider' => 'admins',
         ],
         // Mobile API (Sanctum bearer tokens); the token type is the provider + ability
         'customer_api' => ['driver' => 'sanctum', 'provider' => 'customers'],
@@ -89,13 +86,9 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\Affiliate::class,
         ],
-        'central_admins' => [
+        'admins' => [
             'driver' => 'eloquent',
-            'model' => App\Models\CentralAdmin::class,
-        ],
-        'tenant_admins' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\TenantAdmin::class,
+            'model' => App\Models\Admin::class,
         ],
 
         // 'users' => [

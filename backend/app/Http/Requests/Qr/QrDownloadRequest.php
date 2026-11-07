@@ -4,7 +4,7 @@ namespace App\Http\Requests\Qr;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/** ?variant= : central variant id (affiliate web/API) or tenant-variant row id (admin download). */
+/** ?variant= : product variant id (affiliate web/API and admin download). */
 class QrDownloadRequest extends FormRequest
 {
     public function authorize(): bool

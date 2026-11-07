@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\CustomPageRequest;
+use App\Http\Requests\Admin\CustomPageRequest;
 
 final readonly class CustomPageData
 {

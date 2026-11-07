@@ -5,13 +5,13 @@ namespace App\Http\Resources\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** A decorated TenantProduct (CardPresenter sets ->display). */
+/** A decorated Product (CardPresenter sets ->display). */
 class ProductCardResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         $d = $this->display ?? [];
-        $p = $this->product;
+        $p = $this->resource;
 
         return [
             'id' => $p->id, 'slug' => $p->slug, 'name' => $p->name, 'image' => $p->primaryImageUrl(),

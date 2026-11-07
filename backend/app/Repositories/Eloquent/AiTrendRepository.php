@@ -6,7 +6,6 @@ use App\Enums\OrderStatus;
 use App\Models\AiTrendSnapshot;
 use App\Models\Product;
 use App\Models\StockLevel;
-use App\Models\TenantProduct;
 use App\Repositories\Contracts\AiTrendRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +14,6 @@ class AiTrendRepository implements AiTrendRepositoryInterface
 {
     public function velocity(int $days, ?int $categoryId = null): Collection
     {
-        $tid = current_tenant()->id;
         $now = now();
         $cur = $now->copy()->subDays($days);
         $prev = $now->copy()->subDays($days * 2);
@@ -25,7 +23,7 @@ class AiTrendRepository implements AiTrendRepositoryInterface
         $rev = '((oi.line_subtotal - oi.line_discount) * (oi.quantity - oi.returned_qty) / oi.quantity)';
 
         $q = DB::table('order_items as oi')->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->where('oi.tenant_id', $tid)->where('o.tenant_id', $tid)->whereNull('o.deleted_at')->whereIn('o.status', $statuses)
+            ->whereNull('o.deleted_at')->whereIn('o.status', $statuses)
             ->where('o.created_at', '>=', $prev)->where('o.created_at', '<=', $now)->whereNotNull('oi.product_id')->where('oi.quantity', '>', 0)
             ->groupBy('oi.product_id')
             ->selectRaw("oi.product_id,
@@ -52,15 +50,16 @@ class AiTrendRepository implements AiTrendRepositoryInterface
 
     public function listedProducts(): Collection
     {
-        return TenantProduct::query()->with('product')->get()->filter(fn ($tp) => $tp->product)->map(fn ($tp) => (object) [
-            'product_id' => $tp->product_id, 'tp_id' => $tp->id, 'sku' => (string) $tp->product->sku, 'barcode' => (string) $tp->product->barcode,
-            'names' => array_values(array_filter((array) $tp->product->getTranslations('name'))), 'cost' => (string) ($tp->cost ?? '0'), 'price' => (string) ($tp->price ?? '0'), 'active' => (bool) $tp->is_active,
+        // listed = has a store price (Catalog page); tp_id = the product id the Catalog edit link takes
+        return Product::query()->whereNotNull('price')->get()->map(fn ($p) => (object) [
+            'product_id' => $p->id, 'tp_id' => $p->id, 'sku' => (string) $p->sku, 'barcode' => (string) $p->barcode,
+            'names' => array_values(array_filter((array) $p->getTranslations('name'))), 'cost' => (string) ($p->cost ?? '0'), 'price' => (string) ($p->price ?? '0'), 'active' => (bool) $p->is_active,
         ])->values();
     }
 
     public function catalogMix(int $limit = 8): array
     {
-        $ids = TenantProduct::query()->pluck('product_id');
+        $ids = Product::query()->whereNotNull('price')->pluck('id');
         $cats = DB::table('category_product as cp')->join('categories as c', 'c.id', '=', 'cp.category_id')->whereIn('cp.product_id', $ids)->whereNull('c.deleted_at')
             ->groupBy('c.id')->orderByRaw('COUNT(*) desc')->limit($limit)->selectRaw('c.id')->pluck('c.id');
         $brands = Product::query()->whereIn('id', $ids)->whereNotNull('brand_id')->select('brand_id', DB::raw('COUNT(*) n'))->groupBy('brand_id')->orderByDesc('n')->limit($limit)->pluck('brand_id');

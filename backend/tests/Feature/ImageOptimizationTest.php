@@ -125,7 +125,7 @@ it('migrates referenced images: original kept, refs untouched until --apply, the
     seedLegacy('catalog/products/2026/10/a_thumb.webp', 400, 400);
     seedLegacy('tenants/1/banners/2026/10/b.webp', 1600, 700);
     DB::table('images')->insert(['imageable_type' => 'product', 'imageable_id' => 1, 'path' => 'catalog/products/2026/10/a.webp', 'thumb_path' => 'catalog/products/2026/10/a_thumb.webp', 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()]);
-    $banner = DB::table('banners')->insertGetId(['tenant_id' => \App\Models\Tenant::first()->id, 'placement' => 'hero', 'title' => '{}', 'images' => json_encode(['ar' => 'tenants/1/banners/2026/10/b.webp', 'en' => 'missing/x.webp'], JSON_UNESCAPED_SLASHES), 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+    $banner = DB::table('banners')->insertGetId(['placement' => 'hero', 'title' => '{}', 'images' => json_encode(['ar' => 'tenants/1/banners/2026/10/b.webp', 'en' => 'missing/x.webp'], JSON_UNESCAPED_SLASHES), 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
 
     $this->artisan('images:optimize-existing', ['--disk' => 'media', '--category' => ['images', 'banners']])->assertSuccessful();
     Storage::disk('media')->assertExists(['catalog/products/2026/10/a.avif', 'catalog/products/2026/10/a_thumb.avif', 'tenants/1/banners/2026/10/b.avif', 'catalog/products/2026/10/a.webp']);

@@ -2,6 +2,8 @@
 
 Branch: `ERP-MODULE`. Status of each phase is tracked at the bottom.
 
+> **Single store (2026-11 conversion).** The ERP now runs for the one shop: no `tenant_id`, no central ERP pages, no `--tenant` options (`erp:backfill --from=…`, `erp:reconcile`, `erp:verify`, `erp:depreciate`). `erp_central.*` permissions were dropped; the only kept central page is **Finance → ERP anomalies** (`admin.erp.anomalies`, permission `erp.audit.view`, lang group `erp_audit`). Exchange rates stay as reference rates on ERP settings (never auto-applied, see CALCULATIONS.md). Sections below that mention tenants/central describe the multi-tenant era.
+
 ## 1. Audit findings (what exists today)
 
 | Area | Finding | Consequence |
@@ -162,7 +164,7 @@ Code: `Services/Erp/Reports/{ErpReportFilter,ReportBase,ReportCatalog,ReportExpo
 * **Dashboard**: KPIs reuse `LedgerReports::profitLoss/balanceSheet/balancesByRole` (total/net revenue, COGS, gross profit, opex, net profit, cash & bank, AR, AP, inventory, owner equity, liabilities) so they equal the statements (tested); monthly revenue vs expense trend (last 6 months to the end date), net profit by branch, top expense accounts, last 10 entries; charts via the existing Chart.js `_chart` partial.
 * Gaps: Journal entries page caps at 1000 lines (export is unlimited); no scheduled/emailed reports; PDFs are generic tables.
 
-## 9. Phase 8 - central ERP monitoring (done)
+## 9. Phase 8 - central ERP monitoring (done; historical - removed in the 2026-11 single-store conversion except Anomalies)
 Code: `Services/Erp/Central/{CentralErpService,AnomalyService,ExchangeRates,Csv}`, controllers `Central/Erp/{HubController,FinanceController,AuditController}`, views `resources/views/central/erp/*`, strings `erp_central` (en in `resources/lang-erp`, ar in `lang/ar`), migrations `2026_12_14_100001` (`erp_exchange_rates`) and `_100002` (re-syncs permissions so `erp_central.view|reports|audit` reach existing installs). Sidebar item "ERP" (perm `erp_central.view`) -> `/admin/erp` hub of cards; every card is its own page (`central.erp.*`). Tests: `tests/Feature/ErpCentralTest.php`.
 * **Permissions**: hub `erp_central.view`; overview, drill-down, performance, consolidated, transactions, parties, inventory, periods and the overview CSV `erp_central.reports`; anomalies, anomalies CSV and audit log `erp_central.audit`. The hub only shows cards the user may open. Everything is read-only (GET only); tenant admins cannot reach these routes (central guard).
 * **Tenant isolation**: all reads are `GROUP BY tenant_id` on raw `DB::table` queries (no model global scopes, no per-tenant loops, bounded query count - asserted in tests). Totals are only ever added within ONE currency group (`tenants.currency_code`); EGP and USD are never summed. The tenant drill-down (`erp/tenants/{id}`, 404 on unknown id) renders that tenant's own trial balance / P&L / balance sheet through `ReportCatalog` inside `TenantContext` (restored afterwards) with a banner naming tenant + currency. Entry detail reads lines by entry id AND the entry's own tenant.
@@ -179,14 +181,14 @@ Code: `Services/Erp/Backfill/{BackfillService,OpeningState}`, `Services/Erp/Reco
 * **Inventory opening**: plug = (stock valuation - COGS booked for confirmed-but-unshipped orders) - ledger inventory, computed LAST once the documents are in. Stock leaves `on_hand` at shipping while COGS is booked at confirmation, so the Inventory report/reconciliation use `expected = stock valuation - committed COGS` (committed = posted-confirm orders in confirmed/processing with `stock_deducted = false`).
 * **auto_posting_enabled** (checked by `PostingGuard`, hence by every Phase-4 listener): migration `2026_12_15_100001` writes `false` for every tenant that exists when it runs (pre-ERP tenants must not post before opening balances exist); tenants created later have no row and default to `true`. A completed full backfill turns it on (audited `auto_posting.enabled`); admins can toggle it on the Migration page.
 * **Migration page**: backfill runs, reconciliation with a Re-run button, documented benign differences, missing-journal detection and "Post missing" (`BackfillService::missing(true)`, idempotent, from the opening date), auto-posting switch. All audited.
-* **Reconcile** (`erp:reconcile [--tenant=] [--json]`): runs the Reconciliation report from the opening date to today; exit 1 on any mismatch.
+* **Reconcile** (`erp:reconcile [--json]`): runs the Reconciliation report from the opening date to today; exit 1 on any mismatch.
 
-### Production runbook (run per tenant, in this order)
+### Production runbook (single store, in this order)
 1. Deploy code, then `php artisan migrate --force` (creates ERP tables, seeds ERP permissions incl. central ones, adds `erp_backfill_runs`; existing tenants get `auto_posting_enabled = false`).
 2. `php artisan permission:cache-reset` (or `optimize:clear`) so the new permissions are seen; assign them to roles as needed.
-3. Dry run: `php artisan erp:backfill --tenant=SLUG --from=YYYY-MM-DD --dry-run` (nothing is written; review counts and the opening totals).
-4. Real run: `php artisan erp:backfill --tenant=SLUG --from=YYYY-MM-DD` (rerunnable; on `partial` fix the failures in the audit log and rerun). Post a manual opening journal for cash/bank.
-5. `php artisan erp:reconcile --tenant=SLUG` must exit 0; otherwise review the differences against the documented list on the Migration page.
+3. Dry run: `php artisan erp:backfill --from=YYYY-MM-DD --dry-run` (nothing is written; review counts and the opening totals).
+4. Real run: `php artisan erp:backfill --from=YYYY-MM-DD` (rerunnable; on `partial` fix the failures in the audit log and rerun). Post a manual opening journal for cash/bank.
+5. `php artisan erp:reconcile` must exit 0; otherwise review the differences against the documented list on the Migration page.
 6. Confirm auto-posting is ON (the completed backfill enables it; otherwise toggle it on the Migration page), then use "Detect/Post missing" to close any gap created between the backfill and enabling.
 7. Schedule: `routes/console.php` already schedules `erp:depreciate`; optionally add `erp:reconcile` daily and alert on a non-zero exit. Never run the backfill with `--from` earlier than a closed period.
 

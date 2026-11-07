@@ -2,7 +2,6 @@
 
 namespace App\Services\Erp\Reports;
 
-use App\Services\Erp\Central\Csv;
 use ArPHP\I18N\Arabic;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -49,16 +48,16 @@ class ReportExporter
 
     public function pdf(array $report, ?ErpReportFilter $f = null): \Barryvdh\DomPDF\PDF
     {
-        $rtl = (bool) current_tenant()?->isRtl(app()->getLocale());
+        $rtl = locale_is_rtl();
         $shaper = $rtl ? new Arabic : null;
         $t = fn (mixed $s) => ($shaper && $s !== null && $s !== '') ? $shaper->utf8Glyphs((string) $s, 5000, false) : (string) $s;
 
         return Pdf::setOption(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true])
-            ->loadView('tenant.erp.report-pdf', ['report' => $report, 'f' => $f, 'rtl' => $rtl, 't' => $t, 'tenant' => current_tenant()])->setPaper('a4', 'landscape');
+            ->loadView('admin.erp.report-pdf', ['report' => $report, 'f' => $f, 'rtl' => $rtl, 't' => $t])->setPaper('a4', 'landscape');
     }
 
     public function filename(string $key, ?ErpReportFilter $f, string $ext): string
     {
-        return (current_tenant()->slug ?? 'erp').'-'.$key.'-'.($f ? $f->from.'_'.$f->to : date('Y-m-d')).'.'.$ext;
+        return 'erp-'.$key.'-'.($f ? $f->from.'_'.$f->to : date('Y-m-d')).'.'.$ext;
     }
 }

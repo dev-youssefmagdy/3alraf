@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Central;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\ProductDataTable;
 use App\DTOs\ProductData;
 use App\Enums\ProductType;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Central\ProductRequest;
+use App\Http\Requests\Admin\ProductRequest;
 use App\Models\Brand;
 use App\Models\Language;
 use App\Models\Product;
@@ -37,7 +37,7 @@ class ProductController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('central.products.index', ['table' => new ProductDataTable]);
+        return view('admin.products.index', ['table' => new ProductDataTable]);
     }
 
     public function datatable(ProductDataTable $table): JsonResponse
@@ -47,26 +47,26 @@ class ProductController extends Controller implements HasMiddleware
 
     public function create()
     {
-        return view('central.products.form', $this->formData(new Product(['type' => ProductType::SIMPLE, 'is_active' => true])));
+        return view('admin.products.form', $this->formData(new Product(['type' => ProductType::SIMPLE, 'is_active' => true])));
     }
 
     public function store(ProductRequest $request): JsonResponse
     {
         $this->service->create(ProductData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.products.index'));
+        return $this->ok(__('admin.saved'), route('admin.products.index'));
     }
 
     public function edit(Product $product)
     {
-        return view('central.products.form', $this->formData($product->load(['images', 'categories', 'tags', 'variants.values', 'variants.images'])));
+        return view('admin.products.form', $this->formData($product->load(['images', 'categories', 'tags', 'variants.values', 'variants.images'])));
     }
 
     public function update(ProductRequest $request, Product $product): JsonResponse
     {
         $this->service->update($product, ProductData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('central.products.index'));
+        return $this->ok(__('admin.saved'), route('admin.products.index'));
     }
 
     public function destroy(Product $product): JsonResponse

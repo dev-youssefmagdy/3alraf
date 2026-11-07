@@ -1,9 +1,9 @@
-<x-layouts.admin :title="__('whatsapp.title')" :guard="$guard">
-    @php($can = auth($guard)->user()->can('whatsapp.manage'))
-    <div id="wa-panel" class="space-y-6" data-channel="{{ $channel }}" data-status-url="{{ route("$guard.whatsapp.status") }}"
+<x-layouts.admin :title="__('whatsapp.title')">
+    @php($can = auth('admin')->user()->can('whatsapp.manage'))
+    <div id="wa-panel" class="space-y-6" data-channel="{{ $channel }}" data-status-url="{{ route("admin.whatsapp.status") }}"
         data-ws-key="{{ config('broadcasting.default') === 'reverb' ? config('broadcasting.connections.reverb.key') : '' }}"
         data-ws-host="{{ config('broadcasting.connections.reverb.options.host') }}" data-ws-port="{{ config('broadcasting.connections.reverb.options.port') }}"
-        data-ws-scheme="{{ config('broadcasting.connections.reverb.options.scheme') }}" data-auth-url="{{ route("$guard.broadcasting.auth") }}"
+        data-ws-scheme="{{ config('broadcasting.connections.reverb.options.scheme') }}" data-auth-url="{{ route("admin.broadcasting.auth") }}"
         data-labels='@json(__('whatsapp.status'))' data-initial-status="{{ $session->status }}">
         <p class="text-sm text-slate-500">{{ __('whatsapp.subtitle') }}</p>
         <div class="grid gap-6 lg:grid-cols-2">
@@ -18,9 +18,9 @@
                 </dl>
                 @if ($can)
                     <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                        <button type="button" id="wa-connect" class="btn btn-primary {{ $session->status === 'connected' ? 'hidden' : '' }}" data-wa-action="{{ route("$guard.whatsapp.connect") }}">{{ __('whatsapp.connect') }}</button>
-                        <button type="button" class="btn" data-wa-action="{{ route("$guard.whatsapp.reconnect") }}">{{ __('whatsapp.reconnect') }}</button>
-                        <button type="button" class="btn btn-danger" data-wa-action="{{ route("$guard.whatsapp.disconnect") }}" data-confirm="{{ __('whatsapp.disconnect_confirm') }}">{{ __('whatsapp.disconnect') }}</button>
+                        <button type="button" id="wa-connect" class="btn btn-primary {{ $session->status === 'connected' ? 'hidden' : '' }}" data-wa-action="{{ route("admin.whatsapp.connect") }}">{{ __('whatsapp.connect') }}</button>
+                        <button type="button" class="btn" data-wa-action="{{ route("admin.whatsapp.reconnect") }}">{{ __('whatsapp.reconnect') }}</button>
+                        <button type="button" class="btn btn-danger" data-wa-action="{{ route("admin.whatsapp.disconnect") }}" data-confirm="{{ __('whatsapp.disconnect_confirm') }}">{{ __('whatsapp.disconnect') }}</button>
                     </div>
                 @endif
             </x-card>
@@ -49,7 +49,7 @@
         @if ($can)
             <x-card :title="__('whatsapp.settings')">
                 <p class="mb-5 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{{ __('whatsapp.settings_intro') }}</p>
-                <form data-ajax-form data-method="PUT" action="{{ route("$guard.whatsapp.settings") }}" method="POST" class="space-y-6" novalidate>
+                <form data-ajax-form data-method="PUT" action="{{ route("admin.whatsapp.settings") }}" method="POST" class="space-y-6" novalidate>
                     @csrf
                     <section>
                         <h3 class="text-sm font-semibold text-slate-800">{{ __('whatsapp.sec_sending') }}</h3>
@@ -86,7 +86,7 @@
                 </form>
             </x-card>
             <x-card :title="__('whatsapp.test_title')">
-                <form data-ajax-form action="{{ route("$guard.whatsapp.test") }}" method="POST" class="flex flex-wrap items-end gap-3" novalidate>
+                <form data-ajax-form action="{{ route("admin.whatsapp.test") }}" method="POST" class="flex flex-wrap items-end gap-3" novalidate>
                     @csrf
                     <input type="hidden" name="country" value="EG">
                     <x-input name="phone" type="tel" data-intl-phone="country" :label="__('whatsapp.fields.phone')" />

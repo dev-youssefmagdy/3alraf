@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Erp\AuditLog;
 use App\Models\Erp\FiscalYear;
@@ -18,7 +18,7 @@ class PeriodController extends ErpController
         $year = (int) ($r->year ?: now()->year);
         $svc->createYear($year);
 
-        return view('tenant.erp.periods', ['year' => $year, 'periods' => Period::whereYear('starts_on', $year)->orderBy('starts_on')->get(),
+        return view('admin.erp.periods', ['year' => $year, 'periods' => Period::whereYear('starts_on', $year)->orderBy('starts_on')->get(),
             'fy' => FiscalYear::where('starts_on', "$year-01-01")->first(),
             'log' => AuditLog::whereIn('action', ['period.closed', 'period.reopened', 'year.closed', 'year.reopened'])->latest('id')->limit(15)->get()]);
     }
@@ -28,7 +28,7 @@ class PeriodController extends ErpController
         $this->allow('erp.periods.close');
 
         return $this->guarded(function () use ($id, $svc) {
-            $svc->close(Period::findOrFail($id), auth('tenant')->id());
+            $svc->close(Period::findOrFail($id), auth('admin')->id());
 
             return back()->with('status', __('erp.period_closed'));
         });
@@ -40,7 +40,7 @@ class PeriodController extends ErpController
         $d = $r->validate(['reason' => ['required', 'string', 'max:300']]);
 
         return $this->guarded(function () use ($id, $svc, $d) {
-            $svc->reopen(Period::findOrFail($id), auth('tenant')->id(), $d['reason']);
+            $svc->reopen(Period::findOrFail($id), auth('admin')->id(), $d['reason']);
 
             return back()->with('status', __('erp.period_reopened'));
         });
@@ -51,7 +51,7 @@ class PeriodController extends ErpController
         $this->allow('erp.periods.close');
 
         return $this->guarded(function () use ($id, $svc) {
-            $svc->closeYear(FiscalYear::findOrFail($id), auth('tenant')->id());
+            $svc->closeYear(FiscalYear::findOrFail($id), auth('admin')->id());
 
             return back()->with('status', __('erp.year_closed_ok'));
         });
@@ -63,7 +63,7 @@ class PeriodController extends ErpController
         $d = $r->validate(['reason' => ['required', 'string', 'max:300']]);
 
         return $this->guarded(function () use ($id, $svc, $d) {
-            $svc->reopenYear(FiscalYear::findOrFail($id), auth('tenant')->id(), $d['reason']);
+            $svc->reopenYear(FiscalYear::findOrFail($id), auth('admin')->id(), $d['reason']);
 
             return back()->with('status', __('erp.year_reopened_ok'));
         });

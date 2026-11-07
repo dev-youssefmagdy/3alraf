@@ -2,26 +2,22 @@
 
 namespace App\Services\Growth;
 
-use App\Models\Tenant;
+use App\Models\Setting;
 
-/** Per-tenant `growth` feature flag: tenants.settings.growth.enabled, falling back to config('growth.enabled_default'). */
+/** Master `growth` switch: setting `growth.enabled`, falling back to config('growth.enabled_default'). */
 class GrowthAccess
 {
-    public function enabled(?Tenant $tenant = null): bool
+    public function enabled(): bool
     {
-        $tenant ??= current_tenant();
-        if (! $tenant || ! $tenant->is_active) {
-            return false;
-        }
-        $flag = (($tenant->settings ?? [])['growth'] ?? [])['enabled'] ?? null;
+        $flag = setting('growth.enabled');
 
         return $flag === null ? (bool) config('growth.enabled_default') : (bool) $flag;
     }
 
-    public function set(Tenant $tenant, bool $on): void
+    public function set(bool $on): void
     {
-        $s = $tenant->settings ?? [];
-        $s['growth']['enabled'] = $on;
-        $tenant->forceFill(['settings' => $s])->save();
+        $growth = (array) (setting('growth') ?? []);
+        $growth['enabled'] = $on;
+        Setting::put('growth', $growth);
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\BlogPostDataTable;
 use App\DTOs\BlogPostData;
-use App\Http\Requests\Tenant\BlogPostRequest;
+use App\Http\Requests\Admin\BlogPostRequest;
 use App\Models\BlogPost;
 use App\Services\BlogPostService;
 use Illuminate\Database\Eloquent\Model;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 class BlogPostController extends ResourceController
 {
     protected static string $perm = 'blog_posts';
-    protected static string $routeBase = 'tenant.blog-posts';
-    protected static string $view = 'tenant.blog-posts';
+    protected static string $routeBase = 'admin.blog-posts';
+    protected static string $view = 'admin.blog-posts';
     protected static string $titleKey = 'growth.blog_posts';
     protected static string $requestClass = BlogPostRequest::class;
     protected static string $dtoClass = BlogPostData::class;

@@ -1,5 +1,5 @@
 @php use App\Enums\TransferStatus; @endphp
-<x-layouts.admin guard="tenant" :title="$t->number">
+<x-layouts.admin :title="$t->number">
     <div class="space-y-4">
         <x-card>
             <div class="grid gap-3 text-sm sm:grid-cols-4">
@@ -13,11 +13,11 @@
         <x-card :title="__('ops.items_section')">
             <x-slot:actions>
                 @if ($t->status === TransferStatus::DRAFT)
-                    @can('stock_transfers.edit')<x-button :href="route('tenant.stock-transfers.edit', $t->id)">{{ __('admin.edit') }}</x-button>
-                    <button type="button" class="btn btn-secondary" data-post-action="{{ route('tenant.stock-transfers.cancel', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.cancel_doc') }}</button>@endcan
-                    @can('stock_transfers.send')<button type="button" class="btn btn-primary" data-post-action="{{ route('tenant.stock-transfers.send', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.send') }}</button>@endcan
+                    @can('stock_transfers.edit')<x-button :href="route('admin.stock-transfers.edit', $t->id)">{{ __('admin.edit') }}</x-button>
+                    <button type="button" class="btn btn-secondary" data-post-action="{{ route('admin.stock-transfers.cancel', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.cancel_doc') }}</button>@endcan
+                    @can('stock_transfers.send')<button type="button" class="btn btn-primary" data-post-action="{{ route('admin.stock-transfers.send', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.send') }}</button>@endcan
                 @elseif ($t->status === TransferStatus::IN_TRANSIT)
-                    @can('stock_transfers.receive')<button type="button" class="btn btn-primary" data-post-action="{{ route('tenant.stock-transfers.receive', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.receive') }}</button>@endcan
+                    @can('stock_transfers.receive')<button type="button" class="btn btn-primary" data-post-action="{{ route('admin.stock-transfers.receive', $t->id) }}" data-confirm="{{ __('ops.confirm_action') }}">{{ __('ops.receive') }}</button>@endcan
                 @endif
             </x-slot:actions>
             <table class="w-full text-sm">

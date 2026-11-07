@@ -1,4 +1,4 @@
-@php $cur = current_tenant()->currency_symbol; $img = $bundle['image'] ?: ($bundle['components'][0]['image'] ?? null); @endphp
+@php $cur = setting('currency_symbol'); $img = $bundle['image'] ?: ($bundle['components'][0]['image'] ?? null); @endphp
 <x-layouts.storefront :title="$bundle['name']" :description="\Illuminate\Support\Str::limit(strip_tags($bundle['description']), 160, '')" :image="$img">
     <nav class="mb-4 flex flex-wrap items-center gap-1 text-sm text-slate-500" aria-label="breadcrumb">
         <a href="{{ route('storefront.home') }}" class="hover:text-brand-600">{{ __('store.breadcrumb_home') }}</a><span>/</span>

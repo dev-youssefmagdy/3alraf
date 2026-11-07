@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Central\Ai;
+namespace App\Http\Controllers\Admin\Ai;
 
 use App\DataTables\AiUsageDataTable;
 use App\Http\Controllers\Controller;
@@ -18,11 +18,11 @@ class UsageController extends Controller implements HasMiddleware
 
     public function index()
     {
-        $m = AiUsageLog::query()->where('created_at', '>=', now()->startOfMonth());   // honours the switched tenant
+        $m = AiUsageLog::query()->where('created_at', '>=', now()->startOfMonth());
         $totals = ['tokens' => (int) (clone $m)->selectRaw('COALESCE(SUM(tokens_in + tokens_out),0) t')->value('t'), 'images' => (int) (clone $m)->sum('images'),
             'cost' => (float) (clone $m)->sum('est_cost'), 'calls' => (clone $m)->count()];
 
-        return view('central.ai.usage.index', ['table' => new AiUsageDataTable, 'totals' => $totals]);
+        return view('admin.ai.usage.index', ['table' => new AiUsageDataTable, 'totals' => $totals]);
     }
 
     public function datatable(AiUsageDataTable $table): JsonResponse

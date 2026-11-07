@@ -1,8 +1,8 @@
-<x-layouts.admin guard="tenant" :title="__('erp.title')">
+<x-layouts.admin :title="__('erp.title')">
     <p class="mb-5 text-sm text-slate-500">{{ __('erp.hub_hint') }}</p>
     @if ($cards->isEmpty())
         <div class="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center" data-empty="hub">
-            <h3 class="font-semibold text-slate-800">{{ __('erp_central.hub_empty_title') }}</h3>
+            <h3 class="font-semibold text-slate-800">{{ __('erp_audit.hub_empty_title') }}</h3>
             <p class="mx-auto mt-1 max-w-xl text-sm text-slate-500">{{ __('erp_acc.hub_empty') }}</p>
         </div>
     @endif
@@ -24,8 +24,8 @@
         @endforeach
     </div>
     @if ($alerts !== null)
-    <x-card :title="__('erp_central.alerts.title')" class="mt-6" data-alerts>
-        @if ($alerts->isEmpty())<p class="text-sm text-emerald-700">{{ __('erp_central.alerts.none') }}</p>@else @include('central.erp._alerts', ['alerts' => $alerts]) @endif
+    <x-card :title="__('erp_audit.alerts.title')" class="mt-6" data-alerts>
+        @if ($alerts->isEmpty())<p class="text-sm text-emerald-700">{{ __('erp_audit.alerts.none') }}</p>@else @include('admin.erp._alerts', ['alerts' => $alerts]) @endif
     </x-card>
     @endif
 </x-layouts.admin>

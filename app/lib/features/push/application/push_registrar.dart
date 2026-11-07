@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/api_exception.dart';
 import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
-import '../../tenant/application/startup_controller.dart';
+import '../../startup/application/startup_controller.dart';
 import '../data/push_service.dart';
 
 final pushTokenProviderProvider = Provider<PushTokenProvider>(
@@ -48,8 +48,8 @@ class PushRegistrar {
 
   /// Re-sends the token when the UI language changes after it was registered
   /// (the server uses the device locale to localise notifications). A no-op
-  /// when nothing is registered, so tenant switches and signed-out states do
-  /// not create anonymous device rows.
+  /// when nothing is registered, so signed-out states do not create
+  /// anonymous device rows.
   Future<void> onLocaleChanged(String code) async {
     if (_registered == null || _registeredLocale == code) return;
     await register();

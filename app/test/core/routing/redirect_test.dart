@@ -1,34 +1,32 @@
 import 'package:app/core/routing/app_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-String? r(
-  String loc, {
-  bool ready = true,
-  bool tenant = true,
-  bool signedIn = false,
-}) => computeRedirect(
-  uri: Uri.parse(loc),
-  startupReady: ready,
-  hasTenant: tenant,
-  signedIn: signedIn,
-);
+String? r(String loc, {bool ready = true, bool signedIn = false}) =>
+    computeRedirect(
+      uri: Uri.parse(loc),
+      startupReady: ready,
+      signedIn: signedIn,
+    );
 
 void main() {
   test('splash always renders', () {
-    expect(r('/', ready: false, tenant: false), isNull);
+    expect(r('/', ready: false), isNull);
   });
 
   test('anything else bounces to splash until startup is ready', () {
     expect(r('/home', ready: false), '/');
-    expect(r('/select-country', ready: false), '/');
+    expect(r('/language', ready: false), '/');
   });
 
-  test('no tenant -> country selection, pre-tenant routes stay', () {
-    expect(r('/home', tenant: false), '/select-country');
-    expect(r('/login', tenant: false), '/select-country');
-    expect(r('/select-country', tenant: false), isNull);
-    expect(r('/onboarding', tenant: false), isNull);
-    expect(r('/maintenance', tenant: false), isNull);
+  test('startup screens stay reachable once ready', () {
+    for (final p in [
+      '/language',
+      '/onboarding',
+      '/maintenance',
+      '/update-required',
+    ]) {
+      expect(r(p), isNull, reason: p);
+    }
   });
 
   test('protected routes need a session and remember where to return', () {
@@ -62,8 +60,7 @@ void main() {
     ]) {
       expect(r(p), isNull, reason: p);
     }
-    // still needs a tenant and a finished startup
-    expect(r('/orders/abc', tenant: false), '/select-country');
+    // still needs a finished startup
     expect(r('/orders/abc', ready: false), '/');
   });
 

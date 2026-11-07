@@ -9,9 +9,7 @@ use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Payments\PaymentGatewayFactory;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -24,18 +22,16 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->t = 'http://egy.3alraf.test/admin';
-    app()->instance('currentTenant', $this->tenant);
+    $this->t = '/admin';
     $this->branch = Branch::first();
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'p1', 'sku' => 'P1', 'barcode' => '2000000000008']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 0, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 0, 'is_active' => true]);
     $this->ledger = app(StockLedger::class);
 });
 
 function actAsEgy(): void
 {
-    test()->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    test()->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 }
 
 it('keeps weighted average cost and an exact ledger', function () {
@@ -58,8 +54,8 @@ it('keeps weighted average cost and an exact ledger', function () {
     // invariant: on_hand == sum of signed movements
     expect((int) StockMovement::where('product_id', $p)->sum('quantity'))->toBe(StockLevel::where('product_id', $p)->value('on_hand'))->toBe(20);
 
-    // tenant listing cost follows the weighted average of purchases
-    expect((string) TenantProduct::where('product_id', $p)->value('cost'))->toBe('20.00');
+    // the product cost follows the weighted average of purchases
+    expect((string) Product::whereKey($p)->value('cost'))->toBe('20.00');
 });
 
 it('refuses negative stock unless backorder allowed and resets average when empty', function () {
@@ -73,15 +69,14 @@ it('refuses negative stock unless backorder allowed and resets average when empt
     $this->ledger->record($b, $p, 0, T::PURCHASE_IN, 2, '12.00');           // empty shelf -> avg = new cost
     expect($this->ledger->avgCost($b, $p))->toBe('12.00');
 
-    $this->tenant->update(['settings' => ['allow_backorder' => true]]);
-    app()->instance('currentTenant', $this->tenant->fresh());
+    settings(['allow_backorder' => true]);
     $this->ledger->record($b, $p, 0, T::SALE_OUT, 5);
     expect($this->ledger->onHand($b, $p))->toBe(-3);
 });
 
 it('runs purchase, transfer and adjustment flows through the admin', function () {
     actAsEgy();
-    $b2 = Branch::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => ['ar' => 'فرع 2'], 'is_active' => true]);
+    $b2 = Branch::query()->create(['name' => ['ar' => 'فرع 2'], 'is_active' => true]);
     $supplier = Supplier::first();
     $item = $this->product->id.'-0';
 
@@ -131,12 +126,11 @@ it('runs purchase, transfer and adjustment flows through the admin', function ()
     $this->getJson("{$this->t}/stock/movements/datatable?draw=1&start=0&length=50&type=purchase_in")->assertOk()->assertJsonPath('recordsFiltered', 2);
 });
 
-it('manages cities, branches, suppliers, shipping prices, expenses and banners with tenant isolation', function () {
+it('manages cities, branches, suppliers, shipping prices, expenses and banners', function () {
     actAsEgy();
     $this->postJson("{$this->t}/cities/validate", [])->assertJsonValidationErrors(['name.ar']);
     $this->postJson("{$this->t}/cities", ['name' => ['ar' => 'أسوان', 'en' => 'Aswan'], 'is_active' => 1])->assertOk();
     $city = City::where('name->en', 'Aswan')->first();
-    expect($city->tenant_id)->toBe($this->tenant->id);
     $this->get("{$this->t}/cities")->assertOk();
     $this->get("{$this->t}/cities/create")->assertOk();
     $this->get("{$this->t}/cities/{$city->id}/edit")->assertOk();
@@ -186,15 +180,6 @@ it('manages cities, branches, suppliers, shipping prices, expenses and banners w
     $this->get("{$this->t}/banners/{$banner->id}/edit")->assertOk();
     $this->get("{$this->t}/banners")->assertOk();
 
-    // isolation: another tenant cannot see/edit egy's records
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'SA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $owner = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => 'o', 'email' => 'o@sa.test', 'password' => 'password', 'is_active' => true]);
-    $owner->syncRoles('tenant-owner');
-    $this->actingAs($owner, 'tenant');
-    $this->getJson('http://sa.3alraf.test/admin/cities/datatable?draw=1&start=0&length=10')->assertOk()->assertJsonPath('recordsTotal', 0);
-    $this->getJson("http://sa.3alraf.test/admin/cities/{$city->id}/edit")->assertNotFound();
-    $this->deleteJson("http://sa.3alraf.test/admin/banners/{$banner->id}")->assertNotFound();
-    $this->postJson('http://sa.3alraf.test/admin/purchases/validate', ['supplier_id' => Supplier::withoutGlobalScopes()->first()->id])->assertJsonValidationErrors(['supplier_id']);
 });
 
 it('stores payment gateway credentials encrypted and routes webhooks through the factory', function () {
@@ -227,7 +212,7 @@ it('stores payment gateway credentials encrypted and routes webhooks through the
     expect(fn () => app(PaymentGatewayFactory::class)->make(PaymentMethod::where('provider', PaymentProvider::COD)->first()))->toThrow(InvalidArgumentException::class);
     $obj = ['id' => 991, 'amount_cents' => 10000, 'currency' => 'EGP', 'success' => true, 'pending' => false, 'order' => ['id' => 5, 'merchant_order_id' => 'ORD-UNKNOWN']];
     $body = json_encode(['type' => 'TRANSACTION', 'obj' => $obj]);
-    $url = "http://egy.3alraf.test/webhooks/payments/{$pm->id}";
+    $url = "/webhooks/payments/{$pm->id}";
     $this->call('POST', $url.'?hmac=bad', [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertStatus(400);
     $good = \App\Services\Payments\Drivers\PaymobGateway::hmac($obj, 'topsecret');
     $this->call('POST', $url.'?hmac='.$good, [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertOk()->assertJson(['ignored' => true]); // unknown order: acked, nothing settled

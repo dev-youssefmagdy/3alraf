@@ -8,7 +8,9 @@ import 'package:app/core/storage/key_value_store.dart';
 import 'package:app/core/storage/preferences.dart';
 import 'package:app/core/storage/storage_providers.dart';
 import 'package:app/features/splash/presentation/splash_page.dart';
-import 'package:app/features/tenant/application/startup_controller.dart';
+import 'package:app/features/startup/application/startup_controller.dart';
+import 'package:app/features/store/application/store_controller.dart';
+import 'package:app/features/store/data/store_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -18,28 +20,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/network/fake_adapter.dart';
 
-Map<String, Object?> tenantJson(
-  String slug, {
-  String name = '',
+/// `GET /app-config` `store` block.
+Map<String, Object?> storeInfoJson({
+  String name = 'Store egy',
   String locale = 'ar',
   List<String> locales = const ['ar', 'en'],
 }) => {
-  'slug': slug,
-  'name': name.isEmpty ? 'Store $slug' : name,
-  'country': slug.toUpperCase(),
-  'flag': '🏳',
-  'currency': 'EGP',
+  'name': name,
+  'country': 'EG',
+  'currency': {'code': 'EGP', 'symbol': 'EGP'},
   'default_locale': locale,
-  'locales': locales,
-  'languages': ['العربية'],
-  'logo_url': null,
-  'base_url': 'http://$slug.test/',
+  'locales': [
+    for (final l in locales) {'code': l, 'rtl': l == 'ar'},
+  ],
+  'timezone': 'Africa/Cairo',
+  'base_url': 'http://shop.test',
 };
 
-Map<String, Object?> storeJson(String slug, {String locale = 'ar'}) => {
-  'slug': slug,
-  'name': 'Store $slug',
-  'country': slug.toUpperCase(),
+/// Binds a test container to the store (what the splash does on start).
+Future<void> bootStore(ProviderContainer c, {Map<String, Object?>? info}) => c
+    .read(storeControllerProvider.notifier)
+    .apply(StoreInfo.fromJson(info ?? storeInfoJson()));
+
+/// `GET /store` profile.
+Map<String, Object?> storeJson({String locale = 'ar'}) => {
+  'slug': 'egy',
+  'name': 'Store egy',
+  'country': 'EG',
   'currency': {'code': 'EGP', 'symbol': 'EGP'},
   'default_locale': locale,
   'locales': [
@@ -86,18 +93,22 @@ ResponseBody errorEnvelope(int status, String message, [Object? errors]) =>
 
 /// Everything a test needs: fake backend + overrides.
 class TestEnv {
+  /// [languageChosen] seeds a saved locale so app tests skip the first-run
+  /// language page (pass `false` to test it).
   TestEnv({
-    List<Map<String, Object?>>? tenants,
-    this.tenantsDown = false,
+    Map<String, Object?>? store,
+    this.appConfigDown = false,
     this.appConfig = const {},
     Map<String, Object?> prefs = const {},
+    bool languageChosen = true,
     ResponseBody? Function(RequestOptions o)? extra,
-  }) : tenants = tenants ?? [tenantJson('egy')],
+  }) : store = store ?? storeInfoJson(),
        _extra = extra,
-       initialPrefs = prefs;
+       initialPrefs = {if (languageChosen) 'locale': 'ar', ...prefs};
 
-  List<Map<String, Object?>> tenants;
-  bool tenantsDown;
+  /// `app-config.store`; `null` simulates a server without the block.
+  Map<String, Object?>? store;
+  bool appConfigDown;
   Map<String, Object?> appConfig;
   final Map<String, Object?> initialPrefs;
   final ResponseBody? Function(RequestOptions o)? _extra;
@@ -107,16 +118,13 @@ class TestEnv {
 
   ResponseBody _respond(RequestOptions o) {
     final path = o.path;
-    if (path == '/tenants') {
-      if (tenantsDown) {
+    if (path == '/app-config') {
+      if (appConfigDown) {
         throw DioException.connectionError(
           requestOptions: o,
           reason: 'offline',
         );
       }
-      return envelope(tenants);
-    }
-    if (path == '/app-config') {
       return envelope({
         'min_version': '1.0.0',
         'latest_version': '1.0.0',
@@ -125,13 +133,11 @@ class TestEnv {
         'maintenance_message': null,
         'update_required': false,
         'update_available': false,
+        'store': ?store,
         ...appConfig,
       });
     }
-    if (path == '/store') {
-      final slug = o.headers['X-Tenant'] as String? ?? 'egy';
-      return envelope(storeJson(slug));
-    }
+    if (path == '/store') return envelope(storeJson());
     if (path == '/auth/logout') return envelope(null);
     final r = _extra?.call(o);
     if (r != null) return r;
@@ -156,13 +162,13 @@ class TestEnv {
     dioProvider.overrideWith(
       (ref) => buildDio(
         config: const AppConfig(
-          apiBase: 'http://central.test',
+          apiBase: 'http://shop.test',
           googleServerClientId: '',
           env: 'test',
         ),
         context: ref.watch(apiContextProvider),
         storage: ref.watch(sessionStorageProvider),
-        onUnauthorized: (_) =>
+        onUnauthorized: () =>
             ref.read(unauthorizedEventsProvider.notifier).notify(),
         adapter: adapter,
       ),
@@ -183,6 +189,13 @@ class TestEnv {
     );
     await settle(tester);
   }
+}
+
+/// Container for an env whose prefs/secrets were already seeded (`init()`).
+ProviderContainer createContainer(TestEnv env) {
+  final c = ProviderContainer(overrides: env.overrides);
+  addTearDown(c.dispose);
+  return c;
 }
 
 /// Settles frames and lets the retry-interceptor back-off timers fire.

@@ -284,107 +284,23 @@ abstract class AppLocalizations {
   /// **'تعذّر تشغيل التطبيق'**
   String get startupErrorTitle;
 
-  /// No description provided for @selectCountryTitle.
+  /// No description provided for @chooseLanguageTitle.
   ///
   /// In ar, this message translates to:
-  /// **'اختر بلدك'**
-  String get selectCountryTitle;
+  /// **'اختر اللغة'**
+  String get chooseLanguageTitle;
 
-  /// No description provided for @selectCountrySubtitle.
+  /// No description provided for @chooseLanguageSubtitle.
   ///
   /// In ar, this message translates to:
-  /// **'اختر المتجر الذي تريد التسوّق منه.'**
-  String get selectCountrySubtitle;
-
-  /// No description provided for @searchCountry.
-  ///
-  /// In ar, this message translates to:
-  /// **'ابحث عن بلد أو متجر'**
-  String get searchCountry;
-
-  /// No description provided for @noStoresFound.
-  ///
-  /// In ar, this message translates to:
-  /// **'لا توجد متاجر مطابقة'**
-  String get noStoresFound;
-
-  /// No description provided for @noStoresAvailable.
-  ///
-  /// In ar, this message translates to:
-  /// **'لا توجد متاجر متاحة حاليًا.'**
-  String get noStoresAvailable;
+  /// **'يمكنك تغيير اللغة لاحقًا من القائمة الجانبية.'**
+  String get chooseLanguageSubtitle;
 
   /// No description provided for @continueAction.
   ///
   /// In ar, this message translates to:
   /// **'متابعة'**
   String get continueAction;
-
-  /// No description provided for @confirmCountryTitle.
-  ///
-  /// In ar, this message translates to:
-  /// **'التسوّق من {store}؟'**
-  String confirmCountryTitle(String store);
-
-  /// No description provided for @confirmCountryMessage.
-  ///
-  /// In ar, this message translates to:
-  /// **'يمكنك تغيير البلد لاحقًا من القائمة الجانبية.'**
-  String get confirmCountryMessage;
-
-  /// No description provided for @countryInactiveNotice.
-  ///
-  /// In ar, this message translates to:
-  /// **'متجرك السابق لم يعد متاحًا. اختر بلدًا آخر للمتابعة.'**
-  String get countryInactiveNotice;
-
-  /// No description provided for @currentStore.
-  ///
-  /// In ar, this message translates to:
-  /// **'الحالي'**
-  String get currentStore;
-
-  /// No description provided for @storeCurrency.
-  ///
-  /// In ar, this message translates to:
-  /// **'العملة: {currency}'**
-  String storeCurrency(String currency);
-
-  /// No description provided for @storeLanguages.
-  ///
-  /// In ar, this message translates to:
-  /// **'اللغات: {languages}'**
-  String storeLanguages(String languages);
-
-  /// No description provided for @switchCountry.
-  ///
-  /// In ar, this message translates to:
-  /// **'تغيير البلد'**
-  String get switchCountry;
-
-  /// No description provided for @switchCountryWarnTitle.
-  ///
-  /// In ar, this message translates to:
-  /// **'تغيير المتجر؟'**
-  String get switchCountryWarnTitle;
-
-  /// No description provided for @switchCountryWarnBody.
-  ///
-  /// In ar, this message translates to:
-  /// **'السلة والمفضلة تخصّ المتجر الحالي. سيتم تسجيل خروجك ومسح بيانات السلة على هذا الجهاز عند التغيير إلى {store}.'**
-  String switchCountryWarnBody(String store);
-
-  /// No description provided for @switchConfirm.
-  ///
-  /// In ar, this message translates to:
-  /// **'تغيير'**
-  String get switchConfirm;
-
-  /// No description provided for @switchedTo.
-  ///
-  /// In ar, this message translates to:
-  /// **'تتسوّق الآن من {store}'**
-  String switchedTo(String store);
 
   /// No description provided for @offlineBanner.
   ///
@@ -493,12 +409,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الإصدار {version}'**
   String appVersion(String version);
-
-  /// No description provided for @currentStoreLabel.
-  ///
-  /// In ar, this message translates to:
-  /// **'المتجر الحالي: {store}'**
-  String currentStoreLabel(String store);
 
   /// No description provided for @login.
   ///

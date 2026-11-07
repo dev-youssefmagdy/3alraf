@@ -7,7 +7,7 @@ use App\Models\ImprovementTask;
 use App\Models\SeasonalEvent;
 use App\Models\SeasonalMemory;
 use App\Models\SeasonalTask;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -183,8 +183,8 @@ class SeasonalCalendarService
         }
         $vel = $this->metrics->velocityRows(now())->keyBy('product_id');
         $floor = (float) app(GrowthConfig::class)->get('min_margin_percent', 15);
-        $tps = TenantProduct::with('product.categories')->where('is_active', true)->get()->filter(fn ($tp) => $tp->product && $tp->product->categories->pluck('id')->intersect($cats)->isNotEmpty());
-        $inStock = $tps->filter(fn ($tp) => ($vel[$tp->product_id]['on_hand'] ?? 0) > 0);
+        $tps = Product::with('categories')->where('is_active', true)->get()->filter(fn ($tp) => $tp && $tp->categories->pluck('id')->intersect($cats)->isNotEmpty());
+        $inStock = $tps->filter(fn ($tp) => ($vel[$tp->id]['on_hand'] ?? 0) > 0);
         $checks[] = ['key' => 'products', 'status' => $inStock->count() >= 2 ? 'ok' : ($inStock->count() ? 'warn' : 'fail'), 'evidence' => ['mapped_products' => $tps->count(), 'in_stock' => $inStock->count()]];
         $costed = $inStock->filter(fn ($tp) => (float) $tp->cost > 0);
         $low = $costed->filter(function ($tp) use ($floor) {
@@ -195,7 +195,7 @@ class SeasonalCalendarService
         $checks[] = ['key' => 'margin', 'status' => $inStock->isEmpty() ? 'warn' : ($costed->count() < $inStock->count() ? 'warn' : ($low->isEmpty() ? 'ok' : 'warn')), 'evidence' => ['missing_cost' => $inStock->count() - $costed->count(), 'below_floor' => $low->count(), 'floor_percent' => $floor]];
         // expected demand from the last 30 days of sales vs stock, over the season length (a rough cover check, not a forecast)
         $len = max((int) $e->starts_on->diffInDays($e->ends_on) + 1, 1);
-        $short = $inStock->filter(fn ($tp) => ($vel[$tp->product_id]['daily_velocity'] ?? 0) * $len > ($vel[$tp->product_id]['on_hand'] ?? 0));
+        $short = $inStock->filter(fn ($tp) => ($vel[$tp->id]['daily_velocity'] ?? 0) * $len > ($vel[$tp->id]['on_hand'] ?? 0));
         $checks[] = ['key' => 'cover', 'status' => $short->isEmpty() ? 'ok' : 'warn', 'evidence' => ['products_short_for_season' => $short->count(), 'season_days' => $len]];
         $bundles = Bundle::count();
         $checks[] = ['key' => 'bundles', 'status' => $bundles > 0 ? 'ok' : 'warn', 'evidence' => ['bundles' => $bundles]];

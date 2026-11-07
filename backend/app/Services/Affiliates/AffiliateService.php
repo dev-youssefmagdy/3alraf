@@ -8,7 +8,7 @@ use App\Enums\CommissionStatus;
 use App\Enums\PayoutStatus;
 use App\Models\Affiliate;
 use App\Models\AffiliatePayout;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Repositories\Contracts\AffiliateCommissionRepositoryInterface;
 use App\Repositories\Contracts\AffiliatePayoutRepositoryInterface;
 use App\Repositories\Contracts\AffiliateRepositoryInterface;
@@ -75,15 +75,15 @@ class AffiliateService
     {
         $codes = $this->qr->affiliateCodes($a);
 
-        return TenantProduct::query()->where('is_active', true)->whereHas('product', fn ($q) => $q->where('is_active', true))
-            ->with(['product.images', 'variants.variant.values'])->latest('id')->get()
-            ->each(function (TenantProduct $tp) use ($a, $codes) {
-                $tp->setAttribute('affiliate_url', $this->tracker->productUrl($a, $tp->product));
-                $tp->setAttribute('qr_url', $codes->get($this->qr->codeKey($tp))?->file_url);
-                $tp->setAttribute('variant_links', $tp->variants->filter(fn ($tv) => $tv->is_active && $tv->variant && ! $tv->variant->trashed() && $tv->variant->is_active)->map(fn ($tv) => [
-                    'id' => $tv->product_variant_id, 'label' => $tv->variant->label(), 'sku' => $tv->variant->sku,
-                    'link' => $this->qr->url(current_tenant(), $tp->product->slug, $tv->product_variant_id, $a),
-                    'qr_url' => $codes->get($this->qr->codeKey($tv))?->file_url,
+        return Product::query()->where('is_active', true)->whereNotNull('price')
+            ->with(['images', 'variants.values'])->latest('id')->get()
+            ->each(function (Product $p) use ($a, $codes) {
+                $p->setAttribute('affiliate_url', $this->tracker->productUrl($a, $p));
+                $p->setAttribute('qr_url', $codes->get($this->qr->codeKey($p))?->file_url);
+                $p->setAttribute('variant_links', $p->variants->filter(fn ($v) => $v->is_active)->map(fn ($v) => [
+                    'id' => $v->id, 'label' => $v->label(), 'sku' => $v->sku,
+                    'link' => $this->qr->url($p->slug, $v->id, $a),
+                    'qr_url' => $codes->get($this->qr->codeKey($v))?->file_url,
                 ])->values()->all());
             });
     }

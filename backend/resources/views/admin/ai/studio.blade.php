@@ -1,10 +1,10 @@
-<x-layouts.admin guard="tenant" :title="__('ai.studio.title')">
+<x-layouts.admin :title="__('ai.studio.title')">
     @php
         $s = fn ($k, $a = []) => __('ai.studio.'.$k, $a);
         $inp = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm';
         $lbl = 'block text-sm text-slate-600';
     @endphp
-    <div id="st" class="space-y-4" data-store="{{ route('tenant.ai.studio.store') }}" data-history="{{ route('tenant.ai.studio.history') }}" data-base="{{ url('admin/ai/studio/generations') }}" data-platforms="{{ json_encode($platforms, JSON_UNESCAPED_UNICODE) }}">
+    <div id="st" class="space-y-4" data-store="{{ route('admin.ai.studio.store') }}" data-history="{{ route('admin.ai.studio.history') }}" data-base="{{ url('admin/ai/studio/generations') }}" data-platforms="{{ json_encode($platforms, JSON_UNESCAPED_UNICODE) }}">
         <div class="flex flex-wrap items-center gap-2 border-b border-slate-200">
             @foreach (['social' => 'tab_posts', 'marketing' => 'tab_campaigns', 'history' => 'tab_history'] as $k => $t)
                 <button type="button" data-tab="{{ $k }}" class="st-tab -mb-px border-b-2 {{ $loop->first ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500' }} px-3 py-2 text-sm font-medium">{{ $s($t) }}</button>

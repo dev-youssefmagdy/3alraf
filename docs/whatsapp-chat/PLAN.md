@@ -1,5 +1,7 @@
 # WhatsApp Chat (Admin Inbox) — Implementation Plan
 
+> **Single store (2026-11-06) — historical design doc.** Owner scoping described below (`tenant_id`, `owner_key`, `tenant-<n>` sessions, channels `whatsapp(-chat).central|tenant.{id}`, `ownedBy()`, `ResolvesChatOwner` by route prefix) was removed: one session `central`, channels `whatsapp` / `whatsapp-chat` (guard `admin`), callback envelope `session_id` must be `central` (others ignored; Node answers 410 for `tenant-<n>`), new media under `whatsapp-media/{yyyy}/{mm}/`. Current state: root `WHATSAPP_INTEGRATION.md` (banner) and `OPERATIONS.md`.
+
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done. Each phase is executed by one agent, in order; an agent must tick its boxes and append notes to the **Progress log** at the bottom before finishing.
 
 ## 1. Goal

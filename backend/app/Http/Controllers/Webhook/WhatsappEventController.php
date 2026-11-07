@@ -24,8 +24,8 @@ class WhatsappEventController extends Controller
         $type = is_string($body['type'] ?? null) ? $body['type'] : 'status';
         if (in_array($type, ['status', 'qr'], true)) {
             $wa->applyEvent($body['session_id'], $body['data']);
-        } elseif ($owner = $wa->ownerOf($body['session_id'])) {
-            $chat->handle($owner['tenant'], $type, $body['data']); // unknown types are ignored (200) so Node never retries them
+        } elseif ($wa->isOwnSession($body['session_id'])) {
+            $chat->handle($type, $body['data']); // unknown types are ignored (200) so Node never retries them
         }
 
         return response()->json(['ok' => true]);

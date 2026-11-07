@@ -3,8 +3,8 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\QrCode;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Repositories\Contracts\QrCodeRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -13,13 +13,13 @@ class QrCodeRepository extends BaseRepository implements QrCodeRepositoryInterfa
 {
     protected string $model = QrCode::class;
 
-    public function forListing(TenantProduct $tp): Collection
+    public function forListing(Product $tp): Collection
     {
-        $variantIds = TenantProductVariant::query()->where('tenant_product_id', $tp->id)->pluck('id');
+        $variantIds = ProductVariant::query()->where('product_id', $tp->id)->pluck('id');
 
         return $this->query()->where(fn ($q) => $q
-            ->where(fn ($w) => $w->where('owner_type', TenantProduct::class)->where('owner_id', $tp->id))
-            ->orWhere(fn ($w) => $w->where('owner_type', TenantProductVariant::class)->whereIn('owner_id', $variantIds)))->get();
+            ->where(fn ($w) => $w->where('owner_type', Product::class)->where('owner_id', $tp->id))
+            ->orWhere(fn ($w) => $w->where('owner_type', ProductVariant::class)->whereIn('owner_id', $variantIds)))->get();
     }
 
     public function forAffiliate(int $affiliateId): Collection

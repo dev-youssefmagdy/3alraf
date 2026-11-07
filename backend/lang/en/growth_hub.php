@@ -2,13 +2,13 @@
 
 return [
     'title' => 'Growth system',
-    'disabled' => 'The Growth system is not enabled for this store. Ask the platform administrator to switch it on.',
+    'disabled' => 'The Growth system is switched off. An administrator can switch it on in Settings → General.',
     'menu' => ['lab' => 'Experiment lab', 'batch' => 'Small-batch lab', 'amb' => 'Ambassadors', 'inbox' => 'Interactions', 'voc' => 'Voice of customer', 'rep' => 'Reputation radar', 'missed' => 'Missed opportunities', 'bundles' => 'Bundle engine', 'seasonal' => 'Seasonal calendar', 'gift' => 'Gift Finder', 'brand' => 'Brand memory', 'content' => 'Content', 'group' => 'Growth (n8n)', 'approvals' => 'Approvals', 'experiments' => 'Experiments', 'events' => 'Event log', 'clients' => 'Integrations', 'settings' => 'Guardrails', 'brief' => 'Owner brief'],
     'fields' => ['name' => 'Name', 'scopes' => 'Scopes', 'webhook_url' => 'Webhook URL', 'reason' => 'Reason', 'hypothesis' => 'Hypothesis', 'objective' => 'Objective', 'metric' => 'Metric',
         'starts_on' => 'Starts on', 'ends_on' => 'Ends on', 'budget_cap' => 'Budget cap', 'outcome' => 'Outcome', 'learnings' => 'Learnings', 'value' => 'Value', 'spend' => 'Spend', 'recorded_on' => 'Date', 'note' => 'Note'],
     'api' => [
-        'feature_disabled' => 'This Growth feature is switched off for this tenant.',
-        'unauthenticated' => 'Invalid credentials, signature or timestamp.', 'growth_disabled' => 'Growth system is disabled for this tenant.', 'forbidden_scope' => 'This client lacks the required scope.',
+        'feature_disabled' => 'This Growth feature is switched off.',
+        'unauthenticated' => 'Invalid credentials, signature or timestamp.', 'growth_disabled' => 'The Growth system is disabled.', 'forbidden_scope' => 'This client lacks the required scope.',
         'too_many_requests' => 'Too many requests.', 'idempotency_required' => 'The Idempotency-Key header is required (max 120 chars).',
         'idempotency_mismatch' => 'This Idempotency-Key was already used with a different request.', 'in_flight' => 'A request with this Idempotency-Key is still being processed.',
     ],
@@ -41,7 +41,7 @@ return [
         'outcomes' => ['win' => 'Win', 'loss' => 'Loss', 'inconclusive' => 'Inconclusive'],
     ],
     'settings' => [
-        'cls_title' => 'Classifier accuracy on real data', 'cls_hint' => 'AI fallback and L3 auto-reply stay blocked until a real evaluation on at least :n human-reviewed messages meets the accuracy targets (php artisan growth:eval-classifier --real --tenant=slug).', 'cls_none' => 'Not evaluated yet (blocked).', 'cls_verdict' => ['insufficient_data' => 'Insufficient data (blocked)', 'below_target' => 'Below target (blocked)', 'meets_target' => 'Meets target (allowed)'],
+        'cls_title' => 'Classifier accuracy on real data', 'cls_hint' => 'AI fallback and L3 auto-reply stay blocked until a real evaluation on at least :n human-reviewed messages meets the accuracy targets (php artisan growth:eval-classifier --real).', 'cls_none' => 'Not evaluated yet (blocked).', 'cls_verdict' => ['insufficient_data' => 'Insufficient data (blocked)', 'below_target' => 'Below target (blocked)', 'meets_target' => 'Meets target (allowed)'],
         'title' => 'Growth guardrails', 'hint' => 'Store-level limits used by every growth module. Leave a field empty to use the platform default.', 'default' => 'Default: :v',
         'out_of_range' => 'Must be between :min and :max.', 'cover_order' => 'Minimum days of cover cannot exceed the maximum.', 'allowlist_hint' => 'Comma-separated FAQ keys that may be answered automatically. Empty = nothing is automatic.',
         'fields' => ['min_margin_percent' => 'Minimum margin %', 'max_discount_percent' => 'Maximum discount %', 'low_stock_threshold' => 'Low-stock threshold (units)', 'min_days_of_cover' => 'Minimum days of cover',
@@ -118,7 +118,7 @@ return [
     'decisions' => ['bad_status' => 'Invalid decision status.'],
     'features' => ['title' => 'Feature switches', 'hint' => 'Turn each Growth feature on or off. Data is never deleted; switching back on resumes where you left off.', 'needs' => 'Needs', 'inactive_dep' => 'On, but inactive: a required feature is off.',
         'groups' => ['foundation' => 'Foundation', 'insight' => 'Insight', 'content' => 'Content', 'offers' => 'Offers', 'engagement' => 'Engagement', 'growth' => 'Growth', 'operations' => 'Operations']],
-    'central' => ['title' => 'Growth system', 'hint' => 'Master switch. Store owners cannot enable it themselves; each feature then has its own switch in the store.', 'enabled' => 'Enable the Growth system for this store'],
+    'master' => ['title' => 'Growth system', 'hint' => 'Master switch. When on, each feature has its own switch on the Growth settings page.', 'enabled' => 'Enable the Growth system'],
 
     'inbox' => [
         'review' => 'Save label', 'review_hint' => 'Correct label (category / intent / sentiment): measures real accuracy',

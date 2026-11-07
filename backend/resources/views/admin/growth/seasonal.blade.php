@@ -1,16 +1,16 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.seasonal.title')">
+<x-layouts.admin :title="__('growth_hub.seasonal.title')">
     @php $s = fn ($k) => __('growth_hub.seasonal.'.$k); $inp = 'block w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm'; $csrf = csrf_token(); @endphp
     <div class="space-y-4" id="sc">
         <p class="text-sm text-slate-600">{{ $s('hint') }}</p>
         <div class="flex flex-wrap items-end gap-3">
             <form method="GET" class="flex items-end gap-2"><label class="text-sm text-slate-600">{{ $s('year') }}<input type="number" name="year" value="{{ $year }}" class="{{ $inp }}"></label><x-button type="submit">OK</x-button></form>
-            @can('growth.manage')<form data-ajax-form action="{{ route('tenant.growth.seasonal.year') }}" method="POST" novalidate>@csrf<input type="hidden" name="year" value="{{ $year }}"><x-button type="submit">{{ $s('create_year') }}</x-button></form>@endcan
+            @can('growth.manage')<form data-ajax-form action="{{ route('admin.growth.seasonal.year') }}" method="POST" novalidate>@csrf<input type="hidden" name="year" value="{{ $year }}"><x-button type="submit">{{ $s('create_year') }}</x-button></form>@endcan
         </div>
         @forelse ($events as $e)
             <x-card :title="$e->name().' ('.$e->starts_on->format('Y-m-d').' - '.$e->ends_on->format('Y-m-d').')'">
                 @if ($e->needsConfirmation())
                     <p class="mb-3 rounded bg-amber-50 p-2 text-sm text-amber-800"><span class="badge badge-warning">{{ $s('unconfirmed') }}</span> {{ $s('unconfirmed_hint') }}
-                        @can('growth.manage')<form data-ajax-form action="{{ route('tenant.growth.seasonal.confirm', $e->id) }}" method="POST" class="mt-2" novalidate>@csrf<x-button type="submit">{{ $s('confirm_date') }}</x-button></form>@endcan</p>
+                        @can('growth.manage')<form data-ajax-form action="{{ route('admin.growth.seasonal.confirm', $e->id) }}" method="POST" class="mt-2" novalidate>@csrf<x-button type="submit">{{ $s('confirm_date') }}</x-button></form>@endcan</p>
                 @elseif ($e->hijri)
                     <p class="mb-3 text-xs text-emerald-700">{{ $s('confirmed') }} {{ $e->confirmed_at?->format('Y-m-d') }}</p>
                 @endif
@@ -30,7 +30,7 @@
                     <div>
                         @can('growth.manage')
                             @if ($e->status !== 'closed')
-                                <form data-ajax-form action="{{ route('tenant.growth.seasonal.update', $e->id) }}" method="POST" class="grid gap-2 sm:grid-cols-3" novalidate>
+                                <form data-ajax-form action="{{ route('admin.growth.seasonal.update', $e->id) }}" method="POST" class="grid gap-2 sm:grid-cols-3" novalidate>
                                     @csrf @method('PUT')
                                     <label class="text-xs text-slate-600">{{ $s('fields.starts_on') }}<input type="date" name="starts_on" value="{{ $e->starts_on->format('Y-m-d') }}" class="{{ $inp }}"></label>
                                     <label class="text-xs text-slate-600">{{ $s('fields.ends_on') }}<input type="date" name="ends_on" value="{{ $e->ends_on->format('Y-m-d') }}" class="{{ $inp }}"></label>
@@ -41,7 +41,7 @@
                                         @if (app(\App\Services\Growth\GrowthFeatures::class)->active('bundle_engine'))<button type="button" data-bundles="{{ $e->id }}" class="text-sm text-brand-700 underline">{{ $s('propose') }}</button>@endif</div>
                                 </form>
                                 @if ($e->ends_on->isPast())
-                                    <form data-ajax-form action="{{ route('tenant.growth.seasonal.close', $e->id) }}" method="POST" class="mt-4 grid gap-2" novalidate>@csrf
+                                    <form data-ajax-form action="{{ route('admin.growth.seasonal.close', $e->id) }}" method="POST" class="mt-4 grid gap-2" novalidate>@csrf
                                         @foreach (['content_formats', 'start_timing', 'objections', 'lessons'] as $f)<label class="text-xs text-slate-600">{{ $s('fields.'.$f) }}<input name="{{ $f }}" class="{{ $inp }}"></label>@endforeach
                                         <div><x-button type="submit">{{ $s('close') }}</x-button></div></form>
                                 @endif

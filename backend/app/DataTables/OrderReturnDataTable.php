@@ -29,9 +29,9 @@ class OrderReturnDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('number_link', fn (OrderReturn $m) => '<a class="font-semibold text-brand-600" href="'.e(route('tenant.returns.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (OrderReturn $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.returns.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
-            ->addColumn('order_number', fn (OrderReturn $m) => '<a class="text-brand-600" href="'.e(route('tenant.orders.show', $m->order_id)).'">'.e($m->order?->number).'</a>')
+            ->addColumn('order_number', fn (OrderReturn $m) => '<a class="text-brand-600" href="'.e(route('admin.orders.show', $m->order_id)).'">'.e($m->order?->number).'</a>')
             ->editColumn('created_at', fn (OrderReturn $m) => $m->created_at->format('Y-m-d H:i'))
             ->editColumn('return_value', fn (OrderReturn $m) => $this->money($m->return_value))
             ->editColumn('refund_amount', fn (OrderReturn $m) => $this->money($m->refund_amount))

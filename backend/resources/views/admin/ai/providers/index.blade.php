@@ -1,9 +1,9 @@
-<x-layouts.admin guard="central" :title="__('ai.menu.providers')">
+<x-layouts.admin :title="__('ai.menu.providers')">
     <x-card>
         <x-slot:actions>
-            @can('ai_providers.create')<x-button :href="route('central.ai.providers.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            @can('ai_providers.create')<x-button :href="route('admin.ai.providers.create')">{{ __('admin.add_new') }}</x-button>@endcan
         </x-slot:actions>
-        <x-datatable :table="$table" :url="route('central.ai.providers.datatable')" id="ai-providers-table" />
+        <x-datatable :table="$table" :url="route('admin.ai.providers.datatable')" id="ai-providers-table" />
     </x-card>
     <script>
         document.addEventListener('click', function (e) {

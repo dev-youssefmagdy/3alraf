@@ -1,5 +1,5 @@
-<x-layouts.admin guard="tenant" :title="__('erp.cards.audit')[0]">
-    @include('tenant.erp._flash')
+<x-layouts.admin :title="__('erp.cards.audit')[0]">
+    @include('admin.erp._flash')
     @php $in = 'mt-1 block rounded border border-slate-300 px-2 py-1.5'; @endphp
     <x-card class="mb-5">
         <form method="GET" class="flex flex-wrap items-end gap-3 text-sm">

@@ -2,7 +2,7 @@
 
 /*
  | Offline (WALLET) checkout: mandatory transfer proof + anti-abuse limits. Every value is env-overridable.
- | Windows are in minutes. All counters are keyed by resolved tenant + (client IP | normalised phone | normalised e-mail).
+ | Windows are in minutes. All counters are keyed by (client IP | normalised phone | normalised e-mail).
  */
 return [
     'proof' => [

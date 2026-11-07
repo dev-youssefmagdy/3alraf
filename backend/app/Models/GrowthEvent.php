@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
-/** Outbox row: one business event to deliver (signed) to the tenant's n8n webhooks. */
+/** Outbox row: one business event to deliver (signed) to the store's n8n webhooks. */
 class GrowthEvent extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['event_id', 'type', 'payload', 'status', 'attempts', 'next_attempt_at', 'delivered_to', 'last_error', 'delivered_at'];
 

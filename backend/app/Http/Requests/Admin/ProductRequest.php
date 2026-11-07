@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Requests\Central;
+namespace App\Http\Requests\Admin;
 
 use App\Enums\ProductType;
 use App\Http\Requests\Concerns\TranslatableRules;
 use App\Models\Language;
 use App\Models\ProductVariant;
 use App\Services\BarcodeService;
+use App\Services\Growth\GiftFinderService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -39,6 +40,13 @@ class ProductRequest extends FormRequest
                 fn ($a, $v, $fail) => BarcodeService::isValidEan13((string) $v) ?: $fail(__('admin.invalid_ean13'))],
             'weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
             'is_active' => ['nullable', 'boolean'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:999999999999', 'required_with:sale_price,cost', 'required_if_accepted:is_active'],
+            'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            'min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'gift_suitable' => ['nullable', 'boolean'],
+            'gift_recipients' => ['nullable', 'array'], 'gift_recipients.*' => [Rule::in(GiftFinderService::RECIPIENTS)],
+            'gift_occasions' => ['nullable', 'array'], 'gift_occasions.*' => [Rule::in(GiftFinderService::OCCASIONS)],
             'images' => ['nullable', 'array', 'max:12'],
             'images.*' => ['image', 'max:4096'],
             'remove_images' => ['nullable', 'array'],

@@ -10,13 +10,12 @@ import '../../../core/widgets/widgets.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../shell/presentation/shell_scaffold.dart';
-import '../../tenant/application/tenant_controller.dart';
-import '../../tenant/presentation/country_switcher.dart';
-import '../../tenant/presentation/language_picker.dart';
+import '../../startup/presentation/language_picker.dart';
+import '../../store/application/store_controller.dart';
 import 'about_page.dart';
 
 /// Account tab: guest call-to-action or the signed-in summary, plus
-/// profile, password, orders, addresses, theme, language, country, about,
+/// profile, password, orders, addresses, theme, language, about,
 /// logout and account deletion.
 class AccountPage extends ConsumerWidget {
   const AccountPage({super.key});
@@ -25,10 +24,9 @@ class AccountPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final auth = ref.watch(authControllerProvider);
-    final tenant = ref.watch(tenantControllerProvider);
+    final store = ref.watch(storeControllerProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final storeName = tenant.store?.name ?? tenant.tenant?.name ?? '';
     final customer = auth.customer;
     return Scaffold(
       appBar: AppBar(
@@ -108,14 +106,7 @@ class AccountPage extends ConsumerWidget {
               onTap: () => context.push(AppRoutes.accountPassword),
             ),
           ],
-          ListTile(
-            leading: const Icon(Icons.public_rounded),
-            title: Text(l10n.switchCountry),
-            subtitle: storeName.isEmpty ? null : Text(storeName),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => showCountrySwitcher(ref),
-          ),
-          if (tenant.availableLocales.length > 1)
+          if (store.availableLocales.length > 1)
             ListTile(
               leading: const Icon(Icons.translate_rounded),
               title: Text(l10n.language),

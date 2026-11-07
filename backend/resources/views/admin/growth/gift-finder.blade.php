@@ -1,9 +1,9 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.gift.title')">
+<x-layouts.admin :title="__('growth_hub.gift.title')">
     @php $g = fn ($k) => __('growth_hub.gift.'.$k); @endphp
     <div class="space-y-4">
         <p class="text-sm text-slate-600">{{ $g('admin_hint') }}</p>
         <a href="{{ $url }}" target="_blank" class="text-sm text-brand-700 underline" dir="ltr">{{ $g('link') }}: {{ $url }}</a>
-        <p class="text-sm"><a href="{{ route('tenant.growth.gift-finder.tags') }}" class="btn btn-secondary">{{ $g('tags_title') }}</a>
+        <p class="text-sm"><a href="{{ route('admin.growth.gift-finder.tags') }}" class="btn btn-secondary">{{ $g('tags_title') }}</a>
             <span class="ms-2 text-slate-600">{{ $g('tags_progress', ['n' => $tagged, 'total' => $total]) }}</span>
             @if ($tagged === 0)<span class="ms-2 text-amber-700">{{ $g('tags_none') }}</span>@endif</p>
         <x-card :title="$g('title')">

@@ -13,6 +13,6 @@ class OrderStatusChanged
 
     public function __construct(public Order $order, public ?OrderStatus $from, public OrderStatus $to, public ?int $actorId = null)
     {
-        $this->actorId ??= auth('tenant')->id();
+        $this->actorId ??= auth('admin')->id();
     }
 }

@@ -1,9 +1,9 @@
 @php($editing = $brand->exists)
-<x-layouts.admin guard="central" :title="$editing ? __('admin.edit').': '.$brand->name : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit').': '.$brand->name : __('admin.add_new')">
     <x-card class="max-w-2xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif
-            data-validate-url="{{ route('central.brands.validate', $editing ? [$brand] : []) }}"
-            action="{{ $editing ? route('central.brands.update', $brand) : route('central.brands.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
+            data-validate-url="{{ route('admin.brands.validate', $editing ? [$brand] : []) }}"
+            action="{{ $editing ? route('admin.brands.update', $brand) : route('admin.brands.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
             @csrf
             <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$brand->getTranslations('name')" />
             <div class="grid gap-4 sm:grid-cols-2">
@@ -19,7 +19,7 @@
                 <input id="f-logo" type="file" name="logo" accept="image/*" class="form-control">
             </div>
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$brand->is_active" />
-            <x-form-actions :cancel="route('central.brands.index')" />
+            <x-form-actions :cancel="route('admin.brands.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\FlashSaleRequest;
+use App\Http\Requests\Admin\FlashSaleRequest;
 use App\Services\Stock\StockItemCatalog;
 
 final readonly class FlashSaleData

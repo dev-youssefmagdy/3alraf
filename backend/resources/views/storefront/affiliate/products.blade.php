@@ -3,11 +3,11 @@
     <p class="mb-4 text-sm text-slate-500">{{ __('growth.links_intro') }}</p>
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($items as $tp)
-            @php($p = $tp->product)
+            @php($p = $tp)
             <x-card>
                 <div class="flex gap-3">
                     @if ($img = $p->primaryImageUrl())<img src="{{ $img }}" alt="" class="size-16 rounded-lg object-cover">@endif
-                    <div class="min-w-0"><h3 class="truncate font-semibold">{{ $p->name }}</h3><p class="text-sm text-slate-500">{{ number_format((float) $tp->effectivePrice(), 2) }} {{ current_tenant()->currency_symbol }}</p></div>
+                    <div class="min-w-0"><h3 class="truncate font-semibold">{{ $p->name }}</h3><p class="text-sm text-slate-500">{{ number_format((float) $tp->effectivePrice(), 2) }} {{ setting('currency_symbol') }}</p></div>
                 </div>
                 <div class="mt-3 flex items-center justify-center gap-4">
                     <a href="{{ $tp->qr_url ?? route('storefront.affiliate.qr', $p->slug) }}" download="qr-{{ $p->slug }}.png"><img src="{{ $tp->qr_url ?? route('storefront.affiliate.qr', $p->slug) }}" alt="QR" class="size-28" loading="lazy"></a>

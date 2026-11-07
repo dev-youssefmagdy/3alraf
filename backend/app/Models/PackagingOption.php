@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /** Paid special-packaging option (docs/CALCULATIONS.md "Special packaging"). `cost` is merchant-only. */
 class PackagingOption extends Model
 {
-    use Audited, BelongsToTenant, HasTranslations, SoftDeletes;
+    use Audited, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'description'];
 

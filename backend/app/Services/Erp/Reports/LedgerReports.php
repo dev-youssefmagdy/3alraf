@@ -7,7 +7,7 @@ use App\Models\Erp\JournalLine;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-/** Every figure is computed from posted journal lines (no maintained totals). Tenant scope comes from the models. */
+/** Every figure is computed from posted journal lines (no maintained totals). */
 class LedgerReports
 {
     private const SCALE = 4;

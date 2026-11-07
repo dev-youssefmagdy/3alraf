@@ -1,22 +1,22 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use App\Services\Orders\OrderPaymentService;
 use App\Enums\PaymentMethodType;
 use App\Models\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** POS order (and its live quote: `tenant.pos.quote` accepts incomplete selections). Online gateways are not offered: no customer to redirect. */
+/** POS order (and its live quote: `admin.pos.quote` accepts incomplete selections). Online gateways are not offered: no customer to redirect. */
 class PosOrderRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     private function isQuote(): bool
     {
-        return $this->routeIs('tenant.pos.quote', 'tenant.pos.shipping');
+        return $this->routeIs('admin.pos.quote', 'admin.pos.shipping');
     }
 
     protected function prepareForValidation(): void
@@ -35,7 +35,7 @@ class PosOrderRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user('tenant')?->can('pos.use') ?? false;
+        return $this->user('admin')?->can('pos.use') ?? false;
     }
 
     public function isOffline(): bool
@@ -52,29 +52,28 @@ class PosOrderRequest extends FormRequest
 
     public function rules(): array
     {
-        $tid = current_tenant()->id;
         $q = $this->isQuote();
-        $methods = fn (array $types) => Rule::exists('payment_methods', 'id')->where('tenant_id', $tid)->whereIn('type', $types)->where('is_active', true)->whereNull('deleted_at');
+        $methods = fn (array $types) => Rule::exists('payment_methods', 'id')->whereIn('type', $types)->where('is_active', true)->whereNull('deleted_at');
 
         return [
-            'customer_id' => [$q ? 'nullable' : 'required', Rule::exists('customers', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
+            'customer_id' => [$q ? 'nullable' : 'required', Rule::exists('customers', 'id')->whereNull('deleted_at')],
             'name' => [$q ? 'nullable' : 'required', 'string', 'max:120'],
             'phone' => [$q ? 'nullable' : 'required', 'string', 'max:30'],
             ...$this->phoneCodeRule(),
             'email' => ['nullable', 'email', 'max:190'],
-            'city_id' => [$q ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
+            'city_id' => [$q ? 'nullable' : 'required', Rule::exists('cities', 'id')->where('is_active', true)->whereNull('deleted_at')],
             'address' => [$q ? 'nullable' : 'required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:255'],
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.product_id' => ['required', 'integer', 'min:1'],
             'items.*.variant_id' => ['nullable', 'integer', 'min:0'],
             'items.*.qty' => ['required', 'integer', 'min:1', 'max:9999'],
-            'shipping_company_id' => [$q ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->where('tenant_id', $tid)->whereNull('deleted_at')],
+            'shipping_company_id' => [$q ? 'nullable' : 'required', Rule::exists('shipping_companies', 'id')->whereNull('deleted_at')],
             'payment_method_id' => [$q ? 'nullable' : 'required', $methods([PaymentMethodType::COD->value, PaymentMethodType::WALLET->value])],
             'prepay_method_id' => ['nullable', $methods([PaymentMethodType::WALLET->value])],
             'discount_code' => ['nullable', 'string', 'max:50'],
             'paid_at_counter' => ['nullable', 'boolean'],
-            'packaging_option_id' => ['nullable', 'integer', Rule::exists('packaging_options', 'id')->where('tenant_id', $tid)->where('is_active', true)->whereNull('deleted_at')],
+            'packaging_option_id' => ['nullable', 'integer', Rule::exists('packaging_options', 'id')->where('is_active', true)->whereNull('deleted_at')],
             'proof' => [! $q && $this->isOffline() ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:'.(int) config('checkout.proof.max_kb')],
         ];
     }

@@ -138,7 +138,7 @@ class CartService
         $cart?->update(['packaging_option_id' => null]);
     }
 
-    /** The cart's chosen packaging option id, only while that option is still active (tenant scoped). */
+    /** The cart's chosen packaging option id, only while that option is still active. */
     public function packagingOptionId(): ?int
     {
         $id = $this->cart(false)?->packaging_option_id;
@@ -146,7 +146,7 @@ class CartService
         return $id && PackagingOption::active()->whereKey($id)->exists() ? (int) $id : null;
     }
 
-    /** Persist the packaging choice on the cart (null = none). The option must be an active one of this tenant. */
+    /** Persist the packaging choice on the cart (null = none). The option must be an active one. */
     public function setPackaging(?int $optionId): void
     {
         if ($optionId && ! PackagingOption::active()->whereKey($optionId)->exists()) {
@@ -226,7 +226,7 @@ class CartService
 
     private function assertStock(int $productId, int $variantId, int $qty, string $name): void
     {
-        if (current_tenant()?->settings['allow_backorder'] ?? false) {
+        if (setting('allow_backorder', false)) {
             return;
         }
         $available = (int) StockLevel::where('product_id', $productId)->where('product_variant_id', $variantId)

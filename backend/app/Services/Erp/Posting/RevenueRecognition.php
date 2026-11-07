@@ -8,7 +8,7 @@ use App\Services\Erp\Equity\ErpSettings;
 
 /**
  * When an order's revenue, VAT and COGS are recognised in the ledger (docs/CALCULATIONS.md §ERP revenue recognition).
- * Per-tenant setting `revenue_recognition`:
+ * ERP setting `revenue_recognition`:
  *   shipped   (default) control passes when the parcel leaves the warehouse; COGS = the value the stock ledger removed (sale_out)
  *   delivered control passes on delivery; between shipment and delivery the shipped cost sits in "Goods out for delivery"
  *   confirmed legacy: at admin confirmation (mirrors the Net Profit report); COGS trued up to the shipped cost at shipment

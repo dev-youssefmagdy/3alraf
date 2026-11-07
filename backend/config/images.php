@@ -30,7 +30,7 @@ return [
         'default' => ['max_w' => 1200, 'max_h' => 1200, 'fit' => 'scale', 'max_bytes' => 102400],
     ],
 
-    // Upload directory (first path segment after tenants/{id}/ or catalog/) → profile.
+    // Upload directory (first path segment after catalog/ or a legacy per-store prefix) → profile.
     'dirs' => [
         'products' => 'product', 'variants' => 'product', 'bundles' => 'product', 'packaging' => 'product',
         'categories' => 'category',

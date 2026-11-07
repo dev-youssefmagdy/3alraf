@@ -4,8 +4,6 @@ use App\Models\GrowthDailyStat;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Services\Growth\BriefService;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\MetricsService;
@@ -13,49 +11,13 @@ use App\Services\Growth\StatsAggregator;
 use Carbon\Carbon;
 use Database\Seeders\FoundationSeeder;
 
-require_once __DIR__.'/GrowthFoundationTest.php';
-
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::create(['slug' => 'uae', 'name' => 'UAE Store', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->tenant);
-    app(GrowthAccess::class)->set($this->other, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->other);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    app(GrowthAccess::class)->set(true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll();
     $this->day = Carbon::parse('2026-10-20')->startOfDay();
     $this->n = 0;
 });
-
-function mkOrder(array $o = [], array $items = [['q' => 2, 'price' => 100, 'cost' => 40]], ?Tenant $tenant = null): Order
-{
-    static $seq = 0;
-    $prev = current_tenant();
-    if ($tenant) {
-        app()->instance('currentTenant', $tenant);
-    }
-    $sub = collect($items)->sum(fn ($i) => $i['q'] * $i['price']);
-    $cogs = collect($items)->sum(fn ($i) => $i['q'] * ($i['cost'] ?? 0));
-    $order = new Order;
-    $order->forceFill(array_merge(['number' => 'T'.++$seq.uniqid(), 'public_token' => uniqid('t', true), 'customer_name' => 'X', 'customer_phone' => '01000000100', 'address' => 'a', 'status' => 'delivered', 'payment_status' => 'paid',
-        'subtotal' => $sub, 'discount' => 0, 'shipping' => 0, 'shipping_net' => 0, 'shipping_cost' => 10, 'tax' => 0, 'payment_fee' => 0, 'payment_fee_charged' => 0, 'cod_fee' => 0, 'total' => $sub,
-        'cogs' => $cogs, 'affiliate_commission' => 0, 'packaging_cost' => 0, 'currency' => 'EGP', 'locale' => 'en', 'placed_at' => Carbon::parse('2026-10-20 12:00')], $o))->save();
-    foreach ($items as $i) {
-        $it = new OrderItem;
-        $it->forceFill(['order_id' => $order->id, 'product_id' => $i['pid'] ?? 1, 'name' => 'P', 'unit_price' => $i['price'], 'unit_cost' => $i['cost'] ?? 0, 'quantity' => $i['q'], 'line_subtotal' => $i['q'] * $i['price'], 'line_discount' => 0])->save();
-    }
-    app()->instance('currentTenant', $prev);
-
-    return $order;
-}
-
-function rebuild(Carbon $d)
-{
-    app(StatsAggregator::class)->rebuild($d, $d);
-
-    return app(MetricsService::class)->summary($d, $d);
-}
 
 it('computes contribution margin to the documented formula (golden)', function () {
     // revenue 200-20 discount = 180; cogs 80; shipping cost 30 vs customer net 10 => subsidy 20; payment fee 6 charged 2, cod fee 1 => 3 ; packaging 5; commission 4
@@ -100,18 +62,6 @@ it('is idempotent and splits channels', function () {
     expect($ch['affiliate']['orders_completed']['value'])->toBe(1.0)->and($ch['direct']['orders_completed']['value'])->toBe(1.0);
 });
 
-it('isolates stats and metrics per tenant', function () {
-    mkOrder();
-    mkOrder([], [['q' => 5, 'price' => 100, 'cost' => 10]], $this->other);
-    rebuild($this->day);
-    app()->instance('currentTenant', $this->other);
-    expect(GrowthDailyStat::count())->toBe(0);
-    $s = rebuild($this->day);
-    expect($s['revenue']['value'])->toBe(500.0);
-    app()->instance('currentTenant', $this->tenant);
-    expect(app(MetricsService::class)->summary($this->day, $this->day)['revenue']['value'])->toBe(200.0);
-});
-
 it('builds a daily brief where every recommendation has evidence and no PII', function () {
     mkOrder();
     $b = app(BriefService::class)->daily($this->day);
@@ -126,7 +76,7 @@ it('builds a daily brief where every recommendation has evidence and no PII', fu
 
 // ---- API --------------------------------------------------------------------------------------------------------------------
 
-it('serves the read API with scope, tenant isolation and no PII', function () {
+it('serves the read API with scope and no PII', function () {
     mkOrder();
     [, $token, $secret] = growthClient(['read']);
     [, $tok2, $sec2] = growthClient(['events:read']);
@@ -136,26 +86,21 @@ it('serves the read API with scope, tenant isolation and no PII', function () {
         $r = integrationCall($this, 'GET', $p, null, $token, $secret)->assertOk();
         expect($r->getContent())->not->toContain('01000000100')->not->toContain('customer_phone');
     }
-    // another tenant's client sees only its own data
-    mkOrder([], [['q' => 5, 'price' => 100, 'cost' => 10]], $this->other);
-    [, $tokO, $secO] = growthClient(['read'], null, $this->other);
-    integrationCall($this, 'GET', 'metrics/summary?from=2026-10-20&to=2026-10-20', null, $tokO, $secO)->assertOk()->assertJsonPath('data.revenue.value', 500);
 });
 
-it('returns product facts only for the tenant own listing', function () {
+it('returns product facts for a listed product and 404 for an unknown one', function () {
     $p = Product::create(['name' => ['en' => 'Soap'], 'slug' => 'soap', 'sku' => 'S1', 'is_active' => true, 'type' => 'simple']);
-    TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 40, 'is_active' => true]);
+    listProduct($p, ['price' => 100, 'cost' => 40, 'is_active' => true]);
     [, $token, $secret] = growthClient(['read']);
     integrationCall($this, 'GET', "products/{$p->id}/facts", null, $token, $secret)->assertOk()->assertJsonPath('data.unit_margin_percent.value', 60)->assertJsonPath('data.name', 'Soap');
-    [, $tokO, $secO] = growthClient(['read'], null, $this->other);
-    integrationCall($this, 'GET', "products/{$p->id}/facts", null, $tokO, $secO)->assertNotFound();
+    integrationCall($this, 'GET', 'products/999999/facts', null, $token, $secret)->assertNotFound();
 });
 
 it('requires the admin growth.view permission for the brief page', function () {
-    $this->get('http://egy.3alraf.test/admin/growth/brief')->assertRedirect();
+    $this->get('/admin/growth/brief')->assertRedirect();
 });
 
-it('runs growth:aggregate only for growth-enabled tenants', function () {
-    app(GrowthAccess::class)->set($this->other, false);
+it('runs growth:aggregate as a no-op while growth is switched off', function () {
+    app(GrowthAccess::class)->set(false);
     $this->artisan('growth:aggregate', ['--days' => 1])->assertExitCode(0);
 });

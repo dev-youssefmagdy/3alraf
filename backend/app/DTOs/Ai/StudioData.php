@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiStudioRequest;
+use App\Http\Requests\Admin\AiStudioRequest;
 
 final readonly class StudioData
 {

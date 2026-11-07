@@ -8,8 +8,8 @@ import 'api_context.dart';
 
 final apiContextProvider = Provider<ApiContext>((ref) => ApiContext());
 
-/// Emits the tenant slug whose session was invalidated by a 401. Phase 3
-/// listens to this to route back to login.
+/// Ticks when the customer session was invalidated by a 401; the router
+/// listens to it to route back to login.
 final unauthorizedEventsProvider = NotifierProvider<UnauthorizedNotifier, int>(
   UnauthorizedNotifier.new,
 );
@@ -26,7 +26,7 @@ final dioProvider = Provider<Dio>((ref) {
     config: ref.watch(appConfigProvider),
     context: ref.watch(apiContextProvider),
     storage: ref.watch(sessionStorageProvider),
-    onUnauthorized: (_) =>
+    onUnauthorized: () =>
         ref.read(unauthorizedEventsProvider.notifier).notify(),
   );
   ref.onDispose(dio.close);

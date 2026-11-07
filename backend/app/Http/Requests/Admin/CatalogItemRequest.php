@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class TenantProductRequest extends FormRequest
+class CatalogItemRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -13,8 +13,8 @@ class TenantProductRequest extends FormRequest
 
     public function rules(): array
     {
-        $tp = $this->route('tenantProduct');
-        $own = fn () => 'exists:tenant_product_variants,id,tenant_product_id,'.($tp?->id ?? 0);
+        $p = $this->route('product');
+        $own = fn () => 'exists:product_variants,id,product_id,'.($p?->id ?? 0);
 
         return [
             'price' => ['required', 'numeric', 'min:0', 'max:999999999999'],

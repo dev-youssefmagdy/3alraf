@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 
 class ExpenseCategory extends Model
 {
-    use BelongsToTenant, HasTranslations;
+    use HasTranslations;
 
     protected array $translatable = ['name'];
 

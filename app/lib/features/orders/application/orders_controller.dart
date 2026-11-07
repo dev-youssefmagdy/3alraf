@@ -4,7 +4,6 @@ import '../../../core/error/api_exception.dart';
 import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
 import '../data/order_models.dart';
 import '../data/orders_repository.dart';
 
@@ -17,7 +16,6 @@ final orderProvider = FutureProvider.autoDispose.family<Order, String>((
   ref,
   token,
 ) {
-  ref.watch(tenantSlugProvider);
   ref.watch(localeProvider);
   ref.watch(authControllerProvider.select((s) => s.signedIn));
   return ref.watch(ordersRepositoryProvider).show(token);
@@ -54,7 +52,6 @@ class OrdersController extends Notifier<OrdersState> {
 
   @override
   OrdersState build() {
-    ref.watch(tenantSlugProvider);
     ref.watch(localeProvider);
     final signedIn = ref.watch(
       authControllerProvider.select((s) => s.signedIn),

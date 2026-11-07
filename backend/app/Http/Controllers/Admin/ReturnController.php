@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\OrderReturnDataTable;
 use App\Enums\ReturnStatus;
@@ -27,7 +27,7 @@ class ReturnController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.returns.index', ['table' => new OrderReturnDataTable, 'statuses' => ReturnStatus::options()]);
+        return view('admin.returns.index', ['table' => new OrderReturnDataTable, 'statuses' => ReturnStatus::options()]);
     }
 
     public function datatable(): JsonResponse
@@ -39,7 +39,7 @@ class ReturnController extends Controller implements HasMiddleware
     {
         $ret = $this->service->find($id);
 
-        return view('tenant.returns.show', ['ret' => $ret, 'refundable' => $this->service->refundable($ret),
+        return view('admin.returns.show', ['ret' => $ret, 'refundable' => $this->service->refundable($ret),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all()]);
     }
 
@@ -47,14 +47,14 @@ class ReturnController extends Controller implements HasMiddleware
     {
         $this->service->approve($this->service->find($id), $r->boolean('restock'), $r->filled('branch_id') ? (int) $r->input('branch_id') : null);
 
-        return $this->ok(__('orders.return_approved'), route('tenant.returns.show', $id));
+        return $this->ok(__('orders.return_approved'), route('admin.returns.show', $id));
     }
 
     public function reject(int $id): JsonResponse
     {
         $this->service->reject($this->service->find($id));
 
-        return $this->ok(__('admin.saved'), route('tenant.returns.show', $id));
+        return $this->ok(__('admin.saved'), route('admin.returns.show', $id));
     }
 
     public function refund(Request $r, int $id): JsonResponse
@@ -62,6 +62,6 @@ class ReturnController extends Controller implements HasMiddleware
         $r->validate(['amount' => ['nullable', 'numeric', 'min:0.01'], 'refund_from' => ['nullable', 'in:'.implode(',', \App\Services\Erp\Posting\Poster::REFUND_ROLES)]]);
         $this->service->refund($this->service->find($id), $r->input('amount'), $r->input('refund_from') ?: null);
 
-        return $this->ok(__('orders.refunded'), route('tenant.returns.show', $id));
+        return $this->ok(__('orders.refunded'), route('admin.returns.show', $id));
     }
 }

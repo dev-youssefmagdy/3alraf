@@ -8,14 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Storefront: locale from the {locale} URL prefix, validated against the tenant's locales. */
+/** Storefront: locale from the {locale} URL prefix, validated against the site locales (setting `locales`). */
 class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $tenant = current_tenant();
         $locale = $request->route('locale');
-        abort_if(! $tenant || ! in_array($locale, $tenant->locales, true), 404);
+        abort_if(! in_array($locale, (array) setting('locales', [config('app.locale')]), true), 404);
 
         app()->setLocale($locale);
         URL::defaults(['locale' => $locale]);

@@ -1,8 +1,6 @@
 import 'package:app/core/error/api_exception.dart';
 import 'package:app/features/affiliate/application/affiliate_controller.dart';
 import 'package:app/features/affiliate/data/affiliate_models.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -129,15 +127,13 @@ void main() {
     () async {
       final env = TestEnv(extra: api());
       final c = await env.container();
-      await env.secrets.write('auth_token:egy', 'customer-token');
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
+      await env.secrets.write('auth_token', 'customer-token');
+      await bootStore(c);
       await Future<void>.delayed(const Duration(milliseconds: 20));
       final ctrl = c.read(affiliateControllerProvider.notifier);
       await ctrl.login('aff@x.test', 'pw');
-      expect(env.secrets.data['affiliate_token:egy'], 'aff-token');
-      expect(env.secrets.data['auth_token:egy'], 'customer-token');
+      expect(env.secrets.data['affiliate_token'], 'aff-token');
+      expect(env.secrets.data['auth_token'], 'customer-token');
       // login itself carried no customer bearer
       final login = env.requestsTo('/affiliate/login').single;
       expect(login.headers['Authorization'], isNull);
@@ -152,25 +148,21 @@ void main() {
   test('saved affiliate token is restored; logout clears it', () async {
     final env = TestEnv(extra: api());
     final c = await env.container();
-    await env.secrets.write('affiliate_token:egy', 'aff-token');
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await env.secrets.write('affiliate_token', 'aff-token');
+    await bootStore(c);
     c.listen(affiliateControllerProvider, (_, _) {});
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(c.read(affiliateControllerProvider).signedIn, isTrue);
     await c.read(affiliateControllerProvider.notifier).logout();
-    expect(env.secrets.data.containsKey('affiliate_token:egy'), isFalse);
+    expect(env.secrets.data.containsKey('affiliate_token'), isFalse);
     expect(c.read(affiliateControllerProvider).signedIn, isFalse);
   });
 
   test('payout 422 and disabled ambassador surface typed errors', () async {
     final env = TestEnv(extra: api(ambassadorOff: true));
     final c = await env.container();
-    await env.secrets.write('affiliate_token:egy', 'aff-token');
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await env.secrets.write('affiliate_token', 'aff-token');
+    await bootStore(c);
     await expectLater(
       c.read(affiliateRepositoryProvider).requestPayout(),
       throwsA(

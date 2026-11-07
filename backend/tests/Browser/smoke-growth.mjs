@@ -1,29 +1,29 @@
-// Growth browser smoke (playwright-core + system Chrome): opens every GET `tenant.growth.*` admin page in ar and en as the tenant owner with all
+// Growth browser smoke (playwright-core + system Chrome): opens every GET `admin.growth.*` admin page in ar and en as the super admin with all
 // Growth switches ON, asserts no JS error / HTTP >= 400, html dir (rtl for ar, ltr for en), no horizontal overflow, no raw lang keys; plus the missed-opportunity
 // edit modal. Screenshots go to storage/app/smoke-growth (git-ignored).
 //
 // SAFETY: run it ONLY against a separate database, e.g.
 //   mysql -e "CREATE DATABASE 3alraf_smoke"; export DB_DATABASE=3alraf_smoke
 //   php artisan migrate:fresh --seed --force          # never on the dev DB
-//   (enable growth + all switches for tenant egy, see docs/n8n/README.md)
-//   DB_DATABASE=3alraf_smoke APP_CENTRAL_DOMAIN=3alraf.test php artisan serve --port=8010 &
+//   php artisan growth:enable                       # growth + all switches (see docs/n8n/README.md)
+//   DB_DATABASE=3alraf_smoke APP_URL=http://3alraf.test:8010 php artisan serve --port=8010 &
 //   PORT=8010 npm run smoke:growth
 import { chromium } from 'playwright-core';
 import { execSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 
 const P = process.env.PORT || '8010';
-const DOMAIN = process.env.CENTRAL || '3alraf.test';
+const DOMAIN = process.env.SITE || '3alraf.test';
 const SHOTS = process.env.SHOTS || 'storage/app/smoke-growth';
 mkdirSync(SHOTS, { recursive: true });
 const rules = `MAP ${DOMAIN} 127.0.0.1, MAP *.${DOMAIN} 127.0.0.1`;
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', `--host-resolver-rules=${rules}`] });
-const egy = `http://egy.${DOMAIN}:${P}`;
+const site = `http://${DOMAIN}:${P}`;
 const errs = [], failed = [];
 let checks = 0;
 const ok = (c, m) => { checks++; if (!c) { failed.push(m); console.log('  FAIL', m); } else console.log('  ok  ', m); };
 
-const routes = JSON.parse(execSync('php artisan route:list --name=tenant.growth --json', { encoding: 'utf8', env: { ...process.env } }));
+const routes = JSON.parse(execSync('php artisan route:list --name=admin.growth --json', { encoding: 'utf8', env: { ...process.env } }));
 const pages = [...new Set(routes.filter(r => r.method.split('|').includes('GET') && !r.uri.includes('{') && !/datatable|\/data$/.test(r.uri)).map(r => '/' + r.uri))].sort();
 console.log(`${pages.length} growth pages`);
 
@@ -34,14 +34,14 @@ page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/
 page.on('response', r => { if (r.status() >= 400) errs.push(`HTTP ${r.status()} ${r.url()}`); });
 
 try {
-  await page.goto(`${egy}/admin/login`, { waitUntil: 'networkidle' });
-  await page.fill('[name=email]', 'owner@egy.test'); await page.fill('[name=password]', 'password');
+  await page.goto(`${site}/admin/login`, { waitUntil: 'networkidle' });
+  await page.fill('[name=phone]', '01000000001'); await page.fill('[name=password]', 'password');   // demo super admin (otp_exempt)
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}), page.click('button[type=submit]')]);
-  ok(!/login/.test(page.url()), 'owner signed in');
+  ok(!/login/.test(page.url()), 'super admin signed in');
   for (const loc of ['ar', 'en']) {
-    await page.goto(`${egy}/admin/locale/${loc}`, { waitUntil: 'networkidle' });
+    await page.goto(`${site}/admin/locale/${loc}`, { waitUntil: 'networkidle' });
     for (const u of pages) {
-      await page.goto(`${egy}${u}`, { waitUntil: 'networkidle' }); await page.waitForTimeout(500);
+      await page.goto(`${site}${u}`, { waitUntil: 'networkidle' }); await page.waitForTimeout(500);
       const m = await page.evaluate(() => ({ dir: document.documentElement.dir, lang: document.documentElement.lang, over: document.documentElement.scrollWidth - window.innerWidth, text: document.body.innerText }));
       const tag = `[${loc}] ${u}`;
       ok(m.dir === (loc === 'ar' ? 'rtl' : 'ltr'), `${tag} dir=${m.dir}`);
@@ -50,7 +50,7 @@ try {
       await page.screenshot({ path: `${SHOTS}/${loc}${u.replace(/\//g, '_')}.png`, fullPage: true });
     }
     // missed-opportunity edit modal
-    await page.goto(`${egy}/admin/growth/missed`, { waitUntil: 'networkidle' }); await page.waitForTimeout(800);
+    await page.goto(`${site}/admin/growth/missed`, { waitUntil: 'networkidle' }); await page.waitForTimeout(800);
     const btn = page.locator('[data-missed-edit]').first();
     if (await btn.count()) {
       await btn.click();

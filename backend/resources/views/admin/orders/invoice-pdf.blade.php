@@ -18,7 +18,7 @@
 </head>
 <body>
     <table style="margin-bottom:16px"><tr>
-        <td style="border:0" class="r"><h1>{{ $t($tenant?->name) }}</h1>
+        <td style="border:0" class="r"><h1>{{ $t(setting('name')) }}</h1>
             <div class="muted">{{ $t(__('orders.invoice')) }} #{{ $order->number }}<br>{{ $order->placed_at?->format('Y-m-d H:i') }}</div></td>
         <td style="border:0" class="r"><strong>{{ $t($order->customer_name) }}</strong><br><bdi dir="ltr">{{ $order->phone_display ?: $order->customer_phone }}</bdi><br>{{ $t(trim(($order->city?->name ?? '').' - '.$order->address, ' -')) }}</td>
     </tr></table>

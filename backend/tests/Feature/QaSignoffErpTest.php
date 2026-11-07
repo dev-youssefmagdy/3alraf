@@ -27,9 +27,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\PeriodService;
@@ -50,13 +48,11 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->t = '/admin';
     $this->branch = Branch::first();
     $this->product = tap(Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => 'so'], 'slug' => 'so-p', 'sku' => 'SOP', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]), function ($p) {
-        TenantProduct::create(['product_id' => $p->id, 'price' => '100', 'cost' => '60', 'is_active' => true]);
+        listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, 100, '60');
     });
     $this->place = fn (int $qty = 2) => app(OrderPlacementService::class)->place(new CheckoutData(
@@ -81,11 +77,11 @@ beforeEach(function () {
         $ps = app(PeriodService::class);
         $ps->createYear((int) substr($date, 0, 4));
         foreach (Period::where('starts_on', '<=', $date)->where('status', 'open')->orderBy('starts_on')->get() as $p) {
-            $ps->close($p, TenantAdmin::first()->id);
+            $ps->close($p, Admin::first()->id);
         }
     };
-    $this->admin = TenantAdmin::first();
-    $this->actingAs($this->admin, 'tenant');
+    $this->admin = Admin::first();
+    $this->actingAs($this->admin, 'admin');
 });
 
 // ---------------------------------------------------------------- ERP-001 / 010: refund "paid from" variations
@@ -162,7 +158,7 @@ it('VERIFY ERP-011: switching revenue_recognition mid-life never double-recognis
     $s->set('revenue_recognition', 'delivered');
     ($this->to)($c, S::PROCESSING, S::SHIPPED, S::DELIVERED);                       // recognised at confirm, never again
     expect(($this->bal)('sales_revenue'))->toBe(600.0)->and(($this->bal)('cogs'))->toBe(360.0)->and(($this->bal)('goods_in_delivery'))->toBe(0.0);
-    expect(app(\App\Services\Erp\Reconciliation\LedgerVerifier::class)->run($this->tenant)['ok'])->toBeTrue();
+    expect(app(\App\Services\Erp\Reconciliation\LedgerVerifier::class)->run()['ok'])->toBeTrue();
 });
 
 it('VERIFY ERP-011: RTS under the "delivered" policy restocks and clears goods out for delivery; a delivered (partially returned) order cannot be RTS-cancelled', function () {
@@ -200,7 +196,7 @@ it('VERIFY ERP-007: repost of an entry in a closed period reverses and re-posts 
 
 // ---------------------------------------------------------------- QA-012 / 013: duplicate ref draft -> post
 it('VERIFY QA-012/013: re-submitting a draft journal form with the same ref (now "post now") never creates a second entry; a changed amount is refused', function () {
-    app(CoaTemplate::class)->seed($this->tenant);
+    app(CoaTemplate::class)->seed();
     $cash = Account::where('role_key', 'cash')->value('id');
     $cap = Account::where('role_key', 'owner_capital')->value('id');
     $form = fn (string $amt, bool $post) => ['entry_date' => now()->toDateString(), 'description' => 'd', 'type' => 'manual', 'ref' => 'so-ref-1', 'post_now' => $post ? 1 : 0,
@@ -233,7 +229,7 @@ it('VERIFY QA-004/006: ErpRules money boundaries (max, 0, negative, exponent, Ar
     $date = fn (string $v) => Validator::make(['a' => $v], ['a' => ErpRules::date()])->passes();
     expect($date('1999-12-31'))->toBeFalse()->and($date('2000-01-01'))->toBeTrue()->and($date(now()->addYear()->addDay()->toDateString()))->toBeFalse();
     // end-to-end: a max-value balanced journal posts, the balance column holds it, and Arabic digits are a field error (not a 500)
-    app(CoaTemplate::class)->seed($this->tenant);
+    app(CoaTemplate::class)->seed();
     $cash = Account::where('role_key', 'cash')->value('id');
     $cap = Account::where('role_key', 'owner_capital')->value('id');
     $j = fn ($amt, $ref) => ['entry_date' => now()->toDateString(), 'description' => 'max', 'type' => 'manual', 'ref' => $ref, 'post_now' => 1,
@@ -285,12 +281,11 @@ it('VERIFY QA-005: legacy exponent/garbage values already stored in erp_settings
 });
 
 // ---------------------------------------------------------------- ERP-027 / 028 / 029 / 030: labels, navigation, audit, dashboard
-function soUser(array $perms, string $name): TenantAdmin
+function soUser(array $perms, string $name): Admin
 {
-    $t = current_tenant();
-    $role = \Spatie\Permission\Models\Role::create(['name' => 't'.$t->id.':'.$name, 'guard_name' => 'tenant']);
+    $role = \Spatie\Permission\Models\Role::create(['name' => $name, 'guard_name' => 'admin']);
     $role->givePermissionTo($perms);
-    $u = TenantAdmin::withoutGlobalScopes()->create(['name' => 'SO '.$name, 'email' => $name.'@egy.test', 'password' => 'password', 'is_active' => true, 'tenant_id' => $t->id]);
+    $u = Admin::query()->create(['name' => 'SO '.$name, 'email' => $name.'@egy.test', 'password' => 'password', 'is_active' => true]);
     $u->assignRole($role);
     app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -317,15 +312,15 @@ it('VERIFY ERP-027: every ERP permission module and action has an en + ar label'
 });
 
 it('VERIFY ERP-028/029/030: reports-only user reaches the hub; owners view-only is read-only; audit page gated; main dashboard shows ERP KPIs', function () {
-    app(CoaTemplate::class)->seed($this->tenant);
-    $this->actingAs(soUser(['erp.reports.view'], 'so-rep'), 'tenant');
+    app(CoaTemplate::class)->seed();
+    $this->actingAs(soUser(['erp.reports.view'], 'so-rep'), 'admin');
     $this->get("{$this->t}/erp")->assertOk();
     $this->get("{$this->t}/erp/audit")->assertForbidden();
     $this->get("{$this->t}/")->assertDontSee('data-erp-kpis', false);
-    $this->actingAs(soUser(['erp.owners.view'], 'so-own'), 'tenant');
+    $this->actingAs(soUser(['erp.owners.view'], 'so-own'), 'admin');
     $this->get("{$this->t}/erp/owners")->assertOk();
     $this->post("{$this->t}/erp/owners", ['name' => 'X', 'ownership_percent' => 10])->assertForbidden();
-    $this->actingAs(soUser(['erp.audit.view', 'erp.dashboard.view'], 'so-aud'), 'tenant');
+    $this->actingAs(soUser(['erp.audit.view', 'erp.dashboard.view'], 'so-aud'), 'admin');
     $this->get("{$this->t}/erp/audit")->assertOk();
     $this->get("{$this->t}/")->assertOk()->assertSee('data-erp-kpis', false)->assertSee('data-erp-kpi="net_profit"', false);
 });

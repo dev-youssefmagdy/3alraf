@@ -2,12 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Tenant;
 use Database\Seeders\LiveSeeder;
 use Database\Seeders\Support\DemoDataPurger;
 use Illuminate\Console\Command;
 
-/** Live data only: removes the fake rows left by seed:dev, then seeds languages, permissions, countries, store cities and the available gift products without stock. */
+/** Live data only: removes the fake rows left by seed:dev, then seeds languages, permissions, countries, cities and the available gift products without stock. */
 class SeedLive extends Command
 {
     protected $signature = 'seed:live {--force : do not ask for confirmation (required when not interactive)} {--no-purge : keep any existing demo data, only add the live data}';
@@ -35,9 +34,6 @@ class SeedLive extends Command
 
         $this->call('db:seed', ['--class' => LiveSeeder::class, '--force' => true]);
 
-        if (! Tenant::exists()) {
-            $this->warn('No store exists yet, so no cities or products were listed: run `php artisan tenants:create ...` and then `php artisan seed:live` again.');
-        }
         $this->info('Live data ready.');
 
         return self::SUCCESS;

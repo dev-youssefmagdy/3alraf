@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DTOs\Orders\CodFeeConfig;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\CodFeeSettingsRequest;
+use App\Http\Requests\Admin\CodFeeSettingsRequest;
 use App\Models\City;
 use App\Models\Language;
 use App\Services\CodFeeSettingsService;
@@ -23,16 +23,16 @@ class CodFeeSettingsController extends Controller implements HasMiddleware
 
     public function edit()
     {
-        $cfg = $this->service->get(current_tenant());
+        $cfg = $this->service->get();
 
-        return view('tenant.settings.cod-fees', ['cfg' => $cfg, 'cities' => City::orderBy('sort_order')->get(), 'languages' => Language::activeList()]);
+        return view('admin.settings.cod-fees', ['cfg' => $cfg, 'cities' => City::orderBy('sort_order')->get(), 'languages' => Language::activeList()]);
     }
 
     public function update(CodFeeSettingsRequest $request): JsonResponse
     {
-        $this->service->update(current_tenant(), CodFeeConfig::fromRequest($request));
+        $this->service->update(CodFeeConfig::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('tenant.cod-fees.edit'));
+        return $this->ok(__('admin.saved'), route('admin.cod-fees.edit'));
     }
 
     public function validateForm(CodFeeSettingsRequest $request): JsonResponse

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\CrudService;
@@ -9,15 +9,15 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
 /**
- * Generic tenant CRUD controller (index/datatable/create/store/edit/update/destroy/validate).
- * Subclasses set the static config below and pass their service. Route param is `{id}` (tenant scope applies via model scope).
+ * Generic admin CRUD controller (index/datatable/create/store/edit/update/destroy/validate).
+ * Subclasses set the static config below and pass their service. Route param is `{id}`.
  * Requests are resolved from the container so each module keeps its own FormRequest + DTO.
  */
 abstract class ResourceController extends Controller implements HasMiddleware
 {
     protected static string $perm;          // e.g. 'cities'  -> can:cities.view ...
-    protected static string $routeBase;     // e.g. 'tenant.cities'
-    protected static string $view;          // e.g. 'tenant.cities'  (needs form.blade.php; index is generic)
+    protected static string $routeBase;     // e.g. 'admin.cities'
+    protected static string $view;          // e.g. 'admin.cities'  (needs form.blade.php; index is generic)
     protected static string $titleKey;      // lang key of the page title
     protected static string $requestClass;
     protected static string $dtoClass;
@@ -48,7 +48,7 @@ abstract class ResourceController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.crud.index', ['table' => new (static::$tableClass), 'title' => __(static::$titleKey), 'route' => static::$routeBase, 'perm' => static::$perm]);
+        return view('admin.crud.index', ['table' => new (static::$tableClass), 'title' => __(static::$titleKey), 'route' => static::$routeBase, 'perm' => static::$perm]);
     }
 
     public function datatable(): JsonResponse

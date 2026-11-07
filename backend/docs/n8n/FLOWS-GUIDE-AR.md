@@ -16,7 +16,9 @@
 الـ flows دي اتعملت import في n8n وكلها **غير مفعّلة (inactive)** ولسه ما اتجرّبتش end-to-end. قبل ما تشتغل لازم:
 
 1. إضافة متغيرات البيئة في `/home/b/n8n/.env` وإعادة تشغيل n8n:
-   `GROWTH_API_BASE` و`GROWTH_HMAC_SECRET` و`NODE_FUNCTION_ALLOW_BUILTIN=crypto` و`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
+   `GROWTH_API_BASE` (عنوان الموقع الواحد `APP_URL` + `/api/integration/v1`) و`GROWTH_HMAC_SECRET` و`NODE_FUNCTION_ALLOW_BUILTIN=crypto` و`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
+   واختياري `GROWTH_ADMIN_URL` (رابط لوحة التحكم في رسايل الملخّص؛ لو مش موجود بيتاخد من `GROWTH_API_BASE` + `/admin`).
+   كل حدث بيوصل فيه `store` (اسم المتجر، الدولة، العملة، اللغة) بدل `tenant` القديم.
    (أي flow بيوقّع طلب بيفشل من غيرها.)
 2. ضبط الإيميل في flow 99: credential من نوع SMTP باسم `3alraf Owner Alerts` (Gmail + App Password)، مرة واحدة.
 3. التفعيل بالتدريج: `01` و`03` الأول، وبعدها `06`، وبعدين الباقي واحد واحد.

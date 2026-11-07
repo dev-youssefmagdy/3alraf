@@ -5,8 +5,8 @@ namespace App\Http\Requests\Concerns;
 use App\Support\Phone;
 use Illuminate\Validation\Validator;
 
-/** Normalises the typed national phone and forces the tenant's dial code (any client-sent code is ignored). */
-trait ValidatesTenantPhone
+/** Normalises the typed national phone and forces the shop's dial code (any client-sent code is ignored). */
+trait ValidatesShopPhone
 {
     private ?string $phoneError = null;
 
@@ -19,8 +19,8 @@ trait ValidatesTenantPhone
 
             return;
         }
-        $this->merge(['phone_country_code' => Phone::tenantCode()]);
-        [$n, $err] = Phone::normalize($raw, current_tenant()?->country);
+        $this->merge(['phone_country_code' => Phone::shopCode()]);
+        [$n, $err] = Phone::normalize($raw, setting('country'));
         if ($err) {
             $this->phoneError = $err;
         } else {
@@ -36,7 +36,7 @@ trait ValidatesTenantPhone
     protected function withPhoneValidator(Validator $v, string $field = 'phone'): void
     {
         if ($this->phoneError) {
-            $v->errors()->add($field, __('store.phone_'.$this->phoneError, ['code' => Phone::tenantCode()]));
+            $v->errors()->add($field, __('store.phone_'.$this->phoneError, ['code' => Phone::shopCode()]));
         }
     }
 }

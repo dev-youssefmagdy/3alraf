@@ -43,7 +43,7 @@ it('keeps packaging out of the discount base and the free-shipping threshold', f
     expect(pcalc(['discount' => ['type' => 'percent', 'value' => '10', 'min_order' => '260']])->discount)->toBe('0.00');
 });
 
-it('adds packaging VAT on top for tax-exclusive tenants and includes it in the fee base', function () {
+it('adds packaging VAT on top for tax-exclusive stores and includes it in the fee base', function () {
     $t = pcalc(['taxRate' => '14']);
     expect($t->tax)->toBe('32.20')->and($t->packagingTax)->toBe('2.10')
         ->and($t->paymentFee)->toBe('8.73')                  // F = 230 + 30 + 32.20 + 15 + 2.10 = 309.30
@@ -52,7 +52,7 @@ it('adds packaging VAT on top for tax-exclusive tenants and includes it in the f
         ->and($t->netProfit)->toBe('84.50');                 // VAT is pass-through
 });
 
-it('extracts VAT from the packaging price for tax-inclusive tenants and keeps it out of revenue/profit', function () {
+it('extracts VAT from the packaging price for tax-inclusive stores and keeps it out of revenue/profit', function () {
     $t = pcalc(['taxRate' => '14', 'pricesIncludeTax' => true, 'lines' => [['key' => 'a', 'unit_price' => '114.00', 'unit_cost' => '50.00', 'qty' => 1]],
         'discount' => null, 'shipping' => null, 'feePercent' => '0', 'feeFixed' => '0', 'affiliatePercent' => '0', 'packagingFee' => '114', 'packagingCost' => '10']);
     expect($t->tax)->toBe('14.00')->and($t->packagingTax)->toBe('14.00')->and($t->total)->toBe('228.00')

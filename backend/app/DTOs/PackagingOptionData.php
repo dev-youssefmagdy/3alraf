@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\PackagingOptionRequest;
+use App\Http\Requests\Admin\PackagingOptionRequest;
 use Illuminate\Http\UploadedFile;
 
 final readonly class PackagingOptionData

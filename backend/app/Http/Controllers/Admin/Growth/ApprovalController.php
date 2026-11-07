@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Growth;
+namespace App\Http\Controllers\Admin\Growth;
 
 use App\DataTables\GrowthApprovalDataTable;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\GrowthDecisionRequest;
+use App\Http\Requests\Admin\GrowthDecisionRequest;
 use App\Services\Growth\ApprovalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -21,7 +21,7 @@ class ApprovalController extends Controller implements HasMiddleware
 
     public function index(GrowthApprovalDataTable $table)
     {
-        return view('tenant.growth.approvals', ['table' => $table]);
+        return view('admin.growth.approvals', ['table' => $table]);
     }
 
     public function datatable(GrowthApprovalDataTable $table)
@@ -31,14 +31,14 @@ class ApprovalController extends Controller implements HasMiddleware
 
     public function approve(GrowthDecisionRequest $r, int $id): JsonResponse
     {
-        $this->approvals->approve($id, auth('tenant')->id(), $r->validated('reason'));
+        $this->approvals->approve($id, auth('admin')->id(), $r->validated('reason'));
 
         return $this->ok(__('growth_hub.approvals.approved_ok'));
     }
 
     public function reject(GrowthDecisionRequest $r, int $id): JsonResponse
     {
-        $this->approvals->reject($id, auth('tenant')->id(), $r->validated('reason'));
+        $this->approvals->reject($id, auth('admin')->id(), $r->validated('reason'));
 
         return $this->ok(__('growth_hub.approvals.rejected_ok'));
     }

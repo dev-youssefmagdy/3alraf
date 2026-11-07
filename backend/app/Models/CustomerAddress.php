@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerAddress extends Model
 {
-    use BelongsToTenant, \App\Models\Concerns\HasStorefrontPhone;
+    use \App\Models\Concerns\HasStorefrontPhone;
 
     protected $fillable = ['customer_id', 'label', 'name', 'phone', 'phone_country_code', 'city_id', 'address', 'notes', 'is_default'];
 

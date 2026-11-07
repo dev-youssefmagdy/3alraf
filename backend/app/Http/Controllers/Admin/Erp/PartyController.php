@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant\Erp;
+namespace App\Http\Controllers\Admin\Erp;
 
 use App\Models\Branch;
 use App\Models\Erp\Account;
@@ -28,7 +28,7 @@ class PartyController extends ErpController
         $to = $r->to ?: now()->toDateString();
         $rows = $ledger->balances($type, $to);
 
-        return view('tenant.erp.parties', ['type' => $type, 'rows' => $rows, 'to' => $to, 'recon' => $ledger->reconcile($type),
+        return view('admin.erp.parties', ['type' => $type, 'rows' => $rows, 'to' => $to, 'recon' => $ledger->reconcile($type),
             'total' => array_reduce($rows, fn ($c, $x) => bcadd($c, $x['balance'], 4), '0'),
             'directory' => $this->directory($type)]);
     }
@@ -44,11 +44,11 @@ class PartyController extends ErpController
         $type = $this->type($type);
         $this->ensureSetup();
         $r->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
-        $party = $svc->party($type, $id); // 404 for another tenant's id (tenant scope)
+        $party = $svc->party($type, $id); // 404 for an unknown id
         $from = $r->from ?: now()->startOfMonth()->toDateString();
         $to = $r->to ?: now()->toDateString();
 
-        return view('tenant.erp.party-show', ['type' => $type, 'party' => $party, 'from' => $from, 'to' => $to, 'st' => $ledger->statement($type, $party->id, $from, $to),
+        return view('admin.erp.party-show', ['type' => $type, 'party' => $party, 'from' => $from, 'to' => $to, 'st' => $ledger->statement($type, $party->id, $from, $to),
             'pos' => $ledger->position($type, $party->id), 'branches' => Branch::orderBy('id')->get(), 'cashRoles' => PartyService::CASH_ROLES,
             'accounts' => Account::where('is_group', false)->where('is_active', true)->orderBy('code')->get()]);
     }
@@ -60,7 +60,7 @@ class PartyController extends ErpController
         $this->ensureSetup();
         $r->validate(['as_of' => ['nullable', 'date']]);
 
-        return view('tenant.erp.party-ageing', ['type' => $type, 'data' => $ledger->ageing($type, $r->as_of ?: now()->toDateString())]);
+        return view('admin.erp.party-ageing', ['type' => $type, 'data' => $ledger->ageing($type, $r->as_of ?: now()->toDateString())]);
     }
 
     /** Supplier payment / customer receipt (partial allowed; excess or advance_only becomes an advance). */
@@ -70,7 +70,7 @@ class PartyController extends ErpController
         $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
         $d = $r->validate(['amount' => ErpRules::money(), 'account' => ['required', 'in:'.implode(',', PartyService::CASH_ROLES)], 'date' => ErpRules::date(false),
-            'ref' => ['required', 'string', 'max:60'], 'advance_only' => ['nullable', 'boolean'], 'branch_id' => ['nullable', 'integer', $this->tenantExists('branches', true)], 'note' => ['nullable', 'string', 'max:300']]);
+            'ref' => ['required', 'string', 'max:60'], 'advance_only' => ['nullable', 'boolean'], 'branch_id' => ['nullable', 'integer', $this->existsRule('branches', true)], 'note' => ['nullable', 'string', 'max:300']]);
         $svc->party($type, $id);
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {
@@ -102,7 +102,7 @@ class PartyController extends ErpController
         $this->allow('erp.journals.post'); // these forms post immediately (ERP-018)
         $type = $this->type($type);
         $d = $r->validate(['kind' => ['required', 'in:credit_note,debit_note'], 'amount' => ErpRules::money(), 'ref' => ['required', 'string', 'max:60'],
-            'account_id' => ['nullable', 'integer', $this->tenantExists('erp_accounts')->where('is_group', false)], 'date' => ErpRules::date(false), 'description' => ['nullable', 'string', 'max:300']]);
+            'account_id' => ['nullable', 'integer', $this->existsRule('erp_accounts')->where('is_group', false)], 'date' => ErpRules::date(false), 'description' => ['nullable', 'string', 'max:300']]);
         $svc->party($type, $id);
 
         return $this->guarded(function () use ($svc, $type, $id, $d) {

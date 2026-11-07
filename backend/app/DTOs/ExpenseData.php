@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\ExpenseRequest;
+use App\Http\Requests\Admin\ExpenseRequest;
 use Illuminate\Http\UploadedFile;
 
 final readonly class ExpenseData

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToWhatsappOwner;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** One chat per (owner, remote jid). @lid chats may have no phone, so the jid is the identity. */
 class WhatsappConversation extends Model
 {
-    use BelongsToWhatsappOwner, HasFactory;
+    use HasFactory;
 
     protected $fillable = ['jid', 'phone', 'name', 'push_name', 'avatar_path', 'last_message_id', 'last_message_at', 'last_message_preview', 'unread_count', 'is_archived', 'is_pinned', 'assigned_admin_id', 'assigned_guard', 'customer_id'];
 

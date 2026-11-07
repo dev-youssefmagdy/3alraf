@@ -3,13 +3,11 @@
 namespace App\Models;
 
 use App\Enums\StockMovementType;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 /** Immutable ledger row (append only). */
 class StockMovement extends Model
 {
-    use BelongsToTenant;
 
     public const UPDATED_AT = null;
 

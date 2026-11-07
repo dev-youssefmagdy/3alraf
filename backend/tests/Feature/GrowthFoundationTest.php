@@ -6,8 +6,7 @@ use App\Models\GrowthEvent;
 use App\Models\GrowthExperiment;
 use App\Models\IntegrationClient;
 use App\Models\Review;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Growth\ApprovalService;
 use App\Services\Growth\GrowthAccess;
 use App\Services\Growth\GrowthConfig;
@@ -21,43 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::create(['slug' => 'uae', 'name' => 'UAE Store', 'country' => 'AE', 'currency_code' => 'AED', 'currency_symbol' => 'AED', 'currency_rate' => 1, 'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'Asia/Dubai', 'is_active' => true]);
-    app(GrowthAccess::class)->set($this->tenant, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->tenant);
-    app(GrowthAccess::class)->set($this->other, true);
-    app(\App\Services\Growth\GrowthFeatures::class)->enableAll($this->other);
-    app()->instance('currentTenant', $this->tenant->refresh());
-    $this->base = 'http://egy.3alraf.test';
+    app(GrowthAccess::class)->set(true);
+    app(\App\Services\Growth\GrowthFeatures::class)->enableAll();
+    $this->base = '';
 });
-
-/** Create a client for the tenant, return [client, token, secret]. */
-function growthClient(array $scopes = ['read', 'proposals:write', 'ingest:write', 'events:read'], ?string $webhook = null, ?Tenant $tenant = null): array
-{
-    $tenant ??= current_tenant();
-    $prev = current_tenant();
-    app()->instance('currentTenant', $tenant);
-    $r = app(IntegrationClientService::class)->create('n8n', $scopes, $webhook, null);
-    app()->instance('currentTenant', $prev);
-
-    return $r;
-}
-
-/** Signed call to the integration API. */
-function integrationCall($test, string $method, string $path, ?array $body, string $token, string $secret, array $headers = [], ?int $ts = null)
-{
-    $raw = $body === null ? '' : json_encode($body);
-    $ts ??= time();
-    $h = ['Authorization' => 'Bearer '.$token, 'X-Timestamp' => (string) $ts, 'X-Signature' => app(SignatureService::class)->sign($secret, $ts, $raw), 'Accept' => 'application/json', 'CONTENT_TYPE' => 'application/json'] + $headers;
-    $server = collect($h)->mapWithKeys(fn ($v, $k) => [$k === 'CONTENT_TYPE' ? $k : 'HTTP_'.strtoupper(str_replace('-', '_', $k)) => $v])->all();
-
-    return $test->call($method, 'http://central.3alraf.test/api/integration/v1/'.$path, [], [], [], $server, $raw);
-}
-
-function ownerOf(string $slug): TenantAdmin
-{
-    return TenantAdmin::withoutGlobalScopes()->where('email', "owner@$slug.test")->first();
-}
 
 it('seeds growth permissions for the owner and exposes no price/refund/stock scope', function () {
     expect(ownerOf('egy')->can('growth.approve'))->toBeTrue();
@@ -71,22 +37,22 @@ it('seeds growth permissions for the owner and exposes no price/refund/stock sco
 
 it('authenticates with bearer + HMAC, rejects bad signature, stale timestamp, unknown or revoked tokens', function () {
     [$c, $token, $secret] = growthClient();
-    integrationCall($this, 'GET', 'ping', null, $token, $secret)->assertOk()->assertJsonPath('data.tenant', 'egy');
+    integrationCall($this, 'GET', 'ping', null, $token, $secret)->assertOk()->assertJsonPath('data.store.name', 'Egypt Store')->assertJsonPath('data.store.currency', 'EGP')->assertJsonMissingPath('data.tenant');
     integrationCall($this, 'GET', 'ping', null, $token, 'wrong-secret')->assertStatus(401);
     integrationCall($this, 'GET', 'ping', null, $token, $secret, [], time() - 600)->assertStatus(401);
     integrationCall($this, 'GET', 'ping', null, 'nope.'.$token, $secret)->assertStatus(401);
     integrationCall($this, 'GET', 'ping', null, explode('.', $token)[0].'.badtoken', $secret)->assertStatus(401);
-    $this->getJson('http://central.3alraf.test/api/integration/v1/ping')->assertStatus(401);
+    $this->getJson('/api/integration/v1/ping')->assertStatus(401);
     app(IntegrationClientService::class)->revoke($c, null);
     integrationCall($this, 'GET', 'ping', null, $token, $secret)->assertStatus(401);
-    expect(IntegrationClient::withoutGlobalScopes()->find($c->id)->token_hash)->not->toBe($token); // stored hashed
+    expect(IntegrationClient::query()->find($c->id)->token_hash)->not->toBe($token); // stored hashed
 });
 
-it('enforces scopes and the tenant feature flag', function () {
+it('enforces scopes and the growth feature flag', function () {
     [, $token, $secret] = growthClient(['read']);
     integrationCall($this, 'GET', 'events', null, $token, $secret)->assertStatus(403)->assertJsonPath('error', 'forbidden_scope');
     integrationCall($this, 'POST', 'proposals', ['type' => 'note', 'title' => 'x'], $token, $secret, ['Idempotency-Key' => 'k1'])->assertStatus(403);
-    app(GrowthAccess::class)->set($this->tenant, false);
+    app(GrowthAccess::class)->set(false);
     integrationCall($this, 'GET', 'ping', null, $token, $secret)->assertStatus(403)->assertJsonPath('error', 'growth_disabled');
 });
 
@@ -111,22 +77,6 @@ it('replays idempotent proposals, rejects key reuse with another body, and never
     integrationCall($this, 'POST', 'proposals', $body, $token, $secret)->assertStatus(422); // key required
     integrationCall($this, 'POST', 'proposals', ['type' => 'bogus', 'title' => 't'], $token, $secret, ['Idempotency-Key' => 'zzz'])->assertStatus(422);
     expect(GrowthApproval::count())->toBe(1);
-});
-
-it('isolates tenants: other tenant data is invisible to a client', function () {
-    [, $tokenA, $secretA] = growthClient();
-    app()->instance('currentTenant', $this->other);
-    $exp = GrowthExperiment::create(['name' => 'Other tenant exp', 'status' => 'draft']);
-    GrowthApproval::create(['type' => 'note', 'title' => 'theirs', 'status' => 'pending']);
-    app()->instance('currentTenant', $this->tenant);
-    integrationCall($this, 'POST', "experiments/{$exp->id}/results", ['metric' => 'ctr', 'value' => 1], $tokenA, $secretA, ['Idempotency-Key' => 'x1'])->assertStatus(404);
-    $id = GrowthApproval::withoutGlobalScopes()->where('title', 'theirs')->value('id');
-    integrationCall($this, 'GET', "approvals/$id", null, $tokenA, $secretA)->assertStatus(404);
-    // same idempotency key by another tenant's client is independent
-    [, $tokenB, $secretB] = growthClient(tenant: $this->other);
-    integrationCall($this, 'POST', 'proposals', ['type' => 'note', 'title' => 'b'], $tokenB, $secretB, ['Idempotency-Key' => 'same'])->assertStatus(201);
-    integrationCall($this, 'POST', 'proposals', ['type' => 'note', 'title' => 'b'], $tokenA, $secretA, ['Idempotency-Key' => 'same'])->assertStatus(201);
-    expect(GrowthApproval::withoutGlobalScopes()->where('title', 'b')->pluck('tenant_id')->sort()->values()->all())->toBe([$this->tenant->id, $this->other->id]);
 });
 
 it('ingests experiment results idempotently', function () {
@@ -158,31 +108,28 @@ it('approval: approve runs the handler once, second approve is 422, failing hand
     expect($c->fresh()->status)->toBe('expired');
 });
 
-it('approvals UI: permissions gate approve, cross-tenant ids 404, double approve is 422', function () {
+it('approvals UI: permissions gate approve, unknown ids 404, double approve is 422', function () {
     $a = app(ApprovalService::class)->request('note', 'Check this', ['k' => 'v']);
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->get("{$this->base}/admin/growth/approvals")->assertOk();
     $this->getJson("{$this->base}/admin/growth/approvals/datatable")->assertOk()->assertSee('Check this');
     $this->postJson("{$this->base}/admin/growth/approvals/{$a->id}/reject", [])->assertStatus(422); // reason required
     $this->postJson("{$this->base}/admin/growth/approvals/{$a->id}/approve")->assertOk();
     $this->postJson("{$this->base}/admin/growth/approvals/{$a->id}/approve")->assertStatus(422);
-    app()->instance('currentTenant', $this->other);
-    $theirs = GrowthApproval::create(['type' => 'note', 'title' => 't', 'status' => 'pending']);
-    app()->instance('currentTenant', $this->tenant);
-    $this->postJson("{$this->base}/admin/growth/approvals/{$theirs->id}/approve")->assertStatus(404);
+    $this->postJson("{$this->base}/admin/growth/approvals/999999/approve")->assertStatus(404);
 });
 
 it('admin pages are gated by the feature flag and render', function () {
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     foreach (['clients', 'events', 'approvals', 'experiments', 'settings'] as $p) {
         $this->get("{$this->base}/admin/growth/$p")->assertOk();
     }
-    app(GrowthAccess::class)->set($this->tenant, false);
+    app(GrowthAccess::class)->set(false);
     $this->get("{$this->base}/admin/growth/approvals")->assertStatus(403);
 });
 
 it('admin creates a client (token shown once), rotates and revokes', function () {
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $r = $this->postJson("{$this->base}/admin/growth/clients", ['name' => 'n8n prod', 'scopes' => ['read'], 'webhook_url' => 'https://n8n.example.com/webhook/x'])->assertStatus(201);
     expect($r->json('data.token'))->toContain('.')->and($r->json('data.secret'))->toBeString();
     $this->postJson("{$this->base}/admin/growth/clients", ['name' => 'bad', 'scopes' => ['prices:write']])->assertStatus(422);
@@ -196,8 +143,8 @@ it('admin creates a client (token shown once), rotates and revokes', function ()
     $this->getJson("{$this->base}/admin/growth/clients/datatable")->assertOk()->assertDontSee($rot->json('data.token'));
 });
 
-it('experiments CRUD with guardrail cap, outcome rule and results; tenant isolated', function () {
-    $this->actingAs(ownerOf('egy'), 'tenant');
+it('experiments CRUD with guardrail cap, outcome rule and results; unknown ids 404', function () {
+    $this->actingAs(ownerOf('egy'), 'admin');
     $cap = config('growth.guardrails.ad_total_budget_cap');
     $this->postJson("{$this->base}/admin/growth/experiments", ['name' => 'X', 'status' => 'draft', 'budget_cap' => $cap + 1])->assertStatus(422);
     $this->postJson("{$this->base}/admin/growth/experiments", ['name' => 'X', 'status' => 'completed'])->assertStatus(422);
@@ -208,22 +155,19 @@ it('experiments CRUD with guardrail cap, outcome rule and results; tenant isolat
     $this->postJson("{$this->base}/admin/growth/experiments/{$e->id}/results", ['metric' => 'CVR', 'value' => 3.2, 'spend' => 40])->assertOk();
     $this->putJson("{$this->base}/admin/growth/experiments/{$e->id}", ['name' => 'Hook test', 'status' => 'completed', 'outcome' => 'win', 'learnings' => 'Hooks work'])->assertOk();
     expect($e->fresh()->outcome)->toBe('win')->and($e->results()->count())->toBe(1);
-    app()->instance('currentTenant', $this->other);
-    $theirs = GrowthExperiment::create(['name' => 'theirs', 'status' => 'draft']);
-    app()->instance('currentTenant', $this->tenant);
-    $this->get("{$this->base}/admin/growth/experiments/{$theirs->id}")->assertNotFound();
-    $this->deleteJson("{$this->base}/admin/growth/experiments/{$theirs->id}")->assertNotFound();
+    $this->get("{$this->base}/admin/growth/experiments/999999")->assertNotFound();
+    $this->deleteJson("{$this->base}/admin/growth/experiments/999999")->assertNotFound();
 });
 
-it('settings: tenant overrides validated, merged over config, isolated per tenant', function () {
-    $this->actingAs(ownerOf('egy'), 'tenant');
+it('settings: overrides validated and merged over config', function () {
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->putJson("{$this->base}/admin/growth/settings", ['min_margin_percent' => 99])->assertStatus(422);
     $this->putJson("{$this->base}/admin/growth/settings", ['min_days_of_cover' => 200, 'max_days_of_cover' => 10])->assertStatus(422);
     $this->putJson("{$this->base}/admin/growth/settings", ['min_margin_percent' => 22, 'auto_reply_allowlist' => 'Shipping_Time, returns'])->assertOk();
     $cfg = app(GrowthConfig::class);
-    expect($cfg->get('min_margin_percent', null, $this->tenant->fresh()))->toBe(22)
-        ->and($cfg->get('auto_reply_allowlist', null, $this->tenant->fresh()))->toBe(['shipping_time', 'returns'])
-        ->and($cfg->get('min_margin_percent', null, $this->other->fresh()))->toBe(config('growth.guardrails.min_margin_percent'));
+    expect($cfg->get('min_margin_percent'))->toBe(22)
+        ->and($cfg->get('auto_reply_allowlist'))->toBe(['shipping_time', 'returns'])
+        ->and($cfg->get('max_days_of_cover'))->toBe(config('growth.guardrails.max_days_of_cover'));
 });
 
 it('outbox: emits a signed event, retries with backoff, goes dead, replays; no PII; no event when disabled', function () {
@@ -259,8 +203,8 @@ it('outbox: emits a signed event, retries with backoff, goes dead, replays; no P
     app(GrowthEventService::class)->replay($d->fresh());
     expect($d->fresh()->status)->toBe('pending')->and($d->fresh()->attempts)->toBe(0);
 
-    app(GrowthAccess::class)->set($this->tenant, false);
-    expect(app(GrowthEventService::class)->emit('order.placed', ['order_id' => 1], $this->tenant->fresh()))->toBeNull();
+    app(GrowthAccess::class)->set(false);
+    expect(app(GrowthEventService::class)->emit('order.placed', ['order_id' => 1]))->toBeNull();
 });
 
 it('outbox: no event without a webhook client, unsafe webhooks refused, unknown types ignored', function () {
@@ -275,7 +219,6 @@ it('existing flows feed the outbox (order placed / cancelled / returned) and a f
     Queue::fake();
     growthClient(['read'], 'https://n8n.example.com/hook');
     $o = new \App\Models\Order(['number' => 'A-1', 'total' => 120.5, 'currency' => 'EGP', 'customer_phone' => '01000000100', 'status' => 'cancelled']);
-    $o->tenant_id = $this->tenant->id;
     $o->id = 77;
     event(new \App\Events\OrderPlaced($o, 1));
     event(new \App\Events\OrderStatusChanged($o, \App\Enums\OrderStatus::PENDING, \App\Enums\OrderStatus::CANCELLED, 1));
@@ -288,17 +231,16 @@ it('existing flows feed the outbox (order placed / cancelled / returned) and a f
     expect(true)->toBeTrue();
 });
 
-it('event log UI lists and replays; cross-tenant event id is 404', function () {
+it('event log UI lists and replays; unknown event id is 404', function () {
     growthClient(['read'], 'https://n8n.example.com/hook');
     Queue::fake();
     $e = app(GrowthEventService::class)->emit('order.placed', ['order_id' => 9]);
     $e->update(['status' => 'dead']);
-    $this->actingAs(ownerOf('egy'), 'tenant');
+    $this->actingAs(ownerOf('egy'), 'admin');
     $this->getJson("{$this->base}/admin/growth/events/datatable")->assertOk()->assertSee('order.placed');
     $this->postJson("{$this->base}/admin/growth/events/{$e->id}/replay")->assertOk();
     expect($e->fresh()->status)->toBe('pending');
-    $theirs = GrowthEvent::withoutGlobalScopes()->create(['tenant_id' => $this->other->id, 'event_id' => (string) \Illuminate\Support\Str::uuid(), 'type' => 'order.placed', 'payload' => [], 'status' => 'dead']);
-    $this->postJson("{$this->base}/admin/growth/events/{$theirs->id}/replay")->assertNotFound();
+    $this->postJson("{$this->base}/admin/growth/events/999999/replay")->assertNotFound();
 });
 
 it('maintenance command expires approvals and prunes', function () {

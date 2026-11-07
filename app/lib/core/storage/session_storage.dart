@@ -1,40 +1,48 @@
 import 'key_value_store.dart';
 
-/// Per-tenant secrets (auth token, affiliate token, guest cart token).
-/// Every key is namespaced with the tenant slug so nothing leaks between
-/// countries/stores.
+/// Session secrets of the store: customer auth token, affiliate token and
+/// guest cart token.
 class SessionStorage {
   const SessionStorage(this._store);
 
   final KeyValueStore _store;
 
-  static String _key(String kind, String tenant) => '$kind:$tenant';
+  static const authKey = 'auth_token';
+  static const affiliateKey = 'affiliate_token';
+  static const cartKey = 'cart_token';
 
-  Future<String?> authToken(String tenant) =>
-      _store.read(_key('auth_token', tenant));
-  Future<void> saveAuthToken(String tenant, String token) =>
-      _store.write(_key('auth_token', tenant), token);
-  Future<void> clearAuthToken(String tenant) =>
-      _store.delete(_key('auth_token', tenant));
+  Future<String?> authToken() => _store.read(authKey);
+  Future<void> saveAuthToken(String token) => _store.write(authKey, token);
+  Future<void> clearAuthToken() => _store.delete(authKey);
 
-  Future<String?> affiliateToken(String tenant) =>
-      _store.read(_key('affiliate_token', tenant));
-  Future<void> saveAffiliateToken(String tenant, String token) =>
-      _store.write(_key('affiliate_token', tenant), token);
-  Future<void> clearAffiliateToken(String tenant) =>
-      _store.delete(_key('affiliate_token', tenant));
+  Future<String?> affiliateToken() => _store.read(affiliateKey);
+  Future<void> saveAffiliateToken(String token) =>
+      _store.write(affiliateKey, token);
+  Future<void> clearAffiliateToken() => _store.delete(affiliateKey);
 
-  Future<String?> cartToken(String tenant) =>
-      _store.read(_key('cart_token', tenant));
-  Future<void> saveCartToken(String tenant, String token) =>
-      _store.write(_key('cart_token', tenant), token);
-  Future<void> clearCartToken(String tenant) =>
-      _store.delete(_key('cart_token', tenant));
+  Future<String?> cartToken() => _store.read(cartKey);
+  Future<void> saveCartToken(String token) => _store.write(cartKey, token);
+  Future<void> clearCartToken() => _store.delete(cartKey);
 
-  /// Removes every secret of one tenant (logout / switch country).
-  Future<void> clearTenant(String tenant) async {
-    await clearAuthToken(tenant);
-    await clearAffiliateToken(tenant);
-    await clearCartToken(tenant);
+  /// Removes every secret (account deletion).
+  Future<void> clearAll() async {
+    await clearAuthToken();
+    await clearAffiliateToken();
+    await clearCartToken();
+  }
+
+  /// Moves `<kind>:<namespace>` secrets of an older build to the plain keys.
+  /// A value already stored under the plain key wins. See
+  /// `legacy_storage_migration.dart`.
+  Future<void> adoptNamespace(String namespace) async {
+    for (final key in const [authKey, affiliateKey, cartKey]) {
+      final old = await _store.read('$key:$namespace');
+      if (old == null) continue;
+      final current = await _store.read(key);
+      if ((current == null || current.isEmpty) && old.isNotEmpty) {
+        await _store.write(key, old);
+      }
+      await _store.delete('$key:$namespace');
+    }
   }
 }

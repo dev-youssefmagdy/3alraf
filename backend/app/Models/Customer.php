@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\FreesUniqueOnDelete;
 use App\Models\Concerns\RevokesSessionsOnLockout;
 use App\Services\Growth\GrowthFeatures;
@@ -17,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 class Customer extends Authenticatable
 {
     // Audited MUST boot before RevokesSessionsOnLockout (its `updated` hook re-saves the row, which would hide the change from the audit log) (alphabetical order keeps it so).
-    use Audited, BelongsToTenant, \App\Models\Concerns\HasStorefrontPhone, FreesUniqueOnDelete, HasApiTokens, HasRoles, Notifiable, RevokesSessionsOnLockout, SoftDeletes;
+    use Audited, \App\Models\Concerns\HasStorefrontPhone, FreesUniqueOnDelete, HasApiTokens, HasRoles, Notifiable, RevokesSessionsOnLockout, SoftDeletes;
 
     /** Audit: PII shown masked only. */
     protected array $auditMasked = ['name', 'email', 'phone'];
@@ -35,10 +34,9 @@ class Customer extends Authenticatable
         // Growth data erasure (gated by the `interactions` / `small_batch_lab` / `ambassadors` switches inside the service call site).
         static::deleted(function (Customer $c) {
             try {
-                $t = $c->tenant_id ? Tenant::find($c->tenant_id) : null;
                 $f = app(GrowthFeatures::class);
-                if ($t && $f->active('interactions', $t) || $t && $f->active('small_batch_lab', $t) || $t && $f->active('ambassadors', $t)) {
-                    app(GrowthRetentionService::class)->eraseCustomer($t, $c);
+                if ($f->active('interactions') || $f->active('small_batch_lab') || $f->active('ambassadors')) {
+                    app(GrowthRetentionService::class)->eraseCustomer($c);
                 }
             } catch (\Throwable $e) {
                 report($e); // never block a customer deletion

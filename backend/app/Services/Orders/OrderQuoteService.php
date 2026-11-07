@@ -101,7 +101,7 @@ class OrderQuoteService
 
         $packaging = null;
         if ($d->packagingOptionId) {
-            $packaging = PackagingOption::active()->find($d->packagingOptionId); // tenant scoped + active, else 422
+            $packaging = PackagingOption::active()->find($d->packagingOptionId); // active, else 422
             if (! $packaging) {
                 throw ValidationException::withMessages(['packaging_option_id' => __('orders.packaging.unavailable')]);
             }
@@ -110,7 +110,7 @@ class OrderQuoteService
         $affiliate = $d->affiliateId ? Affiliate::where('status', AffiliateStatus::APPROVED->value)->find($d->affiliateId) : null;
         $affiliatePercent = $affiliate ? $this->affiliates->percentFor($affiliate) : '0';
 
-        $settings = current_tenant()?->settings ?? [];
+        $settings = \App\Models\Setting::map();
         $totals = $this->calculator->calculate(new CalculatorInput(
             lines: array_map(fn ($l) => ['key' => $l['key'], 'unit_price' => $l['unit_price'], 'unit_cost' => $l['unit_cost'], 'qty' => $l['qty'], 'eligible' => $l['eligible']], $lines),
             discount: $rule,
@@ -122,7 +122,7 @@ class OrderQuoteService
             feeBearer: $method ? $method->fee_bearer->value : 'customer',
             affiliatePercent: $affiliatePercent,
             isCod: $method?->type === PaymentMethodType::COD,
-            codCollectShippingUpfront: (bool) (current_tenant()?->codCollectsShippingUpfront() ?? true),
+            codCollectShippingUpfront: (bool) setting('cod_collect_shipping_upfront', config('payments.cod_upfront_default', true)),
             codFee: CodFeeConfig::fromSettings($settings),
             cityId: $d->cityId,
             packagingFee: $packaging ? (string) $packaging->price : '0',

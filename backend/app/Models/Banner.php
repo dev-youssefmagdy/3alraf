@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Enums\BannerPlacement;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 
 class Banner extends Model
 {
-    use BelongsToTenant, HasTranslations;
+    use HasTranslations;
 
     protected array $translatable = ['title'];
 
@@ -23,7 +22,7 @@ class Banner extends Model
     public function imageUrl(?string $locale = null): ?string
     {
         $imgs = $this->images ?? [];
-        $path = $imgs[$locale ?? app()->getLocale()] ?? $imgs[current_tenant()?->default_locale ?? ''] ?? collect($imgs)->first();
+        $path = $imgs[$locale ?? app()->getLocale()] ?? $imgs[Setting::get('default_locale') ?? ''] ?? collect($imgs)->first();
 
         return $path ? media_url($path) : null;
     }

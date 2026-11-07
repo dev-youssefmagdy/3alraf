@@ -8,7 +8,7 @@
 </style></head>
 <body>
 <h1>{{ $t($report['title']) }}</h1>
-<div class="muted">{{ $t($tenant->name ?? '') }} @if ($f) - {{ $f->from }} / {{ $f->to }} @endif</div>
+<div class="muted">{{ $t(setting('name') ?? '') }} @if ($f) - {{ $f->from }} / {{ $f->to }} @endif</div>
 @foreach ($report['cards'] as $c)<div>{{ $t($c['label']) }}: <b>{{ $c['type'] === 'int' ? number_format((float) $c['value']) : number_format((float) $c['value'], 2) }}</b></div>@endforeach
 @foreach ($report['tables'] as $tb)
     @if (! empty($tb['title']))<h3>{{ $t($tb['title']) }}</h3>@endif

@@ -11,8 +11,6 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantProduct;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\Orders\OfflineCheckoutThrottle;
 use App\Services\Orders\OrderPaymentService;
@@ -29,14 +27,11 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
     Storage::fake('media');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
-    $this->hdr = 'http://3alraf.test/api/v1';
+    codUpfront(false);
+    $this->s = '/ar';
+    $this->api = '/api/v1';
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'oc1', 'sku' => 'OC1', 'barcode' => '2000000000077']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, T::PURCHASE_IN, 500, '60.00');
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -95,7 +90,7 @@ it('web: a valid proof creates a pending / review order with a hashed random pri
     $res = ($this->webPost)('checkout', ($this->payload)() + ['proof' => $file])->assertOk();
     $o = Order::where('number', $res->json('data.number'))->first();
     expect($o->proof_status)->toBe(ProofStatus::PENDING)->and($o->payment_status)->toBe(PaymentStatus::REVIEW)
-        ->and($o->payment_proof_hash)->toBe(hash_file('sha256', $file->getRealPath()))->and($o->payment_proof)->toStartWith("tenants/{$this->tenant->id}/payment-proofs/")->toEndWith('.png');
+        ->and($o->payment_proof_hash)->toBe(hash_file('sha256', $file->getRealPath()))->and($o->payment_proof)->toStartWith('payment-proofs/')->toEndWith('.png');
     Storage::disk('private')->assertExists($o->payment_proof);
     expect(basename($o->payment_proof))->not->toContain('p'.$this->n.'.');   // client name never reused
 });
@@ -110,7 +105,7 @@ it('COD alone is unaffected (no proof needed, a stray file is ignored) while a w
     $res = ($this->webPost)('checkout', ($this->payload)(['payment_method_id' => $this->cod->id]) + ['proof' => ($this->proof)()])->assertOk();
     expect(Order::where('number', $res->json('data.number'))->value('payment_proof'))->toBeNull()->and(Storage::disk('private')->allFiles())->toBe([]);
 
-    codUpfront($this->tenant, true);
+    codUpfront(true);
     ($this->webCart)();
     $prepay = ($this->payload)(['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id]);
     ($this->webPost)('checkout/validate', $prepay)->assertStatus(422)->assertJsonValidationErrors(['proof']);
@@ -122,7 +117,7 @@ it('COD alone is unaffected (no proof needed, a stray file is ignored) while a w
 
 it('the service layer itself refuses an offline placement without proof (not only the FormRequest)', function () {
     expect(fn () => ($this->place)())->toThrow(ValidationException::class);
-    codUpfront($this->tenant, true);
+    codUpfront(true);
     expect(fn () => ($this->place)(['paymentMethodId' => $this->cod->id, 'prepayMethodId' => $this->wallet->id]))->toThrow(ValidationException::class);
     expect(Order::count())->toBe(0);
     expect(($this->place)(['proof' => ($this->proof)()])['order']->proof_status)->toBe(ProofStatus::PENDING);
@@ -229,18 +224,18 @@ it('limiter open-order cap: too many offline orders still awaiting review for on
     ($this->webPost)('checkout', ($this->payload)(['phone' => '01001112222']) + ['proof' => ($this->proof)()])->assertOk();
 });
 
-it('limiter keys cannot be dodged through the X-Tenant header and the api answers with the envelope + Retry-After', function () {
+it('limiter keys cannot be dodged through the (ignored) X-Tenant header or a legacy host and the api answers with the envelope + Retry-After', function () {
     config(['checkout.offline.ip_attempts' => 2]);
     $this->app['auth']->forgetGuards(); // API / guest-cart flow: no web session
-    $post = fn ($tenantHeader) => $this->withHeaders(['X-Tenant' => $tenantHeader, 'Accept' => 'application/json'])->post("{$this->hdr}/checkout", array_diff_key(($this->payload)(), ['address_id' => 1]));
+    $post = fn ($tenantHeader) => $this->withHeaders(['X-Tenant' => $tenantHeader, 'Accept' => 'application/json'])->post("{$this->api}/checkout", array_diff_key(($this->payload)(), ['address_id' => 1]));
     $post('egy')->assertStatus(422);
     $post('egy')->assertStatus(422);
-    $post('no-such-tenant')->assertNotFound();           // unknown tenants never reach (or mint) an offline bucket
-    $r = $post('egy');                                   // same resolved tenant, same bucket
+    $r = $post('no-such-tenant');                        // X-Tenant is ignored: any value shares the same bucket
     $r->assertStatus(429)->assertJsonStructure(['success', 'message', 'data', 'meta'])->assertJsonPath('success', false);
     expect((int) $r->headers->get('Retry-After'))->toBeGreaterThan(0);
-    // the tenant-subdomain twin shares the bucket as well
+    // no header and a legacy {slug}. host (api/* served directly) share the bucket as well
     $this->withHeader('Accept', 'application/json')->post("{$this->api}/checkout", array_diff_key(($this->payload)(), ['address_id' => 1]))->assertStatus(429);
+    $this->withHeader('Accept', 'application/json')->post('http://egy.3alraf.loc/api/v1/checkout', array_diff_key(($this->payload)(), ['address_id' => 1]))->assertStatus(429);
 });
 
 it('the proof re-upload route has its own stricter limiter', function () {

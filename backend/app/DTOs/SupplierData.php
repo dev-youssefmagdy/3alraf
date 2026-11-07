@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\SupplierRequest;
+use App\Http\Requests\Admin\SupplierRequest;
 
 final readonly class SupplierData
 {

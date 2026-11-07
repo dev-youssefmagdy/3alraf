@@ -1,9 +1,9 @@
 <?php
 
 /*
- * QA E2E — tenant ERP panel, driven through HTTP as a user would (forms, not services).
+ * QA E2E — ERP panel, driven through HTTP as a user would (forms, not services).
  * Tests named "QA-BUG-xxx" encode the CORRECT behaviour and fail until the bug is fixed (docs/qa/QA_TEST_REPORT.md).
- * Run alone: php artisan test tests/Feature/QaE2eErpTenantTest.php
+ * Run alone: php artisan test tests/Feature/QaE2eErpTest.php
  */
 
 use App\Enums\StockMovementType as T;
@@ -21,12 +21,9 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Erp\Reports\LedgerReports;
 use App\Services\Stock\StockLedger;
-use App\Services\Tenancy\TenantContext;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -35,13 +32,11 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->a = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->a = '/admin';
     $this->e = $this->a.'/erp';
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($this->owner, 'tenant');
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->owner, 'admin');
     $this->branch = Branch::first();
     $this->bal = fn (string $role) => (string) Account::where('role_key', $role)->value('current_balance');
 });
@@ -50,7 +45,7 @@ beforeEach(function () {
 function qaRawKeys(string $html): array
 {
     $html = preg_replace('#<script\b[^>]*>.*?</script>#is', '', $html);
-    preg_match_all('/(?<![\w.\/:-])(?:erp|erp_central|erp_dist|erp_ext|erp_rep|access|admin)\.[a-z0-9_]+(?:\.[a-z0-9_\-]+)*\.?(?![\w(])/', $html, $m);
+    preg_match_all('/(?<![\w.\/:-])(?:erp|erp_audit|erp_dist|erp_ext|erp_rep|access|admin)\.[a-z0-9_]+(?:\.[a-z0-9_\-]+)*\.?(?![\w(])/', $html, $m);
 
     return array_values(array_unique(array_filter($m[0], fn ($k) => ! preg_match('/^admin\.(3alraf|test|loc)/', $k))));
 }
@@ -58,7 +53,7 @@ function qaRawKeys(string $html): array
 function qaProduct(string $slug = 'qa-p', string $price = '100', string $cost = '60', int $qty = 50): Product
 {
     $p = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج '.$slug, 'en' => 'Prod '.$slug], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+    listProduct($p, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
     if ($qty > 0) {
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, $qty, $cost);
     }
@@ -88,7 +83,7 @@ function qaStatus(Order $o, string ...$steps): Order
     return $o->refresh();
 }
 
-/** Builds a realistic tenant via the HTTP UI: orders, return, purchase, adjustment, expense, owners, asset, distribution. */
+/** Builds a realistic store via the HTTP UI: orders, return, purchase, adjustment, expense, owners, asset, distribution. */
 function qaRichData(): array
 {
     $t = test();
@@ -120,19 +115,19 @@ function qaRichData(): array
 }
 
 /** Every GET ERP route with real ids substituted. */
-function qaTenantGetUris(array $ids): array
+function qaErpGetUris(array $ids): array
 {
     $out = [];
     foreach (Route::getRoutes()->getRoutes() as $r) {
         $n = (string) $r->getName();
-        if (! str_starts_with($n, 'tenant.erp.') || ! in_array('GET', $r->methods(), true)) {
+        if (! str_starts_with($n, 'admin.erp.') || ! in_array('GET', $r->methods(), true)) {
             continue;
         }
         $uri = $r->uri();
-        if ($n === 'tenant.erp.reports.show' || $n === 'tenant.erp.reports.export') {
+        if ($n === 'admin.erp.reports.show' || $n === 'admin.erp.reports.export') {
             foreach (array_keys(\App\Services\Erp\Reports\ReportCatalog::META) as $rep) {
                 $u = str_replace('{report}', $rep, $uri);
-                $out[$n.':'.$rep] = $n === 'tenant.erp.reports.export' ? [$u, $u.'?format=pdf'] : [$u];
+                $out[$n.':'.$rep] = $n === 'admin.erp.reports.export' ? [$u, $u.'?format=pdf'] : [$u];
             }
 
             continue;
@@ -144,8 +139,8 @@ function qaTenantGetUris(array $ids): array
 
             continue;
         }
-        $map = ['tenant.erp.journals.show' => $ids['entry'], 'tenant.erp.owners.show' => $ids['owner'], 'tenant.erp.assets.show' => $ids['asset'],
-            'tenant.erp.profits.show' => $ids['dist'], 'tenant.erp.profits.statement' => $ids['owner']];
+        $map = ['admin.erp.journals.show' => $ids['entry'], 'admin.erp.owners.show' => $ids['owner'], 'admin.erp.assets.show' => $ids['asset'],
+            'admin.erp.profits.show' => $ids['dist'], 'admin.erp.profits.statement' => $ids['owner']];
         $uri = str_replace(['{id}', '{owner}'], [(string) ($map[$n] ?? 0), (string) ($map[$n] ?? 0)], $uri);
         $out[$n] = [$uri];
     }
@@ -153,16 +148,16 @@ function qaTenantGetUris(array $ids): array
     return $out;
 }
 
-it('SMOKE: every tenant ERP GET page/export renders for the owner with realistic data (en), no raw keys', function () {
+it('SMOKE: every ERP GET page/export renders for the owner with realistic data (en), no raw keys', function () {
     $d = qaRichData();
     qaJournal('cash', 'sales_revenue', '10000')->assertSessionHasNoErrors();
     $this->post($this->e.'/profits', ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->toDateString(), 'acknowledge_open' => 1]);
     $dist = ProfitDistribution::latest('id')->first();
     $ids = ['customer' => $d['customer']->id, 'supplier' => $d['supplier']->id, 'entry' => $d['entry']->id, 'owner' => $d['owner']->id, 'asset' => $d['asset']->id, 'dist' => $dist?->id ?? 0];
     $bad = [];
-    foreach (qaTenantGetUris($ids) as $name => $uris) {
+    foreach (qaErpGetUris($ids) as $name => $uris) {
         foreach ($uris as $uri) {
-            $res = $this->get('http://egy.3alraf.test/'.$uri);
+            $res = $this->get('/'.$uri);
             $code = $res->getStatusCode();
             if ($code !== 200) {
                 $bad[] = "$name $uri => $code ".substr((string) ($res->exception?->getMessage() ?? ''), 0, 200);
@@ -183,28 +178,24 @@ it('SMOKE: every tenant ERP GET page/export renders for the owner with realistic
     expect($bad)->toBe([]);
 });
 
-/** A brand-new tenant: no chart of accounts, no periods, no branch data, own owner admin. */
-function qaEmptyTenant(): array
+/** A brand-new store: no chart of accounts, no periods, no ERP data yet; a fresh owner admin. */
+function qaEmptyStore(): Admin
 {
-    $t = Tenant::create(['slug' => 'qa-new', 'name' => 'QA New', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'ج.م', 'currency_rate' => 1,
-        'default_locale' => 'en', 'locales' => ['en', 'ar'], 'timezone' => 'Africa/Cairo', 'is_active' => true]);
-    $adm = TenantAdmin::withoutGlobalScopes()->create(['name' => 'New Owner', 'email' => 'owner@qa-new.test', 'password' => 'password', 'is_active' => true, 'tenant_id' => $t->id]);
-    $adm->assignRole(\Spatie\Permission\Models\Role::where(['name' => 'tenant-owner', 'guard_name' => 'tenant'])->first());
+    $adm = Admin::query()->create(['name' => 'New Owner', 'email' => 'owner@qa-new.test', 'phone' => '201000000888', 'password' => 'password', 'is_active' => true]);
+    $adm->assignRole(\Spatie\Permission\Models\Role::where(['name' => 'owner', 'guard_name' => 'admin'])->first());
     app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
-    return [$t, $adm->fresh()];
+    return $adm->fresh();
 }
 
-it('SMOKE: every tenant ERP GET page renders on an EMPTY brand-new tenant (no CoA, no periods, no data)', function () {
-    [$t, $adm] = qaEmptyTenant();
-    app()->instance('currentTenant', $t);
+it('SMOKE: every ERP GET page renders on an EMPTY brand-new store (no CoA, no periods, no data)', function () {
+    $adm = qaEmptyStore();
     expect(Account::count())->toBe(0);
-    $this->actingAs($adm, 'tenant');
+    $this->actingAs($adm, 'admin');
     $bad = [];
-    foreach (qaTenantGetUris(['customer' => 0, 'supplier' => 0, 'entry' => 0, 'owner' => 0, 'asset' => 0, 'dist' => 0]) as $name => $uris) {
+    foreach (qaErpGetUris(['customer' => 0, 'supplier' => 0, 'entry' => 0, 'owner' => 0, 'asset' => 0, 'dist' => 0]) as $name => $uris) {
         foreach ($uris as $uri) {
-            app()->instance('currentTenant', $t);
-            $res = $this->get('http://qa-new.3alraf.test/'.$uri);
+            $res = $this->get('/'.$uri);
             $code = $res->getStatusCode();
             $idRoute = preg_match('#/0(/|$|\?)#', $uri);
             if (! ($code === 200 || ($idRoute && $code === 404))) {
@@ -217,16 +208,16 @@ it('SMOKE: every tenant ERP GET page renders on an EMPTY brand-new tenant (no Co
     expect($bad)->toBe([]);
 });
 
-it('SMOKE: every tenant ERP GET page renders in ARABIC (admin locale ar) with dir=rtl and no raw keys', function () {
+it('SMOKE: every ERP GET page renders in ARABIC (admin locale ar) with dir=rtl and no raw keys', function () {
     $d = qaRichData();
     $this->get($this->a.'/locale/ar')->assertRedirect();
     $ids = ['customer' => $d['customer']->id, 'supplier' => $d['supplier']->id, 'entry' => $d['entry']->id, 'owner' => $d['owner']->id, 'asset' => $d['asset']->id, 'dist' => 0];
     $bad = [];
-    foreach (qaTenantGetUris($ids) as $name => $uris) {
-        if (str_contains($name, 'export') || $name === 'tenant.erp.profits.show') {
+    foreach (qaErpGetUris($ids) as $name => $uris) {
+        if (str_contains($name, 'export') || $name === 'admin.erp.profits.show') {
             continue;
         }
-        $res = $this->get('http://egy.3alraf.test/'.$uris[0]);
+        $res = $this->get('/'.$uris[0]);
         if ($res->getStatusCode() !== 200) {
             $bad[] = "$name => ".$res->getStatusCode().' '.substr((string) ($res->exception?->getMessage() ?? ''), 0, 200);
 
@@ -353,7 +344,7 @@ it('JOURNEY journals: draft -> show -> post -> reverse, unbalanced = validation 
     // delete a draft
     $this->post($this->e.'/journals', $draft);
     $d2 = JournalEntry::latest('id')->first();
-    $this->delete($this->e."/journals/{$d2->id}")->assertRedirect(route('tenant.erp.journals.index'));
+    $this->delete($this->e."/journals/{$d2->id}")->assertRedirect(route('admin.erp.journals.index'));
     expect(JournalEntry::whereKey($d2->id)->exists())->toBeFalse();
     // list filters with odd inputs
     $this->get($this->e.'/journals?status=posted&from=2026-12-31&to=2026-01-01')->assertOk();
@@ -418,11 +409,11 @@ it('JOURNEY periods: close / reopen (reason required) / post into a closed perio
     $this->get($this->e.'/periods')->assertOk();
     $p = Period::whereYear('starts_on', now()->year)->orderBy('starts_on')->first(); // periods close in order: the earliest one
     $in = $p->starts_on->toDateString();
-    $this->get($this->e.'/periods')->assertSee(route('tenant.erp.periods.close', $p->id), false);
+    $this->get($this->e.'/periods')->assertSee(route('admin.erp.periods.close', $p->id), false);
     $this->post($this->e."/periods/{$p->id}/close")->assertSessionHasNoErrors();
     $this->post($this->e."/periods/{$p->id}/close"); // double click
     expect($p->fresh()->isOpen())->toBeFalse();
-    $this->get($this->e.'/periods')->assertOk()->assertSee(route('tenant.erp.periods.reopen', $p->id), false);
+    $this->get($this->e.'/periods')->assertOk()->assertSee(route('admin.erp.periods.reopen', $p->id), false);
     // posting into the closed period through the journal form
     $n = JournalEntry::where('status', 'posted')->count();
     qaJournal('rent', 'cash', '7', ['entry_date' => $in])->assertStatus(302)->assertSessionHasErrors('erp');
@@ -532,16 +523,16 @@ it('JOURNEY profit distribution: create -> approve -> post -> pay -> cancel rule
     expect(ProfitDistribution::count())->toBe(1);
     // second approver: creator cannot approve
     $this->put($this->e.'/settings', ['reserve_percent' => 0, 'distribution_min_cash_buffer' => 0, 'tax_rate' => 0, 'distribution_requires_second_approver' => 1])->assertSessionHasNoErrors();
-    $this->get($this->e."/profits/{$d->id}")->assertOk()->assertSee(route('tenant.erp.profits.approve', $d->id), false);
+    $this->get($this->e."/profits/{$d->id}")->assertOk()->assertSee(route('admin.erp.profits.approve', $d->id), false);
     $this->post($this->e."/profits/{$d->id}/approve")->assertSessionHasErrors('erp');
     expect($d->fresh()->status)->toBe('draft');
-    $second = TenantAdmin::withoutGlobalScopes()->create(['name' => 'CFO', 'email' => 'cfo@egy.test', 'password' => 'password', 'is_active' => true, 'tenant_id' => $this->tenant->id]);
-    $second->assignRole('tenant-owner');
-    $this->actingAs($second->fresh(), 'tenant');
+    $second = Admin::query()->create(['name' => 'CFO', 'email' => 'cfo@egy.test', 'password' => 'password', 'is_active' => true]);
+    $second->assignRole('owner');
+    $this->actingAs($second->fresh(), 'admin');
     $this->post($this->e."/profits/{$d->id}/approve")->assertSessionHasNoErrors();
     $this->post($this->e."/profits/{$d->id}/approve"); // double click
     expect($d->fresh()->status)->toBe('approved');
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->post($this->e."/profits/{$d->id}/post")->assertSessionHasNoErrors();
     $this->post($this->e."/profits/{$d->id}/post"); // double click
     expect($d->fresh()->status)->toBe('posted');
@@ -549,7 +540,7 @@ it('JOURNEY profit distribution: create -> approve -> post -> pay -> cancel rule
     expect($payable)->toBe((float) $d->fresh()->distributed_amount);
     $line = $d->lines()->orderBy('id')->first();
     $page = $this->get($this->e."/profits/{$d->id}")->assertOk();
-    expect($page->getContent())->toContain(route('tenant.erp.profits.pay', [$d->id, $line->id]));
+    expect($page->getContent())->toContain(route('admin.erp.profits.pay', [$d->id, $line->id]));
     $this->post($this->e."/profits/{$d->id}/lines/{$line->id}/pay", ['account' => 'cash'])->assertSessionHasNoErrors();
     $this->post($this->e."/profits/{$d->id}/lines/{$line->id}/pay", ['account' => 'cash']); // double submit
     expect(JournalEntry::where('idempotency_key', "profitdist:{$d->id}:line:{$line->id}:pay")->count())->toBe(1)
@@ -572,7 +563,7 @@ it('JOURNEY profit distribution: cancelling a posted unpaid run reverses its jou
     $this->post($this->e."/profits/{$d->id}/post")->assertSessionHasNoErrors();
     $this->post($this->e."/profits/{$d->id}/cancel", ['reason' => 'mistake'])->assertSessionHasNoErrors();
     expect($d->fresh()->status)->toBe('cancelled')->and((float) ($this->bal)('distributions_payable'))->toBe(0.0);
-    $this->get($this->e."/profits/{$d->id}")->assertOk()->assertDontSee(route('tenant.erp.profits.cancel', $d->id), false);
+    $this->get($this->e."/profits/{$d->id}")->assertOk()->assertDontSee(route('admin.erp.profits.cancel', $d->id), false);
     $this->post($this->e."/profits/{$d->id}/approve")->assertSessionHasErrors('erp');
     // a new run can be created for the same period
     $this->post($this->e.'/profits', $range)->assertSessionHasNoErrors();
@@ -584,7 +575,7 @@ it('JOURNEY profit distribution: cancelling a posted unpaid run reverses its jou
 
 it('JOURNEY fixed asset: register -> depreciate (artisan + UI, idempotent) -> transfer -> dispose', function () {
     $this->get($this->e.'/assets')->assertOk();
-    $b2 = Branch::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
+    $b2 = Branch::query()->create(['name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
     $start = now()->subMonths(3)->startOfMonth();
     $this->post($this->e.'/assets', ['name' => 'Van', 'category' => 'vehicles', 'acquisition_date' => $start->toDateString(), 'cost' => 12000, 'salvage_value' => 0,
         'useful_life_months' => 12, 'method' => 'straight_line', 'paid_from' => 'cash', 'branch_id' => $this->branch->id])->assertSessionHasNoErrors();
@@ -592,12 +583,10 @@ it('JOURNEY fixed asset: register -> depreciate (artisan + UI, idempotent) -> tr
     expect((float) ($this->bal)('fixed_assets'))->toBe(12000.0);
     $this->get($this->e."/assets/{$a->id}")->assertOk()->assertSee('Van');
     $period = $start->copy()->addMonth()->format('Y-m');
-    $this->artisan('erp:depreciate', ['--tenant' => 'egy', '--period' => $period])->assertExitCode(0);
-    app()->instance('currentTenant', $this->tenant);
+    $this->artisan('erp:depreciate', ['--period' => $period])->assertExitCode(0);
     $acc = abs((float) ($this->bal)('accumulated_depreciation')); // catch-up: acquisition month + next month
     expect($acc)->toBe(2000.0);
-    $this->artisan('erp:depreciate', ['--tenant' => 'egy', '--period' => $period])->assertExitCode(0); // re-run: idempotent
-    app()->instance('currentTenant', $this->tenant);
+    $this->artisan('erp:depreciate', ['--period' => $period])->assertExitCode(0); // re-run: idempotent
     $this->post($this->e."/assets/{$a->id}/depreciate", ['period' => $period])->assertSessionHasNoErrors();
     $this->post($this->e."/assets/{$a->id}/depreciate", ['period' => $period]); // double submit
     expect(abs((float) ($this->bal)('accumulated_depreciation')))->toBe($acc);
@@ -617,10 +606,10 @@ it('JOURNEY fixed asset: register -> depreciate (artisan + UI, idempotent) -> tr
 
 it('JOURNEY branch cash transfer: success, same branch refused, double submit with the form ref posts once', function () {
     $this->get($this->e.'/accounts');
-    $b2 = Branch::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
+    $b2 = Branch::query()->create(['name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
     $page = $this->get($this->e.'/branches')->assertOk()->assertSee('name="ref"', false);
     $payload = ['from_branch' => $this->branch->id, 'to_branch' => $b2->id, 'amount' => '250.00', 'role' => 'cash', 'ref' => 'bt-1'];
-    $this->post($this->e.'/branches/transfer', $payload)->assertRedirect(route('tenant.erp.branches.index'));
+    $this->post($this->e.'/branches/transfer', $payload)->assertRedirect(route('admin.erp.branches.index'));
     $this->post($this->e.'/branches/transfer', $payload);
     expect(JournalEntry::where('source_type', 'branch_cash_transfer')->count())->toBe(1)->and((float) ($this->bal)('cash'))->toBe(0.0);
     $this->post($this->e.'/branches/transfer', ['to_branch' => $this->branch->id] + $payload)->assertSessionHasErrors('erp');
@@ -638,7 +627,7 @@ it('JOURNEY settings: save, validation, exchange rate add/delete', function () {
     $this->put($this->e.'/settings', ['reserve_percent' => 1, 'distribution_min_cash_buffer' => 0, 'tax_rate' => 0, 'revenue_policy' => str_repeat('R', 1001)])->assertSessionHasErrors('revenue_policy');
     $this->post($this->e.'/settings/rates', ['from_currency' => 'egp', 'to_currency' => 'usd', 'rate' => '0.0205', 'effective_date' => now()->toDateString()])->assertSessionHasNoErrors();
     $this->post($this->e.'/settings/rates', ['from_currency' => 'egp', 'to_currency' => 'egp', 'rate' => '1', 'effective_date' => now()->toDateString()])->assertSessionHasErrors('to_currency');
-    $r = \App\Models\Erp\ExchangeRate::where('tenant_id', $this->tenant->id)->first();
+    $r = \App\Models\Erp\ExchangeRate::query()->first();
     expect($r->from_currency)->toBe('EGP');
     $this->get($this->e.'/settings')->assertSee('1 EGP = 0.0205 USD');
     $this->delete($this->e."/settings/rates/{$r->id}")->assertSessionHasNoErrors();
@@ -654,7 +643,7 @@ it('JOURNEY migration page: detect, post missing, toggle auto-posting, reconcile
     $o = qaStatus(qaPosOrder($p, 1), 'confirmed', 'processing', 'shipped'); // pass 1 (ERP-011): revenue is recognised at shipment by default
     expect(JournalEntry::where('source_type', 'order')->where('source_id', $o->id)->count())->toBe(0);
     $this->post($this->e.'/migration/detect')->assertOk();
-    $this->post($this->e.'/migration/post-missing')->assertRedirect(route('tenant.erp.migration.index'));
+    $this->post($this->e.'/migration/post-missing')->assertRedirect(route('admin.erp.migration.index'));
     $this->post($this->e.'/migration/post-missing'); // double submit -> nothing duplicated
     expect(JournalEntry::where('source_type', 'order')->where('source_id', $o->id)->where('status', 'posted')->count())->toBe(1);
     $this->put($this->e.'/migration/auto-posting', ['enabled' => 1]);
@@ -668,7 +657,7 @@ it('JOURNEY migration page: detect, post missing, toggle auto-posting, reconcile
 it('E2E business flows (orders, returns, purchases, stock, expenses, POS) are reflected by ERP pages; TB balanced; dashboard KPIs = P&L', function () {
     $p = qaProduct('qa-flow', '100', '60', 0);
     $s = Supplier::create(['name' => 'Flow Supplier', 'is_active' => true]);
-    $b2 = Branch::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
+    $b2 = Branch::query()->create(['name' => ['ar' => 'فرع 2', 'en' => 'Branch Two'], 'is_active' => true]);
     // purchase create (draft) then receive
     $this->postJson($this->a.'/purchases', ['supplier_id' => $s->id, 'branch_id' => $this->branch->id, 'ordered_at' => now()->toDateString(), 'items' => [['item' => $p->id.'-0', 'quantity' => 30, 'unit_cost' => 60]]])->assertOk();
     $po = \App\Models\PurchaseOrder::latest('id')->first();

@@ -2,14 +2,13 @@
 
 namespace App\Http\Requests\Storefront;
 
-use App\Http\Requests\Concerns\ValidatesTenantPhone;
-use App\Models\TenantProduct;
+use App\Http\Requests\Concerns\ValidatesShopPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StockRequestRequest extends FormRequest
 {
-    use ValidatesTenantPhone;
+    use ValidatesShopPhone;
 
     protected function prepareForValidation(): void
     {
@@ -24,7 +23,7 @@ class StockRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_id' => ['required', 'integer', Rule::in(TenantProduct::where('is_active', true)->pluck('product_id')->all())],
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('is_active', true)->whereNotNull('price')->whereNull('deleted_at')],
             'variant_id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')->where('product_id', (int) $this->input('product_id'))],
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:30'],

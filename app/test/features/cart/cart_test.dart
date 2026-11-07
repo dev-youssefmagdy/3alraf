@@ -1,9 +1,7 @@
-import 'package:app/core/network/network_providers.dart';
+import 'package:app/features/store/application/store_controller.dart';
 import 'package:app/features/auth/application/auth_controller.dart';
 import 'package:app/features/cart/application/cart_controller.dart';
 import 'package:app/features/cart/data/cart_models.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -74,9 +72,7 @@ void main() {
     final env = TestEnv(extra: b.call);
     final c = await env.container();
     c.listen(cartControllerProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick();
     expect(c.read(cartCountProvider), 2);
     expect(c.read(cartControllerProvider).cart!.totals.total, '200.00');
@@ -97,9 +93,7 @@ void main() {
     final env = TestEnv(extra: b.call);
     final c = await env.container();
     c.listen(cartControllerProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick();
     final line = c.read(cartControllerProvider).cart!.items.first;
     final notifier = c.read(cartControllerProvider.notifier);
@@ -123,9 +117,7 @@ void main() {
     final env = TestEnv(extra: CartBackend().call);
     final c = await env.container();
     c.listen(cartControllerProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick();
     final line = c.read(cartControllerProvider).cart!.items.first;
     expect(await c.read(cartControllerProvider.notifier).remove(line), isNull);
@@ -138,9 +130,7 @@ void main() {
     final env = TestEnv(extra: b.call);
     final c = await env.container();
     c.listen(cartControllerProvider, (_, _) {});
-    await c
-        .read(tenantControllerProvider.notifier)
-        .select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick();
     final n = c.read(cartControllerProvider.notifier);
 
@@ -159,23 +149,19 @@ void main() {
     expect(env.requestsTo('/cart/quote').last.data, {'discount_code': 'SAVE'});
   });
 
-  test('tenant switch empties the cart and refetches with the new '
-      'X-Tenant', () async {
-    final env = TestEnv(
-      tenants: [tenantJson('egy'), tenantJson('sa')],
-      extra: CartBackend().call,
-    );
+  test('a language change refetches the cart', () async {
+    final env = TestEnv(extra: CartBackend().call);
     final c = await env.container();
     c.listen(cartControllerProvider, (_, _) {});
-    final tenants = c.read(tenantControllerProvider.notifier);
-    await tenants.select(Tenant.fromJson(tenantJson('egy')));
+    await bootStore(c);
     await tick();
     expect(c.read(cartCountProvider), 2);
-    await tenants.switchTo(Tenant.fromJson(tenantJson('sa')));
+    final before = env.requestsTo('/cart').length;
+    await c.read(storeControllerProvider.notifier).chooseLocale('en');
     await tick();
     final gets = env.requestsTo('/cart');
-    expect(gets.last.headers['X-Tenant'], 'sa');
-    expect(c.read(apiContextProvider).tenantSlug, 'sa');
+    expect(gets.length, greaterThan(before));
+    expect(gets.last.headers['Accept-Language'], 'en');
   });
 
   test(
@@ -194,9 +180,7 @@ void main() {
       );
       final c = await env.container();
       c.listen(cartControllerProvider, (_, _) {});
-      await c
-          .read(tenantControllerProvider.notifier)
-          .select(Tenant.fromJson(tenantJson('egy')));
+      await bootStore(c);
       await tick(); // guest cart loaded, token 'guest-1' persisted
       final before = env.adapter.requests.length;
       await c

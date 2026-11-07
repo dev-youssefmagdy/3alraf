@@ -26,12 +26,11 @@ class BranchTransferService
             throw new AccountingException(__('erp_rep.bt.invalid'));
         }
         $from = Branch::findOrFail($fromBranch);
-        $to = Branch::findOrFail($toBranch); // tenant scope -> 404 for another tenant's branch
-        $tenant = current_tenant();
+        $to = Branch::findOrFail($toBranch);
         if (! \App\Models\Erp\Account::where('role_key', 'receivable')->exists()) {
-            $this->coa->seed($tenant);
+            $this->coa->seed();
         }
-        $this->coa->ensureRoles(['branch_transfer'], $tenant);
+        $this->coa->ensureRoles(['branch_transfer']);
         $memo = trim(__('erp_rep.bt.memo', ['from' => (string) $from->name, 'to' => (string) $to->name]).' '.$note);
 
         return $this->journals->post([

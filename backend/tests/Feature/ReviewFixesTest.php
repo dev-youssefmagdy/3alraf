@@ -15,9 +15,7 @@ use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Orders\OfflineCheckoutThrottle;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
@@ -39,13 +37,11 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('private');
     Storage::fake('media');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->t = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->s = '/ar';
+    $this->t = '/admin';
     $this->product = Product::create(['type' => 'simple', 'name' => ['ar' => 'منتج'], 'slug' => 'rv1', 'sku' => 'RV1', 'barcode' => '2000000000099']);
-    TenantProduct::create(['product_id' => $this->product->id, 'price' => 100, 'cost' => 60, 'is_active' => true]);
+    listProduct($this->product, ['price' => 100, 'cost' => 60, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $this->product->id, 0, T::PURCHASE_IN, 500, '60.00');
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -132,7 +128,7 @@ it('shows a warning on the admin order page when its proof hash is shared, and l
     $a = ($this->place)();
     $a->update(['proof_status' => ProofStatus::REJECTED]);
     $b = ($this->place)(['proof' => UploadedFile::fake()->createWithContent('x.png', file_get_contents(Storage::disk('private')->path($a->payment_proof))), 'phone' => '01100000111']);
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("{$this->t}/orders/{$b->id}")->assertOk()->assertSee(__('orders.proof_shared_warning'))->assertSee($a->number);
     $this->get("{$this->t}/orders/{$a->id}")->assertOk()->assertSee(__('orders.proof_shared_warning'))->assertSee($b->number);
     $c = ($this->place)(['phone' => '01200000122']);
@@ -157,7 +153,7 @@ it('documents the checkout as multipart when it takes the proof file, and keeps 
     $migration = require base_path('database/migrations/2026_11_01_100002_seed_bundle_packaging_permissions.php');
     $migration->up();
     $migration->up();
-    $role = Role::where('name', 'tenant-owner')->where('guard_name', 'tenant')->first();
+    $role = Role::where('name', 'owner')->where('guard_name', 'admin')->first();
     expect($role->hasPermissionTo('bundles.create'))->toBeTrue()->and($role->hasPermissionTo('packaging.delete'))->toBeTrue();
 });
 
@@ -171,11 +167,11 @@ it('enforces the proof on web and API against crafted requests (missing, empty, 
         ($this->post)($path, ($this->payload)() + ['proof_file' => testProof(), 'file' => testProof(), 'payment_proof' => testProof()])->assertStatus(422)->assertJsonValidationErrors('proof');
         ($this->post)($path, ($this->payload)() + ['proof' => UploadedFile::fake()->create('r.php', 5, 'image/png')])->assertStatus(422)->assertJsonValidationErrors('proof');
     }
-    codUpfront($this->tenant, true);
+    codUpfront(true);
     ($this->post)('checkout', ($this->payload)(['payment_method_id' => $this->cod->id, 'prepay_method_id' => $this->wallet->id]))->assertStatus(422)->assertJsonValidationErrors('proof');
     expect(Order::count())->toBe(0)->and(Storage::disk('private')->allFiles())->toBe([]);
 
-    $api = 'http://egy.3alraf.test/api/v1';
+    $api = '/api/v1';
     $h = ['X-Cart-Token' => $this->postJson("$api/cart/items", ['product_id' => $this->product->id, 'variant_id' => 0, 'quantity' => 1])->headers->get('X-Cart-Token'), 'Accept' => 'application/json'];
     foreach (['checkout', 'checkout/validate'] as $path) {
         $this->post("$api/$path", ($this->payload)(), $h)->assertStatus(422)->assertJsonValidationErrors('proof');
@@ -185,10 +181,9 @@ it('enforces the proof on web and API against crafted requests (missing, empty, 
 });
 
 it('keeps order net_profit, the net-profit report and the customer totals consistent for bundle + code + packaging (inclusive VAT, COD)', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => 14, 'prices_include_tax' => true])]);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    settings(['tax_rate' => 14, 'prices_include_tax' => true]);
     $p2 = Product::create(['type' => 'simple', 'name' => ['ar' => 'ب'], 'slug' => 'rv2', 'sku' => 'RV2', 'barcode' => '2000000000101']);
-    TenantProduct::create(['product_id' => $p2->id, 'price' => 33.33, 'cost' => 10, 'is_active' => true]);
+    listProduct($p2->id, ['price' => 33.33, 'cost' => 10, 'is_active' => true]);
     app(StockLedger::class)->record(Branch::first()->id, $p2->id, 0, T::PURCHASE_IN, 50, '10.00');
     $bundle = Bundle::create(['name' => ['ar' => 'باقة'], 'slug' => 'rvb', 'price' => '111.11', 'is_active' => true]);
     foreach ([[$this->product, 1], [$p2, 3]] as [$pr, $q]) {
@@ -203,7 +198,7 @@ it('keeps order net_profit, the net-profit report and the customer totals consis
         app(OrderStatusService::class)->change($o, $to);
     }
     $o->refresh();
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $np = $this->get("{$this->t}/reports/net-profit")->assertOk()->viewData('data');
     $op = collect($np['rows'])->firstWhere('line', __('reports.line.order_profit'))['amount'];
     expect($op)->toBe(number_format((float) $o->net_profit, 2, '.', ''));

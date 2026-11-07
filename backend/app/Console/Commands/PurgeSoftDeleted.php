@@ -16,7 +16,7 @@ class PurgeSoftDeleted extends Command
         $days = $this->option('days') !== null ? (int) $this->option('days') : (int) config('retention.soft_delete_days');
         $only = $this->option('model') ?: null;
         if ($only && ($bad = array_diff($only, array_keys(config('retention.models'))))) {
-            $this->error('Unknown model key(s): '.implode(', ', $bad).'. Tenants are never purged automatically. Valid: '.implode(', ', array_keys(config('retention.models'))));
+            $this->error('Unknown model key(s): '.implode(', ', $bad).'. Valid: '.implode(', ', array_keys(config('retention.models'))));
 
             return self::INVALID;
         }

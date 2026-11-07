@@ -31,7 +31,6 @@ class LogOrderNotification
 
         activity('notification')->performedOn($order)->event($e instanceof NotificationFailed ? 'failed' : 'sent')
             ->withProperties(['channel' => $e->channel, 'kind' => $n->kind(), 'audience' => $customer ? 'customer' : 'staff', 'to' => $to])
-            ->tap(fn ($a) => $a->tenant_id = $order->tenant_id)
             ->log(($customer ? 'customer.' : 'staff.').$n->kind().'.'.$e->channel);
     }
 }

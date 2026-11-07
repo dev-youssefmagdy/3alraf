@@ -1,8 +1,8 @@
-<x-layouts.admin guard="tenant" :title="__('growth_hub.settings.title')">
+<x-layouts.admin :title="__('growth_hub.settings.title')">
     <x-card class="mb-4 max-w-3xl">
         <h2 class="mb-1 font-semibold">{{ __('growth_hub.features.title') }}</h2>
         <p class="mb-4 text-sm text-slate-600">{{ __('growth_hub.features.hint') }}</p>
-        <form data-ajax-form data-method="PUT" action="{{ route('tenant.growth.settings.features') }}" method="POST" class="space-y-4" novalidate>
+        <form data-ajax-form data-method="PUT" action="{{ route('admin.growth.settings.features') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             @foreach (collect($registry)->groupBy('group', true) as $group => $items)
                 <div>
@@ -28,7 +28,7 @@
     </x-card>
     <x-card class="max-w-3xl">
         <p class="mb-4 text-sm text-slate-600">{{ __('growth_hub.settings.hint') }}</p>
-        <form data-ajax-form data-method="PUT" action="{{ route('tenant.growth.settings.update') }}" method="POST" class="grid gap-4 sm:grid-cols-2" novalidate>
+        <form data-ajax-form data-method="PUT" action="{{ route('admin.growth.settings.update') }}" method="POST" class="grid gap-4 sm:grid-cols-2" novalidate>
             @csrf
             @foreach ($limits as $k => [$min, $max])
                 <x-input name="{{ $k }}" type="number" step="any" :min="$min" :max="$max" :label="__('growth_hub.settings.fields.'.$k)" :value="$overrides[$k] ?? null"
@@ -38,7 +38,7 @@
             <div class="sm:col-span-2"><x-button type="submit">{{ __('admin.save') }}</x-button></div>
         </form>
     </x-card>
-    @php($ce = data_get(current_tenant()?->settings, 'growth.classifier_eval'))
+    @php($ce = setting('growth.classifier_eval'))
     <x-card :title="__('growth_hub.settings.cls_title')">
         <p class="text-sm text-slate-600">{{ __('growth_hub.settings.cls_hint', ['n' => config('growth.classifier.min_reviewed')]) }}</p>
         <p class="mt-2 text-sm font-semibold">{{ $ce ? __('growth_hub.settings.cls_verdict.'.$ce['verdict']).' (N='.$ce['n'].', '.$ce['at'].')' : __('growth_hub.settings.cls_none') }}</p>

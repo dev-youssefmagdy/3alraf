@@ -53,7 +53,7 @@ class OrderPlacementService
                     }
                     $info = $this->proofs->inspect($d->proof);
                     $this->proofs->assertNotReused($info['hash']);
-                    $storedProof = $this->proofs->store($d->proof, (int) current_tenant()->id, $info);
+                    $storedProof = $this->proofs->store($d->proof, $info);
                     $proof = ['payment_proof' => $storedProof, 'payment_proof_hash' => $info['hash'], 'proof_status' => ProofStatus::PENDING];
                 }
                 $branchId = $this->pickBranch($q['lines']);
@@ -67,7 +67,7 @@ class OrderPlacementService
                     'shipping_cost' => $t->shippingCost, 'tax' => $t->tax, 'payment_fee' => $t->paymentFee, 'payment_fee_charged' => $t->paymentFeeCharged, 'cod_fee' => $t->codFee, 'cod_fee_label' => bccomp($t->codFee, '0', 2) > 0 ? $q['cod_fee_label'] : null, 'total' => $t->total, 'cod_amount' => $t->codAmount, 'prepaid_shipping' => $t->prepaidShipping,
                     'packaging_option_id' => $q['packaging']?->id, 'packaging_name' => $q['packaging'] ? $q['packaging']->getTranslations('name') : null, 'packaging_fee' => $t->packagingFee, 'packaging_cost' => $t->packagingCost, 'packaging_tax' => $t->packagingTax,
                     'cogs' => $t->cogs, 'affiliate_commission' => $t->affiliateCommission, 'net_profit' => 0, // computed when an admin confirms (OrderProfitService)
-                    'currency' => current_tenant()?->currency_code, 'locale' => app()->getLocale(), 'placed_at' => now(),
+                    'currency' => setting('currency_code'), 'locale' => app()->getLocale(), 'placed_at' => now(),
                 ] + ($proof ?? []));
                 $order->update(['number' => sprintf('ORD-%06d', $order->id)]);
 
@@ -146,7 +146,7 @@ class OrderPlacementService
                 return $b->id;
             }
         }
-        if ($branches->isNotEmpty() && (current_tenant()?->settings['allow_backorder'] ?? false)) {
+        if ($branches->isNotEmpty() && setting('allow_backorder', false)) {
             return $branches->first()->id;
         }
 

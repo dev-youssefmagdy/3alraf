@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Central\AttributeRequest;
+use App\Http\Requests\Admin\AttributeRequest;
 
 final readonly class AttributeData
 {

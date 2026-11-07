@@ -5,10 +5,7 @@ namespace App\Events\Whatsapp;
 /** New message (in, or sent from the phone): {message, conversation}. */
 class ChatMessageReceived extends ChatBroadcast
 {
-    public function __construct(?int $tenantId, public array $message, public array $conversation)
-    {
-        parent::__construct($tenantId);
-    }
+    public function __construct(public array $message, public array $conversation) {}
 
     public function broadcastAs(): string
     {

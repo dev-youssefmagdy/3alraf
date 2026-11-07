@@ -1,5 +1,7 @@
 # Plan — QR codes (product / variant / affiliate), local-only CDN, report fixes
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 ## A. Local CDN only (remove S3)
 - `config/filesystems.php`: `media` disk is always `local` (root `MEDIA_ROOT`, default `storage/app/media`, URL `MEDIA_URL`, served by the static cdn vhost / `public/media` symlink in dev). Remove the s3 branch, `MEDIA_DRIVER/KEY/SECRET/BUCKET/...` env vars, S3 package if only used for this, and S3 mentions in `.env*.example`, `docs/cdn-nginx.conf` comments, README/PROGRESS notes.
 - `config/media.php` keeps `disk/url/private_disk`. `media_url()` stays the only URL builder.

@@ -24,7 +24,7 @@ final readonly class CalculatorInput
         public string $paidAmount = '0',
         public bool $isCod = false,                    // payment method type is COD
         public bool $codCollectShippingUpfront = true, // settings.cod_collect_shipping_upfront
-        public ?CodFeeConfig $codFee = null,           // tenant COD extra fee settings (null = none)
+        public ?CodFeeConfig $codFee = null,           // COD extra fee settings (null = none)
         public ?int $cityId = null,                    // for the per-city COD fee override
         public string $packagingFee = '0',             // special packaging fee (own step, not discountable)
         public string $packagingCost = '0',            // merchant cost of the packaging

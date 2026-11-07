@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
-/** One row per tenant: platform-owned (enable, quotas, allowed models, features) + tenant-owned (default model, brand voice, forbidden words). */
-class AiTenantSetting extends Model
+/** The store's AI settings (single row): platform part (enable, quotas, allowed models, features) + preferences (default model, brand voice, forbidden words). */
+class AiSetting extends Model
 {
-    use Audited, BelongsToTenant;
+    use Audited;
 
     protected $fillable = ['ai_enabled', 'monthly_token_quota', 'monthly_image_quota', 'monthly_video_quota', 'allowed_model_ids', 'features',
         'default_ai_model_id', 'brand_voice', 'forbidden_words', 'default_platforms'];

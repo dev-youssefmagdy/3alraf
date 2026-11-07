@@ -30,7 +30,7 @@ $(document).on('change', '[data-attr-type]', syncColor);
 $(document).on('repeater:added', '#attr-values', syncColor);
 $(syncColor);
 
-// tenant catalog bulk-add helpers
+// catalog "activate products" bulk helpers
 $(document).on('change', '[data-check-all]', function () { $('[data-row-check]').prop('checked', this.checked); });
 $(document).on('click', '[data-apply-defaults]', function () {
     const d = {};

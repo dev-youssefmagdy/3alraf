@@ -12,9 +12,10 @@ class RoleRequest extends FormRequest
         return true;
     }
 
-    public static function guardFor(\Illuminate\Http\Request $r): string
+    /** The one staff guard (kept as a helper for the Access controllers). */
+    public static function guardFor(?\Illuminate\Http\Request $r = null): string
     {
-        return str_starts_with((string) $r->route()?->getName(), 'central.') ? 'central' : 'tenant';
+        return AccessService::GUARD;
     }
 
     public function rules(): array

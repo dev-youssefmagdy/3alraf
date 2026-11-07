@@ -28,8 +28,8 @@ class PurchaseOrderDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('tenant')->user();
-        $dt->addColumn('number_link', fn (PurchaseOrder $m) => '<a class="font-semibold text-brand-600" href="'.e(route('tenant.purchases.show', $m->id)).'">'.e($m->number).'</a>')
+        $u = auth('admin')->user();
+        $dt->addColumn('number_link', fn (PurchaseOrder $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.purchases.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->addColumn('supplier_label', fn (PurchaseOrder $m) => e($m->supplier?->name))
             ->addColumn('branch_label', fn (PurchaseOrder $m) => e($m->branch?->name))
@@ -37,7 +37,7 @@ class PurchaseOrderDataTable extends BaseDataTable
             ->editColumn('total_cost', fn (PurchaseOrder $m) => $this->money($m->total_cost))
             ->addColumn('status_label', fn (PurchaseOrder $m) => '<span class="badge '.($m->status->value === 'received' ? 'badge-success' : 'badge-muted').'">'.e($m->status->label()).'</span>')
             ->addColumn('actions', fn (PurchaseOrder $m) => $m->isDraft()
-                ? $this->actionButtons(route('tenant.purchases.edit', $m->id), route('tenant.purchases.destroy', $m->id), (bool) $u?->can('purchases.edit'), (bool) $u?->can('purchases.delete'))
+                ? $this->actionButtons(route('admin.purchases.edit', $m->id), route('admin.purchases.destroy', $m->id), (bool) $u?->can('purchases.edit'), (bool) $u?->can('purchases.delete'))
                 : '');
     }
 

@@ -69,7 +69,7 @@ test('bind: emits envelopes, statuses, presence; downloads media to spool', asyn
   assert.strictEqual(ready.status, 'ready');
   assert.strictEqual(ready.message_id, 'ABCDEF123456');
   assert.ok(media.lookup('central', ready.token));
-  assert.strictEqual(media.lookup('tenant-1', ready.token), null); // other session can't read it
+  assert.strictEqual(media.lookup('other', ready.token), null); // a token is bound to its session id
   out.length = 0;
   sock.emit('messages.update', [{ key: key({ fromMe: true }), update: { status: 4 } }, { key: key({ fromMe: false }), update: { status: 4 } }]);
   sock.emit('message-receipt.update', [{ key: key({ fromMe: true }), receipt: { userJid: 'x', receiptTimestamp: 1 } }]);
@@ -117,7 +117,7 @@ test('outbound: media types, caps and mime checks', () => {
   assert.throws(() => b('image', 'application/pdf'), /mime/);
   assert.throws(() => b('sticker', 'image/png'), /mime/);
   assert.throws(() => build({ type: 'image', media: { upload_id: 'f'.repeat(32) } }, J, { session: 'central' }), /upload/);
-  assert.throws(() => build({ type: 'image', media: { upload_id: up('image/png') } }, J, { session: 'tenant-1' }), /upload/); // another session's upload
+  assert.throws(() => build({ type: 'image', media: { upload_id: up('image/png') } }, J, { session: 'other' }), /upload/); // an upload bound to another session id
 });
 
 test('outbound: location, contact, poll, reaction, edit, delete', () => {
@@ -155,7 +155,7 @@ test('HTTP: typed send validation, uploads, media pull, session isolation', asyn
   const up = await post('/sessions/central/uploads?name=a.png', Buffer.from('PNGDATA'), { 'content-type': 'image/png' });
   assert.strictEqual(up.status, 201);
   const { upload_id } = await up.json();
-  assert.strictEqual((await fetch(`${base}/sessions/tenant-1/media/${upload_id}`, { headers: h })).status, 404);
+  assert.strictEqual((await fetch(`${base}/sessions/tenant-1/media/${upload_id}`, { headers: h })).status, 410); // retired legacy id
   const got = await fetch(`${base}/sessions/central/media/${upload_id}`, { headers: h });
   assert.strictEqual(got.status, 200);
   assert.strictEqual(got.headers.get('content-type'), 'image/png');

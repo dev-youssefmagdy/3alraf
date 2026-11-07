@@ -61,7 +61,7 @@ class ActivityReports extends ReportBase
         $ids = $rows->pluck('eid')->all();
         $parties = [];
         foreach (array_chunk($ids, 1000) as $chunk) {
-            foreach (DB::table('erp_journal_lines')->where('tenant_id', $this->tenantId())->whereIn('entry_id', $chunk)->where('party_type', $partyType)->whereNotNull('party_id')->get(['entry_id', 'party_id']) as $p) {
+            foreach (DB::table('erp_journal_lines')->whereIn('entry_id', $chunk)->where('party_type', $partyType)->whereNotNull('party_id')->get(['entry_id', 'party_id']) as $p) {
                 $parties[$p->entry_id] ??= $p->party_id;
             }
         }

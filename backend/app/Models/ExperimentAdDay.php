@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ExperimentAdDay extends Model
 {
-    use BelongsToTenant;
 
     protected $table = 'experiment_ad_days';
 

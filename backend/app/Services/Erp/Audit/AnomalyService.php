@@ -1,18 +1,15 @@
 <?php
 
-namespace App\Services\Erp\Central;
+namespace App\Services\Erp\Audit;
 
 use App\DTOs\Reports\ReportFilter;
-use App\Models\Tenant;
 use App\Services\Reports\ReportService;
-use App\Services\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shared by the tenant ERP hub (one tenant) and the central monitor (all tenants). Every check is ONE grouped SQL query keyed by tenant_id,
- * except the optional "deep" net-profit comparison which needs the legacy report per tenant.
- * Row: tenant_id, code, severity (high|medium|low), count, entry_id (a sample journal entry or null), detail.
+ * Ledger anomaly checks for the ERP hub and the Anomalies page. Every check is ONE SQL query, except the optional "deep" net-profit
+ * comparison which needs the legacy report. Row: code, severity (high|medium|low), count, entry_id (a sample journal entry or null), detail.
  */
 class AnomalyService
 {
@@ -39,168 +36,155 @@ class AnomalyService
         return (string) config('erp.large_manual_threshold', '100000');
     }
 
-    /** @param ?array<int,int> $tenantIds null = every tenant @return Collection<int,array> */
-    public function detect(?array $tenantIds = null, bool $deep = false): Collection
+    /** @return Collection<int,array> */
+    public function detect(bool $deep = false): Collection
     {
         $rows = collect()
-            ->merge($this->unbalanced($tenantIds))->merge($this->oldDrafts($tenantIds))->merge($this->postingFailed($tenantIds))
-            ->merge($this->backdated($tenantIds))->merge($this->negativeBalances($tenantIds))->merge($this->negativeStock($tenantIds))
-            ->merge($this->controlMismatch($tenantIds))->merge($this->ordersWithoutJournal($tenantIds))->merge($this->largeManual($tenantIds))
-            ->merge($this->reopened($tenantIds));
+            ->merge($this->unbalanced())->merge($this->oldDrafts())->merge($this->postingFailed())
+            ->merge($this->backdated())->merge($this->negativeBalances())->merge($this->negativeStock())
+            ->merge($this->controlMismatch())->merge($this->ordersWithoutJournal())->merge($this->largeManual())
+            ->merge($this->reopened());
         if ($deep) {
-            $rows = $rows->merge($this->profitMismatch($tenantIds));
+            $rows = $rows->merge($this->profitMismatch());
         }
         $order = ['high' => 0, 'medium' => 1, 'low' => 2];
 
-        return $rows->sortBy(fn ($r) => [$order[$r['severity']], $r['tenant_id'], $r['code']])->values();
+        return $rows->sortBy(fn ($r) => [$order[$r['severity']], $r['code']])->values();
     }
 
-    /** @return array<int,int> total anomaly count per tenant id */
-    public function countsByTenant(?array $tenantIds = null, bool $deep = false): array
+    /** Total anomaly count. */
+    public function count(bool $deep = false): int
     {
-        return $this->detect($tenantIds, $deep)->groupBy('tenant_id')->map(fn ($g) => (int) $g->sum('count'))->all();
+        return (int) $this->detect($deep)->sum('count');
     }
 
-    private function row(int $tenant, string $code, int $count, ?int $entry = null, ?string $detail = null): array
+    private function row(string $code, int $count, ?int $entry = null, ?string $detail = null): array
     {
-        return ['tenant_id' => $tenant, 'code' => $code, 'severity' => self::severityOf($code), 'count' => $count, 'entry_id' => $entry, 'detail' => $detail];
+        return ['code' => $code, 'severity' => self::severityOf($code), 'count' => $count, 'entry_id' => $entry, 'detail' => $detail];
     }
 
-    private function scoped($q, string $col, ?array $ids)
+    /** One row (count + smallest id as sample) when the query matches anything. */
+    private function grouped($q, string $code, string $idCol): Collection
     {
-        return $ids === null ? $q : $q->whereIn($col, $ids ?: [0]);
+        $r = $q->selectRaw("COUNT(*) as c, MIN($idCol) as sample")->first();
+
+        return $r && (int) $r->c > 0 ? collect([$this->row($code, (int) $r->c, $r->sample ? (int) $r->sample : null)]) : collect();
     }
 
-    private function grouped($q, string $tenantCol, string $code, string $idCol): Collection
+    private function unbalanced(): Collection
     {
-        return $q->groupBy($tenantCol)->selectRaw("$tenantCol as t, COUNT(*) as c, MIN($idCol) as sample")->get()
-            ->map(fn ($r) => $this->row((int) $r->t, $code, (int) $r->c, $r->sample ? (int) $r->sample : null));
+        $ids = DB::table('erp_journal_lines as l')->join('erp_journal_entries as e', 'e.id', '=', 'l.entry_id')->whereIn('e.status', ['posted', 'reversed'])
+            ->groupBy('e.id')->havingRaw('ROUND(SUM(l.debit) - SUM(l.credit), 4) <> 0')->pluck('e.id');
+
+        return $ids->isEmpty() ? collect() : collect([$this->row('unbalanced_entry', $ids->count(), (int) $ids->min())]);
     }
 
-    private function unbalanced(?array $ids): Collection
-    {
-        $q = DB::table('erp_journal_lines as l')->join('erp_journal_entries as e', 'e.id', '=', 'l.entry_id')->whereIn('e.status', ['posted', 'reversed'])
-            ->groupBy('e.tenant_id', 'e.id')->havingRaw('ROUND(SUM(l.debit) - SUM(l.credit), 4) <> 0')->selectRaw('e.tenant_id as t, e.id as id');
-
-        return $this->scoped($q, 'e.tenant_id', $ids)->get()->groupBy('t')->map(fn ($g, $t) => $this->row((int) $t, 'unbalanced_entry', $g->count(), (int) $g->min('id')))->values();
-    }
-
-    private function oldDrafts(?array $ids): Collection
+    private function oldDrafts(): Collection
     {
         $q = DB::table('erp_journal_entries as e')->where('e.status', 'draft')->where('e.created_at', '<', now()->subDays(self::DRAFT_DAYS));
 
-        return $this->grouped($this->scoped($q, 'e.tenant_id', $ids), 'e.tenant_id', 'old_draft', 'e.id');
+        return $this->grouped($q, 'old_draft', 'e.id');
     }
 
-    private function postingFailed(?array $ids): Collection
+    private function postingFailed(): Collection
     {
         $q = DB::table('erp_audit_logs as a')->where('a.action', 'posting.failed')->where('a.created_at', '>=', now()->subDays(30))
-            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_audit_logs as r')->where('r.action', 'posting.resolved')->whereColumn('r.tenant_id', 'a.tenant_id')
+            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_audit_logs as r')->where('r.action', 'posting.resolved')
                 ->whereColumn('r.subject_type', 'a.subject_type')->whereColumn('r.subject_id', 'a.subject_id')->whereColumn('r.id', '>', 'a.id')); // retried successfully
 
-        return $this->grouped($this->scoped($q, 'a.tenant_id', $ids), 'a.tenant_id', 'posting_failed', 'a.id')->map(fn ($r) => ['entry_id' => null] + $r);
+        return $this->grouped($q, 'posting_failed', 'a.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
 
     /** Posted more than a few days after the end of the period it landed in (period was open after the fact or entry re-dated). */
-    private function backdated(?array $ids): Collection
+    private function backdated(): Collection
     {
         $q = DB::table('erp_journal_entries as e')->join('erp_periods as p', 'p.id', '=', 'e.period_id')->whereIn('e.status', ['posted', 'reversed'])
             ->where('e.type', '!=', 'closing')->whereNotNull('e.posted_at')
             ->whereRaw('DATEDIFF(DATE(e.posted_at), p.ends_on) > ?', [self::BACKDATE_GRACE_DAYS]);
 
-        return $this->grouped($this->scoped($q, 'e.tenant_id', $ids), 'e.tenant_id', 'backdated_entry', 'e.id');
+        return $this->grouped($q, 'backdated_entry', 'e.id');
     }
 
-    private function negativeBalances(?array $ids): Collection
+    private function negativeBalances(): Collection
     {
         $q = DB::table('erp_journal_lines as l')->join('erp_journal_entries as e', 'e.id', '=', 'l.entry_id')->join('erp_accounts as a', 'a.id', '=', 'l.account_id')
             ->whereIn('e.status', ['posted', 'reversed'])->whereIn('a.role_key', [...self::CASH_ROLES, 'inventory'])->where('a.normal_balance', 'debit')
-            ->groupBy('a.tenant_id', 'a.id', 'a.role_key', 'a.code')->havingRaw('SUM(l.debit) - SUM(l.credit) < -0.005')->selectRaw('a.tenant_id as t, a.role_key as role, a.code as code');
+            ->groupBy('a.id', 'a.role_key', 'a.code')->havingRaw('SUM(l.debit) - SUM(l.credit) < -0.005')->selectRaw('a.role_key as role, a.code as code');
         $out = collect();
-        foreach ($this->scoped($q, 'a.tenant_id', $ids)->get()->groupBy('t') as $t => $g) {
-            foreach ([['negative_cash', fn ($r) => $r->role !== 'inventory'], ['negative_inventory', fn ($r) => $r->role === 'inventory']] as [$code, $f]) {
-                if (($sel = $g->filter($f))->isNotEmpty()) {
-                    $out->push($this->row((int) $t, $code, $sel->count(), null, $sel->pluck('code')->implode(', ')));
-                }
+        $g = $q->get();
+        foreach ([['negative_cash', fn ($r) => $r->role !== 'inventory'], ['negative_inventory', fn ($r) => $r->role === 'inventory']] as [$code, $f]) {
+            if (($sel = $g->filter($f))->isNotEmpty()) {
+                $out->push($this->row($code, $sel->count(), null, $sel->pluck('code')->implode(', ')));
             }
         }
 
         return $out;
     }
 
-    private function negativeStock(?array $ids): Collection
+    private function negativeStock(): Collection
     {
         $q = DB::table('stock_levels as s')->where('s.on_hand', '<', 0);
 
-        return $this->grouped($this->scoped($q, 's.tenant_id', $ids), 's.tenant_id', 'negative_stock', 's.id')->map(fn ($r) => ['entry_id' => null] + $r);
+        return $this->grouped($q, 'negative_stock', 's.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
 
     /** Receivable/payable control accounts: the maintained balance must equal the sum of their posted lines (party ledgers are built from the same lines). */
-    private function controlMismatch(?array $ids): Collection
+    private function controlMismatch(): Collection
     {
         $q = DB::table('erp_journal_lines as l')->join('erp_journal_entries as e', 'e.id', '=', 'l.entry_id')->join('erp_accounts as a', 'a.id', '=', 'l.account_id')
             ->whereIn('e.status', ['posted', 'reversed'])->whereIn('a.role_key', ['receivable', 'payable', 'customer_advances', 'supplier_advances'])
-            ->groupBy('a.tenant_id', 'a.id', 'a.code', 'a.normal_balance', 'a.current_balance')->selectRaw('a.tenant_id as t, a.code as code, a.normal_balance as nb, a.current_balance as cb, SUM(l.debit) as dr, SUM(l.credit) as cr');
+            ->groupBy('a.id', 'a.code', 'a.normal_balance', 'a.current_balance')->selectRaw('a.code as code, a.normal_balance as nb, a.current_balance as cb, SUM(l.debit) as dr, SUM(l.credit) as cr');
         $out = collect();
-        foreach ($this->scoped($q, 'a.tenant_id', $ids)->get()->groupBy('t') as $t => $g) {
-            $bad = $g->filter(function ($r) {
-                $exp = $r->nb === 'debit' ? bcsub((string) $r->dr, (string) $r->cr, 4) : bcsub((string) $r->cr, (string) $r->dr, 4);
+        $bad = $q->get()->filter(function ($r) {
+            $exp = $r->nb === 'debit' ? bcsub((string) $r->dr, (string) $r->cr, 4) : bcsub((string) $r->cr, (string) $r->dr, 4);
 
-                return bccomp(ltrim(bcsub($exp, (string) $r->cb, 4), '-'), '0.01', 4) > 0;
-            });
-            if ($bad->isNotEmpty()) {
-                $out->push($this->row((int) $t, 'control_mismatch', $bad->count(), null, $bad->pluck('code')->implode(', ')));
-            }
+            return bccomp(ltrim(bcsub($exp, (string) $r->cb, 4), '-'), '0.01', 4) > 0;
+        });
+        if ($bad->isNotEmpty()) {
+            $out->push($this->row('control_mismatch', $bad->count(), null, $bad->pluck('code')->implode(', ')));
         }
 
         return $out;
     }
 
-    /** Sales-status orders (confirmed..delivered) without a journal entry, only for tenants whose ledger was already live when the order was created (pre-ledger history belongs to the Phase 9 backfill). */
-    private function ordersWithoutJournal(?array $ids): Collection
+    /** Sales-status orders (confirmed..delivered) without a journal entry, only when the ledger was already live when the order was created (pre-ledger history belongs to the Phase 9 backfill). */
+    private function ordersWithoutJournal(): Collection
     {
-        // recognised per the tenant's revenue_recognition policy (default shipped); a recognition entry that was reversed by hand counts as missing (ERP-007)
-        $pol = "COALESCE((SELECT JSON_UNQUOTE(s.value) FROM erp_settings s WHERE s.tenant_id = o.tenant_id AND s.`key` = 'revenue_recognition'), 'shipped')";
-        $q = DB::table('orders as o')->join(DB::raw('(SELECT tenant_id, MIN(created_at) as first_at FROM erp_journal_entries GROUP BY tenant_id) as f'), 'f.tenant_id', '=', 'o.tenant_id')
+        // recognised per the revenue_recognition policy (default shipped); a recognition entry that was reversed by hand counts as missing (ERP-007)
+        $pol = "COALESCE((SELECT JSON_UNQUOTE(s.value) FROM erp_settings s WHERE s.`key` = 'revenue_recognition'), 'shipped')";
+        $q = DB::table('orders as o')->crossJoin(DB::raw('(SELECT MIN(created_at) as first_at FROM erp_journal_entries) as f'))
             ->whereRaw("(o.status = 'delivered' OR (o.status = 'shipped' AND $pol <> 'delivered') OR (o.status IN ('confirmed','processing') AND $pol = 'confirmed'))")
             ->whereColumn('o.created_at', '>=', 'f.first_at')
-            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_journal_entries as j')->whereColumn('j.tenant_id', 'o.tenant_id')->where('j.source_type', 'order')->whereColumn('j.source_id', 'o.id')
+            ->whereNotExists(fn ($x) => $x->select(DB::raw(1))->from('erp_journal_entries as j')->where('j.source_type', 'order')->whereColumn('j.source_id', 'o.id')
                 ->where('j.status', 'posted')->where('j.idempotency_key', 'like', 'order:%:confirm%'));
 
-        return $this->grouped($this->scoped($q, 'o.tenant_id', $ids), 'o.tenant_id', 'order_without_journal', 'o.id')->map(fn ($r) => ['entry_id' => null] + $r);
+        return $this->grouped($q, 'order_without_journal', 'o.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
 
-    private function largeManual(?array $ids): Collection
+    private function largeManual(): Collection
     {
         $q = DB::table('erp_journal_entries as e')->whereIn('e.type', ['manual', 'adjusting'])->whereIn('e.status', ['posted', 'reversed'])->where('e.total', '>=', self::largeManualThreshold());
 
-        return $this->grouped($this->scoped($q, 'e.tenant_id', $ids), 'e.tenant_id', 'large_manual', 'e.id');
+        return $this->grouped($q, 'large_manual', 'e.id');
     }
 
-    private function reopened(?array $ids): Collection
+    private function reopened(): Collection
     {
         $q = DB::table('erp_audit_logs as a')->whereIn('a.action', ['period.reopened', 'year.reopened'])->where('a.created_at', '>=', now()->subDays(90));
 
-        return $this->grouped($this->scoped($q, 'a.tenant_id', $ids), 'a.tenant_id', 'period_reopened', 'a.id')->map(fn ($r) => ['entry_id' => null] + $r);
+        return $this->grouped($q, 'period_reopened', 'a.id')->map(fn ($r) => ['entry_id' => null] + $r);
     }
 
-    /** Ledger net profit vs the legacy Net Profit report (all time). Expected small divergences (depreciation, manual revenue, see ERP_PLAN) make this "low". Per-tenant, so opt-in. */
-    private function profitMismatch(?array $ids): Collection
+    /** Ledger net profit vs the legacy Net Profit report (all time). Expected small divergences (depreciation, manual revenue, see ERP_PLAN) make this "low". Opt-in (slow). */
+    private function profitMismatch(): Collection
     {
-        $with = DB::table('erp_journal_entries')->whereIn('status', ['posted', 'reversed'])->when($ids !== null, fn ($q) => $q->whereIn('tenant_id', $ids ?: [0]))->distinct()->pluck('tenant_id');
-        $out = collect();
-        foreach (Tenant::whereIn('id', $with)->get() as $tenant) {
-            $diff = TenantContext::run($tenant, function () use ($tenant) {
-                $np = app(ReportService::class)->netProfitFigures(new ReportFilter('2000-01-01', now()->toDateString(), false, [$tenant->id]));
-                $pl = app(\App\Services\Erp\Reports\LedgerReports::class)->profitLoss('2000-01-01', now()->toDateString());
-
-                return bcsub($pl['net_profit'], (string) $np['net'], 4);
-            });
-            if (bccomp(ltrim($diff, '-'), '0.01', 4) > 0) {
-                $out->push($this->row($tenant->id, 'profit_mismatch', 1, null, $diff));
-            }
+        if (! DB::table('erp_journal_entries')->whereIn('status', ['posted', 'reversed'])->exists()) {
+            return collect();
         }
+        $np = app(ReportService::class)->netProfitFigures(new ReportFilter('2000-01-01', now()->toDateString()));
+        $pl = app(\App\Services\Erp\Reports\LedgerReports::class)->profitLoss('2000-01-01', now()->toDateString());
+        $diff = bcsub($pl['net_profit'], (string) $np['net'], 4);
 
-        return $out;
+        return bccomp(ltrim($diff, '-'), '0.01', 4) > 0 ? collect([$this->row('profit_mismatch', 1, null, $diff)]) : collect();
     }
 }

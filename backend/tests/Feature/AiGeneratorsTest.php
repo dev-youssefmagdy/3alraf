@@ -6,16 +6,14 @@ use App\Enums\StockMovementType as T;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
 use App\Models\AiProvider;
-use App\Models\AiTenantSetting;
+use App\Models\AiSetting;
 use App\Models\Banner;
 use App\Models\Branch;
 use App\Models\Bundle;
 use App\Models\DiscountCode;
 use App\Models\FlashSale;
 use App\Models\Product;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Ai\GeneratorService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
@@ -28,21 +26,18 @@ use Spatie\Permission\PermissionRegistrar;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    RateLimiter::clear('ai:1');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    $this->other = Tenant::firstOrCreate(['slug' => 'sa'], ['name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    app()->instance('currentTenant', $this->tenant);
+    RateLimiter::clear('ai:shop');
     $p = AiProvider::create(['driver' => AiDriverType::OPENAI, 'name' => 'oa-gen', 'api_key' => 'sk-test-1234567', 'is_active' => true]);
     $this->text = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'gpt-gen', 'label' => 'T', 'kind' => 'text', 'capabilities' => ['json_mode' => true], 'is_active' => true]);
     $this->image = AiModel::create(['ai_provider_id' => $p->id, 'model_id' => 'img-gen', 'label' => 'I', 'kind' => 'image', 'is_active' => true]);
-    AiTenantSetting::withoutGlobalScopes()->updateOrCreate(['tenant_id' => $this->tenant->id], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
+    AiSetting::query()->updateOrCreate([], ['ai_enabled' => true, 'features' => ['generators' => true], 'allowed_model_ids' => [$this->text->id, $this->image->id],
         'default_ai_model_id' => $this->text->id, 'monthly_token_quota' => null, 'monthly_image_quota' => null, 'brand_voice' => null, 'forbidden_words' => []]);
     app(\App\Services\Ai\AiAccess::class)->forget();
-    $this->owner = fn () => $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
-    $this->base = 'http://egy.3alraf.test/admin/ai/generators';
+    $this->owner = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->base = '/admin/ai/generators';
     $this->product = function (string $slug, string $price = '100.00', string $cost = '50', int $stock = 20) {
         $pr = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['tenant_id' => $this->tenant->id, 'product_id' => $pr->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($pr, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         if ($stock > 0) {
             app(StockLedger::class)->record(Branch::first()->id, $pr->id, 0, T::PURCHASE_IN, $stock, $cost);
         }
@@ -95,7 +90,7 @@ it('discount code: percent above the safe headroom is blocked, a safe one create
     expect(AiGeneration::find($bad->json('data.id'))->output['errors'][0]['code'])->toBe('code_margin');
     $ok = ($this->gen)('discount_code', ['code' => 'save15', 'type' => 'percent', 'value' => 15, 'min_order' => 0, 'scope' => 'all', 'starts_at' => $this->start, 'ends_at' => $this->end]);
     ($this->owner)()->postJson("{$this->base}/{$ok->json('data.id')}/approve")->assertOk();
-    $c = DiscountCode::first();
+    $c = DiscountCode::query()->where('code', 'SAVE15')->first(); // the demo seed also has WELCOME10
     expect($c->code)->toBe('SAVE15')->and($c->is_active)->toBeFalse();
     // duplicate code is rejected on the next draft
     $dup = ($this->gen)('discount_code', ['code' => 'SAVE15', 'type' => 'percent', 'value' => 10, 'scope' => 'all']);
@@ -160,22 +155,22 @@ it('stale drafts expire: approval refused and the sweep rejects them', function 
 
 it('splits permissions: use can generate and edit, only approve can approve or reject', function () {
     $a = ($this->product)('pa');
-    $role = Role::create(['name' => 't'.$this->tenant->id.':gen-use', 'guard_name' => 'tenant']);
+    $role = Role::create(['name' => 'gen-use', 'guard_name' => 'admin']);
     $role->givePermissionTo('ai_generators.use');
     app(PermissionRegistrar::class)->forgetCachedPermissions();
-    $staff = TenantAdmin::create(['name' => 'S', 'email' => 'gen-staff@egy.test', 'password' => 'password', 'is_active' => true]);
+    $staff = Admin::create(['name' => 'S', 'email' => 'gen-staff@egy.test', 'password' => 'password', 'is_active' => true]);
     $staff->assignRole($role);
     $r = ($this->gen)('flash_sale', ['name' => ['en' => 'X'], 'starts_at' => $this->start, 'ends_at' => $this->end, 'items' => [['item' => "{$a->id}-0", 'discount_type' => 'percent', 'value' => 10]]]);
     $id = $r->json('data.id');
-    $this->actingAs($staff, 'tenant');
+    $this->actingAs($staff, 'admin');
     $this->get("{$this->base}/$id")->assertOk();
     $this->get($this->base)->assertOk();
     $this->postJson("{$this->base}/$id/approve")->assertForbidden();
     $this->postJson("{$this->base}/$id/reject", ['reason' => 'nope'])->assertForbidden();
     expect(FlashSale::count())->toBe(0);
     // and a user without any generator permission sees nothing
-    $none = TenantAdmin::create(['name' => 'N', 'email' => 'gen-none@egy.test', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($none, 'tenant')->get($this->base)->assertForbidden();
+    $none = Admin::create(['name' => 'N', 'email' => 'gen-none@egy.test', 'password' => 'password', 'is_active' => true]);
+    $this->actingAs($none, 'admin')->get($this->base)->assertForbidden();
 });
 
 it('double approve race: the row lock lets exactly one approval create a record', function () {
@@ -189,21 +184,14 @@ it('double approve race: the row lock lets exactly one approval create a record'
     expect(FlashSale::count())->toBe(1);
 });
 
-it('is tenant isolated: another tenant cannot see, edit or approve a draft, and cannot use foreign products', function () {
+it('unknown drafts are 404 and an unlisted product (no price) is rejected as an item', function () {
     $a = ($this->product)('ia');
-    $r = ($this->gen)('flash_sale', ['name' => ['en' => 'X'], 'starts_at' => $this->start, 'ends_at' => $this->end, 'items' => [['item' => "{$a->id}-0", 'discount_type' => 'percent', 'value' => 10]]]);
-    $id = $r->json('data.id');
-    // same id looked up under the other tenant
-    app()->instance('currentTenant', $this->other);
-    expect(app(GeneratorService::class)->find($id))->toBeNull()->and(AiGeneration::find($id))->toBeNull();
-    expect(fn () => app(GeneratorService::class)->approve($id, 1))->toThrow(\Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class);
-    app()->instance('currentTenant', $this->tenant);
-    expect(FlashSale::count())->toBe(0);
-    // a product only the other tenant lists is rejected as an item
-    $foreign = Product::create(['type' => 'simple', 'name' => ['en' => 'Foreign'], 'slug' => 'foreign-1', 'sku' => 'FOREIGN1', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-    TenantProduct::create(['tenant_id' => $this->other->id, 'product_id' => $foreign->id, 'price' => '10', 'cost' => '5', 'is_active' => true]);
-    $x = ($this->gen)('bundle', ['name' => ['en' => 'Pack'], 'price' => 50, 'items' => [['item' => "{$a->id}-0", 'quantity' => 1], ['item' => "{$foreign->id}-0", 'quantity' => 1]]]);
+    expect(app(GeneratorService::class)->find(999999))->toBeNull();
+    expect(fn () => app(GeneratorService::class)->approve(999999, 1))->toThrow(\Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class);
+    $unlisted = Product::create(['type' => 'simple', 'name' => ['en' => 'Unlisted'], 'slug' => 'unlisted-1', 'sku' => 'UNLISTED1', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
+    $x = ($this->gen)('bundle', ['name' => ['en' => 'Pack'], 'price' => 50, 'items' => [['item' => "{$a->id}-0", 'quantity' => 1], ['item' => "{$unlisted->id}-0", 'quantity' => 1]]]);
     expect(collect(AiGeneration::find($x->json('data.id'))->output['errors'])->pluck('code'))->toContain('item_invalid');
+    expect(FlashSale::count())->toBe(0);
 });
 
 it('requires the generators feature, shows the review pages and datatable', function () {
@@ -213,7 +201,7 @@ it('requires the generators feature, shows the review pages and datatable', func
     ($this->owner)()->get($this->base)->assertOk()->assertSee(__('ai.gen.generate'));
     ($this->owner)()->get("{$this->base}/$id")->assertOk()->assertSee(__('ai.gen.approve'));
     ($this->owner)()->getJson("{$this->base}/datatable")->assertOk()->assertJsonPath('recordsTotal', 1);
-    AiTenantSetting::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->update(['features' => ['chat' => true]]);
+    AiSetting::query()->update(['features' => ['chat' => true]]);
     app(\App\Services\Ai\AiAccess::class)->forget();
     ($this->owner)()->get($this->base)->assertForbidden();
 });

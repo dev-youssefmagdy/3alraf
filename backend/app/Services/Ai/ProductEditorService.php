@@ -9,16 +9,16 @@ use App\Exceptions\AiException;
 use App\Jobs\RunAiGenerationJob;
 use App\Models\AiGeneration;
 use App\Models\AiModel;
-use App\Models\TenantProduct;
+use App\Models\Product;
 use App\Repositories\Contracts\AiGenerationRepositoryInterface;
 use App\Services\Ai\Support\AiRequest;
-use App\Services\TenantCatalogService;
+use App\Services\CatalogService;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 /**
- * Product AI editor. The AI only PROPOSES per field+locale (ai_generations type product_edit). Accepting writes the tenant's own text overlay
- * (tenant_products.content) through TenantCatalogService (audited); the central product record is never touched by a tenant.
+ * Product AI editor. The AI only PROPOSES per field+locale (ai_generations type product_edit). Accepting writes the storefront text overlay
+ * (products.content) through CatalogService (audited); the catalog text itself (name/description columns) is never overwritten.
  */
 class ProductEditorService
 {
@@ -33,7 +33,7 @@ class ProductEditorService
 
     public function __construct(
         private AiGenerationRepositoryInterface $repo, private AiGateway $gateway, private AiAccess $access,
-        private AiContextFactory $contexts, private TenantCatalogService $catalog,
+        private AiContextFactory $contexts, private CatalogService $catalog,
     ) {}
 
     // ---- request side -------------------------------------------------------------------------------------------------------
@@ -49,9 +49,9 @@ class ProductEditorService
         $out = [];
         foreach ($d->productIds as $pid) {
             $g = $this->repo->create(['user_id' => $userId, 'type' => AiGenerationType::PRODUCT_EDIT, 'status' => AiGenerationStatus::QUEUED, 'ai_model_id' => $model->id,
-                'target_type' => TenantProduct::class, 'target_id' => $this->listing($pid)?->id,
+                'target_type' => Product::class, 'target_id' => $this->listing($pid)?->id,
                 'inputs' => ['product_id' => $pid, 'fields' => $d->fields, 'locales' => $d->locales, 'preset' => $d->preset, 'instruction' => $d->instruction, 'text_model_id' => $model->id, 'bulk_id' => $bulk]]);
-            RunAiGenerationJob::dispatch($g->id, current_tenant()->id);
+            RunAiGenerationJob::dispatch($g->id);
             $out[] = $g->fresh();
         }
 
@@ -72,29 +72,29 @@ class ProductEditorService
 
     public function options(): array
     {
-        return ['text' => $this->access->modelsFor(current_tenant(), 'text'), 'locales' => (array) current_tenant()->locales];
+        return ['text' => $this->access->modelsFor('text'), 'locales' => (array) setting('locales', [])];
     }
 
-    /** Searchable product picker (tenant listings only). */
+    /** Searchable product picker (listed products only: those with a store price). */
     public function search(string $q): array
     {
-        return TenantProduct::query()->with('product')->whereHas('product', function ($p) use ($q) {
-            $p->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', '%'.addcslashes($q, '%_\\').'%')->orWhere('sku', 'like', '%'.addcslashes($q, '%_\\').'%')));
-        })->latest('id')->limit(20)->get()->map(fn ($tp) => ['id' => $tp->product_id, 'name' => $tp->applyContent()->product->name, 'sku' => $tp->product->sku])->values()->all();
+        return Product::query()->whereNotNull('price')
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'like', '%'.addcslashes($q, '%_\\').'%')->orWhere('sku', 'like', '%'.addcslashes($q, '%_\\').'%')))
+            ->latest('id')->limit(20)->get()->map(fn ($p) => ['id' => $p->id, 'name' => $p->applyContent()->name, 'sku' => $p->sku])->values()->all();
     }
 
     public function present(AiGeneration $g): array
     {
         $tp = $this->listing((int) ($g->inputs['product_id'] ?? 0));
 
-        return ['id' => $g->id, 'status' => $g->status->value, 'status_label' => $g->status->label(), 'product' => $tp?->product?->getTranslation('name'), 'inputs' => $g->inputs,
+        return ['id' => $g->id, 'status' => $g->status->value, 'status_label' => $g->status->label(), 'product' => $tp?->getTranslation('name'), 'inputs' => $g->inputs,
             'output' => $g->output, 'error' => $g->error, 'bulk_id' => $g->inputs['bulk_id'] ?? null, 'created_at' => $g->created_at?->toIso8601String(),
             'can_undo' => $g->status === AiGenerationStatus::APPROVED && ! empty($g->output['activity_id']) && empty($g->output['undone_at'])];
     }
 
     // ---- job side -----------------------------------------------------------------------------------------------------------
 
-    /** Runs inside the tenant context. */
+    /** Runs in the job. */
     public function generate(AiGeneration $g): void
     {
         $i = $g->inputs;
@@ -106,9 +106,9 @@ class ProductEditorService
         if (! $model) {
             throw new AiException(__('ai.editor.no_text_model'), 'model');
         }
-        $ctx = $this->contexts->forTenant();
-        $fields = array_values(array_intersect($i['fields'], TenantProduct::CONTENT_FIELDS));
-        $locales = array_values(array_intersect($i['locales'], (array) current_tenant()->locales));
+        $ctx = $this->contexts->make();
+        $fields = array_values(array_intersect($i['fields'], Product::CONTENT_FIELDS));
+        $locales = array_values(array_intersect($i['locales'], (array) setting('locales', [])));
         $current = $this->current($tp);
 
         $res = $this->gateway->chat($model, new AiRequest($model->model_id, [['role' => 'user', 'content' => $this->prompt($i, $fields, $locales, $current)]],
@@ -130,7 +130,7 @@ class ProductEditorService
     // ---- review side --------------------------------------------------------------------------------------------------------
 
     /**
-     * Apply ONLY the accepted "field.locale" keys; everything else is marked rejected. Writes through TenantCatalogService (audited).
+     * Apply ONLY the accepted "field.locale" keys; everything else is marked rejected. Writes through CatalogService (audited).
      *
      * @param  string[]  $accept
      */
@@ -144,13 +144,13 @@ class ProductEditorService
             throw new AiException(__('ai.editor.product_gone'), 'product');
         }
         $props = (array) ($g->output['proposals'] ?? []);
-        $locales = (array) current_tenant()->locales;
+        $locales = (array) setting('locales', []);
         $content = (array) $tp->content;
         $applied = [];
         foreach (array_unique($accept) as $key) {
             [$field, $locale] = array_pad(explode('.', $key, 2), 2, null);
-            if (! in_array($field, TenantProduct::CONTENT_FIELDS, true) || ! in_array($locale, $locales, true) || ! isset($props[$field][$locale]['new'])) {
-                throw new AiException(__('ai.editor.bad_key', ['k' => $key]), 'validation');   // unknown field, locale outside the tenant's, or not proposed
+            if (! in_array($field, Product::CONTENT_FIELDS, true) || ! in_array($locale, $locales, true) || ! isset($props[$field][$locale]['new'])) {
+                throw new AiException(__('ai.editor.bad_key', ['k' => $key]), 'validation');   // unknown field, locale outside the shop's, or not proposed
             }
             $content[$field][$locale] = $this->clean($field, $props[$field][$locale]['new']);   // re-sanitised on write, never trust stored output
             $applied[] = $key;
@@ -159,7 +159,7 @@ class ProductEditorService
             throw new AiException(__('ai.editor.nothing_accepted'), 'validation');
         }
         $this->catalog->updateContent($tp, $content);
-        $activity = Activity::query()->where('subject_type', TenantProduct::class)->where('subject_id', $tp->id)->latest('id')->first();
+        $activity = Activity::query()->where('subject_type', Product::class)->where('subject_id', $tp->id)->latest('id')->first();
 
         $out = (array) $g->output;
         $out['applied'] = $applied;
@@ -184,7 +184,7 @@ class ProductEditorService
     {
         $out = (array) $g->output;
         $tp = $this->listing((int) ($g->inputs['product_id'] ?? 0));
-        $activity = ! empty($out['activity_id']) ? Activity::query()->where('subject_type', TenantProduct::class)->find($out['activity_id']) : null;
+        $activity = ! empty($out['activity_id']) ? Activity::query()->where('subject_type', Product::class)->find($out['activity_id']) : null;
         if ($g->status !== AiGenerationStatus::APPROVED || ! $tp || ! $activity || ! empty($out['undone_at']) || (int) $activity->subject_id !== $tp->id) {
             throw new AiException(__('ai.editor.cannot_undo'), 'state');
         }
@@ -215,27 +215,27 @@ class ProductEditorService
         return json_encode($v);
     }
 
-    private function listing(int $productId): ?TenantProduct
+    private function listing(int $productId): ?Product
     {
-        return $productId ? TenantProduct::with('product')->where('product_id', $productId)->first() : null;   // tenant scoped
+        return $productId ? Product::query()->whereNotNull('price')->find($productId) : null;   // listed products only
     }
 
     private function model(?int $id): ?AiModel
     {
-        $models = $this->access->modelsFor(current_tenant(), 'text');
+        $models = $this->access->modelsFor('text');
         $pref = $this->access->settings()?->default_ai_model_id;
 
         return $models->firstWhere('id', $id) ?? ($pref ? $models->firstWhere('id', $pref) : null) ?? $models->firstWhere('is_default', true) ?? $models->first();
     }
 
-    /** field => locale => current effective text (overlay over central, no locale fallback). */
-    private function current(TenantProduct $tp): array
+    /** field => locale => current effective text (overlay over the catalog text, no locale fallback). */
+    private function current(Product $p): array
     {
-        $tp->applyContent();
+        $p = (clone $p)->applyContent();   // display copy: the overlay is never saved into the catalog columns
         $cur = [];
-        foreach (TenantProduct::CONTENT_FIELDS as $f) {
-            foreach ((array) current_tenant()->locales as $l) {
-                $cur[$f][$l] = (string) $tp->product->getTranslation($f, $l, false);
+        foreach (Product::CONTENT_FIELDS as $f) {
+            foreach ((array) setting('locales', []) as $l) {
+                $cur[$f][$l] = (string) $p->getTranslation($f, $l, false);
             }
         }
 

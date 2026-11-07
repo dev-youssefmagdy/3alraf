@@ -14,9 +14,9 @@
         </div>
         <div data-repeater-list class="space-y-2">
             @foreach ($rows as $k => $r)
-                @include('tenant.shipping-companies._rate-row', ['i' => $k, 'r' => $r, 'cities' => $cities])
+                @include('admin.shipping-companies._rate-row', ['i' => $k, 'r' => $r, 'cities' => $cities])
             @endforeach
         </div>
-        <template data-repeater-template>@include('tenant.shipping-companies._rate-row', ['i' => '__INDEX__', 'r' => ['supports_cod' => true], 'cities' => $cities])</template>
+        <template data-repeater-template>@include('admin.shipping-companies._rate-row', ['i' => '__INDEX__', 'r' => ['supports_cod' => true], 'cities' => $cities])</template>
     </div>
 </x-resource-form>

@@ -27,7 +27,7 @@ class ExpenseCategoryDataTable extends BaseDataTable
         $dt->addColumn('name_label', fn (ExpenseCategory $m) => e($m->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
             ->addColumn('status', fn (ExpenseCategory $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (ExpenseCategory $m) => $this->tenantActions($m, 'tenant.expense-categories', 'expense_categories'));
+            ->addColumn('actions', fn (ExpenseCategory $m) => $this->rowActions($m, 'admin.expense-categories', 'expense_categories'));
     }
 
     protected function rawColumns(): array

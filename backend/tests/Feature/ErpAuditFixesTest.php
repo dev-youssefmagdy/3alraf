@@ -26,9 +26,7 @@ use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockMovement;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\PeriodService;
 use App\Services\Erp\Cash\SettlementService;
 use App\Services\Erp\Equity\ErpSettings;
@@ -45,13 +43,11 @@ use Database\Seeders\FoundationSeeder;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
+    codUpfront(false);
+    $this->t = '/admin';
     $this->branch = Branch::first();
     $this->product = tap(Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => 'fx'], 'slug' => 'fx-p', 'sku' => 'FXP', 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]), function ($p) {
-        TenantProduct::create(['product_id' => $p->id, 'price' => '100', 'cost' => '60', 'is_active' => true]);
+        listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, 100, '60');
     });
     $this->place = fn (int $qty = 2, ?int $customer = null) => app(OrderPlacementService::class)->place(new CheckoutData(
@@ -66,8 +62,8 @@ beforeEach(function () {
     };
     $this->deliver = fn (Order $o) => ($this->to)($o, S::CONFIRMED, S::PROCESSING, S::SHIPPED, S::DELIVERED);
     $this->bal = fn (string $role) => (float) Account::where('role_key', $role)->value('current_balance');
-    $this->admin = TenantAdmin::first();
-    $this->actingAs($this->admin, 'tenant');
+    $this->admin = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($this->admin, 'admin');
 });
 
 it('ERP-010: COD with prepaid shipping splits a refund by leg (provider/wallet leg vs cash goods part)', function () {
@@ -82,7 +78,7 @@ it('ERP-010: COD with prepaid shipping splits a refund by leg (provider/wallet l
 });
 
 it('ERP-012/024: carrier settles into bank; VAT payment, carrier payment and gateway payout clear their clearing accounts', function () {
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['tax_rate' => 14])]);
+    settings(['tax_rate' => 14]);
     $o = ($this->place)();
     $o->update(['shipping_cost' => '25.00']);
     $o = ($this->deliver)($o);
@@ -103,7 +99,7 @@ it('ERP-012/024: carrier settles into bank; VAT payment, carrier payment and gat
 it('ERP-013: an unpaid expense with a supplier carries the supplier party on the payable; category mapping is accepted', function () {
     $s = Supplier::create(['name' => 'Landlord']);
     $cat = ExpenseCategory::create(['name' => ['ar' => 'إيجار', 'en' => 'Rent'], 'is_active' => true, 'erp_account_id' => null]);
-    app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed($this->tenant);
+    app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed();
     $cat->update(['erp_account_id' => Account::where('role_key', 'rent')->value('id')]);
     app(ExpenseService::class)->create(new ExpenseData($cat->id, null, '500.00', now()->toDateString(), null, null, false, false, null, $s->id));
     $line = JournalLine::where('account_id', Account::where('role_key', 'payable')->value('id'))->first();
@@ -153,12 +149,12 @@ it('ERP-016: a failed posting notifies ERP managers, shows on the migration page
     $log = AuditLog::where('action', 'posting.failed')->where('subject_id', $o->id)->first();
     $this->post("{$this->t}/erp/posting-failures/{$log->id}/retry")->assertRedirect()->assertSessionHasNoErrors();
     expect(($this->bal)('receivable'))->toBe((float) $o->total);
-    $codes = app(\App\Services\Erp\Central\AnomalyService::class)->detect([$this->tenant->id])->pluck('code');
+    $codes = app(\App\Services\Erp\Audit\AnomalyService::class)->detect()->pluck('code');
     expect($codes)->not->toContain('posting_failed');
 });
 
 it('ERP-017/018: manual journals cannot hit control accounts; party money forms need erp.journals.post', function () {
-    app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed($this->tenant);
+    app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed();
     $this->post("{$this->t}/erp/journals", ['entry_date' => now()->toDateString(), 'description' => 'm', 'type' => 'manual', 'post_now' => 1, 'lines' => [
         ['account_id' => Account::where('role_key', 'receivable')->value('id'), 'debit' => 10], ['account_id' => Account::where('role_key', 'sales_revenue')->value('id'), 'credit' => 10]]])->assertSessionHasErrors('erp');
     expect(JournalEntry::count())->toBe(0);

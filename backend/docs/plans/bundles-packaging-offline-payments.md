@@ -1,5 +1,7 @@
 # Plan: Bundles, Special Packaging, Offline Payment Proof at Checkout
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Team: **Analyst** (this plan) → **Dev agents** (one per feature, sequential: they share OrderCalculator / quote / placement / checkout) → **Problem Solver** (adversarial review + fixes) → **QA** (tests, regression, docs).
 Rules for every agent: read `CLAUDE.md`, `docs/CALCULATIONS.md` (update it FIRST for any money rule), `docs/PROGRESS.md`. Layering Controller → FormRequest → DTO → Service → Repository → Model. ar/en strings in lang files. Web AND mobile API (`/api/v1`) must both work. Do NOT commit. Do not touch unrelated uncommitted files (login/landing/layout blades, public/logo.png). Append a section to `docs/PROGRESS.md` when done.
 

@@ -1,8 +1,8 @@
 @php $editing = $role->exists; @endphp
-<x-layouts.admin :guard="$guard" :title="$editing ? __('admin.edit') : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit') : __('admin.add_new')">
     <x-card>
-        <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route($guard.'.roles.validate', $editing ? [$role->id] : []) }}"
-            action="{{ $editing ? route($guard.'.roles.update', $role->id) : route($guard.'.roles.store') }}" method="POST" class="space-y-5" novalidate data-perm-matrix>
+        <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route('admin.roles.validate', $editing ? [$role->id] : []) }}"
+            action="{{ $editing ? route('admin.roles.update', $role->id) : route('admin.roles.store') }}" method="POST" class="space-y-5" novalidate data-perm-matrix>
             @csrf
             <x-input name="name" :label="__('access.fields.name')" :value="$name" required class="max-w-md" />
             <div>
@@ -34,7 +34,7 @@
                     </table>
                 </div>
             </div>
-            <x-form-actions :cancel="route($guard.'.roles.index')" />
+            <x-form-actions :cancel="route('admin.roles.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

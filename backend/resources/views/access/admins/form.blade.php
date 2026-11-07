@@ -1,7 +1,7 @@
 @php
     $editing = $admin->exists;
     $countries = \App\Support\AdminPhone::countries();
-    $selIso = $guard === 'tenant' ? (current_tenant()?->country ?? 'EG') : 'EG';
+    $selIso = strtoupper((string) setting('country', 'EG')) ?: 'EG';
     $national = '';
     if ($admin->phone) { // split stored E.164 digits back into country + national number (longest dial code wins)
         foreach (collect($countries)->sortByDesc(fn ($d) => strlen($d)) as $iso => $dial) {
@@ -9,10 +9,10 @@
         }
     }
 @endphp
-<x-layouts.admin :guard="$guard" :title="$editing ? __('admin.edit') : __('admin.add_new')">
+<x-layouts.admin :title="$editing ? __('admin.edit') : __('admin.add_new')">
     <x-card class="max-w-2xl">
-        <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route($guard.'.admins.validate', $editing ? [$admin->id] : []) }}"
-            action="{{ $editing ? route($guard.'.admins.update', $admin->id) : route($guard.'.admins.store') }}" method="POST" class="space-y-4" novalidate>
+        <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route('admin.admins.validate', $editing ? [$admin->id] : []) }}"
+            action="{{ $editing ? route('admin.admins.update', $admin->id) : route('admin.admins.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-input name="name" :label="__('access.fields.name')" :value="$admin->name" required />
@@ -30,7 +30,7 @@
                 <label class="form-label">{{ __('access.roles') }}</label>
                 <div class="flex flex-wrap gap-x-5 gap-y-1">
                     @foreach ($roles as $id => $name)
-                        @php($locked = $editing && $admin->getKey() === auth($guard)->id() && in_array($id, $assigned) && $admin->roles->firstWhere('id', $id)?->name === \App\Services\Access\AccessService::SYSTEM[$guard])
+                        @php($locked = $editing && $admin->getKey() === auth('admin')->id() && in_array($id, $assigned) && in_array($admin->roles->firstWhere('id', $id)?->name, \App\Services\Access\AccessService::SYSTEM, true))
                         <label class="inline-flex items-center gap-1.5 text-sm text-slate-700" @if ($locked) title="{{ __('access.cannot_remove_own_system_role') }}" @endif>
                             @if ($locked)<input type="hidden" name="roles[]" value="{{ $id }}">@endif
                             <input type="checkbox" @if (! $locked) name="roles[]" @endif value="{{ $id }}" @checked(in_array($id, $assigned)) @disabled($locked) class="size-4 rounded border-slate-300 text-brand-600"> {{ $name }}
@@ -39,11 +39,11 @@
                 </div>
             </div>
             <x-checkbox name="is_active" :label="__('admin.active')" :checked="$editing ? $admin->is_active : true" />
-            @if (app(\App\Services\Access\AccessService::class)->actorIsSystem($guard))
+            @if (app(\App\Services\Access\AccessService::class)->actorIsSystem())
                 <div><x-checkbox name="otp_exempt" :label="__('access.otp_exempt')" :checked="$editing && $admin->otp_exempt" />
                     <p class="mt-1 text-xs text-slate-500">{{ __('access.otp_exempt_hint') }}</p></div>
             @endif
-            <x-form-actions :cancel="route($guard.'.admins.index')" />
+            <x-form-actions :cancel="route('admin.admins.index')" />
         </form>
     </x-card>
 </x-layouts.admin>

@@ -33,9 +33,8 @@ class TrackStorefrontTraffic
 
     private function track(Request $request, Response $response): void
     {
-        $tenant = current_tenant();
-        if (! $request->isMethod('GET') || ! $tenant || AttributionService::isBot($request->userAgent())
-            || (! $this->features->active('integration_api', $tenant) && ! $this->features->active('brief', $tenant))) {
+        if (! $request->isMethod('GET') || AttributionService::isBot($request->userAgent())
+            || (! $this->features->active('integration_api') && ! $this->features->active('brief'))) {
             return;
         }
         $name = (string) $request->route()?->getName();
@@ -47,18 +46,18 @@ class TrackStorefrontTraffic
             return;
         }
         $channel = AttributionService::currentChannel($request);
-        $date = now($tenant->timezone ?: config('app.timezone'))->toDateString();
+        $date = now()->toDateString();
         $sid = $request->hasSession() ? $request->session()->getId() : null;
-        $this->count($tenant->id, $date, 0, $channel, $sid);
+        $this->count($date, 0, $channel, $sid);
         if ($pid = (int) $request->attributes->get('growth_product_id')) {
-            $this->count($tenant->id, $date, $pid, $channel, $sid);
+            $this->count($date, $pid, $channel, $sid);
         }
     }
 
-    private function count(int $tenantId, string $date, int $productId, string $channel, ?string $sid): void
+    private function count(string $date, int $productId, string $channel, ?string $sid): void
     {
-        $key = ['tenant_id' => $tenantId, 'visit_date' => $date, 'product_id' => $productId, 'channel' => $channel];
-        $first = $sid && Cache::add('growth:sess:'.sha1($tenantId.'|'.$date.'|'.$productId.'|'.$channel.'|'.$sid), 1, now()->addHours(26));
+        $key = ['visit_date' => $date, 'product_id' => $productId, 'channel' => $channel];
+        $first = $sid && Cache::add('growth:sess:'.sha1($date.'|'.$productId.'|'.$channel.'|'.$sid), 1, now()->addHours(26));
         DB::table('storefront_visits')->insertOrIgnore($key + ['visits' => 0, 'unique_sessions' => 0, 'created_at' => now(), 'updated_at' => now()]);
         DB::table('storefront_visits')->where($key)->update(['visits' => DB::raw('visits + 1'), 'unique_sessions' => DB::raw('unique_sessions + '.($first ? 1 : 0)), 'updated_at' => now()]);
     }

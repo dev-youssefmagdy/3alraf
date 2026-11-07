@@ -8,8 +8,8 @@ use App\Services\Ai\Contracts\AiTool;
 use Carbon\Carbon;
 
 /**
- * Base of every chat tool. Read-only by construction (no tool writes anything), tenant-bound: the context tenant must be the
- * current tenant, and all data is read through tenant-scoped models / ReportService (docs/CALCULATIONS.md stays the single source of math).
+ * Base of every chat tool. Read-only by construction (no tool writes anything); all data is read through the models /
+ * ReportService (docs/CALCULATIONS.md stays the single source of math).
  */
 abstract class AbstractTool implements AiTool
 {
@@ -17,10 +17,6 @@ abstract class AbstractTool implements AiTool
 
     final public function execute(array $arguments, AiContext $context): array
     {
-        if ($context->tenantId === null || $context->tenantId !== current_tenant()?->id) {
-            throw new \RuntimeException('tool_no_tenant');
-        }
-
         return $this->run($arguments, $context);
     }
 
@@ -56,7 +52,7 @@ abstract class AbstractTool implements AiTool
     {
         [$from, $to] = $this->range($a, $ctx, $defaultDays);
 
-        return new ReportFilter($from, $to, false, [$ctx->tenantId]);
+        return new ReportFilter($from, $to);
     }
 
     /** @return array{0:string,1:string} */

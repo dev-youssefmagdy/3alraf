@@ -4,29 +4,24 @@ use App\Enums\AffiliateStatus;
 use App\Models\Affiliate;
 use App\Models\Attribute;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\QrCode;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
+use App\Models\Admin;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\Qr\QrCodeManager;
 use App\Services\QrCodeService;
-use App\Services\TenantCatalogService;
-use App\Services\Tenancy\TenantContext;
+use App\Services\CatalogService;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
     $this->media = Storage::disk('media');
     $this->aff = Affiliate::where('email', 'aff@egy.test')->first();
-    Affiliate::withoutGlobalScopes()->where('tenant_id', $this->tenant->id)->where('id', '!=', $this->aff->id)->update(['status' => 'pending']);
+    Affiliate::query()->where('id', '!=', $this->aff->id)->update(['status' => 'pending']);
     $this->aff->update(['status' => AffiliateStatus::APPROVED]);
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
+    $this->t = '/admin';
+    $this->s = '/ar';
 
     $this->simple = Product::create(['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'slug' => 'qr-simple', 'sku' => 'QS', 'barcode' => '2000000000022']);
     $this->var = Product::create(['type' => 'variable', 'name' => ['ar' => 'متغير'], 'slug' => 'qr-var', 'sku' => 'QV']);
@@ -38,26 +33,25 @@ beforeEach(function () {
 
         return $pv;
     });
-    TenantProduct::query()->whereIn('product_id', [$this->simple->id, $this->var->id])->delete();
-    $this->enable = fn (Product $p) => TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 50, 'is_active' => true]);
-    $this->otherTenant = fn () => Tenant::create(['slug' => 'ksa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $this->url = fn (string $path) => 'http://egy.3alraf.test'.$path;
+    $this->enable = fn (Product $p) => listProduct($p, ['price' => 100, 'cost' => 50, 'is_active' => true]);
+    $this->url = fn (string $path) => url($path);   // QR codes always point at APP_URL (never a store subdomain)
 });
 
 it('builds a high-correction PNG with the centred logo that is a valid, larger-than-plain image', function () {
-    $png = app(QrCodeService::class)->png('http://egy.3alraf.test/ar/product/x');
+    $png = app(QrCodeService::class)->png('/ar/product/x');
     $img = imagecreatefromstring($png);
     expect(substr($png, 0, 8))->toBe("\x89PNG\r\n\x1a\n")->and(imagesx($img))->toBe(600)->and(imagesy($img))->toBe(600);
-    // centre is the (red) brand mark, not QR black/white
-    $c = imagecolorsforindex($img, imagecolorat($img, 300, 300));
-    $plain = (function () { config(['qr.logo_path' => '/nope']); $p = app(QrCodeService::class)->png('http://egy.3alraf.test/ar/product/x'); config(['qr.logo_path' => resource_path('branding/3alraf-logo.png')]); return $p; })();
-    expect(strlen($png))->not->toBe(strlen($plain))->and($c['red'] > 150 || $c['blue'] > 150 || $c['green'] > 150)->toBeTrue();
+    // the centre shows the configured logo (config qr.logo_path), not the plain QR modules
+    $logoPath = config('qr.logo_path');
+    $plain = (function () use ($logoPath) { config(['qr.logo_path' => '/nope']); $p = app(QrCodeService::class)->png('/ar/product/x'); config(['qr.logo_path' => $logoPath]); return $p; })();
+    $centre = fn (string $bytes) => array_sum(array_map(fn ($xy) => imagecolorat(imagecreatefromstring($bytes), $xy[0], $xy[1]), [[300, 300], [290, 290], [310, 310], [300, 280], [280, 300]]));
+    expect(strlen($png))->not->toBe(strlen($plain))->and($centre($png))->not->toBe($centre($plain));
     // a missing logo degrades to the plain code instead of failing
     expect(imagesx(imagecreatefromstring($plain)))->toBe(600);
 });
 
 it('creates product, variant and affiliate QR files on enable, with the documented URLs', function () {
-    $svc = app(TenantCatalogService::class);
+    $svc = app(CatalogService::class);
     $tpS = ($this->enable)($this->simple);
     $tpV = ($this->enable)($this->var);
     app(QrCodeManager::class)->syncProduct($tpV, true);
@@ -74,7 +68,7 @@ it('creates product, variant and affiliate QR files on enable, with the document
     // 1 simple + (1 product + 2 variants) = 4 plain; one approved affiliate doubles it
     expect(QrCode::count())->toBe(8);
     QrCode::all()->each(fn ($q) => $this->media->assertExists($q->path));
-    expect(QrCode::first()->path)->toStartWith("tenants/{$this->tenant->id}/qr/products/")->and(QrCode::first()->path)->toEndWith('.png');
+    expect(QrCode::first()->path)->toStartWith('qr/products/')->and(QrCode::first()->path)->toEndWith('.png');
     unset($svc);
 });
 
@@ -104,8 +98,8 @@ it('keeps no orphan files: disabling a listing, a variant or an affiliate remove
     expect($all)->toHaveCount(6); // product + 2 variants, x (none + affiliate)
 
     // variant switched off -> its plain + affiliate codes disappear
-    $tv = TenantProductVariant::where('tenant_product_id', $tp->id)->first();
-    $tvPaths = QrCode::where('owner_type', TenantProductVariant::class)->where('owner_id', $tv->id)->pluck('path')->all();
+    $tv = $tp->variants()->first();
+    $tvPaths = QrCode::where('owner_type', ProductVariant::class)->where('owner_id', $tv->id)->pluck('path')->all();
     $tv->update(['is_active' => false]);
     $m->syncProduct($tp->fresh(), true);
     expect(QrCode::count())->toBe(4);
@@ -127,7 +121,7 @@ it('keeps no orphan files: disabling a listing, a variant or an affiliate remove
 
     // listing removed -> everything goes
     $remaining = QrCode::pluck('path')->all();
-    app(TenantCatalogService::class)->delete($tp->fresh());
+    app(CatalogService::class)->delete($tp->fresh());
     expect(QrCode::count())->toBe(0);
     foreach ($remaining as $p) {
         $this->media->assertMissing($p);
@@ -135,10 +129,10 @@ it('keeps no orphan files: disabling a listing, a variant or an affiliate remove
     expect($this->media->allFiles())->toBe([]);
 });
 
-it('generates codes through the real flows: bulk enable, listing update, affiliate approval, central product edit', function () {
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+it('generates codes through the real flows: bulk enable, listing update, affiliate approval, product edit', function () {
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->postJson("{$this->t}/catalog/bulk", ['rows' => [$this->simple->id => ['enabled' => 1, 'price' => '10', 'cost' => '5']]])->assertOk();
-    $tp = TenantProduct::where('product_id', $this->simple->id)->first();
+    $tp = Product::whereKey($this->simple->id)->first();
     expect(QrCode::where('owner_id', $tp->id)->whereNull('affiliate_id')->count())->toBe(1)->and(QrCode::where('affiliate_id', $this->aff->id)->count())->toBe(1);
 
     // deactivating the listing removes its codes
@@ -147,47 +141,42 @@ it('generates codes through the real flows: bulk enable, listing update, affilia
     $this->putJson("{$this->t}/catalog/{$tp->id}", ['price' => '10', 'cost' => '5', 'is_active' => 1])->assertOk();
     expect(QrCode::count())->toBe(2);
 
-    // central slug change refreshes every tenant's codes (queued job, sync in tests)
+    // a product slug change refreshes its codes (queued job, sync in tests)
     $old = QrCode::pluck('path')->all();
     $cat = \App\Models\Category::create(['name' => ['ar' => 'c'], 'slug' => 'c', 'path' => '1', 'depth' => 0]);
-    $this->actingAs(\App\Models\CentralAdmin::first(), 'central');
-    app()->forgetInstance('currentTenant');
-    app()->offsetUnset('currentTenant');
-    $this->putJson('http://3alraf.test/admin/products/'.$this->simple->id, ['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'slug' => 'qr-slug-2', 'sku' => 'QS', 'category_ids' => [$cat->id], 'is_active' => 1])->assertOk();
-    app()->instance('currentTenant', $this->tenant);
+    $this->actingAs(\App\Models\Admin::first(), 'admin');
+    $this->putJson('/admin/products/'.$this->simple->id, ['type' => 'simple', 'name' => ['ar' => 'بسيط'], 'slug' => 'qr-slug-2', 'sku' => 'QS', 'category_ids' => [$cat->id], 'is_active' => 1, 'price' => '10', 'cost' => '5'])->assertOk();
     expect(QrCode::pluck('url')->all())->each->toContain('qr-slug-2');
     foreach ($old as $p) {
         $this->media->assertMissing($p);
     }
 });
 
-it('serves the admin download, isolates tenants, and affiliates only get their own stored png', function () {
+it('serves the admin download (self-healing) and affiliates only get their own stored png', function () {
     $tp = ($this->enable)($this->var);
     app(QrCodeManager::class)->syncProduct($tp, true);
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 
     $this->get("{$this->t}/catalog/{$tp->id}/edit")->assertOk()->assertSee(__('admin.qr_download'))->assertSee(media_url(QrCode::whereNull('affiliate_id')->first()->path), false);
     $r = $this->get("{$this->t}/catalog/{$tp->id}/qr")->assertOk()->assertHeader('Content-Type', 'image/png');
     expect($r->headers->get('Content-Disposition'))->toContain('qr-qr-var.png')->and(substr($r->getContent(), 1, 3))->toBe('PNG');
-    $tv = TenantProductVariant::where('tenant_product_id', $tp->id)->first();
+    $tv = $tp->variants()->first();
     $this->get("{$this->t}/catalog/{$tp->id}/qr?variant={$tv->id}")->assertOk()->assertHeader('Content-Type', 'image/png');
     $this->get("{$this->t}/catalog/{$tp->id}/qr?variant=999999")->assertNotFound();
 
     // missing file is regenerated on demand (self healing)
-    $q = QrCode::whereNull('affiliate_id')->where('owner_type', TenantProduct::class)->first();
+    $q = QrCode::whereNull('affiliate_id')->where('owner_type', Product::class)->first();
     $this->media->delete($q->path);
     $this->get("{$this->t}/catalog/{$tp->id}/qr")->assertOk();
     $this->media->assertExists($q->fresh()->path);
 
-    // another tenant's admin cannot reach it
-    $other = ($this->otherTenant)();
-    $this->get("http://{$other->slug}.3alraf.test/admin/catalog/{$tp->id}/qr")->assertStatus(404);
+    $this->get("{$this->t}/catalog/999999/qr")->assertNotFound();
 });
 
 it('affiliate web + api return the stored png; affiliate of another listing state gets 404', function () {
     $tp = ($this->enable)($this->var);
     app(QrCodeManager::class)->syncProduct($tp, true);
-    $stored = QrCode::where('affiliate_id', $this->aff->id)->where('owner_type', TenantProduct::class)->first();
+    $stored = QrCode::where('affiliate_id', $this->aff->id)->where('owner_type', Product::class)->first();
 
     $this->actingAs($this->aff, 'affiliate');
     $page = $this->get("{$this->s}/affiliate/products")->assertOk();
@@ -200,12 +189,12 @@ it('affiliate web + api return the stored png; affiliate of another listing stat
     $this->get("{$this->s}/affiliate/qr/nope")->assertNotFound();
 
     // api resource points at the CDN file and lists variants
-    $tok = $this->postJson('http://egy.3alraf.test/api/v1/affiliate/login', ['email' => 'aff@egy.test', 'password' => 'password'])->json('data.token');
+    $tok = $this->postJson('/api/v1/affiliate/login', ['email' => 'aff@egy.test', 'password' => 'password'])->json('data.token');
     $h = ['Authorization' => "Bearer $tok"];
-    $items = collect($this->getJson('http://egy.3alraf.test/api/v1/affiliate/products', $h)->assertOk()->json('data'));
+    $items = collect($this->getJson('/api/v1/affiliate/products', $h)->assertOk()->json('data'));
     $row = $items->firstWhere('slug', 'qr-var');
     expect($row['qr_url'])->toBe(media_url($stored->path))->and($row['variants'])->toHaveCount(2)->and($row['variants'][0]['qr_url'])->toContain('qr/products');
-    $this->get('http://egy.3alraf.test/api/v1/affiliate/products/qr-var/qr', $h)->assertOk()->assertHeader('Content-Type', 'image/png');
+    $this->get('/api/v1/affiliate/products/qr-var/qr', $h)->assertOk()->assertHeader('Content-Type', 'image/png');
 
     // suspended affiliate: no code
     $this->aff->update(['status' => AffiliateStatus::SUSPENDED]);
@@ -213,11 +202,11 @@ it('affiliate web + api return the stored png; affiliate of another listing stat
     expect(QrCode::where('affiliate_id', $this->aff->id)->count())->toBe(0);
 });
 
-it('qr:rebuild backfills, repairs missing files, is idempotent and honours --tenant/--force', function () {
+it('qr:rebuild backfills, repairs missing files, is idempotent and honours --force', function () {
     ($this->enable)($this->simple);
     ($this->enable)($this->var);
     expect(QrCode::count())->toBe(0);
-    $this->artisan('qr:rebuild', ['--tenant' => 'egy'])->assertSuccessful();
+    $this->artisan('qr:rebuild', [])->assertSuccessful();
     $n = QrCode::count();
     expect($n)->toBe(8);
 
@@ -229,17 +218,8 @@ it('qr:rebuild backfills, repairs missing files, is idempotent and honours --ten
     $this->artisan('qr:rebuild')->assertSuccessful();
     $this->media->assertExists($paths[0]);
 
-    $this->artisan('qr:rebuild', ['--tenant' => 'nope'])->assertFailed();
-    $this->artisan('qr:rebuild', ['--tenant' => 'egy', '--force' => true])->assertSuccessful();
+    $this->artisan('qr:rebuild', ['--force' => true])->assertSuccessful();
     expect(QrCode::count())->toBe($n);
-});
-
-it('keeps tenants isolated: codes of another tenant are invisible and its context cannot sync them', function () {
-    $tp = ($this->enable)($this->simple);
-    app(QrCodeManager::class)->syncProduct($tp);
-    $other = ($this->otherTenant)();
-    $seen = TenantContext::run($other, fn () => QrCode::count());
-    expect($seen)->toBe(0)->and(QrCode::count())->toBe(1)->and(current_tenant()->id)->toBe($this->tenant->id);
 });
 
 it('keeps a soft-deleted catalogue product codes and the storefront preselects ?variant', function () {

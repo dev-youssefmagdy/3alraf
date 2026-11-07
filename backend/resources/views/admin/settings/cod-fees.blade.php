@@ -1,6 +1,6 @@
-<x-layouts.admin guard="tenant" :title="__('ops.cod_fee_title')">
+<x-layouts.admin :title="__('ops.cod_fee_title')">
     <x-card class="max-w-3xl">
-        <form data-ajax-form data-method="PUT" data-validate-url="{{ route('tenant.cod-fees.validate') }}" action="{{ route('tenant.cod-fees.update') }}" method="POST" class="space-y-4" novalidate>
+        <form data-ajax-form data-method="PUT" data-validate-url="{{ route('admin.cod-fees.validate') }}" action="{{ route('admin.cod-fees.update') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <p class="text-sm text-slate-600">{{ __('ops.cod_fee_scope') }} {{ __('ops.cod_fee_hint') }}</p>
             <x-checkbox name="cod_extra_fee_enabled" :label="__('ops.fields.cod_extra_fee_enabled')" :checked="$cfg->enabled" />
@@ -26,7 +26,7 @@
                     </div>
                 </div>
             @endif
-            <x-form-actions :cancel="route('tenant.dashboard')" />
+            <x-form-actions :cancel="route('admin.dashboard')" />
         </form>
     </x-card>
 </x-layouts.admin>

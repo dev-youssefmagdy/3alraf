@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Integration;
 use App\Http\Controllers\Controller;
 use App\Models\Bundle;
 use App\Models\Product;
-use App\Models\TenantProduct;
 use App\Services\Growth\BrandMemoryService;
 use App\Services\Growth\BriefService;
 use App\Services\Growth\MetricsService;
@@ -14,7 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Read-only, scope `read`, tenant-scoped (current tenant = the client's), whitelisted fields, aggregate only (no customer identities / PII). */
+/** Read-only, scope `read`, whitelisted fields, aggregate only (no customer identities / PII). */
 class MetricsController extends Controller
 {
     public function __construct(private MetricsService $metrics, private StatsAggregator $stats, private BriefService $brief) {}
@@ -47,19 +46,19 @@ class MetricsController extends Controller
     public function products(Request $r): JsonResponse
     {
         $this->period($r);
-        $p = TenantProduct::with('product')->orderBy('id')->paginate((int) $r->query('per_page', 25));
+        $p = Product::query()->whereNotNull('price')->orderBy('id')->paginate((int) $r->query('per_page', 25));
 
         return $this->out($p->getCollection()->map(fn ($t) => $this->productRow($t))->all(), ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total()]);
     }
 
-    private function productRow(TenantProduct $t): array
+    private function productRow(Product $t): array
     {
-        return ['id' => $t->product_id, 'name' => $this->name($t->product), 'sku' => $t->product?->sku, 'active' => (bool) $t->is_active, 'price' => (float) $t->price, 'sale_price' => $t->sale_price !== null ? (float) $t->sale_price : null];
+        return ['id' => $t->id, 'name' => $this->name($t), 'sku' => $t->sku, 'active' => (bool) $t->is_active, 'price' => (float) $t->price, 'sale_price' => $t->sale_price !== null ? (float) $t->sale_price : null];
     }
 
     public function facts(Request $r, int $id): JsonResponse
     {
-        $t = TenantProduct::with('product')->where('product_id', $id)->firstOrFail();
+        $t = Product::query()->whereNotNull('price')->findOrFail($id);
         [$from, $to] = $this->period($r);
         $row = collect($this->metrics->velocityRows($to))->firstWhere('product_id', $id) ?? ['on_hand' => 0, 'sold' => 0, 'daily_velocity' => 0, 'days_of_cover' => null, 'stock_value' => 0, 'cost_missing' => false];
         $price = (float) ($t->sale_price ?? $t->price);
@@ -68,7 +67,7 @@ class MetricsController extends Controller
         $perf = collect($this->metrics->byProduct($from, $to, 1000))->firstWhere('product_id', $id);
 
         return $this->out($this->productRow($t) + ['cost' => $cost, 'unit_margin_percent' => $margin, 'stock' => ['on_hand' => $row['on_hand'], 'days_of_cover' => $row['days_of_cover'], 'daily_velocity' => $row['daily_velocity']],
-            'period_performance' => $perf, 'description' => mb_substr((string) $t->product?->description, 0, 1000),
+            'period_performance' => $perf, 'description' => mb_substr((string) $t->description, 0, 1000),
             'approved_claims' => app(BrandMemoryService::class)->claims($id)->map(fn ($c) => ['type' => $c->type, 'claim' => $c->claim])->values()->all()], ['period' => [$from->toDateString(), $to->toDateString()]]);
     }
 

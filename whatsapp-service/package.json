@@ -9,7 +9,7 @@
     "start": "node --env-file=.env src/server.js",
     "test": "node --test test/"
   },
-  "description": "Multi-session WhatsApp (Baileys) gateway for the 3alraf Laravel app",
+  "description": "Single-session WhatsApp (Baileys) gateway for the 3alraf Laravel app (session id `central`)",
   "dependencies": {
     "@whiskeysockets/baileys": "6.7.24",
     "pino": "9.14.0",

@@ -5,7 +5,7 @@ namespace App\Services\Push;
 use App\Models\Customer;
 use App\Models\Device;
 
-/** Register / unregister mobile push tokens for the current tenant. */
+/** Register / unregister mobile push tokens of the shop. */
 class DeviceService
 {
     /** Upsert by token (a re-install or a different customer logging in on the same device re-binds the row). */

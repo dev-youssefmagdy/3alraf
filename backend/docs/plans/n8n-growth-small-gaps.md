@@ -1,5 +1,7 @@
 # Growth N9: small-gap closure plan (contract for prompts/31-growth-n9-small-gaps.md)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 | # | Gap | Decision |
 |---|---|---|
 | 1 | Approval handlers don't re-check module switch at approve time | FIX. `ApprovalService::approve` checks the handler's registered feature via GrowthFeatures; OFF => 422 `feature_disabled`, approval stays pending. Registry maps approval type -> feature key |

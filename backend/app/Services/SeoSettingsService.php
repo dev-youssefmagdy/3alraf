@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Tenant;
-use App\Repositories\Contracts\TenantRepositoryInterface;
+use App\Models\Setting;
 
 /**
- * tenants.settings.seo — search-engine / analytics configuration of the storefront.
+ * setting `seo` — search-engine / analytics configuration of the storefront.
  * Every tracking id is pattern-validated (SeoSettingsRequest) because it is echoed into inline <script> on every page.
  */
 class SeoSettingsService
@@ -37,11 +36,10 @@ class SeoSettingsService
     /** Request-local cache for the layout (rendered on every storefront page). */
     private ?array $current = null;
 
-    public function __construct(private TenantRepositoryInterface $tenants) {}
-
-    public function get(Tenant $tenant): array
+    /** SEO settings (setting `seo` + `app_links`). */
+    public function get(): array
     {
-        $saved = (array) (($tenant->settings ?? [])['seo'] ?? []);
+        $saved = (array) (setting('seo') ?? []);
         $out = ['indexable' => (bool) ($saved['indexable'] ?? true), 'track_staff' => (bool) ($saved['track_staff'] ?? false),
             'home_title' => (array) ($saved['home_title'] ?? []), 'home_description' => (array) ($saved['home_description'] ?? []),
             'title_suffix' => (array) ($saved['title_suffix'] ?? []), 'social' => []];
@@ -52,18 +50,19 @@ class SeoSettingsService
             $out['social'][$s] = (string) (($saved['social'] ?? [])[$s] ?? '');
         }
 
-        $out['app_links'] = ['ios' => (string) ($tenant->settings['app_links']['ios'] ?? ''), 'android' => (string) ($tenant->settings['app_links']['android'] ?? '')];
+        $apps = (array) (setting('app_links') ?? []);
+        $out['app_links'] = ['ios' => (string) ($apps['ios'] ?? ''), 'android' => (string) ($apps['android'] ?? '')];
 
         return $out;
     }
 
-    /** The current tenant's settings, memoised for the request. */
+    /** The settings, memoised for the request. */
     public function current(): array
     {
-        return $this->current ??= $this->get(current_tenant());
+        return $this->current ??= $this->get();
     }
 
-    public function update(Tenant $tenant, array $data): array
+    public function update(array $data): array
     {
         $clean = ['indexable' => (bool) ($data['indexable'] ?? false), 'track_staff' => (bool) ($data['track_staff'] ?? false)];
         foreach (['home_title', 'home_description', 'title_suffix'] as $k) {
@@ -76,7 +75,8 @@ class SeoSettingsService
 
         $apps = array_filter(array_map(fn ($v) => trim((string) $v), array_intersect_key((array) ($data['app_links'] ?? []), array_flip(['ios', 'android']))), fn ($v) => $v !== '');
 
-        $this->tenants->update($tenant, ['settings' => array_merge($tenant->settings ?? [], ['seo' => $clean, 'app_links' => $apps])]);
+        Setting::put('seo', $clean, true);
+        Setting::put('app_links', $apps, true);
         $this->current = null;
 
         return $clean;

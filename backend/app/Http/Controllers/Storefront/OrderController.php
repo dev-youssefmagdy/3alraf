@@ -22,7 +22,7 @@ class OrderController extends Controller
 
     public function show(string $locale, string $token)
     {
-        $view = request()->boolean('invoice') ? 'tenant.orders.invoice' : 'storefront.order';
+        $view = request()->boolean('invoice') ? 'admin.orders.invoice' : 'storefront.order';
 
         return view($view, ['order' => $this->order($token), 'public' => true]);
     }

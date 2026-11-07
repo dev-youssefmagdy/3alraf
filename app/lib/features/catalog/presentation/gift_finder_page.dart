@@ -10,7 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/utils/error_messages.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../store/application/store_controller.dart';
 import '../../cart/application/cart_controller.dart';
 import '../application/catalog_providers.dart';
 import '../data/catalog_models.dart';
@@ -129,7 +129,7 @@ class _GiftFinderPageState extends ConsumerState<GiftFinderPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final enabled =
-        ref.watch(storeInfoProvider)?.features['gift_finder'] ?? true;
+        ref.watch(storeProfileProvider)?.features['gift_finder'] ?? true;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.giftFinder),

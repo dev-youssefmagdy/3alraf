@@ -2,12 +2,10 @@
 
 namespace App\Models\Erp;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class AuditLog extends Model
 {
-    use BelongsToTenant;
 
     public $timestamps = false;
 

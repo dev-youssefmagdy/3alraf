@@ -2,8 +2,6 @@ import 'package:app/features/cart/application/cart_controller.dart';
 import 'package:app/features/checkout/application/checkout_controller.dart';
 import 'package:app/features/checkout/data/checkout_models.dart';
 import 'package:app/features/orders/data/order_models.dart';
-import 'package:app/features/tenant/application/tenant_controller.dart';
-import 'package:app/features/tenant/data/tenant_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -95,12 +93,10 @@ Future<void> tick([int ms = 80]) =>
 Future<(TestEnv, dynamic)> boot(CheckoutBackend b) async {
   final env = TestEnv(extra: b.call);
   final c = await env.container();
-  await env.secrets.write('auth_token:egy', '12|secret');
+  await env.secrets.write('auth_token', '12|secret');
   c.listen(cartControllerProvider, (_, _) {});
   c.listen(checkoutControllerProvider, (_, _) {});
-  await c
-      .read(tenantControllerProvider.notifier)
-      .select(Tenant.fromJson(tenantJson('egy')));
+  await bootStore(c);
   await tick(150);
   return (env, c);
 }

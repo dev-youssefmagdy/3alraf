@@ -27,7 +27,7 @@ class StockAdjustmentDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('number_link', fn (StockAdjustment $m) => '<a class="font-semibold text-brand-600" href="'.e(route('tenant.stock-adjustments.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (StockAdjustment $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.stock-adjustments.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->addColumn('branch_label', fn (StockAdjustment $m) => e($m->branch?->name))
             ->addColumn('type_label', fn (StockAdjustment $m) => e($m->type->label()))

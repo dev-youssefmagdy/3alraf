@@ -1,4 +1,4 @@
-{{-- shared dashboard body. $d from ReportService::dashboard, $f filter, $guard --}}
+{{-- shared dashboard body. $d from ReportService::dashboard, $f filter --}}
 @include('reports._filter', ['f' => $f, 'branches' => []])
 <p class="mb-3 text-sm text-slate-500">{{ __('reports.amounts_in', ['c' => $d['currency']]) }}</p>
 @include('reports._cards', ['cards' => $d['cards']])
@@ -9,10 +9,4 @@
     <x-card :title="__('reports.top_products')" class="lg:col-span-2">
         @include('reports._table', ['columns' => $d['topProducts']['columns'], 'rows' => $d['topProducts']['rows']])
     </x-card>
-    @isset($d['tenants'])
-        <x-card :title="__('reports.sales_by_tenant')">@include('reports._chart', ['chart' => $d['tenantChart']])</x-card>
-        <x-card :title="__('reports.tenants_breakdown')" class="lg:col-span-2">
-            @include('reports._table', ['columns' => $d['tenants']['columns'], 'rows' => $d['tenants']['rows']])
-        </x-card>
-    @endisset
 </div>

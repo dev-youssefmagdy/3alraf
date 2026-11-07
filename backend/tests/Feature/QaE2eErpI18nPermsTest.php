@@ -12,8 +12,7 @@ use App\Models\Erp\Account;
 use App\Models\Erp\JournalEntry;
 use App\Models\Erp\Owner;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
 use Database\Seeders\FoundationSeeder;
@@ -22,23 +21,20 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    app()->instance('currentTenant', $this->tenant);
-    app(CoaTemplate::class)->seed($this->tenant);
-    $this->a = 'http://egy.3alraf.test/admin';
+    app(CoaTemplate::class)->seed();
+    $this->a = '/admin';
     $this->e = $this->a.'/erp';
-    $this->owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
+    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
     $this->je = app(JournalService::class);
     $this->acc = fn (string $role) => (int) Account::where('role_key', $role)->value('id');
 });
 
-/** Tenant staff member holding exactly $perms (custom role, tenant-prefixed like the role editor does). */
-function qaiUser(array $perms, string $name = 'qa'): TenantAdmin
+/** Staff member holding exactly $perms (custom role, like the role editor creates). */
+function qaiUser(array $perms, string $name = 'qa'): Admin
 {
-    $t = current_tenant();
-    $role = Role::create(['name' => 't'.$t->id.':'.$name, 'guard_name' => 'tenant']);
+    $role = Role::create(['name' => $name, 'guard_name' => 'admin']);
     $role->givePermissionTo($perms);
-    $u = TenantAdmin::withoutGlobalScopes()->create(['name' => 'QA '.$name, 'email' => $name.'@egy.test', 'password' => 'password', 'is_active' => true, 'tenant_id' => $t->id]);
+    $u = Admin::query()->create(['name' => 'QA '.$name, 'email' => $name.'@egy.test', 'password' => 'password', 'is_active' => true]);
     $u->assignRole($role);
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -67,7 +63,7 @@ function qaiErrs(): array
     return $out;
 }
 
-/** Hub card hrefs (tenant hub cards are <a class="group rounded-xl ..."). */
+/** Hub card hrefs (hub cards are <a class="group rounded-xl ..."). */
 function qaiCards(string $html): array
 {
     preg_match_all('#<a href="([^"]+)" class="group rounded-xl#', $html, $m);
@@ -80,7 +76,7 @@ function qaiCards(string $html): array
 it('PERMS reports-only accountant: report pages work, exports/journals/actions forbidden, export buttons hidden', function () {
     qaiPost('cash', 'sales_revenue', '100');
     $u = qaiUser(['erp.reports.view'], 'reports');
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $this->get($this->e.'/reports')->assertOk()->assertDontSee('/reports/branch-profitability"', false);
     foreach (['trial-balance', 'profit-loss', 'balance-sheet', 'cash-flow', 'sales', 'tax'] as $r) {
         $this->get($this->e."/reports/$r")->assertOk()->assertDontSee('/export', false);
@@ -97,7 +93,7 @@ it('PERMS reports-only accountant: report pages work, exports/journals/actions f
 it('QA-BUG-010 pages do not render links to journal entries the user is not allowed to open (reports-only user, general ledger)', function () {
     $e = qaiPost('cash', 'sales_revenue', '100');
     $u = qaiUser(['erp.reports.view'], 'reports');
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $html = $this->get($this->e.'/reports/general-ledger?account_id='.($this->acc)('cash').'&from='.now()->startOfMonth()->toDateString())->assertOk()->getContent();
     expect($html)->toContain($e->number);
     $this->get($this->e.'/journals/'.$e->id)->assertForbidden();
@@ -107,7 +103,7 @@ it('QA-BUG-010 pages do not render links to journal entries the user is not allo
 it('QA-BUG-010b dashboard-only user is not shown "recent entries" links that 403', function () {
     $e = qaiPost('cash', 'sales_revenue', '100');
     $u = qaiUser(['erp.dashboard.view'], 'dash');
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $html = $this->get($this->e.'/dashboard')->assertOk()->getContent();
     $this->get($this->e.'/journals/'.$e->id)->assertForbidden();
     expect($html)->not->toContain('/erp/journals/'.$e->id.'"');
@@ -115,7 +111,7 @@ it('QA-BUG-010b dashboard-only user is not shown "recent entries" links that 403
 
 it('PERMS journals.create without journals.post: can draft, cannot post (form option hidden, 403 on direct post)', function () {
     $u = qaiUser(['erp.dashboard.view', 'erp.journals.view', 'erp.journals.create'], 'maker');
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $form = $this->get($this->e.'/journals/create')->assertOk();
     $form->assertDontSee('name="post_now"', false);
     $lines = [['account_id' => ($this->acc)('rent'), 'debit' => 10], ['account_id' => ($this->acc)('cash'), 'credit' => 10]];
@@ -133,7 +129,7 @@ it('PERMS journals.create without journals.post: can draft, cannot post (form op
     expect($cards)->toBe(['/admin/erp/journals', '/admin/erp/dashboard']);
     // checker with post permission posts it
     $checker = qaiUser(['erp.journals.view', 'erp.journals.post'], 'checker');
-    $this->actingAs($checker, 'tenant');
+    $this->actingAs($checker, 'admin');
     $this->get($this->e."/journals/{$d->id}")->assertSee('/journals/'.$d->id.'/post"', false)->assertDontSee('name="_method" value="DELETE"', false);
     $this->post($this->e."/journals/{$d->id}/post")->assertSessionHasNoErrors();
     expect($d->fresh()->status)->toBe('posted');
@@ -148,7 +144,7 @@ it('PERMS view-only users never see action forms (accounts, parties, periods, pr
     qaiPost('cash', 'sales_revenue', '1000');
     $dist = app(\App\Services\Erp\Equity\ProfitDistributionService::class)->create(['from' => now()->startOfMonth()->toDateString(), 'to' => now()->toDateString(), 'acknowledge_open' => true], $this->owner->id);
     $u = qaiUser(['erp.dashboard.view', 'erp.accounts.view', 'erp.periods.view', 'erp.profits.view', 'erp.branches.view'], 'viewer');
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $this->get($this->e.'/accounts')->assertOk()->assertDontSee('erp/accounts" ', false)->assertDontSee('name="code"', false)->assertDontSee('/restore"', false);
     $this->post($this->e.'/accounts', ['code' => 'X', 'name_en' => 'X', 'type' => 'asset'])->assertForbidden();
     foreach (["customer/{$c->id}", "supplier/{$s->id}"] as $p) {
@@ -171,21 +167,21 @@ it('PERMS view-only users never see action forms (accounts, parties, periods, pr
     expect($cards)->toEqualCanonicalizing(['/admin/erp/accounts', '/admin/erp/periods', '/admin/erp/parties/customer', '/admin/erp/parties/supplier', '/admin/erp/cash-bank', '/admin/erp/profits', '/admin/erp/branches', '/admin/erp/dashboard']);
 });
 
-it('PERMS roles editor lists the ERP permissions for the tenant owner', function () {
-    $this->actingAs($this->owner, 'tenant');
+it('PERMS roles editor lists the ERP permissions for the owner', function () {
+    $this->actingAs($this->owner, 'admin');
     $html = $this->get($this->a.'/roles/create')->assertOk()->getContent();
     foreach (['erp.dashboard.view', 'erp.journals.post', 'erp.journals.reverse', 'erp.profits.distribute', 'erp.periods.reopen', 'erp.settings.manage', 'erp.reports.export'] as $p) {
         expect($html)->toContain('value="'.$p.'"');
     }
     // creating a role through the editor with ERP perms works
     $this->postJson($this->a.'/roles', ['name' => 'Accountant', 'permissions' => ['erp.dashboard.view', 'erp.reports.view']])->assertOk();
-    expect(Role::where('name', 't'.$this->tenant->id.':Accountant')->first()?->hasPermissionTo('erp.reports.view', 'tenant'))->toBeTrue();
+    expect(Role::where('name', 'Accountant')->first()?->hasPermissionTo('erp.reports.view', 'admin'))->toBeTrue();
 });
 
 /* ---------------------------------------------------------------- localisation / RTL / panel connection */
 
 it('I18N admin locale switch: ar = dir rtl + Arabic ERP labels, en = dir ltr + English labels, invalid code falls back', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->get($this->a.'/locale/ar')->assertRedirect();
     $ar = $this->get($this->e)->assertOk()->getContent();
     expect($ar)->toContain('dir="rtl"')->toContain('lang="ar"')->toContain(e(__('erp.menu', [], 'ar')));
@@ -203,7 +199,7 @@ it('I18N admin locale switch: ar = dir rtl + Arabic ERP labels, en = dir ltr + E
 });
 
 it('QA-BUG-011 Arabic admin: ERP validation messages are fully Arabic (date/between/different rules and field names are not English)', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->get($this->a.'/locale/ar');
     $this->get($this->e.'/journals/create');
     $this->post($this->e.'/journals', ['entry_date' => '2026-02-30', 'description' => 'x', 'type' => 'manual', 'lines' => []]);
@@ -217,25 +213,25 @@ it('QA-BUG-011 Arabic admin: ERP validation messages are fully Arabic (date/betw
     expect($english)->toBe([]);
 });
 
-it('PANEL tenant sidebar shows the ERP item, highlighted on ERP pages; hub cards link to working pages', function () {
-    $this->actingAs($this->owner, 'tenant');
+it('PANEL sidebar shows the ERP item, highlighted on ERP pages; hub cards link to working pages', function () {
+    $this->actingAs($this->owner, 'admin');
     $this->get($this->a.'/locale/en');
     $hub = $this->get($this->e)->assertOk()->getContent();
-    expect($hub)->toMatch('#<a href="http://egy\.3alraf\.test/admin/erp" class="side-link[^"]*\bactive\b#');
+    expect($hub)->toMatch('#<a href="'.preg_quote(url('/admin/erp'), '#').'" class="side-link[^"]*\bactive\b#');
     $this->get($this->e.'/journals')->assertOk()->assertSee(__('erp.menu'));
     $j = $this->get($this->e.'/reports/profit-loss')->getContent();
-    expect($j)->toMatch('#<a href="http://egy\.3alraf\.test/admin/erp" class="side-link[^"]*\bactive\b#');
+    expect($j)->toMatch('#<a href="'.preg_quote(url('/admin/erp'), '#').'" class="side-link[^"]*\bactive\b#');
     $cards = qaiCards($hub);
-    expect(count($cards))->toBe(count(\App\Http\Controllers\Tenant\Erp\HubController::CARDS));
+    expect(count($cards))->toBe(count(\App\Http\Controllers\Admin\Erp\HubController::CARDS));
     foreach ($cards as $url) {
-        $this->get('http://egy.3alraf.test'.$url)->assertOk();
+        $this->get(''.$url)->assertOk();
     }
 });
 
 /* ---------------------------------------------------------------- robustness: CSRF, XSS, long text, CSV */
 
 it('ROBUST every ERP form on every page carries a CSRF token', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $c = Customer::create(['name' => 'C', 'email' => 'c@x.com', 'phone' => '1055500112', 'password' => 'secret-123', 'is_active' => true]);
     $o = Owner::create(['name' => 'O', 'ownership_percent' => 10, 'is_eligible' => true]);
     $d = app(JournalService::class)->draft(['entry_date' => now()->toDateString(), 'description' => 'd'], [['account' => 'rent', 'debit' => '5'], ['account' => 'cash', 'credit' => '5']]);
@@ -255,7 +251,7 @@ it('ROBUST every ERP form on every page carries a CSRF token', function () {
 it('ROBUST XSS payloads in account name, journal description/memo, owner, supplier, asset and note text are escaped on every page and neutralised in CSV', function () {
     $x = '<script>alert("qa")</script><img src=x onerror=alert(1)>';
     $f = '=HYPERLINK("http://evil","x")';
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $this->get($this->a.'/locale/en');
     $grp = Account::where('type', 'expense')->where('is_group', true)->value('id');
     $this->post($this->e.'/accounts', ['code' => 'QAX1', 'name_en' => $x, 'name_ar' => $x, 'description' => $x, 'type' => 'expense', 'parent_id' => $grp])->assertSessionHasNoErrors();
@@ -286,7 +282,7 @@ it('ROBUST XSS payloads in account name, journal description/memo, owner, suppli
 });
 
 it('ROBUST very long text inputs: at the limit accepted and rendered, over the limit = validation error (no 500)', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $lines = [['account_id' => ($this->acc)('rent'), 'debit' => 10, 'memo' => str_repeat('م', 300)], ['account_id' => ($this->acc)('cash'), 'credit' => 10]];
     $this->post($this->e.'/journals', ['entry_date' => now()->toDateString(), 'description' => str_repeat('ع', 500), 'type' => 'manual', 'lines' => $lines])->assertSessionHasNoErrors();
     $this->get($this->e.'/journals/'.JournalEntry::latest('id')->value('id'))->assertOk();
@@ -302,7 +298,7 @@ it('ROBUST very long text inputs: at the limit accepted and rendered, over the l
 });
 
 it('ROBUST repeated (concurrent-ish) receipts with the same form ref post exactly once; different refs post separately', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $c = Customer::create(['name' => 'C', 'email' => 'c@x.com', 'phone' => '1055500113', 'password' => 'secret-123', 'is_active' => true]);
     foreach (range(1, 5) as $i) {
         $this->post($this->e."/parties/customer/{$c->id}/settle", ['amount' => '40', 'account' => 'cash', 'ref' => 'same-ref']);
@@ -313,14 +309,14 @@ it('ROBUST repeated (concurrent-ish) receipts with the same form ref post exactl
 });
 
 it('QA-BUG-012 re-submitting a receipt with the same ref but a DIFFERENT amount is reported to the user, not silently ignored', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $c = Customer::create(['name' => 'C', 'email' => 'c@x.com', 'phone' => '1055500114', 'password' => 'secret-123', 'is_active' => true]);
     $this->post($this->e."/parties/customer/{$c->id}/settle", ['amount' => '40', 'account' => 'cash', 'ref' => 'r-1'])->assertSessionHasNoErrors();
     $this->post($this->e."/parties/customer/{$c->id}/settle", ['amount' => '90', 'account' => 'cash', 'ref' => 'r-1'])->assertSessionHasErrors();
 });
 
 it('QA-BUG-013 double-submitting the manual journal form (post_now) does not create two posted entries', function () {
-    $this->actingAs($this->owner, 'tenant');
+    $this->actingAs($this->owner, 'admin');
     $html = $this->get($this->e.'/journals/create')->assertOk()->getContent();
     preg_match('/name="(ref|idempotency_key|_idem[a-z_]*)" value="([^"]+)"/', $html, $tok);
     $payload = ['entry_date' => now()->toDateString(), 'description' => 'double', 'type' => 'manual', 'post_now' => 1,

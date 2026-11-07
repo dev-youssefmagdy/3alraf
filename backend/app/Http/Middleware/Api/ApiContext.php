@@ -2,8 +2,6 @@
 
 namespace App\Http\Middleware\Api;
 
-use App\Http\Middleware\ResolveTenant;
-use App\Repositories\Contracts\TenantRepositoryInterface;
 use App\Services\Affiliates\AffiliateTracker;
 use App\Services\Growth\AttributionService;
 use Closure;
@@ -13,22 +11,16 @@ use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Per-request context of the mobile API: tenant (subdomain host OR `X-Tenant` slug header), locale (Accept-Language limited to the
- * tenant's locales), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie) and Growth first-touch (`X-Attribution`).
+ * Per-request context of the mobile API: locale (Accept-Language limited to the site locales; a legacy shop-selection header from old app
+ * builds is ignored), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie) and Growth first-touch (`X-Attribution`).
  */
 class ApiContext
 {
-    public function __construct(private TenantRepositoryInterface $tenants, private ResolveTenant $resolver) {}
-
     public function handle(Request $request, Closure $next): Response
     {
         Auth::forgetGuards(); // never carry a user over from a previous request (long-lived workers, tests)
-        $slug = $request->route('tenant') ?? $request->header('X-Tenant') ?? $this->resolver->slugFromHost($request->getHost());
-        $tenant = $slug ? $this->tenants->findBySlug(strtolower((string) $slug)) : null;
-        abort_if(! $tenant, 404, __('store.api.tenant_not_found'));
-        $this->resolver->activate($tenant, $request);
-
-        $locale = $this->locale($request, $tenant->locales, $tenant->default_locale);
+        $default = (string) setting('default_locale', config('app.locale'));
+        $locale = $this->locale($request, (array) setting('locales', [$default]), $default);
         app()->setLocale($locale);
         URL::defaults(['locale' => $locale]);
 

@@ -13,6 +13,6 @@ class OrderReturnUpdated
 
     public function __construct(public OrderReturn $return, public string $kind, public ?int $actorId = null)
     {
-        $this->actorId ??= auth('tenant')->id();
+        $this->actorId ??= auth('admin')->id();
     }
 }

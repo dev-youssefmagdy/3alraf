@@ -1,5 +1,7 @@
 # ERP Module – External QA / Accounting Audit (branch `ERP-MODULE`)
 
+> **Historical (pre single-store).** Written while the project was multi-tenant (central domain + per-country tenant subdomains, `tenant_id`, central/tenant panels). Since the 2026-11 single-store conversion there is one shop on `APP_URL`, one admin panel (`/admin`, guard `admin`) and settings via `setting()`; see `docs/REQUIREMENTS.md` §2 and `/var/www/3alraf/REMOVE_MULTI_TENANCY_PLAN.md`. Kept unchanged as history.
+
 Auditor role: senior ERP/accounting reviewer + business analyst. Scope: `app/Services/Erp/**`, `app/Listeners/Erp`, `app/Events/Erp`, ERP controllers/views/migrations/tests, and the business services they hook into (orders, payments, returns/refunds, purchases, stock, expenses, carrier settlement, POS, affiliates). Ground truth for order math: `docs/CALCULATIONS.md`.
 No application code was changed by the audit. Proof tests: `tests/Feature/QaProbeErpAccountingTest.php` (9 probes; all 9 failed = all 9 findings confirmed, run 2026-11-04). **Pass 1 fixes: see the Status section; the probes are now passing `REG ERP-00x` regression tests.**
 

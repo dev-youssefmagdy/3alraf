@@ -15,9 +15,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\StockLevel;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Orders\BundleResolver;
 use App\Services\Orders\CartService;
 use App\Services\Orders\OrderPlacementService;
@@ -34,12 +32,10 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Storage::fake('media');
     Storage::fake('private');
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/ar';
-    $this->api = 'http://egy.3alraf.test/api/v1';
+    codUpfront(false);
+    $this->t = '/admin';
+    $this->s = '/ar';
+    $this->api = '/api/v1';
     $this->branch = Branch::first();
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -47,7 +43,7 @@ beforeEach(function () {
     $this->ledger = app(StockLedger::class);
     $this->mk = function (string $slug, $price, int $stock = 20, $cost = 6) {
         $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]);
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         $this->ledger->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, $stock, (string) $cost);
 
         return $p;
@@ -80,7 +76,7 @@ function stockOf(Product $p): StockLevel
 
 function ownerActs(): void
 {
-    test()->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    test()->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
 }
 
 // ------------------------------------------------------------------ money allocation
@@ -213,8 +209,7 @@ it('limits a bundle to min floor(available / qty_per) and refuses overselling at
     ($this->place)(($this->bl)($b, 1));                                    // 5 b left -> 1 bundle fits
     expect(stockOf($this->b)->reserved)->toBe(3);
 
-    $this->tenant->update(['settings' => array_merge($this->tenant->settings ?? [], ['allow_backorder' => true])]);
-    app()->instance('currentTenant', $this->tenant->refresh());
+    settings(['allow_backorder' => true]);
     expect($r->available($b))->toBeNull();
 });
 
@@ -249,32 +244,26 @@ it('refuses inactive, not-started, ended and component-unavailable bundles every
     $this->get("{$this->s}")->assertOk();
     // a component listing switched off hides the bundle and blocks an existing cart line / order
     $cart->addBundle($live->id, 1);
-    TenantProduct::where('product_id', $this->b->id)->update(['is_active' => false]);
+    Product::whereKey($this->b->id)->update(['is_active' => false]);
     $this->get("{$this->s}/bundle/{$live->slug}")->assertNotFound();
     expect($cart->view()[0]['available'])->toBeFalse()->and(fn () => ($this->place)(($this->bl)($live, 1)))->toThrow(ValidationException::class);
     expect(app(BundleResolver::class)->available($live))->toBe(0);
 });
 
-// ------------------------------------------------------------------ tenant isolation
+// ------------------------------------------------------------------ unknown bundles / unlisted components
 
-it('keeps bundles and their components inside the tenant', function () {
-    $sa = Tenant::create(['slug' => 'sa', 'name' => 'KSA', 'country' => 'SA', 'currency_code' => 'SAR', 'currency_symbol' => 'SAR', 'currency_rate' => 1, 'default_locale' => 'ar', 'locales' => ['ar', 'en'], 'timezone' => 'Asia/Riyadh', 'is_active' => true]);
-    $foreign = Bundle::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'name' => ['ar' => 'x'], 'slug' => 'foreign', 'price' => 10, 'is_active' => true]);
-    BundleItem::withoutGlobalScopes()->create(['tenant_id' => $sa->id, 'bundle_id' => $foreign->id, 'product_id' => $this->a->id, 'product_variant_id' => 0, 'quantity' => 1]);
-    expect(Bundle::find($foreign->id))->toBeNull();
-    expect(fn () => app(CartService::class)->addBundle($foreign->id, 1))->toThrow(ValidationException::class);
-    expect(fn () => ($this->place)(($this->bl)($foreign, 1)))->toThrow(ValidationException::class);
+it('404s unknown bundles everywhere and refuses an unlisted component in the admin form', function () {
+    expect(fn () => app(CartService::class)->addBundle(999999, 1))->toThrow(ValidationException::class);
     $this->get("{$this->s}/bundle/foreign")->assertNotFound();
     $this->getJson("{$this->api}/bundles/foreign")->assertNotFound();
 
-    // a component that the tenant has NOT listed cannot be added by the admin form
+    // a catalog product that is NOT listed (no price) cannot be added by the admin form
     $other = Product::create(['type' => 'simple', 'name' => ['ar' => 'غريب'], 'slug' => 'unlisted', 'sku' => 'UNL']);
     ownerActs();
     $this->postJson("{$this->t}/bundles/validate", ['name' => ['ar' => 'ب'], 'price' => '10', 'items' => [['item' => $other->id.'-0', 'quantity' => 1]]])
         ->assertStatus(422)->assertJsonValidationErrors(['items.0.item']);
-    $this->get("{$this->t}/bundles/{$foreign->id}/edit")->assertNotFound();
-    $this->deleteJson("{$this->t}/bundles/{$foreign->id}")->assertNotFound();
-    expect(Bundle::withoutGlobalScopes()->find($foreign->id))->not->toBeNull();
+    $this->get("{$this->t}/bundles/999999/edit")->assertNotFound();
+    $this->deleteJson("{$this->t}/bundles/999999")->assertNotFound();
 });
 
 // ------------------------------------------------------------------ cart
@@ -358,19 +347,19 @@ it('lets an authorised admin create, edit and delete bundles and rejects bad inp
 });
 
 it('enforces bundles.* permissions', function () {
-    $role = Role::create(['name' => 't'.$this->tenant->id.':viewer', 'guard_name' => 'tenant']);
+    $role = Role::create(['name' => 'viewer', 'guard_name' => 'admin']);
     $role->givePermissionTo('bundles.view');
-    $u = TenantAdmin::withoutGlobalScopes()->create(['tenant_id' => $this->tenant->id, 'name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
+    $u = Admin::query()->create(['name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
     $u->assignRole($role);
     $b = ($this->bundle)('50.00', [[$this->a, 1]]);
-    $this->actingAs($u, 'tenant');
+    $this->actingAs($u, 'admin');
     $this->get("{$this->t}/bundles")->assertOk();
     $this->get("{$this->t}/bundles/create")->assertForbidden();
     $this->postJson("{$this->t}/bundles", ['name' => ['ar' => 'x'], 'price' => 5, 'items' => [['item' => $this->a->id.'-0', 'quantity' => 1]]])->assertForbidden();
     $this->putJson("{$this->t}/bundles/{$b->id}", [])->assertForbidden();
     $this->deleteJson("{$this->t}/bundles/{$b->id}")->assertForbidden();
     expect(Bundle::count())->toBe(1);
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("{$this->t}/bundles/create")->assertOk();
 });
 
@@ -385,5 +374,5 @@ it('keeps soft-deleted bundles referenced by order lines and purges unreferenced
     Bundle::withTrashed()->whereIn('id', [$kept->id, $free->id])->update(['deleted_at' => now()->subDays(90)]);
     $res = app(SoftDeletePurger::class)->run(60, false, ['bundle']);
     expect($res['bundle']['purged'])->toBe(1)->and($res['bundle']['retained'])->toBe(1);
-    expect(Bundle::withoutGlobalScopes()->withTrashed()->find($kept->id))->not->toBeNull()->and(Bundle::withoutGlobalScopes()->withTrashed()->find($free->id))->toBeNull();
+    expect(Bundle::query()->withTrashed()->find($kept->id))->not->toBeNull()->and(Bundle::query()->withTrashed()->find($free->id))->toBeNull();
 });

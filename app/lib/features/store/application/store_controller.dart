@@ -1,145 +1,148 @@
+import 'package:flutter/widgets.dart' show TextDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/locale_provider.dart';
 import '../../../core/network/network_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../auth/application/auth_controller.dart';
-import '../data/tenant_models.dart';
-import '../data/tenant_repository.dart';
+import '../data/store_models.dart';
+import '../data/store_repository.dart';
 
-final tenantRepositoryProvider = Provider<TenantRepository>(
-  (ref) => TenantRepository(ref.watch(dioProvider)),
+final storeRepositoryProvider = Provider<StoreRepository>(
+  (ref) => StoreRepository(ref.watch(dioProvider)),
 );
 
-/// The tenant (store/country) the app is currently bound to.
-class TenantState {
-  const TenantState({this.slug, this.store, this.tenant});
+/// The shop: basics from `GET /app-config` (`info`) and the full profile
+/// from `GET /store` (`profile`). Both are cached for offline starts.
+class StoreState {
+  const StoreState({this.info, this.profile});
 
-  final String? slug;
-  final StoreInfo? store;
+  final StoreInfo? info;
+  final StoreProfile? profile;
 
-  /// Directory entry, when known (not available in offline startup).
-  final Tenant? tenant;
+  bool get isLoaded => info != null || profile != null;
 
-  bool get hasTenant => slug != null;
+  String get name {
+    final n = info?.name ?? '';
+    return n.isNotEmpty ? n : (profile?.name ?? '');
+  }
 
-  /// Locales the user may choose between (tenant locales that the app has
-  /// translations for).
+  String? get defaultLocale => info?.defaultLocale ?? profile?.defaultLocale;
+
+  /// Store locales the app has translations for.
   List<String> get availableLocales {
-    final codes = store?.localeCodes ?? tenant?.locales ?? const <String>[];
+    final codes = info?.localeCodes ?? profile?.localeCodes ?? const [];
     return codes.where(LocaleNotifier.supported.contains).toList();
+  }
+
+  /// Currency symbol (falls back to the code).
+  String get currencyLabel {
+    final s = info?.currencySymbol ?? '';
+    if (s.isNotEmpty) return s;
+    return profile?.currencySymbol ?? '';
+  }
+
+  /// RTL flag of [code] as declared by the store (`null` = unknown).
+  bool? isRtl(String code) {
+    final fromInfo = info?.isRtl(code);
+    if (fromInfo != null) return fromInfo;
+    for (final l in profile?.locales ?? const <StoreLocale>[]) {
+      if (l.code == code) return l.rtl;
+    }
+    return null;
   }
 }
 
-final tenantControllerProvider =
-    NotifierProvider<TenantController, TenantState>(TenantController.new);
-
-/// Convenience selectors.
-final tenantSlugProvider = Provider<String?>(
-  (ref) => ref.watch(tenantControllerProvider).slug,
+final storeControllerProvider = NotifierProvider<StoreController, StoreState>(
+  StoreController.new,
 );
+
+/// Shop basics (`app-config.store`): name, currency, locales, base URL.
 final storeInfoProvider = Provider<StoreInfo?>(
-  (ref) => ref.watch(tenantControllerProvider).store,
+  (ref) => ref.watch(storeControllerProvider).info,
 );
 
-class TenantController extends Notifier<TenantState> {
+/// Full shop profile (`GET /store`): contact, features, app links.
+final storeProfileProvider = Provider<StoreProfile?>(
+  (ref) => ref.watch(storeControllerProvider).profile,
+);
+
+/// Text direction of the current locale as declared by the store; `null`
+/// lets Flutter derive it from the locale.
+final storeTextDirectionProvider = Provider<TextDirection?>((ref) {
+  final code = ref.watch(localeProvider).languageCode;
+  final rtl = ref.watch(storeControllerProvider).isRtl(code);
+  if (rtl == null) return null;
+  return rtl ? TextDirection.rtl : TextDirection.ltr;
+});
+
+class StoreController extends Notifier<StoreState> {
   @override
-  TenantState build() => const TenantState();
+  StoreState build() => const StoreState();
 
-  /// Binds the app to [slug]: API context, locale, cached store profile.
-  /// Does not touch the network.
-  Future<void> activate(String slug, {Tenant? tenant}) async {
+  /// Last cached `app-config.store`.
+  StoreInfo? cachedInfo() =>
+      StoreInfo.tryDecode(ref.read(preferencesProvider).storeInfoCache);
+
+  /// Applies the shop basics: caches a fresh [info] (or falls back to the
+  /// cached one when `null`, e.g. offline), loads the cached profile, picks
+  /// the locale and restores the customer session.
+  Future<void> apply(StoreInfo? info) async {
     final prefs = ref.read(preferencesProvider);
-    ref.read(apiContextProvider).tenantSlug = slug;
-    final raw = prefs.storeCache(slug);
-    StoreInfo? store;
-    if (raw != null) {
-      try {
-        store = StoreInfo.decode(raw);
-      } on Object {
-        store = null;
-      }
-    }
-    if (prefs.tenantSlug != slug) await prefs.setTenantSlug(slug);
-    state = TenantState(slug: slug, store: store, tenant: tenant);
-    _applyLocale(
-      slug,
-      state.availableLocales,
-      tenant?.defaultLocale ?? store?.defaultLocale,
+    if (info != null) await prefs.setStoreInfoCache(info.encode());
+    final profile =
+        state.profile ?? StoreProfile.tryDecode(prefs.storeProfileCache);
+    state = StoreState(
+      info: info ?? cachedInfo() ?? state.info,
+      profile: profile,
     );
+    _applyLocale();
     await ref.read(authControllerProvider.notifier).restore();
-  }
-
-  /// First selection (no previous tenant to leave).
-  Future<void> select(Tenant tenant) => activate(tenant.slug, tenant: tenant);
-
-  /// Full switch procedure (PLAN 3.1 step 3): revoke the old token, wipe the
-  /// old tenant's secrets/caches, bind the new one.
-  Future<void> switchTo(Tenant tenant) async {
-    final old = state.slug;
-    if (old == tenant.slug) return;
-    if (old != null) {
-      await _leave(old);
-    }
-    await activate(tenant.slug, tenant: tenant);
-    // Fresh profile for the new store (best effort).
-    await refreshStore();
-  }
-
-  /// Forgets the saved tenant (it is no longer active).
-  Future<void> clear() async {
-    final old = state.slug ?? ref.read(preferencesProvider).tenantSlug;
-    if (old != null) await _leave(old, remote: false);
-    await ref.read(preferencesProvider).setTenantSlug(null);
-    ref.read(apiContextProvider).tenantSlug = null;
-    state = const TenantState();
-  }
-
-  Future<void> _leave(String slug, {bool remote = true}) async {
-    final storage = ref.read(sessionStorageProvider);
-    if (remote && ref.read(apiContextProvider).tenantSlug == slug) {
-      final token = await storage.authToken(slug);
-      if (token != null) {
-        await ref.read(tenantRepositoryProvider).logoutRemote();
-      }
-    }
-    await storage.clearTenant(slug);
-    await ref.read(preferencesProvider).removeStoreCache(slug);
-    ref.read(authControllerProvider.notifier).reset();
   }
 
   /// Refreshes `GET /store`; failures are swallowed (cached data stays).
   /// Returns whether the store could be reached.
-  Future<bool> refreshStore() async {
-    final slug = state.slug;
-    if (slug == null) return false;
+  Future<bool> refreshProfile() async {
     try {
-      final store = await ref.read(tenantRepositoryProvider).fetchStore();
-      if (ref.read(apiContextProvider).tenantSlug != slug) return false;
-      await ref.read(preferencesProvider).setStoreCache(slug, store.encode());
-      state = TenantState(slug: slug, store: store, tenant: state.tenant);
+      final profile = await ref.read(storeRepositoryProvider).fetchProfile();
+      await ref
+          .read(preferencesProvider)
+          .setStoreProfileCache(profile.encode());
+      state = StoreState(info: state.info, profile: profile);
       final current = ref.read(localeProvider).languageCode;
-      if (!state.availableLocales.contains(current)) {
-        _applyLocale(slug, state.availableLocales, store.defaultLocale);
-      }
+      final allowed = state.availableLocales;
+      if (allowed.isNotEmpty && !allowed.contains(current)) _applyLocale();
       return true;
     } on Object {
       return false;
     }
   }
 
-  /// User-chosen language, persisted per tenant.
+  /// Whether the user still has to pick a language (never chose one and the
+  /// store offers more than one).
+  bool get needsLanguageChoice =>
+      ref.read(preferencesProvider).locale == null &&
+      state.availableLocales.length > 1;
+
+  /// User-chosen language, persisted.
   Future<void> chooseLocale(String code) async {
-    final slug = state.slug;
-    if (slug == null || !state.availableLocales.contains(code)) return;
+    final allowed = state.availableLocales;
+    if (allowed.isNotEmpty && !allowed.contains(code)) return;
+    if (!LocaleNotifier.supported.contains(code)) return;
     ref.read(localeProvider.notifier).setLocale(code);
-    await ref.read(preferencesProvider).setLocale(slug, code);
+    await ref.read(preferencesProvider).setLocale(code);
   }
 
-  void _applyLocale(String slug, List<String> allowed, String? fallback) {
-    final saved = ref.read(preferencesProvider).locale(slug);
+  /// Saved choice if the store still offers it, else the store default,
+  /// else the first store locale, else Arabic.
+  void _applyLocale() {
+    final allowed = state.availableLocales;
+    final saved = ref.read(preferencesProvider).locale;
+    final fallback = state.defaultLocale;
     String pick;
-    if (saved != null && allowed.contains(saved)) {
+    if (saved != null &&
+        LocaleNotifier.supported.contains(saved) &&
+        (allowed.isEmpty || allowed.contains(saved))) {
       pick = saved;
     } else if (fallback != null &&
         (allowed.isEmpty || allowed.contains(fallback))) {

@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderStatusHistory extends Model
 {
-    use BelongsToTenant;
 
     public const UPDATED_AT = null;
 
@@ -21,6 +19,6 @@ class OrderStatusHistory extends Model
 
     public function user()
     {
-        return $this->belongsTo(TenantAdmin::class, 'user_id')->withoutGlobalScopes();
+        return $this->belongsTo(Admin::class, 'user_id');
     }
 }

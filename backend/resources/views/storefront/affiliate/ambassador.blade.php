@@ -16,7 +16,7 @@
             <x-card :title="$a('my_links')">
                 @foreach ($links as $l)<p class="text-sm"><code>{{ $l->short }}</code> | {{ $l->channel }} | {{ $a('clicks') }}: {{ $l->clicks }}</p>@endforeach
                 <form data-ajax-form action="{{ route('storefront.affiliate.ambassador.links', ['locale' => app()->getLocale()]) }}" method="POST" class="mt-3 flex flex-wrap items-end gap-2" novalidate>@csrf
-                    <select name="product_id" class="{{ $inp }}">@foreach ($products as $tp)<option value="{{ $tp->product_id }}">{{ $tp->product?->name }}</option>@endforeach</select>
+                    <select name="product_id" class="{{ $inp }}">@foreach ($products as $p)<option value="{{ $p->id }}">{{ $p->name }}</option>@endforeach</select>
                     <select name="channel" class="{{ $inp }}">@foreach ($channels as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach</select>
                     <button type="submit" class="btn btn-primary">{{ $a('new_link') }}</button></form>
             </x-card>

@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class StockLevel extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['branch_id', 'product_id', 'product_variant_id', 'on_hand', 'reserved', 'avg_cost'];
 

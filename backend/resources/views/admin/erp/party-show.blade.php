@@ -1,8 +1,8 @@
-<x-layouts.admin guard="tenant" :title="$party->name">
-    @include('tenant.erp._flash')
-    @php $n = fn ($v) => number_format((float) $v, 2); $can = auth('tenant')->user()->can('erp.journals.create'); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; $tok = fn () => \Illuminate\Support\Str::uuid(); $r = fn ($k) => route('tenant.erp.parties.'.$k, [$type, $party->id]); @endphp
+<x-layouts.admin :title="$party->name">
+    @include('admin.erp._flash')
+    @php $n = fn ($v) => number_format((float) $v, 2); $can = auth('admin')->user()->can('erp.journals.create'); $in = 'mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm'; $tok = fn () => \Illuminate\Support\Str::uuid(); $r = fn ($k) => route('admin.erp.parties.'.$k, [$type, $party->id]); @endphp
     <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
-        <a class="text-brand-600" href="{{ route('tenant.erp.parties.index', $type) }}">&larr; {{ __('erp_ext.party.back') }}</a>
+        <a class="text-brand-600" href="{{ route('admin.erp.parties.index', $type) }}">&larr; {{ __('erp_ext.party.back') }}</a>
         <span>{{ __('erp_ext.party.outstanding_'.$type) }}: <b class="tabular-nums">{{ $n($pos['outstanding']) }}</b></span>
         <span>{{ __('erp_ext.party.advance') }}: <b class="tabular-nums">{{ $n($pos['advance']) }}</b></span>
         <span>{{ __('erp_ext.party.net') }}: <b class="tabular-nums">{{ $n($pos['balance']) }}</b></span>
@@ -40,7 +40,7 @@
         <form method="GET" class="mb-3 flex flex-wrap items-end gap-3 text-sm"><label>{{ __('erp_ext.f.from') }}<input type="date" name="from" value="{{ $from }}" class="mt-1 block rounded border border-slate-300 px-2 py-1.5"></label><label>{{ __('erp_ext.f.to') }}<input type="date" name="to" value="{{ $to }}" class="mt-1 block rounded border border-slate-300 px-2 py-1.5"></label><x-button type="submit" variant="secondary">{{ __('erp_ext.f.filter') }}</x-button></form>
         <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b text-slate-500"><th class="py-2 text-start">{{ __('erp_ext.f.date') }}</th><th class="text-start">{{ __('erp_ext.f.number') }}</th><th class="text-start">{{ __('erp_ext.f.note') }}</th><th class="text-end">{{ __('erp_ext.f.debit') }}</th><th class="text-end">{{ __('erp_ext.f.credit') }}</th><th class="text-end">{{ __('erp_ext.f.balance') }}</th></tr></thead><tbody>
         <tr class="bg-slate-50"><td colspan="5" class="py-1.5">{{ __('erp_ext.party.opening') }}</td><td class="text-end tabular-nums">{{ $n($st['opening']) }}</td></tr>
-        @foreach ($st['rows'] as $x)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $x['line']->entry->entry_date->format('Y-m-d') }}</td><td>@include('tenant.erp._jlink', ['id' => $x['line']->entry_id, 'no' => $x['line']->entry->number])</td><td>{{ $x['line']->memo ?: $x['line']->entry->description }}</td><td class="text-end tabular-nums">{{ (float) $x['line']->debit ? $n($x['line']->debit) : '' }}</td><td class="text-end tabular-nums">{{ (float) $x['line']->credit ? $n($x['line']->credit) : '' }}</td><td class="text-end tabular-nums">{{ $n($x['balance']) }}</td></tr>@endforeach
+        @foreach ($st['rows'] as $x)<tr class="border-b border-slate-100"><td class="py-1.5">{{ $x['line']->entry->entry_date->format('Y-m-d') }}</td><td>@include('admin.erp._jlink', ['id' => $x['line']->entry_id, 'no' => $x['line']->entry->number])</td><td>{{ $x['line']->memo ?: $x['line']->entry->description }}</td><td class="text-end tabular-nums">{{ (float) $x['line']->debit ? $n($x['line']->debit) : '' }}</td><td class="text-end tabular-nums">{{ (float) $x['line']->credit ? $n($x['line']->credit) : '' }}</td><td class="text-end tabular-nums">{{ $n($x['balance']) }}</td></tr>@endforeach
         <tr class="font-semibold"><td colspan="5" class="py-2">{{ __('erp_ext.party.closing') }}</td><td class="text-end tabular-nums">{{ $n($st['closing']) }}</td></tr></tbody></table></div>
     </x-card>
 </x-layouts.admin>

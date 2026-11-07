@@ -14,7 +14,7 @@ Dio buildDio({
   required AppConfig config,
   required ApiContext context,
   required SessionStorage storage,
-  void Function(String tenant)? onUnauthorized,
+  void Function()? onUnauthorized,
   HttpClientAdapter? adapter,
 }) {
   final dio = Dio(
@@ -28,10 +28,9 @@ Dio buildDio({
   );
   if (adapter != null) dio.httpClientAdapter = adapter;
   dio.interceptors.addAll([
-    TenantInterceptor(context),
     LocaleInterceptor(context),
-    CartTokenInterceptor(context, storage),
-    AuthInterceptor(context, storage, onUnauthorized: onUnauthorized),
+    CartTokenInterceptor(storage),
+    AuthInterceptor(storage, onUnauthorized: onUnauthorized),
     RetryInterceptor(dio),
     EnvelopeInterceptor(),
   ]);

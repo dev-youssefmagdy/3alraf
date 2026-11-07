@@ -19,8 +19,8 @@ class IntegrationClientRepository extends BaseRepository implements IntegrationC
         return IntegrationClient::withoutGlobalScopes()->where('token_prefix', $prefix)->exists();
     }
 
-    public function webhookTargets(int $tenantId): \Illuminate\Support\Collection
+    public function webhookTargets(): \Illuminate\Support\Collection
     {
-        return IntegrationClient::withoutGlobalScopes()->where('tenant_id', $tenantId)->whereNull('revoked_at')->whereNotNull('webhook_url')->get();
+        return IntegrationClient::query()->whereNull('revoked_at')->whereNotNull('webhook_url')->get();
     }
 }

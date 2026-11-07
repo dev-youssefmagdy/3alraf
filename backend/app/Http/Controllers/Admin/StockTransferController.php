@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StockTransferDataTable;
 use App\DTOs\StockTransferData;
 use App\Enums\TransferStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenant\StockTransferRequest;
+use App\Http\Requests\Admin\StockTransferRequest;
 use App\Models\Branch;
 use App\Models\StockTransfer;
 use App\Services\Stock\StockItemCatalog;
@@ -33,7 +33,7 @@ class StockTransferController extends Controller implements HasMiddleware
 
     public function index()
     {
-        return view('tenant.crud.index', ['table' => new StockTransferDataTable, 'title' => __('ops.stock_transfers'), 'route' => 'tenant.stock-transfers', 'perm' => 'stock_transfers']);
+        return view('admin.crud.index', ['table' => new StockTransferDataTable, 'title' => __('ops.stock_transfers'), 'route' => 'admin.stock-transfers', 'perm' => 'stock_transfers']);
     }
 
     public function datatable(): JsonResponse
@@ -56,21 +56,21 @@ class StockTransferController extends Controller implements HasMiddleware
 
     public function show(int $id)
     {
-        return view('tenant.stock-transfers.show', ['t' => $this->service->find($id)]);
+        return view('admin.stock-transfers.show', ['t' => $this->service->find($id)]);
     }
 
     public function store(StockTransferRequest $request): JsonResponse
     {
         $t = $this->service->create(StockTransferData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('tenant.stock-transfers.show', $t->id));
+        return $this->ok(__('admin.saved'), route('admin.stock-transfers.show', $t->id));
     }
 
     public function update(StockTransferRequest $request, int $id): JsonResponse
     {
         $t = $this->service->update($this->service->find($id), StockTransferData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('tenant.stock-transfers.show', $t->id));
+        return $this->ok(__('admin.saved'), route('admin.stock-transfers.show', $t->id));
     }
 
     public function validateForm(StockTransferRequest $request, ?int $id = null): JsonResponse
@@ -82,21 +82,21 @@ class StockTransferController extends Controller implements HasMiddleware
     {
         $this->service->send($this->service->find($id));
 
-        return $this->ok(__('ops.transfer_sent'), route('tenant.stock-transfers.show', $id));
+        return $this->ok(__('ops.transfer_sent'), route('admin.stock-transfers.show', $id));
     }
 
     public function receive(int $id): JsonResponse
     {
         $this->service->receive($this->service->find($id));
 
-        return $this->ok(__('ops.transfer_received'), route('tenant.stock-transfers.show', $id));
+        return $this->ok(__('ops.transfer_received'), route('admin.stock-transfers.show', $id));
     }
 
     public function cancel(int $id): JsonResponse
     {
         $this->service->cancel($this->service->find($id));
 
-        return $this->ok(__('admin.saved'), route('tenant.stock-transfers.show', $id));
+        return $this->ok(__('admin.saved'), route('admin.stock-transfers.show', $id));
     }
 
     public function destroy(int $id): JsonResponse
@@ -110,7 +110,7 @@ class StockTransferController extends Controller implements HasMiddleware
     {
         $t->loadMissing('items');
 
-        return view('tenant.stock-transfers.form', [
+        return view('admin.stock-transfers.form', [
             't' => $t, 'editing' => $t->exists, 'items' => $this->catalog->options(),
             'branches' => Branch::where('is_active', true)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name])->all(),
         ]);

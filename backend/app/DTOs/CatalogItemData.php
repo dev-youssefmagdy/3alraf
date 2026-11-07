@@ -2,9 +2,10 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Tenant\TenantProductRequest;
+use App\Http\Requests\Admin\CatalogItemRequest;
 
-final readonly class TenantProductData
+/** Catalog page edit: selling fields of a product (+ per-variant overrides). */
+final readonly class CatalogItemData
 {
     /** @param array<int,array{id:int,price:?string,sale_price:?string,cost:?string,is_active:bool}> $variants */
     public function __construct(
@@ -16,7 +17,7 @@ final readonly class TenantProductData
         public ?int $minStockAlert = null,
     ) {}
 
-    public static function fromRequest(TenantProductRequest $r): self
+    public static function fromRequest(CatalogItemRequest $r): self
     {
         $v = $r->validated();
         $n = fn ($x) => ($x === null || $x === '') ? null : (string) $x;

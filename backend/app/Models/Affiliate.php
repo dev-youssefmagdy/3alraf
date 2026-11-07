@@ -3,14 +3,13 @@
 namespace App\Models;
 
 use App\Enums\AffiliateStatus;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
 
 class Affiliate extends Authenticatable
 {
-    use \App\Models\Concerns\HasStorefrontPhone, BelongsToTenant, HasApiTokens, \App\Models\Concerns\RevokesSessionsOnLockout;
+    use \App\Models\Concerns\HasStorefrontPhone, HasApiTokens, \App\Models\Concerns\RevokesSessionsOnLockout;
 
     protected $fillable = ['name', 'email', 'phone', 'phone_country_code', 'password', 'status', 'approved_at'];
 
@@ -32,10 +31,10 @@ class Affiliate extends Authenticatable
         $this->attributes['email'] = self::normalizeEmail($value);
     }
 
-    /** Validation rules for an affiliate e-mail: unique per tenant (the unique index is case-insensitive), optionally ignoring one row. */
+    /** Validation rules for an affiliate e-mail: unique (the unique index is case-insensitive), optionally ignoring one row. */
     public static function emailRules(?int $ignoreId = null): array
     {
-        return ['required', 'email', 'max:190', \Illuminate\Validation\Rule::unique('affiliates', 'email')->where('tenant_id', current_tenant()->id)->ignore($ignoreId)];
+        return ['required', 'email', 'max:190', \Illuminate\Validation\Rule::unique('affiliates', 'email')->ignore($ignoreId)];
     }
 
     protected function casts(): array

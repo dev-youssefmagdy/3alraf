@@ -19,8 +19,8 @@ class PhoneAudit extends Command
             $n = $q->count();
             $total += $n;
             $this->line("$table: $n without code");
-            foreach ($q->limit((int) $this->option('limit'))->get(['id', 'tenant_id', $col]) as $r) {
-                $this->line("  #{$r->id} tenant {$r->tenant_id}: ".substr((string) $r->{$col}, 0, 4).'***');
+            foreach ($q->limit((int) $this->option('limit'))->get(['id', $col]) as $r) {
+                $this->line("  #{$r->id}: ".substr((string) $r->{$col}, 0, 4).'***');
             }
         }
 

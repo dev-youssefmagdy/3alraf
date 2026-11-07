@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Staff notification for tenant admins. Stored in the DB and pushed over the admin's private channel; rendered (translated) at read time.
+ * Staff notification for admins. Stored in the DB and pushed over the admin's private channel; rendered (translated) at read time.
  * E-mail only for MAILABLE kinds, admins holding `orders.email_notifications`, never to the admin who caused the change.
  * kind: new_order|status_changed|proof_uploaded|payment_received|return_requested
  */
@@ -54,7 +54,7 @@ class OrderNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $d = $this->toArray($notifiable);
-        $url = tenant_url($this->order->tenant, 'admin/orders/'.$this->order->id);
+        $url = route('admin.orders.show', $this->order->id);
 
         return (new MailMessage)->subject(NotificationText::title($d))
             ->greeting(__('notifications.admin_mail.greeting', ['name' => $notifiable->name]))

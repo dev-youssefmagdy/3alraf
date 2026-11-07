@@ -9,5 +9,5 @@ class AmbassadorRewardsPaid
 {
     use Dispatchable;
 
-    public function __construct(public int $tenantId, public int $affiliateId, public string $amount, public string $ref, public string $paidFrom = 'cash') {}
+    public function __construct(public int $affiliateId, public string $amount, public string $ref, public string $paidFrom = 'cash') {}
 }

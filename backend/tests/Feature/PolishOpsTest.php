@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ProductVariant;
 use App\DTOs\Orders\CheckoutData;
 use App\Enums\OrderStatus as S;
 use App\Enums\StockMovementType as T;
@@ -15,10 +16,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\Tag;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
-use App\Models\TenantProductVariant;
+use App\Models\Admin;
 use App\Services\Lists\ProductListResolver;
 use App\Services\Orders\CarrierSettlementService;
 use App\Services\Orders\OrderPlacementService;
@@ -33,11 +31,9 @@ use Spatie\Activitylog\Models\Activity;
 beforeEach(function () {
     Cache::flush();
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);   // legacy tests: carrier collects the full total
-    $this->t = 'http://egy.3alraf.test/admin';
-    $this->s = 'http://egy.3alraf.test/en';
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);   // legacy tests: carrier collects the full total
+    $this->t = '/admin';
+    $this->s = '/en';
     $this->branch = Branch::first();
     $this->city = City::first();
     $this->company = ShippingCompany::first();
@@ -45,18 +41,18 @@ beforeEach(function () {
     $this->brand = Brand::create(['name' => ['ar' => 'سوني', 'en' => 'Sony'], 'slug' => 'sony', 'is_active' => true]);
     $this->mk = function (string $slug, $price, array $name = [], ?Brand $brand = null) {
         $p = Product::create(['type' => 'simple', 'name' => $name ?: ['ar' => "منتج $slug", 'en' => "Item $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'brand_id' => $brand?->id]);
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => 10, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'cost' => 10, 'is_active' => true]);
         app(StockLedger::class)->record($this->branch->id, $p->id, 0, T::PURCHASE_IN, 50, '10.00');
 
         return $p;
     };
 });
 
-it('manages tags centrally, assigns them to products and serves brand and tag pages with the tag filter', function () {
+it('manages tags, assigns them to products and serves brand and tag pages with the tag filter', function () {
     $a = ($this->mk)('zz-alpha', 100, [], $this->brand);
     $b = ($this->mk)('zz-beta', 200);
-    $this->actingAs(\App\Models\CentralAdmin::first(), 'central');
-    $c = 'http://3alraf.test/admin';
+    $this->actingAs(\App\Models\Admin::first(), 'admin');
+    $c = '/admin';
     $this->postJson("$c/tags/validate", [])->assertStatus(422)->assertJsonValidationErrors(['name.ar']);
     $this->post("$c/tags", ['name' => ['ar' => 'جديد', 'en' => 'Fresh'], 'slug' => 'fresh', 'is_active' => 1], ['Accept' => 'application/json'])->assertOk();
     $tag = Tag::first();
@@ -65,7 +61,7 @@ it('manages tags centrally, assigns them to products and serves brand and tag pa
     $this->get("$c/tags")->assertOk();
 
     $a->tags()->sync([$tag->id]);
-    $this->actingAs(\App\Models\CentralAdmin::first(), 'central')->get("$c/products/{$a->id}/edit")->assertOk()->assertSee('tag_ids[]', false);
+    $this->actingAs(\App\Models\Admin::first(), 'admin')->get("$c/products/{$a->id}/edit")->assertOk()->assertSee('tag_ids[]', false);
 
     $this->get("{$this->s}/tag/fresh")->assertOk()->assertSee('Item zz-alpha')->assertDontSee('Item zz-beta');
     $this->get("{$this->s}/brand/sony")->assertOk()->assertSee('Item zz-alpha')->assertDontSee('Item zz-beta');
@@ -111,27 +107,27 @@ it('shows the lowest variant price with a "from" marker on cards', function () {
     $v1 = $attr->values()->create(['value' => ['ar' => 'S', 'en' => 'S'], 'sort_order' => 1]);
     $v2 = $attr->values()->create(['value' => ['ar' => 'L', 'en' => 'L'], 'sort_order' => 2]);
     $p = Product::create(['type' => 'variable', 'name' => ['ar' => 'قميص', 'en' => 'Shirt'], 'slug' => 'shirt', 'sku' => 'SHIRT']);
-    $tp = TenantProduct::create(['product_id' => $p->id, 'price' => 100, 'cost' => 10, 'is_active' => true]);
+    $tp = listProduct($p, ['price' => 100, 'cost' => 10, 'is_active' => true]);
     $var = [];
     foreach ([[$v1, 'S'], [$v2, 'L']] as $i => [$v, $l]) {
         $var[$l] = $p->variants()->create(['combination_hash' => (string) $v->id, 'sku' => "SH-$l", 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'is_active' => true]);
         $var[$l]->values()->sync([$v->id]);
     }
-    TenantProductVariant::create(['tenant_product_id' => $tp->id, 'product_variant_id' => $var['S']->id, 'price' => 80, 'cost' => 10, 'is_active' => true]);
-    TenantProductVariant::create(['tenant_product_id' => $tp->id, 'product_variant_id' => $var['L']->id, 'price' => 120, 'cost' => 10, 'is_active' => true]);
+    $var['S']->update(['price' => 80, 'cost' => 10]);   // variant listing prices live on product_variants
+    $var['L']->update(['price' => 120, 'cost' => 10]);
 
     $d = app(\App\Services\Storefront\CardPresenter::class)->decorate(collect([$tp->fresh()]))->first()->display;
     expect($d['price'])->toBe('80.00')->and($d['from'])->toBeTrue();
     $this->get("{$this->s}/search?q=shirt")->assertOk()->assertSee('From')->assertSee('80.00');
     // an inactive cheap variant is ignored
-    TenantProductVariant::where('product_variant_id', $var['S']->id)->update(['is_active' => false]);
+    ProductVariant::whereKey($var['S']->id)->update(['is_active' => false]);
     $d = app(\App\Services\Storefront\CardPresenter::class)->decorate(collect([$tp->fresh()]))->first()->display;
     expect($d['price'])->toBe('120.00')->and($d['from'])->toBeFalse();
 });
 
 it('renders the footer from ACTIVE payment methods only, with app badges from settings, and caches it', function () {
     PaymentMethod::where('type', 'wallet')->update(['is_active' => false]);
-    $this->tenant->update(['settings' => ['app_links' => ['ios' => 'https://apps.apple.com/app/x', 'android' => null]]]);
+    settings(['app_links' => ['ios' => 'https://apps.apple.com/app/x', 'android' => null]]);
     Cache::flush();
     $html = $this->get("{$this->s}")->assertOk()->getContent();
     expect($html)->toContain('https://apps.apple.com/app/x')->and($html)->toContain('Google Play')->and($html)->toContain('Cash on delivery');
@@ -162,13 +158,13 @@ it('builds category rails with a constant number of queries', function () {
     expect($home['categoryRails'])->toHaveCount(4)->and($count)->toBeLessThan(40);
 });
 
-it('caches the sold / review rankings per tenant for five minutes and caps them at 200', function () {
+it('caches the sold / review rankings for five minutes and caps them at 200', function () {
     $p = ($this->mk)('top', 100);
     $order = app(OrderPlacementService::class)->place(new CheckoutData(name: 'A', phone: '010', cityId: $this->city->id, address: 'x', shippingCompanyId: $this->company->id, paymentMethodId: $this->cod->id), [['product_id' => $p->id, 'variant_id' => 0, 'qty' => 1]])['order'];
     $order->forceFill(['status' => S::DELIVERED])->save();
     $r = app(ProductListResolver::class);
     expect($r->soldRanking())->toBe([$p->id]);
-    expect(Cache::has('rank.sold.'.$this->tenant->id))->toBeTrue()->and(ProductListResolver::RANK_LIMIT)->toBe(200)->and(ProductListResolver::RANK_TTL)->toBe(300);
+    expect(Cache::has('rank.sold'))->toBeTrue()->and(ProductListResolver::RANK_LIMIT)->toBe(200)->and(ProductListResolver::RANK_TTL)->toBe(300);
     $order->forceFill(['status' => S::CANCELLED])->save();
     expect($r->soldRanking())->toBe([$p->id]);   // still cached
     Cache::flush();
@@ -181,33 +177,31 @@ it('exports the order invoice as a PDF for admins and for the public token', fun
     $res = $this->get("{$this->s}/order/{$order->public_token}/invoice.pdf")->assertOk();
     expect($res->headers->get('content-type'))->toContain('pdf')->and(substr($res->getContent() ?: $res->streamedContent(), 0, 4))->toBe('%PDF');
     $this->get("{$this->s}/order/not-a-token/invoice.pdf")->assertNotFound();
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("{$this->t}/orders/{$order->id}/invoice.pdf")->assertOk();
     // Arabic locale renders too (shaped text)
     app()->setLocale('ar');
     expect(strlen(app(\App\Services\Orders\InvoicePdf::class)->render($order)->output()))->toBeGreaterThan(1000);
 });
 
-it('writes an audit trail for orders, prices, roles and shows it only to the owning tenant', function () {
+it('writes an audit trail for orders, prices, roles and lists it on the audit page', function () {
     $p = ($this->mk)('aud', 100);
-    $owner = TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first();
-    $this->actingAs($owner, 'tenant');
+    $owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->actingAs($owner, 'admin');
     $order = app(OrderPlacementService::class)->place(new CheckoutData(name: 'A', phone: '010', cityId: $this->city->id, address: 'x', shippingCompanyId: $this->company->id, paymentMethodId: $this->cod->id), [['product_id' => $p->id, 'variant_id' => 0, 'qty' => 1]])['order'];
     app(OrderStatusService::class)->change($order->fresh(), S::CONFIRMED);
     $log = Activity::where('subject_type', Order::class)->where('subject_id', $order->id)->where('event', 'updated')->get()->first(fn ($a) => isset($a->properties['attributes']['status']));
-    expect($log)->not->toBeNull()->and($log->tenant_id)->toBe($this->tenant->id)->and($log->causer_id)->toBe($owner->id)->and($log->properties['attributes']['status'])->toBe('confirmed');
+    expect($log)->not->toBeNull()->and($log->causer_id)->toBe($owner->id)->and($log->properties['attributes']['status'])->toBe('confirmed');
 
-    TenantProduct::where('product_id', $p->id)->first()->update(['price' => 120]);
-    $priceLog = Activity::where('log_name', 'tenantproduct')->where('event', 'updated')->latest('id')->first();
+    Product::whereKey($p->id)->first()->update(['price' => 120]);
+    $priceLog = Activity::where('log_name', 'product')->where('event', 'updated')->latest('id')->first();
     expect($priceLog->properties['old']['price'])->toBe('100.00')->and($priceLog->properties['attributes']['price'])->toBe('120.00');
 
     $this->postJson("{$this->t}/roles", ['name' => 'Packers', 'permissions' => ['orders.view']])->assertOk();
-    expect(Activity::where('log_name', 'access')->where('event', 'role.saved')->where('tenant_id', $this->tenant->id)->count())->toBe(1);
+    expect(Activity::where('log_name', 'access')->where('event', 'role.saved')->count())->toBe(1);
 
     $this->get("{$this->t}/audit")->assertOk();
-    $this->getJson("{$this->t}/audit/datatable?draw=1&start=0&length=50")->assertOk()->assertJson(fn ($j) => $j->where('recordsTotal', Activity::where('tenant_id', $this->tenant->id)->count())->etc());
-    Activity::create(['log_name' => 'x', 'description' => 'other tenant', 'tenant_id' => 9999]);
-    $this->getJson("{$this->t}/audit/datatable?draw=1&start=0&length=50")->assertOk()->assertJson(fn ($j) => $j->where('recordsTotal', Activity::where('tenant_id', $this->tenant->id)->count())->etc());
+    $this->getJson("{$this->t}/audit/datatable?draw=1&start=0&length=50")->assertOk()->assertJson(fn ($j) => $j->where('recordsTotal', Activity::count())->etc());
 });
 
 it('soft deletes orders, customers and discount codes and hides them from reports', function () {
@@ -221,7 +215,7 @@ it('soft deletes orders, customers and discount codes and hides them from report
     expect(DiscountCode::where('code', 'X1')->count())->toBe(0)->and(DiscountCode::withTrashed()->find($code->id)->code)->toBe('X1')->and(Customer::where('email', 'c@x.test')->count())->toBe(0);
     expect(Order::find($order->id)->customer->email)->toBe('c@x.test')->and(Order::find($order->id)->discountCode->code)->toBe('X1'); // history keeps its links
 
-    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), false, [$this->tenant->id]);
+    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString());
     $before = app(\App\Repositories\Contracts\ReportRepositoryInterface::class)->sales($f);
     expect(array_sum(array_column($before, 'orders')))->toBe(1);
     $order->delete();
@@ -232,17 +226,16 @@ it('soft deletes orders, customers and discount codes and hides them from report
 
 it('marks delivered COD orders of a carrier as settled and moves them out of the outstanding balance', function () {
     $p = ($this->mk)('cod', 100);
-    $this->tenant->update(['settings' => ['cod_collect_shipping_upfront' => false]]);
-    app()->instance('currentTenant', $this->tenant->fresh());
+    settings(['cod_collect_shipping_upfront' => false]);
     $order = app(OrderPlacementService::class)->place(new CheckoutData(name: 'A', phone: '010', cityId: $this->city->id, address: 'x', shippingCompanyId: $this->company->id, paymentMethodId: $this->cod->id), [['product_id' => $p->id, 'variant_id' => 0, 'qty' => 1]])['order'];
     expect((float) $order->cod_amount)->toBeGreaterThan(0);
     $order->forceFill(['status' => S::DELIVERED, 'delivered_at' => now()])->save();
-    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString(), false, [$this->tenant->id]);
+    $f = new \App\DTOs\Reports\ReportFilter(now()->subDay()->toDateString(), now()->toDateString());
     $repo = app(\App\Repositories\Contracts\ReportRepositoryInterface::class);
     $row = $repo->codSettlement($f)[0];
     expect((float) $row['owed'])->toBeGreaterThan(0)->and((float) $row['settled'])->toBe(0.0)->and((int) $row['company_id'])->toBe($this->company->id);
 
-    $this->actingAs(TenantAdmin::withoutGlobalScopes()->where('email', 'owner@egy.test')->first(), 'tenant');
+    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->post("{$this->t}/reports/cod-settlement/settle", ['shipping_company_id' => $this->company->id, 'from' => now()->subDay()->toDateString(), 'to' => now()->toDateString()])->assertRedirect();
     expect($order->fresh()->carrier_settled_at)->not->toBeNull();
     $row2 = $repo->codSettlement($f)[0];
@@ -251,24 +244,9 @@ it('marks delivered COD orders of a carrier as settled and moves them out of the
     $this->get("{$this->t}/reports/cod-settlement")->assertOk();
 });
 
-it('creates a store from the command with owner, COD method, default branch and affiliate tiers', function () {
-    $this->artisan('tenants:create', ['slug' => 'newshop', 'name' => 'New Shop', '--owner-phone' => '01055566677', '--country' => 'EG', '--timezone' => 'Africa/Cairo'])
-        ->expectsOutputToContain('Tenant newshop created')->assertSuccessful();
-    $t = Tenant::where('slug', 'newshop')->first();
-    expect($t->default_locale)->toBe('ar')->and($t->is_active)->toBeTrue();
-    $admin = TenantAdmin::withoutGlobalScopes()->where('tenant_id', $t->id)->first();
-    expect($admin->phone)->toBe('201055566677')->and($admin->is_super_admin)->toBeTrue()->and($admin->hasRole('tenant-owner'))->toBeTrue();
-    expect(PaymentMethod::withoutGlobalScopes()->where('tenant_id', $t->id)->where('type', 'cod')->count())->toBe(1)
-        ->and(Branch::withoutGlobalScopes()->where('tenant_id', $t->id)->where('is_default', true)->count())->toBe(1)
-        ->and(\App\Models\AffiliateTier::withoutGlobalScopes()->where('tenant_id', $t->id)->orderBy('min_sales')->pluck('percent')->map(fn ($x) => (int) $x)->all())->toBe([5, 7, 10]);
-    $this->artisan('tenants:create', ['slug' => 'newshop', 'name' => 'Dup', '--owner-email' => 'x@y.test'])->assertFailed();
-    $this->artisan('tenants:create', ['slug' => 'www', 'name' => 'Reserved', '--owner-email' => 'x@y.test'])->assertFailed();
-    $this->artisan('tenants:create', ['slug' => 'okslug', 'name' => 'No owner'])->assertFailed();
-});
-
-it('answers the central health endpoint and the framework /up probe', function () {
-    $this->getJson('http://3alraf.test/api/v1/health')->assertOk()->assertJsonPath('status', 'ok')->assertJsonPath('checks.database', 'ok');
-    $this->get('http://3alraf.test/up')->assertOk();
+it('answers the health endpoint and the framework /up probe', function () {
+    $this->getJson('/api/v1/health')->assertOk()->assertJsonPath('status', 'ok')->assertJsonPath('checks.database', 'ok');
+    $this->get('/up')->assertOk();
 });
 
 it('ships well-formed ops files', function () {
@@ -278,6 +256,6 @@ it('ships well-formed ops files', function () {
     $env = file_get_contents(base_path('.env.production.example'));
     expect($env)->toContain('SESSION_SECURE_COOKIE=true')->and($env)->not->toMatch('/^SESSION_DOMAIN=/m')->and($env)->toContain('QUEUE_CONNECTION=redis');
     $nginx = file_get_contents(base_path('deploy/nginx/app.conf'));
-    expect($nginx)->toContain('server_name domain.com *.domain.com;');
+    expect($nginx)->toContain('server_name domain.com;')->toContain('server_name *.domain.com;'); // site vhost + legacy-host block (LegacyHostRedirect)
     expect(substr_count($nginx, '{'))->toBe(substr_count($nginx, '}'));
 });

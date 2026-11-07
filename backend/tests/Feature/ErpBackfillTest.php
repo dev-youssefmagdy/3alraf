@@ -22,9 +22,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
 use App\Models\Supplier;
-use App\Models\Tenant;
-use App\Models\TenantAdmin;
-use App\Models\TenantProduct;
+use App\Models\Admin;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Accounting\PeriodService;
 use App\Services\Erp\Backfill\BackfillService;
@@ -41,23 +39,21 @@ use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
-    $this->tenant = Tenant::where('slug', 'egy')->first();
-    codUpfront($this->tenant, false);
-    app()->instance('currentTenant', $this->tenant);
+    codUpfront(false);
     $this->branch = Branch::first();
     $mk = fn (string $slug, string $price, string $cost) => tap(Product::create(['type' => 'simple', 'name' => ['ar' => 'م', 'en' => $slug], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique()]), function ($p) use ($price, $cost) {
-        TenantProduct::create(['product_id' => $p->id, 'price' => $price, 'cost' => $cost, 'is_active' => true]);
+        listProduct($p, ['price' => $price, 'cost' => $cost, 'is_active' => true]);
         app(StockLedger::class)->record(Branch::first()->id, $p->id, 0, T::PURCHASE_IN, 100, $cost);
     });
     $this->product = $mk('pa', '100', '60');
-    $this->actingAs(TenantAdmin::first(), 'tenant');
-    // these scenarios model a tenant whose history was recognised at admin confirmation (legacy policy, pinned for pre-existing ledgers by
+    $this->actingAs(Admin::first(), 'admin');
+    // these scenarios model a store whose history was recognised at admin confirmation (legacy policy, pinned for pre-existing ledgers by
     // migration 2026_12_17_100001); the default "shipped" policy is covered by ErpPostingTest / QaProbeErpAccountingTest (REG ERP-007/011)
     app(\App\Services\Erp\Equity\ErpSettings::class)->set('revenue_recognition', 'confirmed');
     $this->from = now()->subMonths(6)->startOfMonth()->toDateString();
     $this->before = now()->subMonths(8)->startOfMonth()->addDays(9)->toDateString();   // clearly before --from
     $this->after = fn (int $d) => now()->subMonths(4)->startOfMonth()->addDays($d)->toDateString();
-    // a tenant that pre-dates the ERP: auto-posting is OFF, so everything below is "history" without journals
+    // a store that pre-dates the ERP: auto-posting is OFF, so everything below is "history" without journals
     app(ErpSettings::class)->set('auto_posting_enabled', false);
 
     $this->place = fn (int $qty = 2) => app(OrderPlacementService::class)->place(new CheckoutData(
@@ -106,7 +102,7 @@ beforeEach(function () {
         DB::table('stock_adjustments')->where('id', $a->id)->update(['created_at' => ($this->after)(7).' 10:00:00']);
         expect(JournalEntry::count())->toBe(0);   // nothing was recorded: the flag is off
     };
-    $this->backfill = fn (array $extra = []) => $this->artisan('erp:backfill', ['--tenant' => 'egy', '--from' => $this->from] + $extra);
+    $this->backfill = fn (array $extra = []) => $this->artisan('erp:backfill', ['--from' => $this->from] + $extra);
 });
 
 it('backfills history idempotently at the documents\' own dates and the ledger reconciles', function () {
@@ -142,8 +138,8 @@ it('backfills history idempotently at the documents\' own dates and the ledger r
     expect($bal('inventory'))->toBe(round($stock - (float) $this->o4->refresh()->cogs, 2));
     expect(app(\App\Services\Erp\Reports\LedgerReports::class)->trialBalance()['balanced'])->toBeTrue();
     // reconciliation: clean
-    $this->artisan('erp:reconcile', ['--tenant' => 'egy'])->assertExitCode(0);
-    $this->artisan('erp:reconcile', ['--tenant' => 'egy', '--json' => true])->assertExitCode(0);
+    $this->artisan('erp:reconcile', [])->assertExitCode(0);
+    $this->artisan('erp:reconcile', ['--json' => true])->assertExitCode(0);
 });
 
 it('reconcile exits non-zero when a mismatch is injected', function () {
@@ -151,7 +147,7 @@ it('reconcile exits non-zero when a mismatch is injected', function () {
     ($this->backfill)()->assertExitCode(0);
     app(JournalService::class)->post(['entry_date' => now()->toDateString(), 'type' => 'manual', 'description' => 'oops', 'idempotency_key' => 'x:1'], [
         ['account' => 'cogs', 'debit' => '50'], ['account' => 'inventory', 'credit' => '50']]);
-    $this->artisan('erp:reconcile', ['--tenant' => 'egy'])->assertExitCode(1);
+    $this->artisan('erp:reconcile', [])->assertExitCode(1);
 });
 
 it('never modifies historic business rows', function () {
@@ -166,11 +162,11 @@ it('never modifies historic business rows', function () {
 
 it('dry-run computes counts and writes nothing', function () {
     ($this->scenario)();
-    $this->artisan('erp:backfill', ['--tenant' => 'egy', '--from' => $this->from, '--dry-run' => true])->expectsOutputToContain('would create')->assertExitCode(0);
+    $this->artisan('erp:backfill', ['--from' => $this->from, '--dry-run' => true])->expectsOutputToContain('would create')->assertExitCode(0);
     expect(JournalEntry::count())->toBe(0)->and(BackfillRun::count())->toBe(0)->and(Account::count())->toBe(0)->and(Period::count())->toBe(0)
         ->and(app(ErpSettings::class)->get('opening_date'))->toBeNull()->and(app(ErpSettings::class)->bool('auto_posting_enabled'))->toBeFalse()
         ->and(DB::table('erp_opening_orders')->count())->toBe(0);
-    $res = app(BackfillService::class)->run($this->tenant, $this->from, true);
+    $res = app(BackfillService::class)->run($this->from, true);
     expect($res['counts']['orders']['created'])->toBe(3)->and($res['counts']['expenses']['created'])->toBe(1)->and($res['counts']['purchases']['created'])->toBe(1)
         ->and($res['opening']['payable'])->toBe('-'.number_format((float) $this->poOld->total_cost, 2, '.', ''));
     expect(JournalEntry::count())->toBe(0);
@@ -190,7 +186,7 @@ it('refuses to backfill into closed periods with a clear message and writes noth
 it('isolates per-document failures and records them', function () {
     ($this->scenario)();
     // an expense mapped to an unusable account fails; everything else goes through
-    $acc = Account::count() ? null : app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed($this->tenant);
+    $acc = Account::count() ? null : app(\App\Services\Erp\Accounting\CoaTemplate::class)->seed();
     DB::table('expenses')->where('id', $this->e2->id)->update(['paid_from' => 'no_such_role']);
     ($this->backfill)()->assertExitCode(1);
     expect(AuditLog::where('action', 'backfill.failed')->where('subject_type', 'expenses')->where('subject_id', $this->e2->id)->exists())->toBeTrue()
@@ -225,7 +221,7 @@ it('detects source documents without journals and posts them idempotently', func
     $n2 = JournalEntry::count();
     $svc->missing(true);
     expect(JournalEntry::count())->toBe($n2);
-    $this->artisan('erp:reconcile', ['--tenant' => 'egy'])->assertExitCode(0);
+    $this->artisan('erp:reconcile', [])->assertExitCode(0);
 });
 
 it('an order confirmed before the opening date only posts its post-cutover movement', function () {
@@ -236,18 +232,15 @@ it('an order confirmed before the opening date only posts its post-cutover movem
     ($this->to)($this->o2->refresh(), S::DELIVERED);       // in-flight at the cutover, delivered later (live listener)
     expect((float) Account::where('role_key', 'sales_revenue')->value('current_balance'))->toBe($rev)   // no second revenue
         ->and(JournalEntry::count())->toBe($n + 1);
-    $this->artisan('erp:reconcile', ['--tenant' => 'egy'])->assertExitCode(0);
+    $this->artisan('erp:reconcile', [])->assertExitCode(0);
 });
 
-it('migration page lists runs, reconciles, detects and posts missing journals, toggles auto-posting, only for erp.settings.manage and only for this tenant', function () {
+it('migration page lists runs, reconciles, detects and posts missing journals, toggles auto-posting, only for erp.settings.manage', function () {
     ($this->scenario)();
     ($this->backfill)()->assertExitCode(0);
-    $other = Tenant::create(['slug' => 'oth', 'name' => 'Other Store', 'country' => 'XX', 'currency_code' => 'EGP', 'currency_symbol' => 'EGP', 'currency_rate' => 1,
-        'default_locale' => 'en', 'locales' => ['en'], 'timezone' => 'UTC', 'is_active' => true]);
-    DB::table('erp_backfill_runs')->insert(['tenant_id' => $other->id, 'from_date' => '2020-02-02', 'status' => 'failed', 'triggered_by' => 'cli:other', 'created_at' => now(), 'updated_at' => now()]);
-    $base = 'http://egy.3alraf.test/admin/erp';
-    $this->get("$base")->assertOk()->assertSee(route('tenant.erp.migration.index'), false);
-    $this->get("$base/migration")->assertOk()->assertSee('data-runs', false)->assertSee($this->from)->assertDontSee('2020-02-02')->assertDontSee('cli:other')->assertSee('data-benign', false);
+    $base = '/admin/erp';
+    $this->get("$base")->assertOk()->assertSee(route('admin.erp.migration.index'), false);
+    $this->get("$base/migration")->assertOk()->assertSee('data-runs', false)->assertSee($this->from)->assertSee('cli:')->assertSee('data-benign', false);
     $this->post("$base/migration/reconcile")->assertOk()->assertSee('data-recon', false)->assertSee('data-mismatches="0"', false);
 
     app(ErpSettings::class)->set('auto_posting_enabled', false);
@@ -263,24 +256,13 @@ it('migration page lists runs, reconciles, detects and posts missing journals, t
     expect(app(ErpSettings::class)->bool('auto_posting_enabled'))->toBeFalse()->and(AuditLog::where('action', 'auto_posting.disabled')->exists())->toBeTrue();
 
     // permission gate
-    $u = TenantAdmin::first();
+    $u = Admin::query()->where('email', 'owner@egy.test')->first();
     $u->roles->each->revokePermissionTo('erp.settings.manage');
     app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     $u->unsetRelation('permissions')->unsetRelation('roles');
-    $this->actingAs($u->fresh(), 'tenant');
+    $this->actingAs($u->fresh(), 'admin');
     $this->get("$base/migration")->assertForbidden();
     $this->post("$base/migration/post-missing")->assertForbidden();
     $this->put("$base/migration/auto-posting", ['enabled' => 1])->assertForbidden();
 });
 
-it('central migration page shows every tenant run and needs erp_central.audit', function () {
-    ($this->scenario)();
-    ($this->backfill)()->assertExitCode(0);
-    $central = 'http://3alraf.test/admin/erp';
-    $plain = \App\Models\CentralAdmin::create(['name' => 'Plain', 'email' => 'plain@3alraf.test', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($plain, 'central');
-    $this->get("$central/migration")->assertForbidden();
-    $this->actingAs(\App\Models\CentralAdmin::where('email', 'admin@3alraf.test')->first(), 'central');
-    $this->get($central)->assertOk()->assertSee('data-card="migration"', false);
-    $this->get("$central/migration")->assertOk()->assertSee('data-runs', false)->assertSee('Egypt Store')->assertSee('cli:');
-});

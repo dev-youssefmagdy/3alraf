@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Enums\CommissionStatus;
-use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class AffiliateCommission extends Model
 {
-    use BelongsToTenant;
 
     protected $fillable = ['affiliate_id', 'order_id', 'payout_id', 'base', 'percent', 'amount', 'status', 'approved_at'];
 

@@ -9,13 +9,13 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../content/application/content_providers.dart';
-import '../../tenant/application/startup_controller.dart';
-import '../../tenant/application/tenant_controller.dart';
+import '../../startup/application/startup_controller.dart';
+import '../../store/application/store_controller.dart';
 
 /// Opens the store listing of this app (App Store / Play) from
 /// `GET /store` `app_links`; tells the user when no link is configured.
 Future<void> rateApp(BuildContext context, WidgetRef ref) async {
-  final links = ref.read(storeInfoProvider)?.appLinks ?? const {};
+  final links = ref.read(storeProfileProvider)?.appLinks ?? const {};
   final key = defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
   final url = links[key] ?? links.values.firstOrNull;
   if (url == null) {
@@ -80,7 +80,7 @@ class AboutPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final store = ref.watch(storeInfoProvider);
+    final storeName = ref.watch(storeControllerProvider).name;
     final version = ref.watch(appVersionProvider).value;
     final pages = ref.watch(pagesProvider).asData?.value ?? const [];
     return Scaffold(
@@ -98,7 +98,7 @@ class AboutPage extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           Center(
             child: Text(
-              store?.name ?? l10n.appName,
+              storeName.isEmpty ? l10n.appName : storeName,
               style: context.text.titleLarge,
             ),
           ),

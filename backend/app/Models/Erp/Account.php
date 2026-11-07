@@ -3,13 +3,12 @@
 namespace App\Models\Erp;
 
 use App\Models\Branch;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 
 class Account extends Model
 {
-    use BelongsToTenant, HasTranslations;
+    use HasTranslations;
 
     protected $table = 'erp_accounts';
 

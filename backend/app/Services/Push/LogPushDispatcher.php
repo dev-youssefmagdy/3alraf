@@ -10,6 +10,6 @@ class LogPushDispatcher implements PushDispatcher
 {
     public function send(Device $device, string $title, string $body, array $data = []): void
     {
-        Log::info('push.noop', ['device_id' => $device->id, 'tenant_id' => $device->tenant_id, 'platform' => $device->platform, 'title' => $title]);
+        Log::info('push.noop', ['device_id' => $device->id, 'platform' => $device->platform, 'title' => $title]);
     }
 }

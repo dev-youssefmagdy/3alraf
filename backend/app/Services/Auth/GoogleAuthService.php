@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
  */
 class GoogleAuthService
 {
-    public const STATE_TTL = 300;   // seconds a state is valid (tenant -> Google -> central)
-    public const HANDOFF_TTL = 60;  // seconds a central -> tenant handoff is valid
+    public const STATE_TTL = 300;   // seconds a state is valid (shop -> Google -> callback)
+    public const HANDOFF_TTL = 60;  // seconds a callback -> complete handoff is valid
 
     public function __construct(private SessionRevoker $sessions) {}
 
@@ -26,10 +26,7 @@ class GoogleAuthService
 
     public function callbackUrl(): string
     {
-        $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'http';
-        $port = parse_url((string) config('app.url'), PHP_URL_PORT);
-
-        return $scheme.'://'.central_domain().($port ? ':'.$port : '').'/auth/google/callback';
+        return rtrim((string) config('app.url'), '/').'/auth/google/callback';
     }
 
     // ---- signed tokens ----------------------------------------------------------------------------------------------------------
@@ -101,7 +98,7 @@ class GoogleAuthService
     // ---- accounts ---------------------------------------------------------------------------------------------------------------
 
     /**
-     * Resolves (or creates) the customer of the CURRENT tenant for a verified Google identity.
+     * Resolves (or creates) the customer for a verified Google identity.
      *
      * @param  array{sub:string,email:?string,email_verified:bool,name:?string,avatar:?string}  $g
      * @return array{0:?Customer,1:?string} [customer, error key under store.google.*]

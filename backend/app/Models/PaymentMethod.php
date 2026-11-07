@@ -6,14 +6,13 @@ use App\Enums\FeeBearer;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentProvider;
 use App\Models\Concerns\Audited;
-use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PaymentMethod extends Model
 {
-    use Audited, BelongsToTenant, HasTranslations, SoftDeletes;
+    use Audited, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'instructions'];
 
@@ -24,7 +23,7 @@ class PaymentMethod extends Model
 
     protected static function booted(): void
     {
-        // the default COD method of a tenant can be deactivated but never deleted
+        // the default COD method can be deactivated but never deleted
         static::deleting(function (PaymentMethod $m) {
             if ($m->type === PaymentMethodType::COD) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['record' => __('ops.cod_cannot_delete')]);
@@ -42,11 +41,11 @@ class PaymentMethod extends Model
         ];
     }
 
-    /** Every tenant has a COD method from day one (deactivatable, not deletable). */
-    public static function ensureDefaultCod(int $tenantId): self
+    /** The store has a COD method from day one (deactivatable, not deletable). */
+    public static function ensureDefaultCod(): self
     {
         return static::withoutGlobalScopes()->withTrashed()->firstOrCreate(
-            ['tenant_id' => $tenantId, 'type' => PaymentMethodType::COD->value],
+            ['type' => PaymentMethodType::COD->value],
             ['provider' => PaymentProvider::COD->value, 'name' => ['ar' => 'الدفع عند الاستلام', 'en' => 'Cash on delivery'], 'fee_percent' => 0, 'fee_fixed' => 0,
                 'fee_bearer' => FeeBearer::CUSTOMER->value, 'is_active' => true, 'sort_order' => 1],
         );

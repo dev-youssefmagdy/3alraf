@@ -113,67 +113,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startupErrorTitle => 'Could not start the app';
 
   @override
-  String get selectCountryTitle => 'Choose your country';
+  String get chooseLanguageTitle => 'Choose your language';
 
   @override
-  String get selectCountrySubtitle => 'Pick the store you want to shop from.';
-
-  @override
-  String get searchCountry => 'Search a country or store';
-
-  @override
-  String get noStoresFound => 'No matching stores';
-
-  @override
-  String get noStoresAvailable => 'No stores are available right now.';
+  String get chooseLanguageSubtitle =>
+      'You can change it later from the side menu.';
 
   @override
   String get continueAction => 'Continue';
-
-  @override
-  String confirmCountryTitle(String store) {
-    return 'Shop from $store?';
-  }
-
-  @override
-  String get confirmCountryMessage =>
-      'You can change the country later from the side menu.';
-
-  @override
-  String get countryInactiveNotice =>
-      'Your previous store is no longer available. Please choose another one.';
-
-  @override
-  String get currentStore => 'Current';
-
-  @override
-  String storeCurrency(String currency) {
-    return 'Currency: $currency';
-  }
-
-  @override
-  String storeLanguages(String languages) {
-    return 'Languages: $languages';
-  }
-
-  @override
-  String get switchCountry => 'Switch country';
-
-  @override
-  String get switchCountryWarnTitle => 'Switch store?';
-
-  @override
-  String switchCountryWarnBody(String store) {
-    return 'Your cart and wishlist belong to the current store. Switching to $store signs you out and clears the cart on this device.';
-  }
-
-  @override
-  String get switchConfirm => 'Switch';
-
-  @override
-  String switchedTo(String store) {
-    return 'Now shopping from $store';
-  }
 
   @override
   String get offlineBanner => 'You are offline. Showing saved data.';
@@ -234,11 +181,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String appVersion(String version) {
     return 'Version $version';
-  }
-
-  @override
-  String currentStoreLabel(String store) {
-    return 'Current store: $store';
   }
 
   @override

@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Tenant\AiProductEditRequest;
+use App\Http\Requests\Admin\AiProductEditRequest;
 
 final readonly class ProductEditData
 {

@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Ai;
 
-use App\Http\Requests\Central\Ai\AiProviderRequest;
+use App\Http\Requests\Admin\Ai\AiProviderRequest;
 
 final readonly class AiProviderData
 {

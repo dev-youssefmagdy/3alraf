@@ -19,21 +19,17 @@ abstract class Poster
 {
     public function __construct(protected JournalService $journals, protected CoaTemplate $coa) {}
 
-    /** Roles added after the first chart template (audit fixes): topped up lazily for tenants seeded earlier. */
+    /** Roles added after the first chart template (audit fixes): topped up lazily for charts seeded earlier. */
     public const LATE_ROLES = ['goods_in_delivery', 'packaging_supplies', 'branch_transfer'];
 
-    /** Make sure the current tenant owns a chart of accounts (lazy seed + top-up of late roles). */
+    /** Make sure a chart of accounts exists (lazy seed + top-up of late roles). */
     protected function ensureChart(): void
     {
-        $tenant = current_tenant();
-        if (! $tenant) {
-            return;
-        }
         if (! Account::query()->where('role_key', 'receivable')->exists()) {
-            $this->coa->seed($tenant);
+            $this->coa->seed();
             app(AccountResolver::class)->flush();
         } elseif (Account::query()->whereIn('role_key', self::LATE_ROLES)->count() < count(self::LATE_ROLES)) {
-            $this->coa->ensureRoles(self::LATE_ROLES, $tenant);
+            $this->coa->ensureRoles(self::LATE_ROLES);
         }
     }
 
@@ -90,7 +86,7 @@ abstract class Poster
 
         return $this->journals->post([
             'entry_date' => $date, 'type' => 'auto', 'description' => $description, 'source_type' => $sourceType, 'source_id' => $sourceId,
-            'idempotency_key' => $key, 'branch_id' => $branchId, 'created_by' => auth('tenant')->id(),
+            'idempotency_key' => $key, 'branch_id' => $branchId, 'created_by' => auth('admin')->id(),
         ], $lines);
     }
 
@@ -219,7 +215,7 @@ abstract class Poster
                 }
             });
         foreach ($q->orderByDesc('id')->get() as $e) {
-            $this->journals->reverse($e, auth('tenant')->id(), $this->today(), $reason);
+            $this->journals->reverse($e, auth('admin')->id(), $this->today(), $reason);
             $n++;
         }
 

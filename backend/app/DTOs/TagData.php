@@ -2,7 +2,7 @@
 
 namespace App\DTOs;
 
-use App\Http\Requests\Central\TagRequest;
+use App\Http\Requests\Admin\TagRequest;
 
 final readonly class TagData
 {

@@ -4,12 +4,11 @@ namespace App\Services\Ai\Tools;
 
 use App\Models\Product;
 use App\Models\StockLevel;
-use App\Models\TenantProduct;
 
-/** Shared product shaping for the product tools (tenant-scoped TenantProduct overlay over the central catalog). */
+/** Shared product shaping for the product tools (listed products: those with a store price). */
 trait ProductSupport
 {
-    /** @return array<int,array{on_hand:int,reserved:int}> product_id => totals (all branches of the current tenant) */
+    /** @return array<int,array{on_hand:int,reserved:int}> product_id => totals (all branches) */
     protected function stockByProduct(array $productIds): array
     {
         $rows = StockLevel::query()->whereIn('product_id', $productIds)->selectRaw('product_id, SUM(on_hand) as oh, SUM(reserved) as rs')->groupBy('product_id')->get();
@@ -17,15 +16,13 @@ trait ProductSupport
         return $rows->mapWithKeys(fn ($r) => [$r->product_id => ['on_hand' => (int) $r->oh, 'reserved' => (int) $r->rs]])->all();
     }
 
-    protected function productRow(TenantProduct $tp, array $stock, ?string $currency): array
+    protected function productRow(Product $p, array $stock, ?string $currency): array
     {
-        /** @var Product $p */
-        $p = $tp->product;
-        $s = $stock[$tp->product_id] ?? ['on_hand' => 0, 'reserved' => 0];
+        $s = $stock[$p->id] ?? ['on_hand' => 0, 'reserved' => 0];
 
         return [
-            'id' => $tp->product_id, 'name' => $this->data($p->getTranslation('name')), 'sku' => $p->sku, 'type' => $p->type?->value,
-            'price' => $tp->price, 'sale_price' => $tp->sale_price, 'currency' => $currency, 'active' => (bool) $tp->is_active && (bool) $p->is_active,
+            'id' => $p->id, 'name' => $this->data($p->getTranslation('name')), 'sku' => $p->sku, 'type' => $p->type?->value,
+            'price' => $p->price, 'sale_price' => $p->sale_price, 'currency' => $currency, 'active' => (bool) $p->is_active,
             'available' => $s['on_hand'] - $s['reserved'],
         ];
     }
