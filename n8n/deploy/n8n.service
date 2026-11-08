@@ -1,0 +1,20 @@
+# systemd --user unit for local n8n (installed by n8n/install-user-service.sh into ~/.config/systemd/user/n8n.service).
+# @N8N_DIR@ is replaced by the install script. Production uses a system unit with a dedicated user: see README.md.
+[Unit]
+Description=n8n (3alraf gift-finder workflows) on 127.0.0.1:5678
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@N8N_DIR@
+ExecStart=@N8N_DIR@/start.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillSignal=SIGTERM
+# the unit inherits nothing secret; start.sh loads @N8N_DIR@/.env
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Removes the fake rows the dev seeders (FoundationSeeder, OperationsSeeder, OrdersSeeder, GrowthSeeder, GiftCatalogSeeder opening stock) create, and only those:
+ * Removes the fake rows the dev seeders (FoundationSeeder, OperationsSeeder, OrdersSeeder, MarketingDemoSeeder, GiftCatalogSeeder opening stock) create, and only those:
  * every row is matched by the exact marker the seeder writes (demo e-mail + the still-unchanged demo password, "Demo Supplier", WELCOME10, the placeholder
  * page text, the seeded opening-stock note...). Anything a person changed or that real activity references (orders, purchases, later stock movements) is kept.
  * The store row, branches, cities, countries, the catalog and the default COD method are never touched.
@@ -25,7 +25,7 @@ class DemoDataPurger
     /** Demo admin logins (FoundationSeeder) - removed only while they still use the demo password. */
     public const DEMO_ADMIN_EMAILS = ['admin@3alraf.test', 'owner@egy.test', 'owner@sa.test'];
 
-    /** Demo customer / affiliate e-mails (OrdersSeeder / GrowthSeeder; `sa` = the former second demo store). */
+    /** Demo customer / affiliate e-mails (OrdersSeeder / MarketingDemoSeeder; `sa` = the former second demo store). */
     private const DEMO_CUSTOMERS = ['customer@egy.test', 'customer@sa.test'];
 
     private const DEMO_AFFILIATES = ['aff@egy.test', 'aff@sa.test'];

@@ -21,6 +21,9 @@ interface RetentionRepositoryInterface
     /** @return array<int,string> image paths (main + thumb) of the morph owner; rows are deleted. */
     public function detachImages(Model $owner): array;
 
+    /** @return array<int,string> file paths (video + poster) of the product's gallery videos; rows are deleted. */
+    public function detachVideos(\App\Models\Product $product): array;
+
     /** Delete rows of $table matching $where, returns affected count. */
     public function deleteWhere(string $table, array $where): int;
 

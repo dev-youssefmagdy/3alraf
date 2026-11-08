@@ -3,6 +3,8 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Image;
+use App\Models\Product;
+use App\Models\ProductVideo;
 use App\Models\QrCode;
 use App\Repositories\Contracts\RetentionRepositoryInterface;
 use Carbon\CarbonInterface;
@@ -32,6 +34,17 @@ class RetentionRepository implements RetentionRepositoryInterface
         }
 
         return false;
+    }
+
+    public function detachVideos(Product $product): array
+    {
+        $paths = [];
+        ProductVideo::query()->where('product_id', $product->id)->get()->each(function (ProductVideo $v) use (&$paths) {
+            array_push($paths, $v->path, $v->poster_path, $v->poster_thumb_path);
+            $v->delete();
+        });
+
+        return array_values(array_filter($paths));
     }
 
     public function detachImages(Model $owner): array

@@ -198,4 +198,12 @@ return [
     'proof_shared_warning' => 'This proof file was also attached to other order(s):',
     'proof_reused' => 'This proof file was already used for another order. Please upload your own transfer receipt.',
     'offline_throttled' => 'Too many payment-transfer orders from you. Please try again in about :minutes minute(s) or contact the store.',
+    // Return / cancellation reason codes (order_returns.reason_code, orders.cancel_reason_code) + customer cancellation (setting customer_cancel.enabled)
+    'reason_code' => 'Reason code',
+    'reason_codes' => ['color_differs' => 'Colour differs from expected', 'size_unclear' => 'Size unclear', 'damaged_packaging' => 'Damaged packaging', 'delivery_delay' => 'Delivery delay', 'description_inaccurate' => 'Description inaccurate', 'quality' => 'Quality issue', 'wrong_item' => 'Wrong item', 'changed_mind' => 'Changed mind', 'other' => 'Other'],
+    'customer_cancel' => [
+        'title' => 'Cancel this order', 'reason' => 'Why are you cancelling?', 'button' => 'Cancel order',
+        'not_allowed' => 'This order can no longer be cancelled.', 'reason_required' => 'Please choose a reason.', 'note' => 'Cancelled by the customer', 'done' => 'Your order was cancelled.',
+        'setting' => 'Let customers cancel their orders before shipping', 'setting_hint' => 'Shows a "Cancel order" button on the order page (and in the app) for pending, confirmed or processing orders, with a reason. Cancelling follows the normal cancel rules (stock is released).',
+    ],
 ];

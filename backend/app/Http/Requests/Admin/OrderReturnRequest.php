@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\ReturnReasonCode;
+use Illuminate\Validation\Rule;
+
 class OrderReturnRequest extends BaseRequest
 {
     public function rules(): array
@@ -11,7 +14,7 @@ class OrderReturnRequest extends BaseRequest
             'items.*.order_item_id' => ['required', 'integer'],
             'items.*.quantity' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'reason' => ['nullable', 'string', 'max:255'],
-            'reason_code' => ['nullable', 'in:'.implode(',', \App\Services\Growth\ReturnIntelService::CODES)],
+            'reason_code' => ['nullable', Rule::enum(ReturnReasonCode::class)],
             'restock' => ['nullable', 'boolean'],
             'refund_shipping' => ['nullable', 'boolean'],
             'branch_id' => ['nullable', $this->existsRule('branches', true)],

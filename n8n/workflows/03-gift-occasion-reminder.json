@@ -1,0 +1,257 @@
+{
+  "id": "3alrafOccasion03",
+  "name": "03 - Gift occasion reminder",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1b23ecc-1e67-52cd-8c39-b5f0bd00deac",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "3487c834-b374-58be-87d1-6aa1b1f85af0",
+      "name": "Every day 09:00 (Cairo)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { label: 'occasions', path: 'gift-finder/occasions', query: { days: 21 } } }];\n"
+      },
+      "id": "ba6f33fe-2b2c-5581-b85d-49fcf035cb3e",
+      "name": "Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafApiCallS91"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "307cf90d-9b69-5d89-9985-f06c27a0ab2f",
+      "name": "Call 3alraf API",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const SITE = String($env.THREEALRAF_SITE_URL || '').replace(/\\/+$/, '');\nconst OCC_AR = { birthday: 'عيد ميلاد', mothers_day: 'عيد الأم', valentine: 'عيد الحب', wedding: 'فرح', eid_fitr: 'عيد الفطر',\n  eid_adha: 'عيد الأضحى', ramadan: 'رمضان', graduation: 'تخرج', thanks: 'شكر', self: 'لنفسي' };\nconst num = (v) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });\nconst pct = (v) => (v === null || v === undefined) ? '—' : num(v) + '%';\nconst money = (v) => (v === null || v === undefined) ? '—' : num(v) + ' ج.م';\nconst requireOk = (results) => {\n  const bad = results.filter((r) => !r.ok);\n  if (bad.length) throw new Error('3alraf integration API failed: ' + bad.map((r) => `${r.path} -> ${r.status} ${r.error}`).join('; '));\n};\n\n// Reminder when a gift occasion is exactly 21, 7 or 2 days away (runs daily). Hijri dates (Umm al-Qura) are approximate.\nconst REMIND_AT = [21, 7, 2];\nconst res = $input.all().map((i) => i.json);\nrequireOk(res);\nconst d = res[0].data;\nconst all = d.occasions || [];\nconst due = all.filter((o) => REMIND_AT.includes(o.days_left));\nconst when = (n) => n === 1 ? 'غدًا' : n === 2 ? 'بعد يومين' : n <= 10 ? `بعد ${n} أيام` : `بعد ${n} يومًا`;\nconst label = (o) => (o.label && o.label.ar) || OCC_AR[o.key] || o.key;\nconst upcoming = all.map((o) => `${label(o)} ${o.date} (${when(o.days_left)})${o.approximate ? ' ~' : ''}`).join('، ') || '—';\nif (!due.length) {\n  return [{ json: { notify: false, summary: `لا تذكير اليوم (${d.today}). القادم خلال ${d.days} يومًا: ${upcoming}`, occasions: all } }];\n}\nconst lines = [];\ndue.forEach((o) => {\n  lines.push(`• ${label(o)}: ${when(o.days_left)} — ${o.date}`);\n  if (o.approximate) lines.push('  تاريخ هجري تقريبي (تقويم أم القرى) وقد يختلف يومًا أو يومين حسب رؤية الهلال.');\n});\nlines.push('', 'مقترح:',\n  `- راجع وسوم الهدايا لهذه المناسبة: ${SITE}/admin/gift-finder/tags`,\n  `- جهّز باقة أو عرضًا وبانر للمناسبة: ${SITE}/admin/bundles`,\n  `- إحصائيات مكتشف الهدايا: ${SITE}/admin/gift-finder`,\n  '', `كل المناسبات خلال ${d.days} يومًا: ${upcoming}`);\nconst soonest = Math.min(...due.map((o) => o.days_left));\nreturn [{ json: { notify: true, title: `تذكير مناسبة هدايا: ${due.map(label).join(' و')}`, text: lines.join('\\n'),\n  level: soonest <= 2 ? 'warning' : 'info', source: '03-gift-occasion-reminder', link: SITE + '/admin/gift-finder', occasions: due } }];\n"
+      },
+      "id": "811842ac-551f-52b3-bd1e-a9813ce3f88e",
+      "name": "Pick occasions 21 / 7 / 2 days away",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bdd7014a-7a42-57b1-ae52-7491b8d3e582",
+              "leftValue": "={{ $json.notify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b2b638e8-c2fc-56f0-9035-e847c584984a",
+      "name": "Reminder due?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafNotifyOw90"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "c0783915-d29d-5005-93dc-60ac5247e981",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "01f26e9d-d9f5-5bc1-8085-be1dd596d3f7",
+      "name": "Nothing today",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 09:00 (Cairo)": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request": {
+      "main": [
+        [
+          {
+            "node": "Call 3alraf API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 3alraf API": {
+      "main": [
+        [
+          {
+            "node": "Pick occasions 21 / 7 / 2 days away",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick occasions 21 / 7 / 2 days away": {
+      "main": [
+        [
+          {
+            "node": "Reminder due?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder due?": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "3alrafErrorHnd00"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "cf1af0c8-f937-58a0-b886-16c7969181ab"
+}

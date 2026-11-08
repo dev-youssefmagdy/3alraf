@@ -1,8 +1,9 @@
 <?php
 
-// Mobile API gap closure (docs/mobile-app/PLAN.md section 2): blog, tag/brand/category pages, stock requests, launch, ambassador, invoice/proof,
+// Mobile API gap closure (docs/mobile-app/PLAN.md section 2): blog, tag/brand/category pages, stock requests, invoice/proof (launch / ambassador were removed with the Growth system, P2),
 // store info, legacy store list, account deletion, devices, app-config.
 
+use App\Enums\StockMovementType as T;
 use App\Models\Affiliate;
 use App\Models\BlogPost;
 use App\Models\Branch;
@@ -15,12 +16,12 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\SmallBatchTest;
 use App\Models\StockRequest;
 use App\Models\Tag;
-use App\Enums\StockMovementType as T;
-use App\Services\Growth\GrowthAccess;
-use App\Services\Growth\GrowthFeatures;
+use App\Models\WishlistItem;
+use App\Services\BarcodeService;
+use App\Services\Push\LogPushDispatcher;
+use App\Services\Push\PushDispatcher;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Http\UploadedFile;
@@ -45,7 +46,7 @@ beforeEach(function () {
     $this->tag = Tag::create(['name' => ['ar' => 'جديد', 'en' => 'New'], 'slug' => 'new', 'is_active' => true]);
     $branch = Branch::first();
     $this->mk = function (string $slug, Brand $brand) use ($branch) {
-        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(\App\Services\BarcodeService::class)->generateUnique(), 'brand_id' => $brand->id]);
+        $p = Product::create(['type' => 'simple', 'name' => ['ar' => "منتج $slug", 'en' => "P $slug"], 'slug' => $slug, 'sku' => strtoupper($slug), 'barcode' => app(BarcodeService::class)->generateUnique(), 'brand_id' => $brand->id]);
         $p->categories()->attach($this->cat->id);
         listProduct($p, ['price' => 100, 'cost' => 60, 'is_active' => true]);
         app(StockLedger::class)->record($branch->id, $p->id, 0, T::PURCHASE_IN, 50, '60.00');
@@ -55,10 +56,6 @@ beforeEach(function () {
     $this->p1 = ($this->mk)('sonyx', $this->sony);
     $this->p2 = ($this->mk)('lgx', $this->lg);
     $this->p1->tags()->attach($this->tag->id);
-    $this->growthOn = function () {
-        app(GrowthAccess::class)->set(true);
-        app(GrowthFeatures::class)->enableAll();
-    };
 });
 
 function ok($r)
@@ -120,46 +117,16 @@ it('stores a back-in-stock request, de-duplicates it and validates', function ()
     expect(StockRequest::where('phone', '01000000112')->value('customer_id'))->toBe($this->customer->id);
 });
 
-// ------------------------------------------------------------------ small-batch launch
+// ------------------------------------------------------------------ removed Growth endpoints (P2)
 
-it('serves the small-batch launch page behind its feature flag and signs up', function () {
-    $mkTest = fn (array $o = []) => SmallBatchTest::create($o + ['code' => 'abcd1234', 'name' => 'Test', 'mode' => 'interest', 'description' => 'd', 'status' => 'running', 'preorder' => false]);
-    $mkTest();
-    $this->getJson("{$this->api}/launch/abcd1234")->assertStatus(403)->assertJsonPath('error', 'feature_disabled');
-    ($this->growthOn)();
-
-    ok($this->getJson("{$this->api}/launch/abcd1234"))->assertJsonPath('data.name', 'Test')->assertJsonPath('data.is_open', true)->assertJsonPath('data.preorder_terms', null);
-    $this->getJson("{$this->api}/launch/zzzzzzzz")->assertNotFound();
-    $mkTest(['code' => 'draft123', 'status' => 'draft']);
-    $this->getJson("{$this->api}/launch/draft123")->assertNotFound();
-
-    $this->postJson("{$this->api}/launch/abcd1234", [])->assertStatus(422)->assertJsonStructure(['errors' => ['contact', 'consent']]);
-    ok($this->postJson("{$this->api}/launch/abcd1234", ['contact' => '01000000555', 'consent' => true]))->assertCreated()->assertJsonPath('data.created', true);
-    ok($this->postJson("{$this->api}/launch/abcd1234", ['contact' => '01000000555', 'consent' => true]))->assertOk()->assertJsonPath('data.created', false);   // idempotent
-    SmallBatchTest::where('code', 'abcd1234')->update(['status' => 'closed']);
-    $this->postJson("{$this->api}/launch/abcd1234", ['contact' => '01000000666', 'consent' => true])->assertStatus(422);
-});
-
-// ------------------------------------------------------------------ ambassador
-
-it('lets an approved affiliate join the ambassador program, create links and read the report (feature gated)', function () {
+it('no longer serves the small-batch launch or ambassador endpoints (Growth system removed)', function () {
     $aff = Affiliate::where('email', 'aff@egy.test')->first();
     $h = ['Authorization' => 'Bearer '.$aff->createToken('t', ['affiliate'])->plainTextToken];
-    $this->getJson("{$this->api}/affiliate/ambassador", $h)->assertStatus(403);   // flag off
-    ($this->growthOn)();
-
-    $this->getJson("{$this->api}/affiliate/ambassador")->assertUnauthorized();
-    $this->getJson("{$this->api}/affiliate/ambassador", ($this->auth)())->assertUnauthorized();   // customer token is no affiliate token
-    ok($this->getJson("{$this->api}/affiliate/ambassador", $h))->assertJsonPath('data.enrolled', false)->assertJsonPath('data.report', null)->assertJsonPath('data.channels.0', 'instagram');
-    $this->postJson("{$this->api}/affiliate/ambassador/links", ['product_id' => $this->p1->id, 'channel' => 'instagram'], $h)->assertNotFound();   // not enrolled
-    $this->postJson("{$this->api}/affiliate/ambassador/join", [], $h)->assertStatus(422)->assertJsonStructure(['errors' => ['disclosure', 'terms_accepted']]);
-    ok($this->postJson("{$this->api}/affiliate/ambassador/join", ['disclosure' => 'Paid partner', 'terms_accepted' => true], $h))->assertCreated()->assertJsonPath('data.status', 'active');
-
-    $l = ok($this->postJson("{$this->api}/affiliate/ambassador/links", ['product_id' => $this->p1->id, 'channel' => 'instagram'], $h))->assertCreated()->assertJsonPath('data.channel', 'instagram');
-    expect($l->json('data.url'))->toContain(config('app.url').'/l/');
-    $this->postJson("{$this->api}/affiliate/ambassador/links", ['product_id' => 999999, 'channel' => 'instagram'], $h)->assertStatus(422);
-    $s = ok($this->getJson("{$this->api}/affiliate/ambassador", $h))->assertJsonPath('data.enrolled', true)->assertJsonCount(1, 'data.links');
-    expect($s->json('data.report'))->toHaveKeys(['valid_orders', 'pending_orders', 'window_days'])->not->toHaveKey('margin_after_rewards')->not->toHaveKey('commission_cost');
+    $this->getJson("{$this->api}/launch/abcd1234")->assertNotFound();
+    $this->postJson("{$this->api}/launch/abcd1234", ['contact' => '01000000555', 'consent' => true])->assertNotFound();
+    $this->getJson("{$this->api}/affiliate/ambassador", $h)->assertNotFound();
+    $this->postJson("{$this->api}/affiliate/ambassador/join", [], $h)->assertNotFound();
+    $this->postJson("{$this->api}/affiliate/ambassador/links", [], $h)->assertNotFound();
 });
 
 // ------------------------------------------------------------------ invoice + proof file
@@ -193,7 +160,7 @@ it('returns branding, contact, social, footer pages and app links in the store p
     Cache::flush();
     $d = ok($this->getJson("{$this->api}/store"))->assertJsonPath('data.slug', 'egy')->assertJsonPath('data.colors.primary', '#112233')->assertJsonPath('data.colors.accent', '#D7B987')
         ->assertJsonPath('data.contact.whatsapp', '201000000000')->assertJsonPath('data.contact.email', 'hi@egy.test')->assertJsonPath('data.social.instagram', 'https://instagram.com/x')
-        ->assertJsonPath('data.app_links.ios', 'https://apps.apple.com/x')->assertJsonPath('data.app_links.android', null)->assertJsonPath('data.features.ambassadors', false)->json('data');
+        ->assertJsonPath('data.app_links.ios', 'https://apps.apple.com/x')->assertJsonPath('data.app_links.android', null)->assertJsonPath('data.features.ambassadors', false)->assertJsonPath('data.features.small_batch_lab', false)->assertJsonPath('data.features.gift_finder', true)->json('data');
     expect($d['logo_url'])->toContain('logo.png')->and($d['footer'])->toHaveKeys(['pages', 'has_blog', 'payment_methods'])->and($d['footer']['pages'])->not->toBeEmpty()->and($d['colors'])->toHaveKey('danger');
 });
 
@@ -232,7 +199,7 @@ it('deletes the account after password confirmation, anonymises it and revokes e
     $row = Customer::withTrashed()->find($id);
     expect($row->name)->toBe('Deleted customer')->and($row->phone)->toBeNull()->and($row->email)->not->toContain('customer@egy.test')
         ->and($row->tokens()->count())->toBe(0)->and($row->addresses()->count())->toBe(0)->and(Device::count())->toBe(0);
-    expect(\App\Models\WishlistItem::where('customer_id', $id)->count())->toBe(0);
+    expect(WishlistItem::where('customer_id', $id)->count())->toBe(0);
     $this->getJson("{$this->api}/auth/me", $other)->assertUnauthorized();
     $this->postJson("{$this->api}/auth/login", ['email' => 'customer@egy.test', 'password' => 'password'])->assertStatus(422);
     // the e-mail is free again
@@ -268,5 +235,5 @@ it('registers and removes push tokens (one row per token, whatever host or X-Ten
     ok($this->deleteJson("{$this->api}/devices", ['token' => $tok]));
     expect(Device::query()->count())->toBe(0);
     ok($this->deleteJson("{$this->api}/devices", ['token' => $tok]));   // idempotent
-    expect(app(\App\Services\Push\PushDispatcher::class))->toBeInstanceOf(\App\Services\Push\LogPushDispatcher::class);
+    expect(app(PushDispatcher::class))->toBeInstanceOf(LogPushDispatcher::class);
 });

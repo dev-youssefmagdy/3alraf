@@ -43,9 +43,20 @@ class BundleCatalog
         if (! $components) {
             return null;
         }
+
+        return $this->presentResolved($b, $components, $this->resolver->available($b, $components));
+    }
+
+    /**
+     * present() from components / availability the caller already resolved (BundleResolver::components shape, available() semantics:
+     * null = unlimited). Lets a caller that scores many bundles at once (Gift Finder) resolve them from eager-loaded data.
+     *
+     * @param  array<int,array{item:array,per:int}>  $components
+     */
+    public function presentResolved(Bundle $b, array $components, ?int $avail): array
+    {
         $regular = $this->resolver->regularTotal($components);
         $save = Money::sub($regular, (string) $b->price);
-        $avail = $this->resolver->available($b, $components);
 
         return [
             'id' => $b->id, 'slug' => $b->slug, 'name' => (string) $b->name, 'description' => (string) $b->description, 'image' => $b->imageUrl(),

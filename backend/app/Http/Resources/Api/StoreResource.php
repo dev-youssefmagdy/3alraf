@@ -2,7 +2,8 @@
 
 namespace App\Http\Resources\Api;
 
-use App\Services\Growth\GrowthFeatures;
+use App\Models\Setting;
+use App\Services\GiftFinder\GiftFinderSettings;
 use App\Services\SeoSettingsService;
 use App\Services\Storefront\StorefrontData;
 use Illuminate\Http\Request;
@@ -11,15 +12,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /** The shop (General settings), built from setting(); construct with `new StoreResource(null)`. */
 class StoreResource extends JsonResource
 {
-    /** Features the app needs to show/hide whole sections (growth.feature:* gates on the API). */
-    private const FEATURES = ['gift_finder', 'small_batch_lab', 'ambassadors'];
-
     public function toArray(Request $request): array
     {
         $seo = app(SeoSettingsService::class)->get();
         $footer = app(StorefrontData::class)->footer();
-        $settings = \App\Models\Setting::map();
-        $features = app(GrowthFeatures::class);
+        $settings = Setting::map();
         $abs = fn (?string $u) => $u ? (preg_match('#^https?://#i', $u) ? $u : url($u)) : null;
         $logo = $abs($seo['org_logo'] ?: null) ?? asset('logo.png');
 
@@ -44,7 +41,8 @@ class StoreResource extends JsonResource
                 'has_blog' => (bool) ($footer['blog'] ?? false),
                 'payment_methods' => $footer['payments'],
             ],
-            'features' => collect(self::FEATURES)->mapWithKeys(fn ($k) => [$k => $features->active($k)])->all(),
+            // Sections the app shows/hides. small_batch_lab / ambassadors were removed with the Growth system (P2) and stay `false` for older app builds.
+            'features' => ['gift_finder' => app(GiftFinderSettings::class)->enabled(), 'small_batch_lab' => false, 'ambassadors' => false],
         ];
     }
 

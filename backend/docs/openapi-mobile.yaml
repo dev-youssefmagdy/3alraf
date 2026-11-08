@@ -263,199 +263,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       description: Delete an address.
-  /affiliate/ambassador:
-    get:
-      summary: 'Ambassador portal (feature `ambassadors`, else 403):'
-      operationId: affiliate_ambassador_show_get
-      tags:
-      - affiliate
-      parameters:
-      - $ref: '#/components/parameters/AcceptLanguage'
-      - $ref: '#/components/parameters/XCartToken'
-      - $ref: '#/components/parameters/XAffiliateRef'
-      - $ref: '#/components/parameters/XAttribution'
-      security:
-      - affiliateToken: []
-      responses:
-        '200':
-          description: Success (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-              example:
-                success: true
-                message: null
-                data:
-                  enrolled: true
-                  ambassador:
-                    status: active
-                    disclosure: I am a paid brand partner
-                    terms_accepted_at: '2026-11-01T23:51:45+02:00'
-                  channels:
-                  - instagram
-                  ideas: []
-                  links:
-                  - id: 1
-                    channel: instagram
-                    product_id: 1
-                    clicks: 0
-                    url: http://3alraf.test/l/0kcv8vr0
-                  report:
-                    valid_orders: 0
-                    pending_orders: 0
-                    excluded_orders: 0
-                    new_customer_share: null
-                    window_days: 14
-                    referral_cac: null
-                    by_channel:
-                      instagram:
-                        clicks: 0
-                        orders: 0
-                    disclosure: I am a paid brand partner
-                meta: {}
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing / wrong-type / revoked token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: 'Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `channels`, idea library, own tracked links
-        and a 30-day report (valid/pending/excluded orders, new-customer share, CAC; no margins).'
-  /affiliate/ambassador/join:
-    post:
-      summary: Opt in as an ambassador (disclosure + terms)
-      operationId: affiliate_ambassador_join_post
-      tags:
-      - affiliate
-      parameters:
-      - $ref: '#/components/parameters/AcceptLanguage'
-      - $ref: '#/components/parameters/XCartToken'
-      - $ref: '#/components/parameters/XAffiliateRef'
-      - $ref: '#/components/parameters/XAttribution'
-      security:
-      - affiliateToken: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                disclosure:
-                  type: string
-                terms_accepted:
-                  type: string
-              required:
-              - disclosure
-              - terms_accepted
-      responses:
-        '200':
-          description: Success (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing / wrong-type / revoked token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '201':
-          description: Example
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-              example:
-                success: true
-                message: Welcome, you are now an ambassador.
-                data:
-                  status: active
-                  disclosure: I am a paid brand partner
-                  terms_accepted_at: '2026-11-01T23:51:45+02:00'
-                meta: {}
-      description: 'Opt in as an ambassador (disclosure + terms). Idempotent re-join updates the disclosure.
-
-
-        Body (`*` required): `disclosure`* (max 300; texts that reward fake reviews are refused with 422), `terms_accepted`* (true)'
-  /affiliate/ambassador/links:
-    post:
-      summary: Create a per-channel tracked link for a product (404 when not enrolled)
-      operationId: affiliate_ambassador_links_post
-      tags:
-      - affiliate
-      parameters:
-      - $ref: '#/components/parameters/AcceptLanguage'
-      - $ref: '#/components/parameters/XCartToken'
-      - $ref: '#/components/parameters/XAffiliateRef'
-      - $ref: '#/components/parameters/XAttribution'
-      security:
-      - affiliateToken: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                product_id:
-                  type: integer
-                channel:
-                  type: string
-              required:
-              - product_id
-              - channel
-      responses:
-        '200':
-          description: Success (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing / wrong-type / revoked token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '201':
-          description: Example
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-              example:
-                success: true
-                message: Saved successfully.
-                data:
-                  id: 1
-                  channel: instagram
-                  product_id: 1
-                  clicks: 0
-                  url: http://3alraf.test/l/0kcv8vr0
-                meta: {}
-      description: 'Create a per-channel tracked link for a product (404 when not enrolled). `url` is a short link on the store domain.
-
-
-        Body (`*` required): `product_id`*, `channel`* (one of `channels`, anything else is stored as `other`)'
   /affiliate/dashboard:
     get:
       summary: Stats, tier, commissions, payouts
@@ -3105,7 +2912,7 @@ paths:
                   type: string
   /gift-finder:
     post:
-      summary: Gift finder search (feature `gift_finder`)
+      summary: Gift finder search (setting `gift_finder.enabled`, else 403 `feature_disabled`)
       operationId: gift-finder_search_post
       tags:
       - gift-finder
@@ -3127,12 +2934,23 @@ paths:
                   type: number
                 occasion:
                   type: string
+                  enum: [birthday, mothers_day, valentine, wedding, eid_fitr, eid_adha, ramadan, graduation, thanks, self]
                 recipient:
                   type: string
+                  enum: [mother, partner, friend, sister, colleague, child, self, other]
                 category_id:
                   type: integer
                 restrictions:
                   type: string
+                  maxLength: 200
+                type:
+                  type: string
+                  enum: [all, products, bundles]
+                  default: all
+                sort:
+                  type: string
+                  enum: [best, price_asc, price_desc]
+                  default: best
               required:
               - budget
       responses:
@@ -3141,21 +2959,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope'
+                allOf:
+                - $ref: '#/components/schemas/Envelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GiftSearchResult'
         '422':
           description: Validation error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: 'Gift finder search (feature `gift_finder`).
-
-
-        Body (`*` required): `budget`* (number), `occasion`, `recipient`, `category_id`, `restrictions`'
-  /gift-finder/{token}/cart:
-    post:
-      summary: Add the suggested gift set from a search to the cart (feature `gift_finder`)
-      operationId: gift-finder_cart_post
+      description: 'Gift finder search (setting `gift_finder.enabled`, else 403 `feature_disabled`). Products AND bundles are ranked
+        in one list `items` (each with `type`); `results` / `bundles` / `near_budget` are kept unchanged for app builds before P3.
+        Ranking rules: docs/CALCULATIONS.md "Gift Finder ranking".'
+  /gift-finder/{token}:
+    get:
+      summary: A stored gift search re-rendered (share link), same payload as the search plus `shared=true`
+      operationId: gift-finder_show_get
       tags:
       - gift-finder
       parameters:
@@ -3177,6 +2999,59 @@ paths:
           content:
             application/json:
               schema:
+                allOf:
+                - $ref: '#/components/schemas/Envelope'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GiftSearchResult'
+        '404':
+          description: Unknown token
+  /gift-finder/{token}/cart:
+    post:
+      summary: Add the suggested gift set from a search to the cart (setting `gift_finder.enabled`, else 403 `feature_disabled`)
+      operationId: gift-finder_cart_post
+      tags:
+      - gift-finder
+      parameters:
+      - $ref: '#/components/parameters/AcceptLanguage'
+      - $ref: '#/components/parameters/XCartToken'
+      - $ref: '#/components/parameters/XAffiliateRef'
+      - $ref: '#/components/parameters/XAttribution'
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - []
+      - customerToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_ids:
+                  type: array
+                  items:
+                    type: integer
+                variants:
+                  type: object
+                  description: product_id => variant_id (required for a variable product)
+                  additionalProperties:
+                    type: integer
+                bundle_ids:
+                  type: array
+                  description: suggested bundles to add (bundle cart path, like POST /cart/items with bundle_id)
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: 'Success (envelope): data = {added: int[], skipped: int[], bundles_added: int[], bundles_skipped: int[]}'
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/Envelope'
         '422':
           description: Validation error
@@ -3184,7 +3059,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      description: Add the suggested gift set from a search to the cart (feature `gift_finder`).
+      description: Add the chosen suggested products / bundles of a search to the cart. With neither product_ids nor bundle_ids the
+        suggested products are added (legacy).
   /health:
     get:
       summary: Liveness/readiness probe (database, cache, storage, failed jobs)
@@ -3275,130 +3151,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       description: 'Home screen payload: banners (hero/strips/tiles/popup), category rail, flash sale, product rails, brands.'
-  /launch/{code}:
-    get:
-      summary: Small-batch launch page (interest / survey / limited stock / pre-order)
-      operationId: launch_show_get
-      tags:
-      - launch
-      parameters:
-      - $ref: '#/components/parameters/AcceptLanguage'
-      - $ref: '#/components/parameters/XCartToken'
-      - $ref: '#/components/parameters/XAffiliateRef'
-      - $ref: '#/components/parameters/XAttribution'
-      - name: code
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - []
-      - customerToken: []
-      responses:
-        '200':
-          description: Success (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-              example:
-                success: true
-                message: null
-                data:
-                  code: abcd1234
-                  name: Rose serum pilot
-                  description: Help us decide
-                  mode: survey
-                  survey_question: Which size would you buy?
-                  preorder: false
-                  preorder_terms: null
-                  is_open: true
-                  ends_on: null
-                  product:
-                    id: 1
-                    slug: cheap
-                    name: P cheap
-                    image: null
-                meta: {}
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      description: 'Small-batch launch page (interest / survey / limited stock / pre-order). Feature `small_batch_lab`. `code` = 6-12 lowercase
-        alphanumerics; draft or other-store tests = 404.
-
-
-        When `preorder` is true, show `preorder_terms` and send `preorder_accepted=true`.'
-    post:
-      summary: 'Join a launch (idempotent per contact:'
-      operationId: launch_signup_post
-      tags:
-      - launch
-      parameters:
-      - $ref: '#/components/parameters/AcceptLanguage'
-      - $ref: '#/components/parameters/XCartToken'
-      - $ref: '#/components/parameters/XAffiliateRef'
-      - $ref: '#/components/parameters/XAttribution'
-      - name: code
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - []
-      - customerToken: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                contact:
-                  type: string
-                answer:
-                  type: string
-                quantity:
-                  type: integer
-                preorder_accepted:
-                  type: boolean
-                consent:
-                  type: string
-              required:
-              - contact
-              - consent
-      responses:
-        '200':
-          description: Success (envelope)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '201':
-          description: Example
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope'
-              example:
-                success: true
-                message: Thank you, your interest is recorded.
-                data:
-                  created: true
-                meta: {}
-      description: 'Join a launch (idempotent per contact: a repeat returns `created:false`, HTTP 200). 422 when the test is closed, sold out,
-        consent/terms missing.
-
-
-        Body (`*` required): `contact`* (phone or e-mail, max 120), `answer` (survey, max 300), `quantity` (1-20), `preorder_accepted`, `consent`*
-        (must be true)'
   /menu:
     get:
       summary: Category tree (nested `children`)
@@ -4451,8 +4203,8 @@ paths:
                       provider: cod
                   features:
                     gift_finder: true
-                    small_batch_lab: true
-                    ambassadors: true
+                    small_batch_lab: false
+                    ambassadors: false
                 meta: {}
         '422':
           description: Validation error
@@ -4702,6 +4454,134 @@ components:
         type: string
         maxLength: 1024
   schemas:
+    GiftItem:
+      type: object
+      description: One Gift Finder suggestion. Bundle-only fields are present when type=bundle, product-only ones when type=product.
+      properties:
+        type:
+          type: string
+          enum: [product, bundle]
+        key:
+          type: string
+          example: bundle:3
+        id:
+          type: integer
+        product_id:
+          type: integer
+        bundle_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        price:
+          type: string
+          example: '95.00'
+        image:
+          type: string
+          nullable: true
+        fit:
+          type: number
+        category_match:
+          type: boolean
+          nullable: true
+        recipient_match:
+          type: boolean
+        occasion_match:
+          type: boolean
+        explanation:
+          type: string
+          nullable: true
+        over_budget:
+          type: boolean
+        simple:
+          type: boolean
+        picker:
+          type: object
+          nullable: true
+        regular_total:
+          type: string
+        savings:
+          type: string
+        savings_percent:
+          type: integer
+        available:
+          type: integer
+          nullable: true
+        in_stock:
+          type: boolean
+        components:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: integer
+              variant_id:
+                type: integer
+              name:
+                type: string
+              slug:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+              image:
+                type: string
+                nullable: true
+    GiftSearchResult:
+      type: object
+      properties:
+        token:
+          type: string
+        share_url:
+          type: string
+        budget:
+          type: number
+        filters:
+          type: object
+          properties:
+            type:
+              type: string
+            sort:
+              type: string
+        answers:
+          type: object
+        relaxed:
+          type: array
+          items:
+            type: string
+            enum: [category, occasion]
+        relaxed_notice:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GiftItem'
+        near_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GiftItem'
+        results:
+          type: array
+          description: legacy - products only (unchanged shape, price is a number)
+          items:
+            type: object
+        bundles:
+          type: array
+          description: legacy - best bundles, GET /bundles shape (+ fit, explanation)
+          items:
+            type: object
+        near_budget:
+          type: array
+          description: legacy - near-budget products
+          items:
+            type: object
+        shared:
+          type: boolean
+          description: only on GET /gift-finder/{token}
     Envelope:
       type: object
       properties:

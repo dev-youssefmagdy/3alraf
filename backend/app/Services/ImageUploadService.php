@@ -85,10 +85,10 @@ class ImageUploadService
         return $path;
     }
 
-    /** Attach uploaded files to any model using HasImages. @param  UploadedFile[]  $files */
-    public function attach(Model $model, array $files, string $dir = 'products'): void
+    /** Attach uploaded files to any model using HasImages. @param  UploadedFile[]  $files  @param  int|null  $afterOrder  continue after this sort_order (products: the order is shared with their videos) */
+    public function attach(Model $model, array $files, string $dir = 'products', ?int $afterOrder = null): void
     {
-        $order = (int) $model->images()->max('sort_order');
+        $order = $afterOrder ?? (int) $model->images()->max('sort_order');
         foreach ($files as $file) {
             $model->images()->create($this->store($file, $dir) + ['sort_order' => ++$order]);
         }

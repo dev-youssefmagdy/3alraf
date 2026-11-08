@@ -2,6 +2,12 @@
 @php
     $locale = app()->getLocale();
     $seo = app(\App\Services\SeoSettingsService::class)->current();
+    // P5: meta title / description stored by SEO suggestions for entities without own meta columns (seo_metas), and the seasonal theme
+    $seoOverride = app(\App\Services\Marketing\SeoMetaService::class)->forRequest(request(), $locale);
+    $title = $seoOverride['title'] ?: $title;
+    $description = $seoOverride['description'] ?: $description;
+    $seasonal = app(\App\Services\Marketing\ThemeService::class)->storefront(request());
+    $noindex = $noindex || $seasonal['preview'] !== null;
     $isHome = request()->routeIs('storefront.home');
     $suffix = ($seo['title_suffix'][$locale] ?? '') ?: setting('name');
     $fullTitle = $isHome && ($seo['home_title'][$locale] ?? '') !== '' ? $seo['home_title'][$locale]
@@ -19,6 +25,9 @@
     $routeLocale = request()->route('locale');
     $sf = app(\App\Services\Storefront\StorefrontData::class);
     $menu = $sf->menu();
+    $giftOn = app(\App\Services\GiftFinder\GiftFinderSettings::class)->enabled();
+    $giftActive = request()->routeIs('storefront.gift-finder.*');
+    $giftIcon = '<svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>';
     $footer = $sf->footer();
     $langs = \App\Models\Language::activeList()->filter(fn ($l) => in_array($l->code, ((array) setting('locales', [])), true));
     $switchUrl = fn ($code) => $routeLocale
@@ -54,7 +63,8 @@
             @foreach ($langs as $l)<link rel="alternate" hreflang="{{ $l->code }}" href="{{ $altUrl($l->code) }}">@endforeach
             <link rel="alternate" hreflang="x-default" href="{{ $altUrl(setting('default_locale')) }}">
         @endif
-        <meta name="theme-color" content="#a8456c">
+        <meta name="theme-color" content="{{ $seasonal['theme_color'] ?? '#a8456c' }}">
+        @if ($seasonal['css'] !== '')<style id="seasonal-theme" data-theme-preview="{{ $seasonal['preview']?->id }}">{!! $seasonal['css'] !!}</style>@endif
         @if (($mediaHost = parse_url(media_url('x'), PHP_URL_HOST)) && $mediaHost !== request()->getHost())<link rel="preconnect" href="{{ parse_url(media_url('x'), PHP_URL_SCHEME) }}://{{ $mediaHost }}" crossorigin>@endif
         <link rel="apple-touch-icon" href="{{ asset('logo-192.png') }}">
         @foreach (['google-site-verification' => 'google_verification', 'msvalidate.01' => 'bing_verification', 'yandex-verification' => 'yandex_verification', 'p:domain_verify' => 'pinterest_verification', 'facebook-domain-verification' => 'facebook_domain_verification'] as $metaName => $k)
@@ -74,6 +84,9 @@
     </x-slot:head>
 
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-brand-800 focus:shadow-lg">{{ __('store.skip_to_content') }}</a>
+    @if ($seasonal['preview'])
+        <div class="bg-amber-400 py-1.5 text-center text-xs font-semibold text-slate-900" data-theme-preview-bar>{{ __('marketing.suggestions.themes.preview_banner') }}: #{{ $seasonal['preview']->id }} {{ $seasonal['preview']->title }} · <a class="underline" href="{{ url()->current() }}?theme_preview=off">{{ __('marketing.suggestions.themes.exit_preview') }}</a></div>
+    @endif
     <div class="bg-brand-800 py-1.5 text-center text-xs font-medium text-white">{{ __('store.promo') }}</div>
 
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
@@ -92,6 +105,12 @@
             </form>
 
             <nav class="ms-auto flex items-center gap-1 text-sm lg:ms-0">
+                @if ($giftOn)
+                    <a href="{{ route('storefront.gift-finder.show') }}" data-nav-gift-finder @if ($giftActive) aria-current="page" @endif
+                        class="hidden items-center gap-1.5 rounded-full bg-brand-50 px-3 py-2 font-semibold text-brand-700 hover:bg-brand-100 sm:flex {{ $giftActive ? 'ring-2 ring-brand-300' : '' }}">
+                        {!! $giftIcon !!}<span>{{ __('gift_finder.nav') }}</span>
+                    </a>
+                @endif
                 <div class="relative">
                     <button type="button" data-dropdown-toggle="lang-menu" class="rounded-lg px-2 py-2 text-slate-600 hover:bg-slate-100">{{ strtoupper($locale) }}</button>
                     <div id="lang-menu" data-dropdown class="absolute end-0 z-50 mt-1 hidden min-w-32 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -157,9 +176,6 @@
                         @endif
                     </li>
                 @endforeach
-                @if (app(\App\Services\Growth\GrowthFeatures::class)->active('gift_finder'))
-                    <li><a href="{{ route('storefront.gift-finder.show') }}" class="block px-3 py-2.5 text-brand-600 hover:underline">{{ __('growth_gaps.gift_nav') }}</a></li>
-                @endif
             </ul>
         </nav>
     </header>
@@ -168,6 +184,9 @@
     <div class="fixed inset-0 z-50 hidden" data-drawer>
         <div class="absolute inset-0 bg-black/40" data-drawer-close></div>
         <aside class="absolute inset-y-0 start-0 w-80 max-w-[85vw] overflow-y-auto bg-white p-4 shadow-xl">
+            @if ($giftOn)
+                <a href="{{ route('storefront.gift-finder.show') }}" class="mb-3 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 font-bold text-brand-700">{!! $giftIcon !!}{{ __('gift_finder.cta') }}</a>
+            @endif
             <div class="mb-3 flex items-center justify-between"><strong>{{ __('store.categories') }}</strong><button type="button" data-drawer-close class="p-1 text-2xl leading-none" aria-label="{{ __('store.close') }}">&times;</button></div>
             @php
                 $renderTree = function (array $nodes) use (&$renderTree) {

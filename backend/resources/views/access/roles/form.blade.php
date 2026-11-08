@@ -23,7 +23,7 @@
                                     @foreach ($actions as $action => $perm)
                                         <label class="inline-flex items-center gap-1.5 text-slate-600">
                                             <input type="checkbox" name="permissions[]" value="{{ $perm }}" @checked(in_array($perm, $granted, true)) class="size-4 rounded border-slate-300 text-brand-600">
-                                            {{ \Illuminate\Support\Facades\Lang::has("access.actions.$action") ? __("access.actions.$action") : \Illuminate\Support\Str::headline($action) }}
+                                            @php $ak = 'access.actions.'.str_replace('.', '_', $action); @endphp{{ \Illuminate\Support\Facades\Lang::has($ak) ? __($ak) : \Illuminate\Support\Str::headline($action) }}
                                         </label>
                                     @endforeach
                                     </div>

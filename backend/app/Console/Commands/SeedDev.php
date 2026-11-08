@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Console\Command;
 
-/** Dev data: demo super admin + store owners, demo operations / orders / growth rows, countries, cities and the full gift catalog WITH opening stock. */
+/** Dev data: demo super admin + store owners, demo operations / orders / marketing rows, countries, cities and the full gift catalog WITH opening stock. */
 class SeedDev extends Command
 {
     protected $signature = 'seed:dev {--force : run even when APP_ENV=production (creates accounts with the password "password")}';

@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\AffiliatePayoutDataTable;
 use App\Http\Controllers\Controller;
 use App\Services\Affiliates\AffiliateService;
-use App\Services\Growth\AmbassadorService;
-use App\Services\Growth\GrowthFeatures;
+use App\Services\Erp\Posting\AffiliatePoster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,11 +35,8 @@ class AffiliatePayoutController extends Controller implements HasMiddleware
 
     public function pay(Request $r, int $id): JsonResponse
     {
-        $r->validate(['paid_from' => ['nullable', 'in:'.implode(',', \App\Services\Erp\Posting\AffiliatePoster::PAY_ROLES)]]);
-        $payout = $this->service->markPaid($this->service->findPayout($id), $r->input('note'), $r->input('paid_from') ?: null);
-        if (app(GrowthFeatures::class)->active('ambassadors')) {
-            app(AmbassadorService::class)->settle($payout->affiliate_id, 'payout'.$payout->id, $payout->paid_from); // ambassador rewards of this affiliate are paid in the same run
-        }
+        $r->validate(['paid_from' => ['nullable', 'in:'.implode(',', AffiliatePoster::PAY_ROLES)]]);
+        $this->service->markPaid($this->service->findPayout($id), $r->input('note'), $r->input('paid_from') ?: null);
 
         return $this->ok(__('growth.payout_paid'));
     }

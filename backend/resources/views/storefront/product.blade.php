@@ -2,6 +2,8 @@
     $cur = setting('currency_symbol');
     $first = collect($picker['variants'])->firstWhere('in_stock', true) ?? ($picker['variants'][0] ?? null);
     $img = $product->images->first()?->url;
+    $hasVideo = $media->contains('type', 'video');
+    $preload = ($media->first()['type'] ?? null) === 'video' ? $media->first()['poster'] : $img;   // the first slide is what must paint first
     $desc = \Illuminate\Support\Str::limit(strip_tags((string) ($product->meta_description ?: $product->description)), 160, '');
     $ld = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->name, 'description' => $desc, 'sku' => $product->sku,
         'image' => $product->images->map->url->values()->all(), 'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
@@ -14,7 +16,7 @@
     if ($summary['count']) { $ld['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $summary['avg'], 'reviewCount' => $summary['count']]; }
     $ld = array_filter($ld, fn ($v) => $v !== null);
 @endphp
-<x-layouts.storefront :title="$product->meta_title ?: $product->name" :description="$desc" :image="$img" :preload-image="$img" :breadcrumbs="$bc" type="product" :jsonld="$ld">
+<x-layouts.storefront :title="$product->meta_title ?: $product->name" :description="$desc" :image="$img" :preload-image="$preload" :breadcrumbs="$bc" type="product" :jsonld="$ld">
     <nav class="mb-4 flex flex-wrap items-center gap-1 text-sm text-slate-500" aria-label="breadcrumb">
         <a href="{{ route('storefront.home') }}" class="hover:text-brand-600">{{ __('store.breadcrumb_home') }}</a>
         @foreach ($crumbs as $c)<span>/</span><a href="{{ route('storefront.category.show', $c->slug) }}" class="hover:text-brand-600">{{ $c->name }}</a>@endforeach
@@ -23,6 +25,9 @@
 
     <div class="grid gap-8 rounded-2xl bg-white p-4 ring-1 ring-slate-100 lg:grid-cols-2" data-product-page data-product-id="{{ $product->id }}" data-picker="{{ json_encode($picker, JSON_UNESCAPED_UNICODE | JSON_HEX_QUOT | JSON_HEX_APOS) }}">
         <div>
+            @if ($hasVideo)
+                @include('storefront._product-gallery')
+            @else
             <div class="mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl bg-slate-50">
                 @if ($img)<x-media-img :src="$img" :alt="$product->name" width="800" height="800" :eager="true" class="size-full object-cover" data-main-image />@else<div class="size-full bg-slate-100"></div>@endif
             </div>
@@ -30,6 +35,7 @@
                 <div data-scroll-row class="mx-auto mt-3 flex max-w-[480px] gap-2 overflow-x-auto">
                     @foreach ($product->images as $im)<button type="button" data-thumb="{{ $im->url }}" aria-label="{{ $product->name }} {{ $loop->iteration }}" class="size-16 shrink-0 overflow-hidden rounded-lg border-2 {{ $loop->first ? 'border-brand-600' : 'border-transparent' }}"><img src="{{ $im->thumb_url }}" alt="" class="size-full object-cover"></button>@endforeach
                 </div>
+            @endif
             @endif
         </div>
 

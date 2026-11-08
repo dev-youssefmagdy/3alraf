@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Crypt;
 
 /**
  * Site-wide key-value settings of the shop: name, country, currency_code, currency_symbol, default_locale, locales,
- * timezone and every former `settings` JSON key (cod_collect_shipping_upfront, growth, seo, notifications, branding...).
+ * timezone and every former `settings` JSON key (cod_collect_shipping_upfront, gift_finder, customer_cancel, seo, notifications, branding...).
  * Values are stored JSON-encoded; `encrypted` rows (secrets) are encrypted at rest with APP_KEY. Read through setting().
  */
 class Setting extends Model
@@ -61,7 +61,7 @@ class Setting extends Model
         return $map;
     }
 
-    /** Exact key first, else dot path into an array value ("growth.enabled" → growth['enabled']). */
+    /** Exact key first, else dot path into an array value ("gift_finder.enabled" → gift_finder['enabled']). */
     public static function get(string $key, mixed $default = null): mixed
     {
         $all = self::map();
@@ -72,7 +72,7 @@ class Setting extends Model
         return data_get($all, $key, $default);
     }
 
-    /** Shop profile keys: stored plain. Every other key belonged to the encrypted settings JSON of the pre-2026-11 shop row (secrets, payment/SEO/growth config). */
+    /** Shop profile keys: stored plain. Every other key belonged to the encrypted settings JSON of the pre-2026-11 shop row (secrets, payment/SEO config). */
     public const PLAIN = ['name', 'country', 'currency_code', 'currency_symbol', 'default_locale', 'locales', 'timezone'];
 
     /** Write one top-level key. $encrypted null = keep the row's current flag (new rows: plain for PLAIN keys, encrypted otherwise). */

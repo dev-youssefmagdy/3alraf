@@ -22,7 +22,19 @@ class PriceResolver
     public function item(int $productId, int $variantId = 0): ?array
     {
         $product = Product::with('variants.values')->whereKey($productId)->where('is_active', true)->whereNotNull('price')->first();
-        if (! $product) {
+
+        return $product ? $this->itemFor($product, $variantId) : null;
+    }
+
+    /**
+     * Same snapshot as item() for an already loaded product (eager-load `variants.values` to avoid per-row queries, e.g. the Gift Finder
+     * scoring every live bundle). Applies the same listing gate item() puts in its query: active, priced, not soft-deleted.
+     *
+     * @return array{product:Product,variant:?ProductVariant,price:string,cost:string,name:string,sku:?string,barcode:?string}|null
+     */
+    public function itemFor(Product $product, int $variantId = 0): ?array
+    {
+        if (! $product->is_active || $product->price === null || $product->trashed()) {
             return null;
         }
 

@@ -70,7 +70,7 @@ it('otp_exempt is per account: switching it on lets a regular admin skip the OTP
     waConnected();
     $a = regularAdmin();
     $a->update(['otp_exempt' => true]);
-    loginAs('', '01000000002')->assertOk()->assertJsonPath('redirect', url('/admin'));
+    loginAs('', '01000000002')->assertOk()->assertJsonPath('redirect', url('/admin/welcome'));
     expect(sentMessages())->toBeEmpty();
     $this->post('/admin/logout');
     $a->update(['otp_exempt' => false]);

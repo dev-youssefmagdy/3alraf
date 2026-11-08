@@ -11,7 +11,7 @@ class PruneOrphanMedia extends Command
 {
     protected $signature = 'media:prune-orphans {--dry-run : only list} {--min-age=24 : ignore files younger than N hours (in-flight uploads)}';
 
-    protected $description = 'Find (and delete) files on the media disk under catalog/, qr/ and the legacy per-store root that no DB row references (images, brand logos, category images, banners, QR codes).';
+    protected $description = 'Find (and delete) files on the media disk under catalog/, qr/ and the legacy per-store root that no DB row references (images, product videos, brand logos, category images, banners, QR codes).';
 
     public function handle(): int
     {
@@ -43,7 +43,7 @@ class PruneOrphanMedia extends Command
     private function referenced(): array
     {
         $paths = [];
-        foreach ([['images', 'path'], ['images', 'thumb_path'], ['brands', 'logo'], ['categories', 'image'], ['qr_codes', 'path']] as [$table, $col]) {
+        foreach ([['images', 'path'], ['images', 'thumb_path'], ['brands', 'logo'], ['categories', 'image'], ['qr_codes', 'path'], ['product_videos', 'path'], ['product_videos', 'poster_path'], ['product_videos', 'poster_thumb_path']] as [$table, $col]) {
             DB::table($table)->whereNotNull($col)->pluck($col)->each(function ($p) use (&$paths) {
                 $paths[] = $p;
             });

@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { clearErrors, showErrors } from './ajax-form';
 
 /**
  * Product form: toggles simple/variable sections and builds the variant matrix
@@ -74,4 +75,49 @@ $(() => {
     $(document).on('change', '#f-type', toggleType);
     $(document).on('click', '#variant-generator [data-generate]', generate);
     $(document).on('repeater:changed', '#variant-repeater', refreshEmpty);
+});
+
+/* Product edit page: gallery videos + shared image/video order (P8). Every answer carries the re-rendered card; the product form itself stays untouched. */
+const swapMediaCard = (res) => {
+    if (res.message) window.toastr?.success(res.message);
+    if (res.data?.html) $('[data-product-media]').replaceWith(res.data.html);
+};
+const mediaError = (xhr) => {
+    const errs = xhr.responseJSON?.errors;
+    window.toastr?.error(errs ? Object.values(errs)[0][0] : xhr.responseJSON?.message || window.__t?.error || 'Error');
+};
+
+$(document).on('submit', '[data-product-video-form]', function (e) {
+    e.preventDefault();
+    const $form = $(this), $card = $form.closest('[data-product-media]'), $progress = $form.find('[data-video-progress]'), $submit = $form.find('[type=submit]');
+    const file = $form.find('[name=video]')[0].files[0];
+    const tooLarge = () => showErrors($form, { video: [$card.data('too-large')] });
+    clearErrors($form);
+    if (file && file.size > Number($card.data('max-bytes'))) return tooLarge(); // before spending minutes on an upload the server must refuse
+
+    $submit.prop('disabled', true).addClass('opacity-60');
+    $progress.removeClass('hidden').val(0);
+    $.ajax({
+        url: $form.attr('action'), method: 'POST', data: new FormData(this), processData: false, contentType: false,
+        xhr: () => { const x = new XMLHttpRequest(); x.upload.addEventListener('progress', (ev) => { if (ev.lengthComputable) $progress.val(Math.round((ev.loaded / ev.total) * 100)); }); return x; },
+    }).done(swapMediaCard).fail((xhr) => {
+        if (xhr.status === 422 && xhr.responseJSON?.errors) showErrors($form, xhr.responseJSON.errors);
+        else if (xhr.status === 413) tooLarge(); // refused by PHP (post_max_size) or the web server before the app could validate it
+        else mediaError(xhr);
+        $submit.prop('disabled', false).removeClass('opacity-60');
+        $progress.addClass('hidden');
+    });
+});
+
+$(document).on('click', '[data-media-move]', function () {
+    const $card = $(this).closest('[data-product-media]'), $item = $(this).closest('[data-media-key]');
+    if (Number($(this).data('media-move')) < 0) $item.prev().before($item); else $item.next().after($item);
+    const order = $card.find('[data-media-key]').map((_, el) => $(el).attr('data-media-key')).get();
+    $card.find('[data-media-move]').prop('disabled', true);
+    $.post($card.data('order-url'), { order }).done(swapMediaCard).fail((xhr) => { mediaError(xhr); setTimeout(() => location.reload(), 1200); });
+});
+
+$(document).on('click', '[data-media-delete]', function () {
+    if (!window.confirm(window.__t?.confirm_delete || 'Delete this record?')) return;
+    $.post($(this).data('media-delete'), { _method: 'DELETE' }).done(swapMediaCard).fail(mediaError);
 });

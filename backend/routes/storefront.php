@@ -6,7 +6,6 @@ use App\Http\Controllers\Storefront\AccountController;
 use App\Http\Controllers\Storefront\AddressController;
 use App\Http\Controllers\Storefront\AffiliateAuthController;
 use App\Http\Controllers\Storefront\AffiliateDashboardController;
-use App\Http\Controllers\Storefront\AmbassadorPortalController;
 use App\Http\Controllers\Storefront\BlogController;
 use App\Http\Controllers\Storefront\BundleController;
 use App\Http\Controllers\Storefront\CartController;
@@ -20,24 +19,23 @@ use App\Http\Controllers\Storefront\OrderController;
 use App\Http\Controllers\Storefront\PageController;
 use App\Http\Controllers\Storefront\ProductController;
 use App\Http\Controllers\Storefront\ReviewController;
+use App\Http\Controllers\Storefront\RobotsController;
 use App\Http\Controllers\Storefront\SitemapController;
-use App\Http\Controllers\Storefront\SmallBatchPublicController;
-use App\Http\Controllers\Storefront\TrackedLinkController;
+use App\Http\Controllers\Storefront\StockRequestController;
 use App\Http\Controllers\Storefront\WishlistController;
 use App\Http\Controllers\Webhook\PaymentWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'root'])->name('storefront.root');
 Route::get('sitemap.xml', SitemapController::class)->name('storefront.sitemap');
-Route::get('robots.txt', \App\Http\Controllers\Storefront\RobotsController::class)->name('storefront.robots');
+Route::get('robots.txt', RobotsController::class)->name('storefront.robots');
 // Google OAuth redirect URI (registered at Google; outside the locale prefix)
 Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:auth')->name('storefront.google.callback');
-Route::get('l/{code}', TrackedLinkController::class)->where('code', '[a-z0-9]{6,12}')->name('storefront.tracked-link');
 
 // Payment gateway callbacks (public, signature-verified, CSRF-exempt: bootstrap/app.php)
 Route::post('webhooks/payments/{method}', PaymentWebhookController::class)->middleware('throttle:webhooks')->whereNumber('method')->name('webhooks.payments');
 
-Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->middleware(['set.locale', 'affiliate.track', 'growth.track'])->name('storefront.')->group(function () {
+Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->middleware(['set.locale', 'affiliate.track', 'attribution.capture'])->name('storefront.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
     Route::middleware('guest:web')->group(function () {
@@ -89,16 +87,13 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
     Route::get('product/{slug}', [ProductController::class, 'show'])->name('product.show');
     Route::get('bundles', [BundleController::class, 'index'])->name('bundles.index');
     Route::get('bundle/{slug}', [BundleController::class, 'show'])->name('bundle.show');
-    Route::middleware('growth.feature:gift_finder')->group(function () {
+    Route::middleware('gift_finder.enabled')->group(function () {
         Route::get('gift-finder', [GiftFinderController::class, 'show'])->name('gift-finder.show');
+        Route::get('gift-finder/r/{token}', [GiftFinderController::class, 'shared'])->where('token', '[A-Za-z0-9]{16,40}')->name('gift-finder.shared');
         Route::post('gift-finder', [GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
         Route::post('gift-finder/{token}/cart', [GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
     });
-    Route::middleware('growth.feature:small_batch_lab')->group(function () {
-        Route::get('launch/{code}', [SmallBatchPublicController::class, 'show'])->where('code', '[a-z0-9]{6,12}')->name('launch.show');
-        Route::post('launch/{code}', [SmallBatchPublicController::class, 'signup'])->where('code', '[a-z0-9]{6,12}')->middleware('throttle:search')->name('launch.signup');
-    });
-    Route::post('stock-requests', [\App\Http\Controllers\Storefront\StockRequestController::class, 'store'])->middleware('throttle:stock-requests')->name('stock-requests.store');
+    Route::post('stock-requests', [StockRequestController::class, 'store'])->middleware('throttle:stock-requests')->name('stock-requests.store');
     Route::get('page/{slug}', [PageController::class, 'show'])->name('pages.show');
     Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
     Route::get('blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
@@ -124,11 +119,6 @@ Route::prefix('{locale}')->where(['locale' => '[a-z]{2,3}(-[A-Za-z]{2})?'])->mid
             Route::get('/', [AffiliateDashboardController::class, 'dashboard'])->name('dashboard');
             Route::get('products', [AffiliateDashboardController::class, 'products'])->name('products');
             Route::get('qr/{slug}', [AffiliateDashboardController::class, 'qr'])->name('qr');
-            Route::middleware('growth.feature:ambassadors')->group(function () {
-                Route::get('ambassador', [AmbassadorPortalController::class, 'show'])->name('ambassador');
-                Route::post('ambassador', [AmbassadorPortalController::class, 'join'])->name('ambassador.join');
-                Route::post('ambassador/links', [AmbassadorPortalController::class, 'link'])->name('ambassador.links');
-            });
             Route::post('payouts', [AffiliateDashboardController::class, 'requestPayout'])->middleware('throttle:payout')->name('payouts.request');
         });
     });

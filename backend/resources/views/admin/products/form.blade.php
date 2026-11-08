@@ -9,6 +9,16 @@
     $usedValueIds = collect($variantRows)->pluck('values')->flatten()->unique()->values();
 @endphp
 <x-layouts.admin :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')">
+    @if ($editing && auth('admin')->user()->can('ai_media.view'))
+        @php($socialTab = ! empty($library))
+        <nav class="mb-4 flex flex-wrap gap-2 border-b border-slate-200" aria-label="{{ __('marketing.media.tab') }}" data-product-tabs>
+            <a href="{{ route('admin.products.edit', $product) }}" class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold {{ $socialTab ? 'border-transparent text-slate-500' : 'border-brand-600 text-brand-700' }}" @unless ($socialTab) aria-current="page" @endunless>{{ __('marketing.media.tab_details') }}</a>
+            <a href="{{ route('admin.products.edit', [$product, 'tab' => 'social']) }}" class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold {{ $socialTab ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500' }}" @if ($socialTab) aria-current="page" @endif data-social-tab>{{ __('marketing.media.tab') }}</a>
+        </nav>
+    @endif
+    @if (! empty($library))
+        @include('marketer.media._library', $library + ['hidden' => ['tab' => 'social'], 'stay' => true])
+    @else
     <form data-ajax-form @if ($editing) data-method="PUT" @endif
         data-validate-url="{{ route('admin.products.validate', $editing ? [$product] : []) }}"
         action="{{ $editing ? route('admin.products.update', $product) : route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="grid gap-5 lg:grid-cols-3" novalidate>
@@ -35,14 +45,14 @@
                 @php($giftR = (array) old('gift_recipients', $product->gift_recipients ?? []))
                 @php($giftO = (array) old('gift_occasions', $product->gift_occasions ?? []))
                 <div class="space-y-3">
-                    <x-checkbox name="gift_suitable" :label="__('growth_hub.gift.tag_suitable')" :checked="$product->gift_suitable" />
+                    <x-checkbox name="gift_suitable" :label="__('gift_finder.tag_suitable')" :checked="$product->gift_suitable" />
                     <div data-field>
-                        <div class="form-label">{{ __('growth_hub.gift.tag_recipients') }}</div>
-                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\Growth\GiftFinderService::RECIPIENTS as $o)<x-checkbox name="gift_recipients[]" :value="$o" :bool="false" :label="__('growth_hub.gift.recipients.'.$o)" :checked="in_array($o, $giftR, true)" />@endforeach</div>
+                        <div class="form-label">{{ __('gift_finder.tag_recipients') }}</div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\GiftFinder\GiftFinderService::RECIPIENTS as $o)<x-checkbox name="gift_recipients[]" :value="$o" :bool="false" :label="__('gift_finder.recipients.'.$o)" :checked="in_array($o, $giftR, true)" />@endforeach</div>
                     </div>
                     <div data-field>
-                        <div class="form-label">{{ __('growth_hub.gift.tag_occasions') }}</div>
-                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\Growth\GiftFinderService::OCCASIONS as $o)<x-checkbox name="gift_occasions[]" :value="$o" :bool="false" :label="__('growth_hub.gift.occasions.'.$o)" :checked="in_array($o, $giftO, true)" />@endforeach</div>
+                        <div class="form-label">{{ __('gift_finder.tag_occasions') }}</div>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">@foreach (\App\Services\GiftFinder\GiftFinderService::OCCASIONS as $o)<x-checkbox name="gift_occasions[]" :value="$o" :bool="false" :label="__('gift_finder.occasions.'.$o)" :checked="in_array($o, $giftO, true)" />@endforeach</div>
                     </div>
                 </div>
             </x-card>
@@ -61,6 +71,7 @@
                 <div data-field>
                     <input type="file" name="images[]" multiple accept="image/*" class="form-control">
                     <p class="mt-1 text-xs text-slate-500">{{ __('admin.images_hint') }}</p>
+                    @unless ($editing)<p class="mt-1 text-xs text-slate-500">{{ __('admin.product_media.after_save') }}</p>@endunless
                 </div>
             </x-card>
 
@@ -144,6 +155,9 @@
             <x-form-actions :cancel="route('admin.products.index')" />
         </div>
     </form>
+    @if ($editing)
+        @include('admin.products._media', ['product' => $product, 'media' => $media])
+    @endif
     @if ($editing && $product->price !== null)
         @php($variants = $product->variants->filter(fn ($v) => ! $v->trashed() && $v->is_active))
         @php($pq = $qrCodes->get(\App\Models\Product::class.':'.$product->id))
@@ -168,5 +182,6 @@
                 @endforeach
             </div>
         </x-card>
+    @endif
     @endif
 </x-layouts.admin>

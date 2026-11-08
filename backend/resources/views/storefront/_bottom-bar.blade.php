@@ -5,6 +5,8 @@
             'icon' => 'M3 11.5 12 4l9 7.5M5 10v10h5v-6h4v6h5V10'],
         ['key' => 'categories', 'label' => __('store.categories'), 'drawer' => true, 'active' => request()->routeIs('storefront.category.*', 'storefront.brand.*', 'storefront.tag.*', 'storefront.search'),
             'icon' => 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
+        ...(app(\App\Services\GiftFinder\GiftFinderSettings::class)->enabled() ? [['key' => 'gift', 'label' => __('gift_finder.nav_short'), 'href' => route('storefront.gift-finder.show'),
+            'active' => request()->routeIs('storefront.gift-finder.*'), 'icon' => 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z']] : []),
         ['key' => 'cart', 'label' => __('store.cart'), 'href' => route('storefront.cart.show'), 'active' => request()->routeIs('storefront.cart.*', 'storefront.checkout.*'), 'badge' => true,
             'icon' => 'M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6M9 20h.01M17 20h.01'],
         ['key' => 'wishlist', 'label' => __('store.wishlist'), 'href' => auth('web')->check() ? route('storefront.wishlist.index') : route('storefront.login'), 'active' => request()->routeIs('storefront.wishlist.*'),
@@ -15,13 +17,13 @@
     ];
 @endphp
 <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur lg:hidden" aria-label="{{ __('store.menu') }}" data-bottom-bar>
-    <ul class="mx-auto grid max-w-xl grid-cols-5">
+    <ul class="mx-auto grid max-w-xl {{ count($bbItems) > 5 ? 'grid-cols-6' : 'grid-cols-5' }}">
         @foreach ($bbItems as $it)
             <li>
                 @if ($it['drawer'] ?? false)
                     <button type="button" data-drawer-open class="flex w-full flex-col items-center gap-0.5 px-1 py-2 text-[11px] font-semibold {{ $it['active'] ? 'text-brand-600' : 'text-slate-500' }}">
                 @else
-                    <a href="{{ $it['href'] }}" @if ($it['active']) aria-current="page" @endif class="flex flex-col items-center gap-0.5 px-1 py-2 text-[11px] font-semibold {{ $it['active'] ? 'text-brand-600' : 'text-slate-500 hover:text-brand-600' }}">
+                    <a href="{{ $it['href'] }}" @if ($it['key'] === 'gift') data-bottom-gift-finder @endif @if ($it['active']) aria-current="page" @endif class="flex flex-col items-center gap-0.5 px-1 py-2 text-[11px] font-semibold {{ $it['active'] ? 'text-brand-600' : 'text-slate-500 hover:text-brand-600' }}">
                 @endif
                     <span class="relative">
                         <svg class="size-6" fill="{{ $it['active'] && $it['key'] === 'home' ? 'currentColor' : 'none' }}" fill-opacity="0.15" stroke="currentColor" stroke-width="{{ $it['active'] ? 2.2 : 1.8 }}" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ $it['icon'] }}"/></svg>

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Storefront;
 
-use App\Services\Growth\GiftFinderService;
+use App\Services\GiftFinder\GiftFinderService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,11 +21,13 @@ class GiftFinderRequest extends FormRequest
             'recipient' => ['nullable', Rule::in(GiftFinderService::RECIPIENTS)],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'restrictions' => ['nullable', 'string', 'max:200'],
+            'type' => ['nullable', Rule::in(GiftFinderService::TYPES)],
+            'sort' => ['nullable', Rule::in(GiftFinderService::SORTS)],
         ];
     }
 
     public function attributes(): array
     {
-        return trans('growth_hub.gift.fields');
+        return trans('gift_finder.fields');
     }
 }

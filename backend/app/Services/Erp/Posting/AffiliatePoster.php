@@ -9,7 +9,6 @@ use App\Support\Money;
 /**
  * Affiliate money out (ERP-003). Commissions are accrued at revenue recognition (Dr Affiliate expense / Cr Affiliate payable, SalesPoster);
  * paying them clears the liability:  payout paid : Dr Affiliate payable / Cr cash-like account (payout.paid_from, default cash).
- * Ambassador rewards are an extra marketing cost paid in the same run: Dr Marketing / Cr cash-like account.
  */
 class AffiliatePoster extends Poster
 {
@@ -30,19 +29,6 @@ class AffiliatePoster extends Poster
 
         return $this->post('affpayout:'.$p->id, $this->today(), 'Affiliate payout #'.$p->id, 'affiliate_payout', $p->id, [
             $this->dr('affiliate_payable', $amount, null, $m, 'affiliate', $p->affiliate_id), $this->cr($this->from($p->paid_from), $amount, null, $m),
-        ]);
-    }
-
-    public function rewardsPaid(int $affiliateId, string $amount, string $ref, ?string $from = null): ?JournalEntry
-    {
-        $amount = Money::round($amount);
-        if (! $this->pos($amount)) {
-            return null;
-        }
-        $m = 'AMB-'.$affiliateId.'-'.$ref;
-
-        return $this->post('ambassador:'.$affiliateId.':'.$ref, $this->today(), 'Ambassador rewards '.$m, 'ambassador_rewards', $affiliateId, [
-            $this->dr('marketing', $amount, null, $m, 'affiliate', $affiliateId), $this->cr($this->from($from), $amount, null, $m),
         ]);
     }
 }

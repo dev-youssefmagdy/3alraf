@@ -1,0 +1,209 @@
+{
+  "id": "3alrafNotifyOw90",
+  "name": "90 - Notify owner (sub-workflow)",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "3bee89ff-5f7c-5844-9dbb-a0b0e8a2da29",
+      "name": "When called by another workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Owner notification. Input items: { title, text, level: info|warning|error, source, link? }.\n// Always: the formatted message is this execution's output (Executions list in n8n).\n// Optional: NOTIFY_WEBHOOK_URL (POST JSON) and NOTIFY_EMAIL_ENABLED=true + the \"Send email\" node (enable it, pick an SMTP credential).\nconst prefix = { info: '[3alraf]', warning: '[3alraf][تنبيه]', error: '[3alraf][خطأ]' };\nreturn $input.all().map((item) => {\n  const j = item.json || {};\n  const level = ['info', 'warning', 'error'].includes(j.level) ? j.level : 'info';\n  const title = String(j.title || 'إشعار');\n  const text = String(j.text || '');\n  const message = `${prefix[level]} ${title}\\n\\n${text}` + (j.link ? `\\n\\n${j.link}` : '');\n  return { json: {\n    title, text, level, source: j.source || 'unknown', link: j.link || null, message, sent_at: new Date().toISOString(),\n    channels: { execution_output: true, webhook: !!$env.NOTIFY_WEBHOOK_URL, email: String($env.NOTIFY_EMAIL_ENABLED || '') === 'true' },\n    webhook_url: String($env.NOTIFY_WEBHOOK_URL || ''),\n    email_to: String($env.NOTIFY_EMAIL_TO || ''), email_from: String($env.NOTIFY_EMAIL_FROM || ''),\n  } };\n});\n"
+      },
+      "id": "7749ddce-76f0-58bd-9c65-0ccb5fd09bb4",
+      "name": "Format message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "32a0feab-1c32-5a85-9baa-6cf7c9ecd6d2",
+              "leftValue": "={{ $json.channels.webhook }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "72c0cb5e-74de-5bd3-b751-be0bfc1661ed",
+      "name": "Webhook configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.title, text: $json.text, level: $json.level, source: $json.source, link: $json.link, message: $json.message, sent_at: $json.sent_at }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "cd054d57-5d0f-5d14-8b22-3668f2239e8c",
+      "name": "POST webhook (WhatsApp / Telegram relay)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        -140
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "087d04bb-d3ed-51b9-9887-0947e7282dfa",
+              "leftValue": "={{ $json.channels.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7ea58ce2-1e34-5aad-b880-105f846b83e5",
+      "name": "E-mail enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.email_from }}",
+        "toEmail": "={{ $json.email_to }}",
+        "subject": "={{ $json.title }}",
+        "emailFormat": "text",
+        "text": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "8567a507-e71f-5bae-b02f-4ae96ac40cb4",
+      "name": "Send email (SMTP, disabled)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        100
+      ],
+      "disabled": true,
+      "notes": "Enable this node and select an SMTP credential to send e-mails (also set NOTIFY_EMAIL_ENABLED=true in n8n/.env)."
+    }
+  ],
+  "connections": {
+    "When called by another workflow": {
+      "main": [
+        [
+          {
+            "node": "Format message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format message": {
+      "main": [
+        [
+          {
+            "node": "Webhook configured?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "E-mail enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook configured?": {
+      "main": [
+        [
+          {
+            "node": "POST webhook (WhatsApp / Telegram relay)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-mail enabled?": {
+      "main": [
+        [
+          {
+            "node": "Send email (SMTP, disabled)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "903b05cf-a000-567a-b088-df4da82c0ffc"
+}

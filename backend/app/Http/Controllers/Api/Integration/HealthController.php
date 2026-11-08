@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\Integration;
 
 use App\Http\Controllers\Controller;
-use App\Models\GrowthEvent;
+use App\Services\GiftFinder\GiftFinderSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
-/** Monitoring probe for n8n: auth works, DB reachable, outbox backlog. */
+/** GET /api/integration/v1/health: monitoring probe for n8n (auth works, database reachable, Gift Finder switch). */
 class HealthController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(GiftFinderSettings $gift): JsonResponse
     {
         $db = true;
         try {
@@ -18,11 +18,7 @@ class HealthController extends Controller
         } catch (\Throwable) {
             $db = false;
         }
-        $pending = $db ? GrowthEvent::where('status', 'pending')->count() : null;
-        $dead = $db ? GrowthEvent::where('status', 'dead')->count() : null;
-        $oldest = $db ? GrowthEvent::where('status', 'pending')->min('created_at') : null;
-        $ok = $db && ($dead ?? 0) === 0;
 
-        return response()->json(['success' => true, 'data' => ['status' => $ok ? 'ok' : 'degraded', 'database' => $db, 'outbox_pending' => $pending, 'outbox_dead' => $dead, 'oldest_pending_at' => $oldest, 'server_time' => now()->toIso8601String()]]);
+        return response()->json(['success' => true, 'data' => ['status' => $db ? 'ok' : 'degraded', 'database' => $db, 'gift_finder_enabled' => $gift->enabled(), 'server_time' => now()->toIso8601String()]]);
     }
 }

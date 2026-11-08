@@ -24,16 +24,11 @@ Schedule::command('media:prune-orphans --dry-run')->weeklyOn(0, '05:00');
 // Retention: purge / anonymise soft-deleted records older than SOFT_DELETE_RETENTION_DAYS (default 60), off-peak.
 Schedule::command('retention:purge')->dailyAt('04:45')->withoutOverlapping()->onOneServer();
 
-Schedule::command('ai:expire-drafts')->dailyAt('02:30');
-
-// n8n growth system: outbox retries every minute, housekeeping nightly.
-Schedule::command('growth:dispatch-pending')->everyMinute()->withoutOverlapping();
-Schedule::command('growth:scan-low-stock')->everyFifteenMinutes()->withoutOverlapping();
-Schedule::command('growth:aggregate')->hourly()->withoutOverlapping();
-Schedule::command('growth:maintain')->dailyAt('02:45');
-Schedule::command('growth:prune')->dailyAt('03:10');
-Schedule::command('growth:engage')->hourly()->withoutOverlapping();
-Schedule::command('growth:operate')->dailyAt('06:30')->withoutOverlapping();
+// n8n integration API: call-log retention.
+Schedule::command('integration:prune')->dailyAt('03:10')->onOneServer();
+// Marketing internal API (MCP): request-log retention (config marketing.request_log_days).
+Schedule::command('marketing:prune-requests')->dailyAt('03:15')->onOneServer();
+Schedule::command('marketing:expire-suggestions')->dailyAt('03:25')->onOneServer();
 
 // WhatsApp chat retention (config whatsapp_chat.retention_days, 0 = keep forever).
 Schedule::command('whatsapp:chat-prune')->dailyAt('04:20')->withoutOverlapping()->onOneServer();

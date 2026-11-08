@@ -1,0 +1,194 @@
+{
+  "id": "3alrafGiftWeek01",
+  "name": "01 - Gift finder weekly report",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1c033554-a19b-542b-a966-72c27ab90e67",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 6"
+            }
+          ]
+        }
+      },
+      "id": "4c3b4033-d3fe-5cc3-a09c-de07edbd0c1e",
+      "name": "Every Saturday 10:00 (Cairo)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { label: 'store', path: 'ping' } },\n  { json: { label: 'week', path: 'gift-finder/stats', query: { days: 7 } } },\n  { json: { label: 'month', path: 'gift-finder/stats', query: { days: 30 } } },\n];\n"
+      },
+      "id": "7fc5dbfc-e955-5d1a-a04b-5c616eb50535",
+      "name": "Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafApiCallS91"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "38f649fd-a9b7-5750-bb8c-2cd9b0747dcd",
+      "name": "Call 3alraf API",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const SITE = String($env.THREEALRAF_SITE_URL || '').replace(/\\/+$/, '');\nconst OCC_AR = { birthday: 'عيد ميلاد', mothers_day: 'عيد الأم', valentine: 'عيد الحب', wedding: 'فرح', eid_fitr: 'عيد الفطر',\n  eid_adha: 'عيد الأضحى', ramadan: 'رمضان', graduation: 'تخرج', thanks: 'شكر', self: 'لنفسي' };\nconst num = (v) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });\nconst pct = (v) => (v === null || v === undefined) ? '—' : num(v) + '%';\nconst money = (v) => (v === null || v === undefined) ? '—' : num(v) + ' ج.م';\nconst requireOk = (results) => {\n  const bad = results.filter((r) => !r.ok);\n  if (bad.length) throw new Error('3alraf integration API failed: ' + bad.map((r) => `${r.path} -> ${r.status} ${r.error}`).join('; '));\n};\n\nconst res = $input.all().map((i) => i.json);\nrequireOk(res);\nconst get = (label) => res.find((r) => r.label === label).data;\nconst store = get('store').store || {};\nconst w = get('week');\nconst m = get('month');\nconst occ = Object.entries(m.by_occasion || {}).sort((a, b) => b[1] - a[1]).slice(0, 5)\n  .map(([k, c]) => `${OCC_AR[k] || k || 'بدون'} ${c}`).join('، ') || '—';\nconst lines = [\n  `المتجر: ${store.name || '—'}`,\n  'الفترة: آخر 7 أيام (وبين القوسين آخر 30 يومًا)',\n  '',\n  `• عمليات البحث: ${num(w.sessions)} (${num(m.sessions)})`,\n  `• بحث بنتائج: ${pct(w.completion_rate)} (${pct(m.completion_rate)}) — بدون نتائج: ${num(w.no_result)} (${num(m.no_result)})`,\n  `• أضافوا للسلة: ${pct(w.cart_rate)} (${pct(m.cart_rate)})`,\n  `• طلبات من مكتشف الهدايا: ${num(w.orders)} (${num(m.orders)}) بقيمة ${money(w.orders_revenue)} (${money(m.orders_revenue)})`,\n  `• متوسط قيمة الطلب: ${money(w.orders_aov)} (${money(m.orders_aov)}) — تحويل السلة لطلب: ${pct(w.order_rate)} (${pct(m.order_rate)})`,\n  `• متوسط الميزانية: ${money(w.avg_budget)} (${money(m.avg_budget)})`,\n  `• أكثر المناسبات بحثًا (30 يومًا): ${occ}`,\n];\nconst hints = [];\nif (!w.enabled) hints.push('مكتشف الهدايا مُعطّل من الإعدادات العامة — لا يظهر للعملاء.');\nif (w.sessions > 0 && w.no_result / w.sessions >= 0.2) hints.push('أكثر من 20% من عمليات البحث بلا نتائج: راجع وسوم الهدايا والميزانيات.');\nif (w.sessions === 0) hints.push('لا توجد عمليات بحث هذا الأسبوع: تأكد من ظهور الرابط في القائمة والصفحة الرئيسية.');\nif (hints.length) lines.push('', 'ملاحظات:', ...hints.map((h) => '- ' + h));\nreturn [{ json: { title: 'تقرير مكتشف الهدايا الأسبوعي', text: lines.join('\\n'), level: w.enabled ? 'info' : 'warning',\n  source: '01-gift-finder-weekly-report', link: SITE + '/admin/gift-finder', week: w, month: m } }];\n"
+      },
+      "id": "5f5bb313-ae53-58ef-b0e3-7f1ad249f042",
+      "name": "Build Arabic summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafNotifyOw90"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ec9fe312-0071-5302-8aba-6e1b0f17a52b",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Saturday 10:00 (Cairo)": {
+      "main": [
+        [
+          {
+            "node": "Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requests": {
+      "main": [
+        [
+          {
+            "node": "Call 3alraf API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 3alraf API": {
+      "main": [
+        [
+          {
+            "node": "Build Arabic summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Arabic summary": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "3alrafErrorHnd00"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "90879540-5e69-5e23-a6c9-2029daa69ca8"
+}

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
-use App\Http\Controllers\Api\V1\AmbassadorController;
 use App\Http\Controllers\Api\V1\AffiliateController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BlogController;
@@ -9,7 +8,6 @@ use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\GiftFinderController;
-use App\Http\Controllers\Api\V1\LaunchController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\StockRequestController;
 use App\Http\Controllers\Api\V1\StoreController;
@@ -40,12 +38,13 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('catalog', [StoreController::class, 'catalog'])->middleware('throttle:search')->name('catalog');
         Route::get('catalog/facets', [StoreController::class, 'facets'])->middleware('throttle:search')->name('catalog.facets');
         Route::get('catalog/suggest', [StoreController::class, 'suggest'])->middleware('throttle:search')->name('catalog.suggest');
-        Route::get('products/{slug}', [StoreController::class, 'product'])->middleware('growth.track')->name('products.show');
+        Route::get('products/{slug}', [StoreController::class, 'product'])->name('products.show');
         Route::get('products/{slug}/reviews', [AccountController::class, 'reviews'])->name('products.reviews');
         Route::get('bundles', [StoreController::class, 'bundles'])->name('bundles.index');
         Route::get('bundles/{slug}', [StoreController::class, 'bundle'])->where('slug', '[A-Za-z0-9._-]+')->name('bundles.show');
-        Route::middleware('growth.feature:gift_finder')->group(function () {
+        Route::middleware('gift_finder.enabled')->group(function () {
             Route::post('gift-finder', [GiftFinderController::class, 'search'])->middleware('throttle:search')->name('gift-finder.search');
+            Route::get('gift-finder/{token}', [GiftFinderController::class, 'show'])->where('token', '[A-Za-z0-9]{16,40}')->name('gift-finder.show');
             Route::post('gift-finder/{token}/cart', [GiftFinderController::class, 'cart'])->middleware('throttle:cart')->name('gift-finder.cart');
         });
         Route::get('brands', [StoreController::class, 'brands'])->name('brands');
@@ -55,10 +54,6 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
         Route::get('blog/{slug}', [BlogController::class, 'show'])->where('slug', '[^/]+')->name('blog.show');
         Route::post('stock-requests', [StockRequestController::class, 'store'])->middleware('throttle:stock-requests')->name('stock-requests.store');
-        Route::middleware('growth.feature:small_batch_lab')->group(function () {
-            Route::get('launch/{code}', [LaunchController::class, 'show'])->where('code', '[a-z0-9]{6,12}')->name('launch.show');
-            Route::post('launch/{code}', [LaunchController::class, 'signup'])->where('code', '[a-z0-9]{6,12}')->middleware('throttle:search')->name('launch.signup');
-        });
         Route::post('devices', [DeviceController::class, 'store'])->middleware('throttle:devices')->name('devices.store');
         Route::delete('devices', [DeviceController::class, 'destroy'])->middleware('throttle:devices')->name('devices.destroy');
 
@@ -121,10 +116,5 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('products/{slug}/qr', [AffiliateController::class, 'qr'])->name('qr');
         Route::get('payouts', [AffiliateController::class, 'payouts'])->name('payouts');
         Route::post('payouts', [AffiliateController::class, 'requestPayout'])->middleware('throttle:payout')->name('payouts.request');
-        Route::middleware('growth.feature:ambassadors')->prefix('ambassador')->name('ambassador.')->group(function () {
-            Route::get('/', [AmbassadorController::class, 'show'])->name('show');
-            Route::post('join', [AmbassadorController::class, 'join'])->middleware('throttle:auth')->name('join');
-            Route::post('links', [AmbassadorController::class, 'link'])->middleware('throttle:addresses')->name('links');
-        });
     });
 });

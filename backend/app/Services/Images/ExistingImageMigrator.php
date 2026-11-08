@@ -26,13 +26,11 @@ class ExistingImageMigrator
         'categories' => ['categories', ['image']],
         'bundles' => ['bundles', ['image']],
         'packaging' => ['packaging_options', ['image']],
-        'bundle_ab' => ['bundle_ab_variants', ['image']],
     ];
 
     /** category => [table, json column, keys holding paths ('*' = values of a locale map)]. */
     public const JSON = [
         'banners' => ['banners', 'images', ['*']],
-        'ai' => ['ai_generations', 'media', ['path', 'thumb']],
     ];
 
     private const CONVERTIBLE = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'bmp'];

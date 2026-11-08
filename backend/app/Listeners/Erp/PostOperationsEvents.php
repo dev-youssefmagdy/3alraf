@@ -2,12 +2,14 @@
 
 namespace App\Listeners\Erp;
 
+use App\Events\Erp\AffiliatePayoutPaid;
 use App\Events\Erp\ExpenseDeleted;
 use App\Events\Erp\ExpenseSaved;
 use App\Events\Erp\PurchaseCancelled;
 use App\Events\Erp\PurchaseReceived;
 use App\Events\Erp\StockAdjusted;
 use App\Events\Erp\StockTransferMoved;
+use App\Services\Erp\Posting\AffiliatePoster;
 use App\Services\Erp\Posting\ExpensePoster;
 use App\Services\Erp\Posting\PostingGuard;
 use App\Services\Erp\Posting\PurchasePoster;
@@ -17,19 +19,18 @@ use App\Services\Erp\Posting\StockPoster;
 class PostOperationsEvents
 {
     public function __construct(private PostingGuard $guard, private PurchasePoster $purchases, private StockPoster $stock, private ExpensePoster $expenses,
-        private \App\Services\Erp\Posting\AffiliatePoster $affiliates) {}
+        private AffiliatePoster $affiliates) {}
 
     public function subscribe($events): array
     {
         return [
-            \App\Events\Erp\PurchaseReceived::class => 'onPurchaseReceived',
-            \App\Events\Erp\PurchaseCancelled::class => 'onPurchaseCancelled',
-            \App\Events\Erp\StockAdjusted::class => 'onStockAdjusted',
-            \App\Events\Erp\StockTransferMoved::class => 'onTransferMoved',
-            \App\Events\Erp\ExpenseSaved::class => 'onExpenseSaved',
-            \App\Events\Erp\ExpenseDeleted::class => 'onExpenseDeleted',
-            \App\Events\Erp\AffiliatePayoutPaid::class => 'onAffiliatePayoutPaid',
-            \App\Events\Erp\AmbassadorRewardsPaid::class => 'onAmbassadorRewardsPaid',
+            PurchaseReceived::class => 'onPurchaseReceived',
+            PurchaseCancelled::class => 'onPurchaseCancelled',
+            StockAdjusted::class => 'onStockAdjusted',
+            StockTransferMoved::class => 'onTransferMoved',
+            ExpenseSaved::class => 'onExpenseSaved',
+            ExpenseDeleted::class => 'onExpenseDeleted',
+            AffiliatePayoutPaid::class => 'onAffiliatePayoutPaid',
         ];
     }
 
@@ -64,14 +65,9 @@ class PostOperationsEvents
         $this->guard->run('expense', $e->expense->id, 'expense.deleted', fn () => $this->expenses->deleted($e->expense));
     }
 
-    public function onAffiliatePayoutPaid(\App\Events\Erp\AffiliatePayoutPaid $e): void
+    public function onAffiliatePayoutPaid(AffiliatePayoutPaid $e): void
     {
         $p = $e->payout;
         $this->guard->run('affiliate_payout', $p->id, 'affiliate.payout_paid', fn () => $this->affiliates->payoutPaid($p));
-    }
-
-    public function onAmbassadorRewardsPaid(\App\Events\Erp\AmbassadorRewardsPaid $e): void
-    {
-        $this->guard->run('ambassador_rewards', $e->affiliateId, 'ambassador.rewards_paid', fn () => $this->affiliates->rewardsPaid($e->affiliateId, $e->amount, $e->ref, $e->paidFrom));
     }
 }

@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Storefront\ProofRequest;
 use App\Http\Requests\Storefront\ReturnRequest;
 use App\Models\Order;
-use App\Services\Growth\CustomerCancellationService;
+use App\Services\Orders\CustomerCancellationService;
 use App\Services\Orders\InvoicePdf;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\ReturnService;
@@ -68,12 +68,12 @@ class OrderController extends Controller
         return $this->ok(__('orders.return_requested'));
     }
 
-    /** Customer cancellation with a structured reason (feature `return_intel`; 404 when off). */
+    /** Customer cancellation with a structured reason (setting `customer_cancel.enabled`; 404 when off). */
     public function cancel(Request $r, CustomerCancellationService $svc, string $locale, string $token): JsonResponse
     {
         $svc->cancel($this->order($token), auth('web')->user(), $r->input('reason_code'));
 
-        return $this->ok(__('growth_gaps.cancelled_ok'), route('storefront.orders.show', compact('locale', 'token')));
+        return $this->ok(__('orders.customer_cancel.done'), route('storefront.orders.show', compact('locale', 'token')));
     }
 
     /** Browser return from the gateway (non-authoritative; the webhook settles the payment). */

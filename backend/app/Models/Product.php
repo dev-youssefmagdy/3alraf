@@ -77,6 +77,12 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class)->orderBy('id');
     }
 
+    /** Public gallery videos (P8). The private social-media library is deliberately not a relation of Product. */
+    public function videos(): HasMany
+    {
+        return $this->hasMany(ProductVideo::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     public function isVariable(): bool
     {
         return $this->type === ProductType::VARIABLE;

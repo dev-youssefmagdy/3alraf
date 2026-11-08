@@ -3,58 +3,41 @@
 use App\Http\Controllers\Access\AdminUserController;
 use App\Http\Controllers\Access\AuditLogController;
 use App\Http\Controllers\Access\RoleController;
-use App\Http\Controllers\Auth\AdminLoginController;
-use App\Http\Controllers\Admin\GeneralSettingsController;
-use App\Http\Controllers\BarcodeController;
-use App\Http\Controllers\Admin\Ai\ModelController as AiModelController;
-use App\Http\Controllers\Admin\Ai\ProviderController as AiProviderController;
-use App\Http\Controllers\Admin\Ai\UsageController as AiUsageController;
-use App\Http\Controllers\Admin\AttributeController;
-use App\Http\Controllers\Admin\BrandController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\Erp\AnomalyController as ErpAnomalyController;
-use App\Http\Controllers\Admin\LanguageController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\AffiliatePayoutController;
 use App\Http\Controllers\Admin\AffiliateTierController;
-use App\Http\Controllers\Admin\AiChatController;
-use App\Http\Controllers\Admin\AiGeneratorController;
-use App\Http\Controllers\Admin\AiMarketTrendsController;
-use App\Http\Controllers\Admin\AiProductEditorController;
-use App\Http\Controllers\Admin\AiSettingsController;
-use App\Http\Controllers\Admin\AiStudioController;
-use App\Http\Controllers\Admin\AiTrendsController;
+use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BranchController;
+use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\BundleController;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CodFeeSettingsController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomPageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DiscountCodeController;
+use App\Http\Controllers\Admin\Erp\AccountController as ErpAccountController;
+use App\Http\Controllers\Admin\Erp\AnomalyController as ErpAnomalyController;
+use App\Http\Controllers\Admin\Erp\AssetController as ErpAssetController;
+use App\Http\Controllers\Admin\Erp\AuditController;
+use App\Http\Controllers\Admin\Erp\CashBankController;
+use App\Http\Controllers\Admin\Erp\HubController as ErpHubController;
+use App\Http\Controllers\Admin\Erp\JournalController as ErpJournalController;
+use App\Http\Controllers\Admin\Erp\MigrationController;
+use App\Http\Controllers\Admin\Erp\OwnerController as ErpOwnerController;
+use App\Http\Controllers\Admin\Erp\PartyController as ErpPartyController;
+use App\Http\Controllers\Admin\Erp\PeriodController as ErpPeriodController;
+use App\Http\Controllers\Admin\Erp\ProfitController;
+use App\Http\Controllers\Admin\Erp\ReportController as ErpReportController;
+use App\Http\Controllers\Admin\Erp\SettingsController;
 use App\Http\Controllers\Admin\ExpenseCategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\FlashSaleController;
-use App\Http\Controllers\Admin\Growth\AmbassadorAdminController;
-use App\Http\Controllers\Admin\Growth\ApprovalController;
-use App\Http\Controllers\Admin\Growth\BrandMemoryController;
-use App\Http\Controllers\Admin\Growth\BriefController;
-use App\Http\Controllers\Admin\Growth\BundleEngineController;
-use App\Http\Controllers\Admin\Growth\CapitalAdminController;
-use App\Http\Controllers\Admin\Growth\ClientController;
-use App\Http\Controllers\Admin\Growth\ContentController;
-use App\Http\Controllers\Admin\Growth\EngagementAdminController;
-use App\Http\Controllers\Admin\Growth\EventController;
-use App\Http\Controllers\Admin\Growth\ExperimentController;
-use App\Http\Controllers\Admin\Growth\GiftFinderAdminController;
-use App\Http\Controllers\Admin\Growth\LabController;
-use App\Http\Controllers\Admin\Growth\SeasonalController;
-use App\Http\Controllers\Admin\Growth\SettingsController;
-use App\Http\Controllers\Admin\Growth\SmallBatchController;
+use App\Http\Controllers\Admin\GeneralSettingsController;
+use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\LowStockController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\NotificationSettingsController;
@@ -63,6 +46,8 @@ use App\Http\Controllers\Admin\PackagingOptionController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PrivateFileController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductVideoController;
 use App\Http\Controllers\Admin\ProductListController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ReportController;
@@ -76,20 +61,16 @@ use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\StockRequestController;
 use App\Http\Controllers\Admin\StockTransferController;
 use App\Http\Controllers\Admin\SupplierController;
-use App\Http\Controllers\Admin\Erp\AccountController as ErpAccountController;
-use App\Http\Controllers\Admin\Erp\HubController as ErpHubController;
-use App\Http\Controllers\Admin\Erp\JournalController as ErpJournalController;
-use App\Http\Controllers\Admin\Erp\PeriodController as ErpPeriodController;
-use App\Http\Controllers\Admin\Erp\PartyController as ErpPartyController;
-use App\Http\Controllers\Admin\Erp\OwnerController as ErpOwnerController;
-use App\Http\Controllers\Admin\Erp\AssetController as ErpAssetController;
-use App\Http\Controllers\Admin\Erp\ReportController as ErpReportController;
+use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\Whatsapp\ChatConversationController;
 use App\Http\Controllers\Whatsapp\ChatMediaController;
 use App\Http\Controllers\Whatsapp\ChatMessageController;
 use App\Http\Controllers\Whatsapp\ChatPageController;
 use App\Http\Controllers\Whatsapp\ConnectionController;
 use Illuminate\Broadcasting\BroadcastController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(function () {
@@ -105,6 +86,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
     Route::middleware('auth:admin')->group(function () {
         Route::post('logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::view('welcome', 'admin.welcome')->name('welcome');
         Route::get('locale/{code}', function (string $code) {
             session()->put('admin_locale', $code);
 
@@ -112,7 +94,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         })->name('locale');
         Route::get('barcode/{code}', BarcodeController::class)->where('code', '[0-9]{8,13}')->name('barcode');
 
-        // Settings → General (shop profile + AI / Growth master switches; reachable while AI / Growth are off)
+        // Settings → General (shop profile + Gift Finder / customer-cancel switches)
         Route::get('settings/general', [GeneralSettingsController::class, 'edit'])->name('general-settings.edit');
         Route::post('settings/general/validate', [GeneralSettingsController::class, 'validateForm'])->name('general-settings.validate');
         Route::put('settings/general', [GeneralSettingsController::class, 'update'])->name('general-settings.update');
@@ -127,8 +109,12 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('products/{product}/qr', [ProductController::class, 'qr'])->whereNumber('product')->name('products.qr');
         Route::post('products/{product}/qr/regenerate', [ProductController::class, 'regenerateQr'])->whereNumber('product')->name('products.qr.regenerate');
         Route::post('products/{product}/unlist', [ProductController::class, 'unlist'])->whereNumber('product')->name('products.unlist');
+        // Public gallery videos + shared image/video order (P8)
+        Route::post('products/{product}/videos', [ProductVideoController::class, 'store'])->whereNumber('product')->name('products.videos.store');
+        Route::delete('products/{product}/videos/{video}', [ProductVideoController::class, 'destroy'])->whereNumber(['product', 'video'])->scopeBindings()->name('products.videos.destroy');
+        Route::post('products/{product}/media/order', [ProductVideoController::class, 'order'])->whereNumber('product')->name('products.media.order');
         // Old Catalog bookmarks: permanent redirect to the Products equivalents (still inside the admin auth group)
-        Route::get('catalog/{path?}', fn (\Illuminate\Http\Request $r, ?string $path = null) => redirect()->to('/admin/products'.($path ? '/'.$path : '').($r->getQueryString() ? '?'.$r->getQueryString() : ''), 301))->where('path', '.*');
+        Route::get('catalog/{path?}', fn (Request $r, ?string $path = null) => redirect()->to('/admin/products'.($path ? '/'.$path : '').($r->getQueryString() ? '?'.$r->getQueryString() : ''), 301))->where('path', '.*');
         foreach (['brands' => [BrandController::class, 'brand'], 'tags' => [TagController::class, 'tag'], 'attributes' => [AttributeController::class, 'attribute'], 'products' => [ProductController::class, 'product']] as $name => [$ctl, $param]) {
             Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
             Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
@@ -136,18 +122,6 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         }
         Route::post('categories/validate/{category?}', [CategoryController::class, 'validateForm'])->name('categories.validate');
         Route::resource('categories', CategoryController::class)->except('show');
-
-        // AI platform: providers, models, usage (always reachable, also while AI is off)
-        Route::prefix('ai')->name('ai.')->group(function () {
-            foreach (['providers' => [AiProviderController::class, 'ai_provider'], 'models' => [AiModelController::class, 'ai_model']] as $name => [$ctl, $param]) {
-                Route::get("$name/datatable", [$ctl, 'datatable'])->name("$name.datatable");
-                Route::post("$name/validate/{{$param}?}", [$ctl, 'validateForm'])->name("$name.validate");
-                Route::resource($name, $ctl)->except('show')->parameters([$name => $param]);
-            }
-            Route::post('providers/{ai_provider}/test', [AiProviderController::class, 'test'])->middleware('throttle:10,1')->name('providers.test');
-            Route::get('usage', [AiUsageController::class, 'index'])->name('usage.index');
-            Route::get('usage/datatable', [AiUsageController::class, 'datatable'])->name('usage.datatable');
-        });
 
         // ERP anomalies (erp.audit.view)
         Route::get('erp/anomalies', [ErpAnomalyController::class, 'anomalies'])->name('erp.anomalies');
@@ -190,33 +164,33 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
             Route::post('periods/years/{id}/close', [ErpPeriodController::class, 'closeYear'])->where('id', '[0-9]{1,18}')->name('periods.year-close');
             Route::post('periods/years/{id}/reopen', [ErpPeriodController::class, 'reopenYear'])->where('id', '[0-9]{1,18}')->name('periods.year-reopen');
             // profit distribution + settings
-            Route::get('profits', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'index'])->name('profits.index');
-            Route::post('profits', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'store'])->name('profits.store');
-            Route::get('profits/report', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'report'])->name('profits.report');
-            Route::get('profits/owner/{owner}/statement', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'statement'])->where('owner', '[0-9]{1,18}')->name('profits.statement');
-            Route::get('profits/{id}', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'show'])->where('id', '[0-9]{1,18}')->name('profits.show');
-            Route::post('profits/{id}/approve', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'approve'])->where('id', '[0-9]{1,18}')->name('profits.approve');
-            Route::post('profits/{id}/post', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'post'])->where('id', '[0-9]{1,18}')->name('profits.post');
-            Route::post('profits/{id}/cancel', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'cancel'])->where('id', '[0-9]{1,18}')->name('profits.cancel');
-            Route::post('profits/{id}/lines/{line}/pay', [\App\Http\Controllers\Admin\Erp\ProfitController::class, 'pay'])->where(['id' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])->name('profits.pay');
-            Route::get('settings', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'edit'])->name('settings.edit');
-            Route::put('settings', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'update'])->name('settings.update');
-            Route::post('settings/rates', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'storeRate'])->name('settings.rates.store');
-            Route::delete('settings/rates/{id}', [\App\Http\Controllers\Admin\Erp\SettingsController::class, 'destroyRate'])->where('id', '[0-9]{1,18}')->name('settings.rates.destroy');
-            Route::get('migration', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'index'])->name('migration.index');
-            Route::post('migration/reconcile', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'reconcile'])->name('migration.reconcile');
-            Route::post('migration/detect', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'detect'])->name('migration.detect');
-            Route::post('migration/post-missing', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'postMissing'])->name('migration.post-missing');
-            Route::put('migration/auto-posting', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'toggle'])->name('migration.toggle');
-            Route::get('dashboard', [\App\Http\Controllers\Admin\Erp\DashboardController::class, 'index'])->name('dashboard');
-            Route::get('audit', [\App\Http\Controllers\Admin\Erp\AuditController::class, 'index'])->name('audit.index');
-            Route::get('cash-bank', [\App\Http\Controllers\Admin\Erp\CashBankController::class, 'index'])->name('cash-bank.index');
+            Route::get('profits', [ProfitController::class, 'index'])->name('profits.index');
+            Route::post('profits', [ProfitController::class, 'store'])->name('profits.store');
+            Route::get('profits/report', [ProfitController::class, 'report'])->name('profits.report');
+            Route::get('profits/owner/{owner}/statement', [ProfitController::class, 'statement'])->where('owner', '[0-9]{1,18}')->name('profits.statement');
+            Route::get('profits/{id}', [ProfitController::class, 'show'])->where('id', '[0-9]{1,18}')->name('profits.show');
+            Route::post('profits/{id}/approve', [ProfitController::class, 'approve'])->where('id', '[0-9]{1,18}')->name('profits.approve');
+            Route::post('profits/{id}/post', [ProfitController::class, 'post'])->where('id', '[0-9]{1,18}')->name('profits.post');
+            Route::post('profits/{id}/cancel', [ProfitController::class, 'cancel'])->where('id', '[0-9]{1,18}')->name('profits.cancel');
+            Route::post('profits/{id}/lines/{line}/pay', [ProfitController::class, 'pay'])->where(['id' => '[0-9]{1,18}', 'line' => '[0-9]{1,18}'])->name('profits.pay');
+            Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/rates', [SettingsController::class, 'storeRate'])->name('settings.rates.store');
+            Route::delete('settings/rates/{id}', [SettingsController::class, 'destroyRate'])->where('id', '[0-9]{1,18}')->name('settings.rates.destroy');
+            Route::get('migration', [MigrationController::class, 'index'])->name('migration.index');
+            Route::post('migration/reconcile', [MigrationController::class, 'reconcile'])->name('migration.reconcile');
+            Route::post('migration/detect', [MigrationController::class, 'detect'])->name('migration.detect');
+            Route::post('migration/post-missing', [MigrationController::class, 'postMissing'])->name('migration.post-missing');
+            Route::put('migration/auto-posting', [MigrationController::class, 'toggle'])->name('migration.toggle');
+            Route::get('dashboard', [App\Http\Controllers\Admin\Erp\DashboardController::class, 'index'])->name('dashboard');
+            Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
+            Route::get('cash-bank', [CashBankController::class, 'index'])->name('cash-bank.index');
             foreach (['vat', 'carrier', 'payout'] as $kind) {
-                Route::post("cash-bank/$kind", [\App\Http\Controllers\Admin\Erp\CashBankController::class, 'settle'])->defaults('kind', $kind)->name("cash-bank.$kind");
+                Route::post("cash-bank/$kind", [CashBankController::class, 'settle'])->defaults('kind', $kind)->name("cash-bank.$kind");
             }
-            Route::post('posting-failures/{id}/retry', [\App\Http\Controllers\Admin\Erp\MigrationController::class, 'retry'])->where('id', '[0-9]{1,18}')->name('migration.retry');
-            Route::get('branches', [\App\Http\Controllers\Admin\Erp\BranchController::class, 'index'])->name('branches.index');
-            Route::post('branches/transfer', [\App\Http\Controllers\Admin\Erp\BranchController::class, 'transfer'])->name('branches.transfer');
+            Route::post('posting-failures/{id}/retry', [MigrationController::class, 'retry'])->where('id', '[0-9]{1,18}')->name('migration.retry');
+            Route::get('branches', [App\Http\Controllers\Admin\Erp\BranchController::class, 'index'])->name('branches.index');
+            Route::post('branches/transfer', [App\Http\Controllers\Admin\Erp\BranchController::class, 'transfer'])->name('branches.transfer');
             Route::get('reports', [ErpReportController::class, 'index'])->name('reports.index');
             Route::get('reports/{report}', [ErpReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
             Route::get('reports/{report}/export', [ErpReportController::class, 'export'])->where('report', '[a-z-]+')->name('reports.export');
@@ -256,188 +230,10 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
 
-        // n8n growth system (feature flag `growth`; perms growth.view|manage|approve)
-        Route::middleware('growth.enabled')->prefix('growth')->name('growth.')->group(function () {
-            Route::get('brief', [BriefController::class, 'index'])->middleware('growth.feature:brief')->name('brief.index');
-            Route::post('brief/decision', [BriefController::class, 'decide'])->middleware('growth.feature:brief')->name('brief.decision');
-            Route::get('brief/data', [BriefController::class, 'data'])->middleware('growth.feature:brief')->name('brief.data');
-            Route::get('clients', [ClientController::class, 'index'])->middleware('growth.feature:integration_api')->name('clients.index');
-            Route::get('clients/datatable', [ClientController::class, 'datatable'])->middleware('growth.feature:integration_api')->name('clients.datatable');
-            Route::post('clients', [ClientController::class, 'store'])->middleware('growth.feature:integration_api')->name('clients.store');
-            Route::put('clients/{id}', [ClientController::class, 'update'])->whereNumber('id')->middleware('growth.feature:integration_api')->name('clients.update');
-            Route::post('clients/{id}/rotate', [ClientController::class, 'rotate'])->whereNumber('id')->middleware('growth.feature:integration_api')->name('clients.rotate');
-            Route::post('clients/{id}/revoke', [ClientController::class, 'revoke'])->whereNumber('id')->middleware('growth.feature:integration_api')->name('clients.revoke');
-            Route::get('events', [EventController::class, 'index'])->middleware('growth.feature:events_outbox')->name('events.index');
-            Route::get('events/datatable', [EventController::class, 'datatable'])->middleware('growth.feature:events_outbox')->name('events.datatable');
-            Route::post('events/{id}/replay', [EventController::class, 'replay'])->whereNumber('id')->middleware('growth.feature:events_outbox')->name('events.replay');
-            Route::get('approvals', [ApprovalController::class, 'index'])->middleware('growth.feature:approvals')->name('approvals.index');
-            Route::get('approvals/datatable', [ApprovalController::class, 'datatable'])->middleware('growth.feature:approvals')->name('approvals.datatable');
-            Route::post('approvals/{id}/approve', [ApprovalController::class, 'approve'])->whereNumber('id')->middleware('growth.feature:approvals')->name('approvals.approve');
-            Route::post('approvals/{id}/reject', [ApprovalController::class, 'reject'])->whereNumber('id')->middleware('growth.feature:approvals')->name('approvals.reject');
-            Route::get('experiments', [ExperimentController::class, 'index'])->middleware('growth.feature:experiments')->name('experiments.index');
-            Route::get('experiments/datatable', [ExperimentController::class, 'datatable'])->middleware('growth.feature:experiments')->name('experiments.datatable');
-            Route::post('experiments', [ExperimentController::class, 'store'])->middleware('growth.feature:experiments')->name('experiments.store');
-            Route::get('experiments/{id}', [ExperimentController::class, 'show'])->whereNumber('id')->middleware('growth.feature:experiments')->name('experiments.show');
-            Route::put('experiments/{id}', [ExperimentController::class, 'update'])->whereNumber('id')->middleware('growth.feature:experiments')->name('experiments.update');
-            Route::delete('experiments/{id}', [ExperimentController::class, 'destroy'])->whereNumber('id')->middleware('growth.feature:experiments')->name('experiments.destroy');
-            Route::post('experiments/{id}/results', [ExperimentController::class, 'storeResult'])->whereNumber('id')->middleware('growth.feature:experiments')->name('experiments.results');
-            $bm = BrandMemoryController::class;
-            Route::get('brand-memory', [$bm, 'index'])->middleware('growth.feature:brand_memory')->name('brand-memory.index');
-            Route::post('brand-memory', [$bm, 'store'])->middleware('growth.feature:brand_memory')->name('brand-memory.store');
-            Route::put('brand-memory/{id}', [$bm, 'update'])->whereNumber('id')->middleware('growth.feature:brand_memory')->name('brand-memory.update');
-            Route::delete('brand-memory/{id}', [$bm, 'destroy'])->whereNumber('id')->middleware('growth.feature:brand_memory')->name('brand-memory.destroy');
-            Route::get('brand-memory/{id}/versions', [$bm, 'versions'])->whereNumber('id')->middleware('growth.feature:brand_memory')->name('brand-memory.versions');
-            Route::post('claims', [$bm, 'storeClaim'])->middleware('growth.feature:brand_memory')->name('claims.store');
-            Route::delete('claims/{id}', [$bm, 'destroyClaim'])->whereNumber('id')->middleware('growth.feature:brand_memory')->name('claims.destroy');
-            $ct = ContentController::class;
-            Route::get('content', [$ct, 'index'])->middleware('growth.feature:content_factory')->name('content.index');
-            Route::post('content/schedule', [$ct, 'schedule'])->middleware('growth.feature:content_factory')->name('content.schedule');
-            Route::post('content/{id}/publish', [$ct, 'publish'])->whereNumber('id')->middleware('growth.feature:content_factory')->name('content.publish');
-            Route::post('content/{id}/skip', [$ct, 'skip'])->whereNumber('id')->middleware('growth.feature:content_factory')->name('content.skip');
-            $be = BundleEngineController::class;
-            Route::get('bundles', [$be, 'index'])->middleware('growth.feature:bundle_engine')->name('bundles.index');
-            Route::post('bundles/propose', [$be, 'propose'])->middleware('growth.feature:bundle_engine')->name('bundles.propose');
-            Route::post('bundles/ab', [$be, 'abStart'])->middleware('growth.feature:bundle_ab')->name('bundles.ab.start');
-            Route::post('bundles/ab/{id}/conclude', [$be, 'abConclude'])->whereNumber('id')->middleware('growth.feature:bundle_ab')->name('bundles.ab.conclude');
-            $en = EngagementAdminController::class;
-            Route::get('interactions', [$en, 'inbox'])->middleware('growth.feature:interactions')->name('interactions.index');
-            Route::get('interactions/datatable', [$en, 'inboxData'])->middleware('growth.feature:interactions')->name('interactions.datatable');
-            Route::post('interactions/level', [$en, 'level'])->middleware('growth.feature:interactions')->name('interactions.level');
-            Route::post('interactions/{id}/review', [$en, 'review'])->whereNumber('id')->middleware('growth.feature:interactions')->name('interactions.review');
-            Route::post('interactions/{id}/action', [$en, 'action'])->whereNumber('id')->middleware('growth.feature:interactions')->name('interactions.action');
-            Route::post('interactions/links', [$en, 'link'])->middleware('growth.feature:comment_to_cart')->name('interactions.links');
-            Route::get('voc', [$en, 'voc'])->middleware('growth.feature:voc')->name('voc.index');
-            Route::post('voc/generate', [$en, 'vocGenerate'])->middleware('growth.feature:voc')->name('voc.generate');
-            Route::put('voc/tasks/{id}', [$en, 'taskUpdate'])->whereNumber('id')->middleware('growth.feature:voc')->name('voc.tasks.update');
-            Route::get('reputation', [$en, 'reputation'])->middleware('growth.feature:reputation_radar')->name('reputation.index');
-            Route::post('reputation/scan', [$en, 'reputationScan'])->middleware('growth.feature:reputation_radar')->name('reputation.scan');
-            Route::post('reputation/{id}/resolve', [$en, 'reputationResolve'])->whereNumber('id')->middleware('growth.feature:reputation_radar')->name('reputation.resolve');
-            Route::get('missed', [$en, 'missed'])->middleware('growth.feature:missed_opportunities')->name('missed.index');
-            Route::post('missed/scan', [$en, 'missedScan'])->middleware('growth.feature:missed_opportunities')->name('missed.scan');
-            Route::get('missed/datatable', [$en, 'missedData'])->middleware('growth.feature:missed_opportunities')->name('missed.datatable');
-            Route::post('missed/{id}/status', [$en, 'missedStatus'])->whereNumber('id')->middleware('growth.feature:missed_opportunities')->name('missed.status');
-            Route::put('missed/{id}', [$en, 'missedUpdate'])->whereNumber('id')->middleware('growth.feature:missed_opportunities')->name('missed.update');
-            $sc = SeasonalController::class;
-            Route::get('seasonal', [$sc, 'index'])->middleware('growth.feature:seasonal_calendar')->name('seasonal.index');
-            Route::post('seasonal/year', [$sc, 'ensure'])->middleware('growth.feature:seasonal_calendar')->name('seasonal.year');
-            Route::put('seasonal/{id}', [$sc, 'update'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.update');
-            Route::post('seasonal/{id}/confirm', [$sc, 'confirm'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.confirm');
-            Route::post('seasonal/tasks/{id}/toggle', [$sc, 'task'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.task');
-            Route::post('seasonal/{id}/bundles', [$sc, 'bundles'])->whereNumber('id')->middleware(['growth.feature:seasonal_calendar', 'growth.feature:bundle_engine'])->name('seasonal.bundles');
-            Route::post('seasonal/{id}/close', [$sc, 'close'])->whereNumber('id')->middleware('growth.feature:seasonal_calendar')->name('seasonal.close');
-            Route::get('gift-finder', [GiftFinderAdminController::class, 'index'])->middleware('growth.feature:gift_finder')->name('gift-finder.index');
-            Route::get('gift-finder/tags', [GiftFinderAdminController::class, 'tags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags');
-            Route::post('gift-finder/tags', [GiftFinderAdminController::class, 'saveTags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags.save');
-            Route::post('gift-finder/tags/suggest', [GiftFinderAdminController::class, 'suggestTags'])->middleware('growth.feature:gift_finder')->name('gift-finder.tags.suggest');
-            $lb = LabController::class;
-            Route::get('lab', [$lb, 'index'])->middleware('growth.feature:experiment_lab')->name('lab.index');
-            Route::post('lab', [$lb, 'store'])->middleware('growth.feature:experiment_lab')->name('lab.store');
-            Route::get('lab/{id}', [$lb, 'show'])->whereNumber('id')->middleware('growth.feature:experiment_lab')->name('lab.show');
-            Route::post('lab/{id}/content', [$lb, 'approveContent'])->whereNumber('id')->middleware('growth.feature:experiment_lab')->name('lab.content');
-            Route::post('lab/{id}/start', [$lb, 'start'])->whereNumber('id')->middleware('growth.feature:experiment_lab')->name('lab.start');
-            Route::post('lab/{id}/links', [$lb, 'link'])->whereNumber('id')->middleware('growth.feature:experiment_lab')->name('lab.links');
-            Route::post('lab/{id}/ads', [$lb, 'ads'])->whereNumber('id')->middleware('growth.feature:experiment_lab')->name('lab.ads');
-            Route::post('lab/{id}/budget', [$lb, 'budget'])->whereNumber('id')->middleware(['growth.feature:experiment_lab', 'growth.feature:approvals'])->name('lab.budget');
-            $cp = CapitalAdminController::class;
-            Route::get('inventory', [$cp, 'inventory'])->middleware('growth.feature:inventory_engine')->name('inventory.index');
-            Route::post('inventory/reorder', [$cp, 'reorder'])->middleware(['growth.feature:inventory_engine', 'growth.feature:approvals'])->name('inventory.reorder');
-            Route::post('inventory/terms', [$cp, 'terms'])->middleware('growth.feature:inventory_engine')->name('inventory.terms');
-            Route::post('inventory/prices', [$cp, 'savePrice'])->middleware('growth.feature:inventory_engine')->name('inventory.prices.save');
-            Route::delete('inventory/prices/{id}', [$cp, 'deletePrice'])->whereNumber('id')->middleware('growth.feature:inventory_engine')->name('inventory.prices.delete');
-            Route::post('inventory/story', [$cp, 'story'])->middleware('growth.feature:inventory_engine')->name('inventory.story');
-            Route::get('returns-intel', [$cp, 'returns'])->middleware('growth.feature:return_intel')->name('returns-intel.index');
-            Route::post('returns-intel/reason', [$cp, 'reason'])->middleware('growth.feature:return_intel')->name('returns-intel.reason');
-            Route::post('returns-intel/tasks', [$cp, 'returnTasks'])->middleware('growth.feature:return_intel')->name('returns-intel.generate');
-            Route::put('returns-intel/tasks/{id}', [$cp, 'returnTask'])->whereNumber('id')->middleware('growth.feature:return_intel')->name('returns-intel.task');
-            Route::get('trends', [$cp, 'trends'])->middleware('growth.feature:trend_radar')->name('trends.index');
-            Route::post('trends/scan', [$cp, 'trendScan'])->middleware('growth.feature:trend_radar')->name('trends.scan');
-            Route::post('trends/{id}/test', [$cp, 'trendTest'])->whereNumber('id')->middleware('growth.feature:trend_radar')->name('trends.test');
-            Route::post('trends/{id}/dismiss', [$cp, 'trendDismiss'])->whereNumber('id')->middleware('growth.feature:trend_radar')->name('trends.dismiss');
-            Route::get('ceo', [$cp, 'ceo'])->middleware('growth.feature:ceo_challenge')->name('ceo.index');
-            Route::post('ceo/generate', [$cp, 'ceoGenerate'])->middleware('growth.feature:ceo_challenge')->name('ceo.generate');
-            Route::put('ceo/{id}', [$cp, 'ceoReview'])->whereNumber('id')->middleware('growth.feature:ceo_challenge')->name('ceo.review');
-            Route::post('ceo/{id}/experiment', [$cp, 'ceoExperiment'])->whereNumber('id')->middleware('growth.feature:ceo_challenge')->name('ceo.experiment');
-            $sb = SmallBatchController::class;
-            Route::get('small-batch', [$sb, 'index'])->middleware('growth.feature:small_batch_lab')->name('batch.index');
-            Route::post('small-batch', [$sb, 'store'])->middleware('growth.feature:small_batch_lab')->name('batch.store');
-            Route::post('small-batch/{id}/open', [$sb, 'open'])->whereNumber('id')->middleware('growth.feature:small_batch_lab')->name('batch.open');
-            Route::post('small-batch/{id}/decision', [$sb, 'decide'])->whereNumber('id')->middleware('growth.feature:small_batch_lab')->name('batch.decide');
-            $am = AmbassadorAdminController::class;
-            Route::get('ambassadors', [$am, 'index'])->middleware('growth.feature:ambassadors')->name('ambassadors.index');
-            Route::post('ambassadors', [$am, 'enroll'])->middleware('growth.feature:ambassadors')->name('ambassadors.enroll');
-            Route::put('ambassadors/{id}', [$am, 'update'])->whereNumber('id')->middleware('growth.feature:ambassadors')->name('ambassadors.update');
-            Route::post('ambassadors/ideas', [$am, 'ideaStore'])->middleware('growth.feature:ambassadors')->name('ambassadors.ideas.store');
-            Route::delete('ambassadors/ideas/{id}', [$am, 'ideaDestroy'])->whereNumber('id')->middleware('growth.feature:ambassadors')->name('ambassadors.ideas.destroy');
-            Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
-            Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
-            Route::put('settings/features', [SettingsController::class, 'updateFeatures'])->name('settings.features');
-        });
-
-        Route::middleware('ai.enabled')->prefix('ai')->name('ai.')->group(function () {
-            Route::get('settings', [AiSettingsController::class, 'edit'])->name('settings.edit');
-            Route::put('settings', [AiSettingsController::class, 'update'])->name('settings.update');
-            Route::post('settings/validate', [AiSettingsController::class, 'validateForm'])->name('settings.validate');
-            Route::put('settings/platform', [AiSettingsController::class, 'updatePlatform'])->name('settings.platform');
-            Route::post('settings/platform/validate', [AiSettingsController::class, 'validatePlatform'])->name('settings.platform.validate');
-
-            Route::middleware('ai.enabled:trends')->prefix('trends')->name('trends.')->group(function () {
-                Route::get('/', [AiTrendsController::class, 'index'])->name('index');
-                Route::get('own', [AiTrendsController::class, 'own'])->name('own');
-                Route::get('market', [AiTrendsController::class, 'market'])->name('market');
-                Route::post('market/refresh', [AiTrendsController::class, 'refresh'])->name('refresh');
-                Route::post('market/dismiss', [AiTrendsController::class, 'dismiss'])->name('dismiss');
-                Route::post('purchase-draft', [AiTrendsController::class, 'purchaseDraft'])->name('draft');
-                Route::get('export', [AiTrendsController::class, 'export'])->name('export');
-            });
-
-            Route::middleware('ai.enabled:trends')->prefix('market-trends')->name('market-trends.')->group(function () {
-                Route::get('/', [AiMarketTrendsController::class, 'index'])->name('index');
-                Route::get('data', [AiMarketTrendsController::class, 'data'])->name('data');
-                Route::post('refresh', [AiMarketTrendsController::class, 'refresh'])->name('refresh');
-                Route::post('dismiss', [AiMarketTrendsController::class, 'dismiss'])->name('dismiss');
-                Route::get('export', [AiMarketTrendsController::class, 'export'])->name('export');
-            });
-
-            Route::middleware('ai.enabled:studio')->prefix('studio')->name('studio.')->group(function () {
-                Route::get('/', [AiStudioController::class, 'index'])->name('index');
-                Route::get('history', [AiStudioController::class, 'history'])->name('history');
-                Route::post('generate', [AiStudioController::class, 'store'])->middleware('throttle:20,1')->name('store');
-                Route::get('generations/{id}', [AiStudioController::class, 'show'])->whereNumber('id')->name('show');
-                Route::post('generations/{id}/regenerate', [AiStudioController::class, 'regenerate'])->middleware('throttle:20,1')->whereNumber('id')->name('regenerate');
-                Route::delete('generations/{id}', [AiStudioController::class, 'destroy'])->whereNumber('id')->name('destroy');
-            });
-
-            Route::middleware('ai.enabled:editor')->prefix('editor')->name('editor.')->group(function () {
-                Route::get('/', [AiProductEditorController::class, 'index'])->name('index');
-                Route::get('products', [AiProductEditorController::class, 'products'])->name('products');
-                Route::get('history', [AiProductEditorController::class, 'history'])->name('history');
-                Route::post('generate', [AiProductEditorController::class, 'store'])->middleware('throttle:20,1')->name('store');
-                Route::get('generations/{id}', [AiProductEditorController::class, 'show'])->whereNumber('id')->name('show');
-                Route::post('generations/{id}/apply', [AiProductEditorController::class, 'apply'])->whereNumber('id')->name('apply');
-                Route::post('generations/{id}/reject', [AiProductEditorController::class, 'reject'])->whereNumber('id')->name('reject');
-                Route::post('generations/{id}/undo', [AiProductEditorController::class, 'undo'])->whereNumber('id')->name('undo');
-            });
-
-            Route::middleware('ai.enabled:generators')->prefix('generators')->name('generators.')->group(function () {
-                Route::get('/', [AiGeneratorController::class, 'index'])->name('index');
-                Route::get('datatable', [AiGeneratorController::class, 'datatable'])->name('datatable');
-                Route::post('generate', [AiGeneratorController::class, 'store'])->middleware('throttle:20,1')->name('store');
-                Route::get('{id}', [AiGeneratorController::class, 'show'])->whereNumber('id')->name('show');
-                Route::get('{id}/json', [AiGeneratorController::class, 'json'])->whereNumber('id')->name('json');
-                Route::put('{id}', [AiGeneratorController::class, 'update'])->whereNumber('id')->name('update');
-                Route::post('{id}/approve', [AiGeneratorController::class, 'approve'])->whereNumber('id')->name('approve');
-                Route::post('{id}/reject', [AiGeneratorController::class, 'reject'])->whereNumber('id')->name('reject');
-                Route::post('{id}/regenerate', [AiGeneratorController::class, 'regenerate'])->middleware('throttle:20,1')->whereNumber('id')->name('regenerate');
-            });
-
-            Route::middleware('ai.enabled:chat')->prefix('chat')->name('chat.')->group(function () {
-                Route::get('/', [AiChatController::class, 'index'])->name('index');
-                Route::post('stream', [AiChatController::class, 'stream'])->name('stream');
-                Route::get('conversations/{id}', [AiChatController::class, 'show'])->whereNumber('id')->name('show');
-                Route::put('conversations/{id}', [AiChatController::class, 'rename'])->whereNumber('id')->name('rename');
-                Route::delete('conversations/{id}', [AiChatController::class, 'destroy'])->whereNumber('id')->name('destroy');
-            });
-        });
+        // Gift Finder admin + n8n integration clients moved to the marketer panel (P4): old bookmarks 301 to /marketer/... (GET only).
+        foreach (['gift-finder', 'integration-clients'] as $moved) {
+            Route::get("$moved/{path?}", fn (Request $r, ?string $path = null) => redirect()->to("/marketer/$moved".($path ? '/'.$path : '').($r->getQueryString() ? '?'.$r->getQueryString() : ''), 301))->where('path', '.*')->name("moved.$moved");
+        }
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 
@@ -545,7 +341,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('customers/{id}', [CustomerController::class, 'show'])->name('customers.show');
 
-        // Phase 5 growth: affiliates, payouts, product-list pins, reviews
+        // Phase 5 marketing: affiliates, payouts, product-list pins, reviews
         Route::get('affiliates/datatable', [AffiliateController::class, 'datatable'])->name('affiliates.datatable');
         Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates.index');
         Route::post('affiliates/{id}/approve', [AffiliateController::class, 'approve'])->name('affiliates.approve');

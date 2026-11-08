@@ -21,9 +21,12 @@
                 </div>
             </div>
             <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-4">
-                <x-checkbox name="ai_enabled" :label="__('ai.menu.group')" :checked="$s['ai_enabled']" />
-                <x-checkbox name="growth_enabled" :label="__('growth_hub.master.enabled')" :checked="$s['growth_enabled']" />
-                <p class="text-xs text-slate-500">{{ __('growth_hub.master.hint') }}</p>
+                <x-checkbox name="gift_finder_enabled" :label="__('gift_finder.setting')" :checked="$s['gift_finder_enabled']" />
+                <p class="text-xs text-slate-500">{{ __('gift_finder.setting_hint') }}</p>
+            </div>
+            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-4">
+                <x-checkbox name="customer_cancel_enabled" :label="__('orders.customer_cancel.setting')" :checked="$s['customer_cancel_enabled']" />
+                <p class="text-xs text-slate-500">{{ __('orders.customer_cancel.setting_hint') }}</p>
             </div>
             @if ($canEdit)<x-form-actions :cancel="route('admin.dashboard')" />@endif
         </form>

@@ -3,7 +3,7 @@
 use App\Models\Setting;
 
 if (! function_exists('setting')) {
-    /** Site-wide setting (table `settings`, cached per request): exact key, or a dot path into an array value ("growth.enabled"). */
+    /** Site-wide setting (table `settings`, cached per request): exact key, or a dot path into an array value ("gift_finder.enabled"). */
     function setting(string $key, mixed $default = null): mixed
     {
         return Setting::get($key, $default);

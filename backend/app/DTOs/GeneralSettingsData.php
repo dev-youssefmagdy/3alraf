@@ -15,8 +15,8 @@ final readonly class GeneralSettingsData
         public string $defaultLocale,
         public array $locales,
         public string $timezone,
-        public bool $aiEnabled,
-        public bool $growthEnabled,
+        public bool $giftFinderEnabled,
+        public bool $customerCancelEnabled,
     ) {}
 
     public static function fromRequest(GeneralSettingsRequest $r): self
@@ -25,7 +25,7 @@ final readonly class GeneralSettingsData
 
         return new self(trim($v['name']), isset($v['country']) && $v['country'] !== '' ? strtoupper($v['country']) : null,
             strtoupper($v['currency_code']), $v['currency_symbol'], $v['default_locale'], array_values(array_unique($v['locales'])),
-            $v['timezone'], $r->boolean('ai_enabled'), $r->boolean('growth_enabled'));
+            $v['timezone'], $r->boolean('gift_finder_enabled'), $r->boolean('customer_cancel_enabled'));
     }
 
     /** @return array<string,mixed> the plain `settings` rows */

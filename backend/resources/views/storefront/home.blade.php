@@ -49,8 +49,12 @@
         <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :accent="true" />
     @endif
 
-    @if (app(\App\Services\Growth\GrowthFeatures::class)->active('gift_finder'))
-        <a href="{{ route('storefront.gift-finder.show') }}" class="mt-6 block rounded-2xl bg-brand-50 p-4 text-center text-sm font-bold text-brand-700">{{ __('growth_gaps.gift_cta') }}</a>
+    @if (app(\App\Services\GiftFinder\GiftFinderSettings::class)->enabled())
+        <a href="{{ route('storefront.gift-finder.show') }}" data-home-gift-finder class="mt-6 flex items-center gap-4 rounded-2xl bg-brand-50 p-4 ring-1 ring-brand-100 transition hover:shadow-md sm:p-5">
+            <span class="grid size-12 shrink-0 place-items-center rounded-full bg-brand-600 text-white"><svg class="size-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg></span>
+            <span class="min-w-0 flex-1"><span class="block font-extrabold text-brand-800">{{ __('gift_finder.cta') }}</span><span class="mt-0.5 block text-sm text-slate-600">{{ __('gift_finder.intro') }}</span></span>
+            <span class="hidden rounded-full bg-brand-600 px-4 py-2 text-sm font-bold text-white sm:inline">{{ __('gift_finder.find') }}</span>
+        </a>
     @endif
 
     @if (! empty($bundles))

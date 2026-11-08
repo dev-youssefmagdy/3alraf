@@ -7,6 +7,7 @@ use App\DTOs\ProductVariantData;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Repositories\Contracts\ProductVideoRepositoryInterface;
 use App\Services\Qr\QrCodeManager;
 use App\Support\Slug;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,7 @@ class ProductService
         private ImageUploadService $images,
         private BarcodeService $barcodes,
         private QrCodeManager $qr,
+        private ProductVideoRepositoryInterface $videos,
     ) {}
 
     public function create(ProductData $dto): Product
@@ -48,12 +50,39 @@ class ProductService
         });
     }
 
+    /** Merchandising: replace the product's tags only (P5 product suggestions; the full form still goes through update()). */
+    public function syncTags(Product $product, array $tagIds): Product
+    {
+        $this->products->syncTags($product, array_values(array_unique(array_map('intval', $tagIds))));
+
+        return $product->refresh();
+    }
+
+    /** Merchandising: Gift Finder tags only (same fields the Gift Finder tags page writes). */
+    public function updateGiftTags(Product $product, bool $suitable, array $recipients, array $occasions): Product
+    {
+        $product->update(['gift_suitable' => $suitable, 'gift_recipients' => array_values($recipients) ?: null, 'gift_occasions' => array_values($occasions) ?: null]);
+
+        return $product;
+    }
+
+    /** SEO: change the slug only (unique incl. soft-deleted rows; QR codes refreshed). Returns the slug actually stored. */
+    public function changeSlug(Product $product, string $slug): string
+    {
+        return DB::transaction(function () use ($product, $slug) {
+            $product->update(['slug' => Slug::unique(Product::class, $slug, $product->name, $product->id)]);
+            $this->qr->queueCatalogProduct($product->id);
+
+            return $product->slug;
+        });
+    }
+
     private function finish(Product $product, ProductData $dto): Product
     {
         $this->products->syncCategories($product, $dto->categoryIds);
         $this->products->syncTags($product, $dto->tagIds);
         $this->images->removeByIds($product, $dto->removeImageIds);
-        $this->images->attach($product, $dto->images, 'products');
+        $this->images->attach($product, $dto->images, 'products', $this->videos->lastMediaOrder($product));
         $this->syncVariants($product, $dto);
 
         return $product->refresh();

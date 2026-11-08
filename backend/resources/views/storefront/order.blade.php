@@ -94,13 +94,13 @@
             @endforeach
         </section>
 
-        @if ($mine && app(\App\Services\Growth\CustomerCancellationService::class)->canCancel($order, auth('web')->user()))
+        @if ($mine && app(\App\Services\Orders\CustomerCancellationService::class)->canCancel($order, auth('web')->user()))
             <section class="rounded-2xl bg-white p-5 ring-1 ring-slate-100">
-                <h2 class="mb-3 font-extrabold">{{ __('growth_gaps.cancel_title') }}</h2>
+                <h2 class="mb-3 font-extrabold">{{ __('orders.customer_cancel.title') }}</h2>
                 <form data-ajax-form action="{{ route('storefront.orders.cancel', $order->public_token) }}" method="POST" class="space-y-3 text-sm" novalidate>
                     @csrf
-                    <select name="reason_code" class="form-control" aria-label="{{ __('growth_gaps.cancel_reason') }}"><option value="">{{ __('growth_gaps.cancel_reason') }}</option>@foreach (\App\Services\Growth\ReturnIntelService::CODES as $c)<option value="{{ $c }}">{{ __('growth_capital.ret.codes.'.$c) }}</option>@endforeach</select>
-                    <button class="btn btn-secondary">{{ __('growth_gaps.cancel_btn') }}</button>
+                    <select name="reason_code" class="form-control" aria-label="{{ __('orders.customer_cancel.reason') }}"><option value="">{{ __('orders.customer_cancel.reason') }}</option>@foreach (\App\Enums\ReturnReasonCode::options() as $c => $l)<option value="{{ $c }}">{{ $l }}</option>@endforeach</select>
+                    <button class="btn btn-secondary">{{ __('orders.customer_cancel.button') }}</button>
                 </form>
             </section>
         @endif

@@ -1,0 +1,7 @@
+{
+  "name": "isolated-vm",
+  "version": "6.2.0-stub.3alraf",
+  "description": "Stub (see n8n/README.md 'Why isolated-vm is stubbed'): real isolated-vm 6.x needs Node >= 22 and fails to compile on Node 20. n8n 1.123.x only loads it for the opt-in N8N_EXPRESSION_ENGINE=vm; the default legacy expression engine never requires it.",
+  "main": "index.js",
+  "license": "MIT"
+}

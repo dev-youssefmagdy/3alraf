@@ -6,7 +6,7 @@ use App\Models\Language;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Settings → General: shop profile, currency, locales, timezone + the AI / Growth master switches. */
+/** Settings → General: shop profile, currency, locales, timezone + the Gift Finder and customer-cancel switches. */
 class GeneralSettingsRequest extends FormRequest
 {
     public function authorize(): bool
@@ -27,8 +27,8 @@ class GeneralSettingsRequest extends FormRequest
             'locales' => ['required', 'array', 'min:1'],
             'locales.*' => [Rule::in($codes)],
             'timezone' => ['required', 'timezone:all'],
-            'ai_enabled' => ['nullable', 'boolean'],
-            'growth_enabled' => ['nullable', 'boolean'],
+            'gift_finder_enabled' => ['nullable', 'boolean'],
+            'customer_cancel_enabled' => ['nullable', 'boolean'],
         ];
     }
 

@@ -16,7 +16,7 @@ class OptimizeExistingImages extends Command
     protected $signature = 'images:optimize-existing
         {--dry-run : inventory + report only; writes nothing (files, ledger or DB)}
         {--sample=0 : with --dry-run, really encode N files in memory to estimate savings}
-        {--category=* : images, brands, categories, bundles, packaging, bundle_ab, banners, ai (default: all)}
+        {--category=* : images, brands, categories, bundles, packaging, banners (default: all)}
         {--disk= : storage disk (default: config media.disk)}
         {--chunk=100 : sources processed per progress batch}
         {--limit=0 : stop after N sources (pilot runs)}

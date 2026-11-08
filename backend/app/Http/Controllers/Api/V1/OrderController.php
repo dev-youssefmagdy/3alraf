@@ -8,7 +8,7 @@ use App\Http\Resources\Api\OrderDetailResource;
 use App\Http\Resources\Api\OrderResource;
 use App\Http\Resources\Api\ReturnResource;
 use App\Services\Api\ApiOrderService;
-use App\Services\Growth\CustomerCancellationService;
+use App\Services\Orders\CustomerCancellationService;
 use App\Services\Orders\InvoicePdf;
 use App\Services\Orders\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
@@ -80,11 +80,11 @@ class OrderController extends ApiController
         return $this->respond(new ReturnResource($ret), __('orders.return_requested'), status: 201);
     }
 
-    /** Customer cancellation with a structured reason code (feature `return_intel`; 404 when off). */
+    /** Customer cancellation with a structured reason code (setting `customer_cancel.enabled`; 404 when off). */
     public function cancel(Request $r, CustomerCancellationService $svc, string $token): JsonResponse
     {
         $o = $svc->cancel($this->orders->byToken($token), $r->user(), $r->input('reason_code'));
 
-        return $this->respond(new OrderResource($o), __('growth_gaps.cancelled_ok'));
+        return $this->respond(new OrderResource($o), __('orders.customer_cancel.done'));
     }
 }

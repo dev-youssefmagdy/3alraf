@@ -51,7 +51,6 @@ class NotificationController extends Controller
         $d = $n->data;
         $url = match (true) {
             isset($d['order_id']) => route('admin.orders.show', $d['order_id']),
-            ($d['kind'] ?? '') === 'ad_cap_exceeded' => route('admin.growth.lab.index'),
             default => '#',
         };
 

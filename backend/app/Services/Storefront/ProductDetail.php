@@ -14,18 +14,16 @@ use App\Services\WishlistService;
 /** Everything a product page (web Blade or mobile API) shows, assembled once. */
 class ProductDetail
 {
-    public function __construct(private ReviewService $reviews, private WishlistService $wishlist, private ProductListResolver $lists, private ProductPageData $page, private CardPresenter $cards) {}
+    public function __construct(private ReviewService $reviews, private WishlistService $wishlist, private ProductListResolver $lists, private ProductPageData $page, private CardPresenter $cards, private ProductGallery $gallery) {}
 
-    /** @return array{product:Product,summary:array,reviews:\Illuminate\Support\Collection,canReview:bool,myReview:?Review,inWishlist:bool,related:\Illuminate\Support\Collection,picker:array,crumbs:\Illuminate\Support\Collection} */
+    /** @return array{product:Product,media:\Illuminate\Support\Collection,summary:array,reviews:\Illuminate\Support\Collection,canReview:bool,myReview:?Review,inWishlist:bool,related:\Illuminate\Support\Collection,picker:array,crumbs:\Illuminate\Support\Collection} */
     public function load(string $slug, ?Customer $customer): array
     {
-        $product = Product::with(['images', 'variants.values', 'variants.images', 'brand', 'categories'])->where('slug', $slug)->where('is_active', true)->whereNotNull('price')->firstOrFail();
-        $product->applyContent();   // storefront wording overlay (AI product editor); display only, never saved
-
-        request()->attributes->set('growth_product_id', $product->id);
+        $product = Product::with(['images', 'videos', 'variants.values', 'variants.images', 'brand', 'categories'])->where('slug', $slug)->where('is_active', true)->whereNotNull('price')->firstOrFail();
+        $product->applyContent();   // storefront wording overlay (products.content); display only, never saved
 
         return [
-            'product' => $product, 'summary' => $this->reviews->summary($product),
+            'product' => $product, 'media' => $this->gallery->items($product), 'summary' => $this->reviews->summary($product),
             'reviews' => Review::with('customer')->where('product_id', $product->id)->where('status', ReviewStatus::APPROVED->value)->latest('id')->limit(30)->get(),
             'canReview' => $customer && $this->reviews->purchaseOrder($customer, $product) !== null,
             'myReview' => $customer ? Review::where('product_id', $product->id)->where('customer_id', $customer->id)->first() : null,

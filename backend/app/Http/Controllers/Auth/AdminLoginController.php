@@ -169,9 +169,9 @@ class AdminLoginController extends Controller
         $request->session()->regenerate();
         $this->audit($guard, $event, $admin, $admin->phone);
 
-        $home = route('admin.dashboard');
+        $request->session()->forget('url.intended'); // always land on the welcome page after login
 
-        return $this->ok(__('admin.welcome_back'), redirect()->intended($home)->getTargetUrl());
+        return $this->ok(__('admin.welcome_back'), route('admin.welcome'));
     }
 
     /** The admin that passed the password step in THIS session; anything else is ignored. */

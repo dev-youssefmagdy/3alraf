@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import toastr from 'toastr';
+import { initProductGallery } from './product-gallery';
 
 const sf = window.__sf;
 if (sf) init();
@@ -234,6 +235,9 @@ function init() {
         const $btn = $p.find('[data-add-to-cart-page]');
         const matches = (v, s) => Object.values(s).every((id) => v.values.includes(id));
         const nGroups = picker.options.length;
+        const galleryEl = $p.find('[data-product-gallery]')[0]; // only products with a video have the slider
+        const gallery = galleryEl ? initProductGallery(galleryEl) : null;
+        let firstRefresh = true;
 
         function refresh() {
             // disable option values that no variant can satisfy together with the other selections
@@ -256,7 +260,10 @@ function init() {
             let st = '';
             if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (v.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
             $p.find('[data-stock]').html(st);
-            if (v && v.image) setMainImage($p, v.image);
+            if (v && v.image) {
+                if (gallery) gallery.showVariantImage(v.image, { initial: firstRefresh, explicit: !!(wanted && v.id === wanted) });
+                else setMainImage($p, v.image);
+            }
             $btn.prop('disabled', !(v && v.in_stock));
             $p.find('[data-stock-request-page]').toggleClass('hidden', !(v && !v.in_stock)).data('variant', v ? v.id : 0);
             $p.find('[data-variant-status]').toggleClass('hidden', !picker.variable).html(picker.variable ? '<p class="mb-2 text-sm font-bold">' + esc(T.variants_availability) + '</p>' + picker.variants.map((x) => {
@@ -305,6 +312,7 @@ function init() {
             $.post($(this).data('wish')).done((r) => { toastr.success(r.message); setTimeout(() => location.reload(), 600); });
         });
         refresh();
+        firstRefresh = false;
     });
 
     /* ---------- totals renderer ---------- */
@@ -524,8 +532,9 @@ document.addEventListener('DOMContentLoaded', initScrollRows);
 
 /** Swap the main product image; keeps a <picture>'s AVIF <source> and WebP fallback <img> in step (a stale <source> would win otherwise). */
 function setMainImage($p, url) {
-    const $img = $p.find('[data-main-image]');
+    const $img = $p.find('[data-main-image]'), $picture = $img.closest('picture');
+    if (!$picture.length) { $img.attr('src', url); return; } // plain <img> (x-media-img): there may be no .webp sibling (IMAGE_WEBP_FALLBACK=false)
     const isAvif = /\.avif(\?|$)/.test(url);
-    $img.closest('picture').find('source').attr('srcset', isAvif ? url : '');
+    $picture.find('source').attr('srcset', isAvif ? url : '');
     $img.attr('src', isAvif ? url.replace(/\.avif/, '.webp') : url);
 }

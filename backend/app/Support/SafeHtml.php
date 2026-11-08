@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-/** Whitelist sanitiser for untrusted rich text (AI output, blog bodies): tiny tag set, every attribute stripped, no scripts/links/handlers. */
+/** Whitelist sanitiser for untrusted rich text (blog bodies, imported content): tiny tag set, every attribute stripped, no scripts/links/handlers. */
 class SafeHtml
 {
     public const TAGS = '<p><br><ul><ol><li><strong><em><b><i><h2><h3><h4><blockquote>';

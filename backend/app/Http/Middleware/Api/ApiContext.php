@@ -3,7 +3,7 @@
 namespace App\Http\Middleware\Api;
 
 use App\Services\Affiliates\AffiliateTracker;
-use App\Services\Growth\AttributionService;
+use App\Services\Storefront\AttributionService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Per-request context of the mobile API: locale (Accept-Language limited to the site locales; a legacy shop-selection header from old app
- * builds is ignored), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie) and Growth first-touch (`X-Attribution`).
+ * builds is ignored), guest cart token (`X-Cart-Token`) and affiliate attribution (`X-Affiliate-Ref` = affiliate uuid, same as the web cookie) and first-touch attribution (`X-Attribution`).
  */
 class ApiContext
 {
@@ -30,9 +30,8 @@ class ApiContext
         }
         $request->attributes->set('api_context', true);
         if ($attr = AttributionService::fromHeader((string) $request->header('X-Attribution'))) {
-            session(['growth_attr' => $attr['attr']]);
-            ! empty($attr['gift_session']) && session(['gift_session_id' => $attr['gift_session']]);
-            ! empty($attr['bundle_ab']) && session(['bundle_ab' => $attr['bundle_ab']]);
+            $attr['attr'] && session([AttributionService::SESSION_KEY => $attr['attr']]);
+            ! empty($attr['gift_session']) && session([AttributionService::GIFT_SESSION_KEY => $attr['gift_session']]);
         }
         if ($ref = $request->header('X-Affiliate-Ref')) {
             $request->cookies->set(AffiliateTracker::COOKIE, (string) $ref);

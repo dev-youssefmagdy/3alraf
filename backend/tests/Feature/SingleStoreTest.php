@@ -28,7 +28,6 @@ function addedPages(): array
     return [
         '/admin/products' => 'products.view', '/admin/categories' => 'categories.view', '/admin/brands' => 'brands.view', '/admin/tags' => 'tags.view',
         '/admin/attributes' => 'attributes.view', '/admin/languages' => 'languages.view',
-        '/admin/ai/providers' => 'ai_providers.view', '/admin/ai/models' => 'ai_models.view', '/admin/ai/usage' => 'ai_usage.view',
         '/admin/erp/anomalies' => 'erp.audit.view', '/admin/settings/general' => 'general_settings.view',
     ];
 }
@@ -45,7 +44,7 @@ it('has no tenant_id / owner_key column and no tenant / central admin table left
 
 it('logs in once at /admin on guard admin; otp_exempt skips the OTP', function () {
     $this->get('/admin')->assertRedirect('/admin/login');
-    $this->postJson('/admin/login', adminCreds('admin@3alraf.test'))->assertOk()->assertJsonPath('redirect', url('/admin'));
+    $this->postJson('/admin/login', adminCreds('admin@3alraf.test'))->assertOk()->assertJsonPath('redirect', url('/admin/welcome'));
     expect(auth('admin')->id())->toBe($this->super->id)->and($this->super->otp_exempt)->toBeTrue();
     $this->get('/admin')->assertOk();
 });
@@ -83,7 +82,7 @@ it('a role without the permissions gets 403 on each added page, and exactly its 
 
 it('Settings → General saves the store profile into settings (validated, audited) and the storefront follows it', function () {
     $this->actingAs($this->super, 'admin');
-    $p = ['name' => 'My Shop', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'ج.م', 'default_locale' => 'en', 'locales' => ['ar', 'en'], 'timezone' => 'Africa/Cairo', 'ai_enabled' => 0, 'growth_enabled' => 0];
+    $p = ['name' => 'My Shop', 'country' => 'EG', 'currency_code' => 'EGP', 'currency_symbol' => 'ج.م', 'default_locale' => 'en', 'locales' => ['ar', 'en'], 'timezone' => 'Africa/Cairo', 'gift_finder_enabled' => 1];
     $this->postJson('/admin/settings/general/validate', [...$p, 'default_locale' => 'fr'])->assertStatus(422)->assertJsonValidationErrors('default_locale');
     $this->postJson('/admin/settings/general/validate', [...$p, 'timezone' => 'Mars/Base'])->assertStatus(422)->assertJsonValidationErrors('timezone');
     $this->putJson('/admin/settings/general', $p)->assertOk();
@@ -163,4 +162,10 @@ it('LegacyHostRedirect: old {slug}.host pages 301 to the same path + query on AP
     $this->postJson("http://egy.$host/webhooks/payments/999999", ['x' => 1])->assertNotFound();
     // the main host and unrelated hosts are untouched
     $this->get(config('app.url').'/ar')->assertOk();
+});
+
+it('lands admins on the empty welcome page after login', function () {
+    $this->postJson('/admin/login', adminCreds('admin@3alraf.test'))->assertOk()->assertJsonPath('redirect', url('/admin/welcome'));
+    $this->get('/admin/welcome')->assertOk()->assertSee(__('admin.welcome'));
+    $this->get('/admin/login')->assertRedirect('/admin/welcome');
 });

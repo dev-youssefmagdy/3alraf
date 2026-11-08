@@ -2,7 +2,10 @@
 @props(['title' => ''])
 @php
     $user = auth('admin')->user();
-    $menu = [['admin.dashboard', 'dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'], ['admin.reports.index', 'reports.reports', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'reports.view'],
+    $menu = [['admin.dashboard', 'dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
+            // marketer panel (/marketer, P4): Gift Finder, integration clients, API tokens, marketing dashboard live there
+            ['marketer.dashboard', 'marketing.panel_link', 'M11 5.9v12.2a1.8 1.8 0 01-3.4.7L5.2 13H4a2 2 0 01-2-2V9a2 2 0 012-2h1.2l2.4-5.8A1.8 1.8 0 0111 2v3.9zM15 8a4 4 0 010 8m3-11a8 8 0 010 14', 'marketing.panel', 'marketer.*'],
+            ['admin.reports.index', 'reports.reports', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'reports.view'],
             ['admin.admins.index', 'access.admins', 'M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M10 10a4 4 0 100-8 4 4 0 000 8z', 'admins.view'],
             ['admin.audit.index', 'access.audit_log', 'M9 12h6M9 16h6M7 3h8l4 4v14H7z', 'audit.view'],
             ['admin.roles.index', 'access.roles', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', 'roles.view'],
@@ -51,23 +54,6 @@
             ['admin.attributes.index', 'attributes', 'M4 6h16M4 12h16M4 18h7', 'attributes.view'],
             ['admin.general-settings.edit', 'settings_general', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z', 'general_settings.view', 'admin.general-settings.*'],
             ['admin.languages.index', 'languages', 'M3 5h12M9 3v2m1 4c-1 4-4 7-7 8m3-5c1 2 4 5 8 6M12 21l4-9 4 9M13.5 18h5', 'languages.view']];
-    $growthMenu = app(\App\Services\Growth\GrowthAccess::class)->enabled()
-        ? [['admin.growth.brief.index', 'growth_hub.menu.brief', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'growth.view', 'admin.growth.brief.*', 'brief'], ['admin.growth.approvals.index', 'growth_hub.menu.approvals', 'M5 13l4 4L19 7', 'growth.view', 'admin.growth.approvals.*', 'approvals'], ['admin.growth.experiments.index', 'growth_hub.menu.experiments', 'M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3', 'growth.view', 'admin.growth.experiments.*', 'experiments'],
-            ['admin.growth.brand-memory.index', 'growth_hub.menu.brand', 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5', 'growth.view', 'admin.growth.brand-memory.*', 'brand_memory'], ['admin.growth.content.index', 'growth_hub.menu.content', 'M4 5h16v14H4zM4 9h16M8 3v4M16 3v4', 'growth.view', 'admin.growth.content.*', 'content_factory'],
-            ['admin.growth.bundles.index', 'growth_hub.menu.bundles', 'M20 7l-8-4-8 4v10l8 4 8-4zM4 7l8 4 8-4M12 11v10', 'growth.view', 'admin.growth.bundles.*', 'bundle_engine'], ['admin.growth.seasonal.index', 'growth_hub.menu.seasonal', 'M8 7V3m8 4V3M4 11h16M5 5h14v16H5z', 'growth.view', 'admin.growth.seasonal.*', 'seasonal_calendar'], ['admin.growth.interactions.index', 'growth_hub.menu.inbox', 'M8 10h8M8 14h5M21 12a9 9 0 01-13.5 7.8L3 21l1.2-4.5A9 9 0 1121 12z', 'growth.view', 'admin.growth.interactions.*', 'interactions'], ['admin.growth.voc.index', 'growth_hub.menu.voc', 'M12 3a3 3 0 013 3v6a3 3 0 01-6 0V6a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v3', 'growth.view', 'admin.growth.voc.*', 'voc'], ['admin.growth.reputation.index', 'growth_hub.menu.rep', 'M12 3l9 16H3zM12 10v4M12 17h.01', 'growth.view', 'admin.growth.reputation.*', 'reputation_radar'], ['admin.growth.missed.index', 'growth_hub.menu.missed', 'M3 4h18l-7 8v6l-4 2v-8z', 'growth.view', 'admin.growth.missed.*', 'missed_opportunities'], ['admin.growth.lab.index', 'growth_hub.menu.lab', 'M9 3v6L4 19a2 2 0 002 3h12a2 2 0 002-3L15 9V3M8 3h8', 'growth.view', 'admin.growth.lab.*', 'experiment_lab'], ['admin.growth.batch.index', 'growth_hub.menu.batch', 'M20 7l-8-4-8 4v10l8 4 8-4zM12 11v10', 'growth.view', 'admin.growth.batch.*', 'small_batch_lab'], ['admin.growth.ambassadors.index', 'growth_hub.menu.amb', 'M17 20h5v-2a4 4 0 00-5-3.9M9 12a4 4 0 100-8 4 4 0 000 8zM2 20v-2a4 4 0 014-4h6a4 4 0 014 4v2', 'growth.view', 'admin.growth.ambassadors.*', 'ambassadors'], ['admin.growth.inventory.index', 'growth_capital.menu.inventory', 'M20 7l-8-4-8 4v10l8 4 8-4zM4 7l8 4 8-4M12 11v10', 'growth.view', 'admin.growth.inventory.*', 'inventory_engine'], ['admin.growth.returns-intel.index', 'growth_capital.menu.returns', 'M3 10h11a5 5 0 010 10H9M3 10l4-4M3 10l4 4', 'growth.view', 'admin.growth.returns-intel.*', 'return_intel'], ['admin.growth.trends.index', 'growth_capital.menu.trends', 'M3 17l6-6 4 4 8-8M15 7h6v6', 'growth.view', 'admin.growth.trends.*', 'trend_radar'], ['admin.growth.ceo.index', 'growth_capital.menu.ceo', 'M12 3l2.5 6 6.5.5-5 4.3 1.6 6.4L12 16.8 6.4 20.2 8 13.8 3 9.5 9.5 9z', 'growth.view', 'admin.growth.ceo.*', 'ceo_challenge'], ['admin.growth.gift-finder.index', 'growth_hub.menu.gift', 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7a3 3 0 100-4c-2 0-3 2-3 4M12 7a3 3 0 110-4c2 0 3 2 3 4', 'growth.view', 'admin.growth.gift-finder.*', 'gift_finder'],
-            ['admin.growth.events.index', 'growth_hub.menu.events', 'M13 10V3L4 14h7v7l9-11z', 'growth.view', 'admin.growth.events.*', 'events_outbox'], ['admin.growth.clients.index', 'growth_hub.menu.clients', 'M15 7a4 4 0 11-8 0 4 4 0 018 0zM3 21v-1a6 6 0 0112 0v1M19 8v6M16 11h6', 'growth.view', 'admin.growth.clients.*', 'integration_api'],
-            ['admin.growth.settings.edit', 'growth_hub.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'growth.view', 'admin.growth.settings.*', null]]
-        : [];
-    // AI platform pages (providers / models / usage) are always reachable; the feature pages only while AI is on.
-    $aiPlatform = [['admin.ai.providers.index', 'ai.menu.providers', 'M5 12h14M12 5v14M4 4h16v16H4z', 'ai_providers.view', 'admin.ai.providers.*'], ['admin.ai.models.index', 'ai.menu.models', 'M12 3l8 4.5v9L12 21l-8-4.5v-9z', 'ai_models.view', 'admin.ai.models.*'],
-        ['admin.ai.usage.index', 'ai.menu.usage', 'M4 19V9m5 10V5m5 14v-7m5 7V8', 'ai_usage.view', 'admin.ai.usage.*']];
-    $aiMenu = array_merge((app(\App\Services\Ai\AiAccess::class)->enabled()
-            ? array_merge(app(\App\Services\Ai\AiAccess::class)->feature('chat') ? [['admin.ai.chat.index', 'ai.menu.assistant', 'M8 10h8M8 14h5M4 5h16v11H9l-5 4z', 'ai_chat.use', 'admin.ai.chat.*']] : [],
-                app(\App\Services\Ai\AiAccess::class)->feature('trends') ? [['admin.ai.trends.index', 'ai.menu.trends', 'M3 17l6-6 4 4 8-8M15 7h6v6', 'ai_trends.view', 'admin.ai.trends.*'], ['admin.ai.market-trends.index', 'ai.menu.market_trends', 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', 'ai_trends.view', 'admin.ai.market-trends.*']] : [],
-                app(\App\Services\Ai\AiAccess::class)->feature('studio') ? [['admin.ai.studio.index', 'ai.menu.studio', 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M9 9h.01', 'ai_studio.use', 'admin.ai.studio.*']] : [],
-                app(\App\Services\Ai\AiAccess::class)->feature('editor') ? [['admin.ai.editor.index', 'ai.menu.editor', 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4', 'ai_editor.use', 'admin.ai.editor.*']] : [],
-                app(\App\Services\Ai\AiAccess::class)->feature('generators') ? [['admin.ai.generators.index', 'ai.menu.generators', 'M5 4h14v6H5zM5 14h6v6H5zM15 14h4v6h-4z', 'ai_generators.use', 'admin.ai.generators.*']] : [],
-                [['admin.ai.settings.edit', 'ai.menu.settings', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', 'ai_settings.view', 'admin.ai.settings.*']]) : []), $aiPlatform);
 @endphp
 <x-layouts.base :title="$title">
     <div class="flex min-h-screen">
@@ -98,14 +84,6 @@
                 $badges = ! $user ? [] : app(\App\Services\Admin\NavBadges::class)->for($user);
                 $badge = fn ($n) => $n > 0 ? '<span class="ms-auto min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">'.($n > 99 ? '99+' : $n).'</span>' : '';
                 $grouped = collect($groups)->flatMap(fn ($g) => $g[2])->all();
-                $aiVisible = collect($aiMenu)->filter(fn ($i) => $user?->can($i[3]));
-                $growthVisible = collect($growthMenu)->filter(fn ($i) => $user?->can($i[3]) && (empty($i[5]) || app(\App\Services\Growth\GrowthFeatures::class)->active($i[5])));
-                if ($growthVisible->isNotEmpty()) {
-                    $groups[] = ['growth_hub.menu.group', 'M3 17l6-6 4 4 8-8M15 7h6v6', 'growth'];
-                }
-                if ($aiVisible->isNotEmpty()) {
-                    $groups[] = ['ai.menu.group', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8 12h8', null];
-                }
                 $chev = '<svg class="size-4 shrink-0 transition-transform group-open:rotate-90 rtl:group-open:-rotate-90 rtl:-scale-x-100" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>';
             @endphp
             <nav class="-me-2 flex-1 space-y-1 overflow-y-auto pe-2">
@@ -121,11 +99,7 @@
 
                 @foreach ($groups as $g)
                     @php
-                        $items = $g[2] === 'growth'
-                            ? $growthVisible->values()
-                            : ($g[2] === null
-                            ? $aiVisible->map(fn ($i) => [$i[0], $i[1], $i[2], $i[3], $i[4]])
-                            : collect($g[2])->map(fn ($n) => $visible[$n] ?? null)->filter());
+                        $items = collect($g[2])->map(fn ($n) => $visible[$n] ?? null)->filter();
                         $open = $items->contains(fn ($i) => $isActive($i));
                     @endphp
                     @continue($items->isEmpty())

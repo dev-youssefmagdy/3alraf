@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\PackagingOption;
 use App\Models\StockLevel;
 use App\Repositories\Contracts\CartRepositoryInterface;
+use App\Services\Storefront\AttributionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -28,12 +29,11 @@ class CartService
         }
         $sess = session();
         if ($cart->attribution) {
-            foreach (['growth_attr' => 'attr', 'gift_session_id' => 'gift_session', 'bundle_ab' => 'bundle_ab'] as $key => $field) {
-                $v = $field === 'attr' ? array_diff_key($cart->attribution, ['gift_session' => 1, 'bundle_ab' => 1]) : ($cart->attribution[$field] ?? null);
-                $v && $sess->put($key, $v);
-            }
-        } elseif ($a = $sess->get('growth_attr')) {
-            $cart->update(['attribution' => $a + array_filter(['gift_session' => $sess->get('gift_session_id'), 'bundle_ab' => $sess->get('bundle_ab')])]);
+            $first = array_diff_key($cart->attribution, ['gift_session' => 1, 'bundle_ab' => 1]); // bundle_ab: legacy key of rows written before P2
+            $first && $sess->put(AttributionService::SESSION_KEY, $first);
+            ! empty($cart->attribution['gift_session']) && $sess->put(AttributionService::GIFT_SESSION_KEY, $cart->attribution['gift_session']);
+        } elseif ($a = $sess->get(AttributionService::SESSION_KEY)) {
+            $cart->update(['attribution' => $a + array_filter(['gift_session' => $sess->get(AttributionService::GIFT_SESSION_KEY)])]);
         }
 
         return $cart;

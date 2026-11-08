@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
-/** Settings → General (shop profile + growth toggle + AI master switch). Reachable while AI / Growth are off. */
+/** Settings → General (shop profile + Gift Finder / customer-cancel switches). */
 class GeneralSettingsController extends Controller implements HasMiddleware
 {
     public function __construct(private GeneralSettingsService $service) {}

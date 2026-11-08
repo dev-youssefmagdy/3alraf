@@ -21,11 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/v1')->group(base_path('routes/api.php'));
             // Node WhatsApp gateway -> Laravel session events (HMAC-signed).
             Route::middleware('api')->post('internal/whatsapp/events', \App\Http\Controllers\Webhook\WhatsappEventController::class)->name('internal.whatsapp.events');
-            // n8n integration API (bearer + HMAC).
+            // n8n integration API (bearer + HMAC; read-only: ping, health, gift-finder reads).
             Route::middleware(['api', 'integration.ip', 'throttle:integration-ip'])->prefix('api/integration/v1')->name('integration.')->group(base_path('routes/api_integration.php'));
-            // order matters: /admin first, then the /{locale} storefront (its `/{slug}` custom-page catch-all is last)
+            // Marketing internal API for the MCP server (service token, no session; read-only in P4).
+            Route::middleware('api')->prefix('api/internal/marketing')->name('marketing-api.')->group(base_path('routes/api_marketing.php'));
+            // order matters: /admin and /marketer first, then the /{locale} storefront (its `/{slug}` custom-page catch-all is last)
             Route::middleware(['web', 'auth.active'])->group(base_path('routes/admin.php'));
-            Route::middleware(['web', 'auth.active'])->group(base_path('routes/storefront.php'));
+            Route::middleware(['web', 'auth.active'])->group(base_path('routes/marketer.php'));
+            // seo.redirects: 301 for old slugs (P5 SEO suggestions), only when a storefront page answers 404
+            Route::middleware(['web', 'auth.active', 'seo.redirects'])->group(base_path('routes/storefront.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -41,13 +45,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.context' => \App\Http\Middleware\Api\ApiContext::class,
             'api.auth' => \App\Http\Middleware\Api\ApiAuth::class,
             'affiliate.track' => \App\Http\Middleware\TrackAffiliateClick::class,
-            'ai.enabled' => \App\Http\Middleware\EnsureAiEnabled::class,
             'integration.ip' => \App\Http\Middleware\Api\IntegrationIpAllowlist::class,
             'integration.auth' => \App\Http\Middleware\Api\IntegrationAuth::class,
-            'growth.enabled' => \App\Http\Middleware\EnsureGrowthEnabled::class,
-            'growth.track' => \App\Http\Middleware\TrackStorefrontTraffic::class,
-            'growth.feature' => \App\Http\Middleware\EnsureGrowthFeature::class,
+            'attribution.capture' => \App\Http\Middleware\CaptureAttribution::class,
+            'gift_finder.enabled' => \App\Http\Middleware\EnsureGiftFinderEnabled::class,
             'auth.active' => \App\Http\Middleware\EnsureAccountActive::class,
+            'marketing.token' => \App\Http\Middleware\Api\MarketingTokenAuth::class,
+            'seo.redirects' => \App\Http\Middleware\SeoRedirects::class,
         ]);
         // Inactive-account logout must run before route auth (Authenticate is priority-sorted ahead of plain group middleware).
         $middleware->prependToPriorityList(before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, prepend: \App\Http\Middleware\EnsureAccountActive::class);
@@ -55,7 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 return null; // JSON 401 (ApiExceptionRenderer), never a redirect
             }
-            if ($request->is('admin') || $request->is('admin/*')) {
+            if ($request->is('admin') || $request->is('admin/*') || $request->is('marketer') || $request->is('marketer/*')) {
                 return route('admin.login');
             }
             $locale = $request->segment(1) ?: (string) setting('default_locale', app()->getLocale());
@@ -67,7 +71,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->redirectUsersTo(function (Request $request) {
             if ($request->is('admin') || $request->is('admin/*')) {
-                return route('admin.dashboard');
+                return route('admin.welcome');
             }
             $locale = $request->segment(1) ?: (string) setting('default_locale', app()->getLocale());
             if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {

@@ -1,0 +1,150 @@
+{
+  "id": "3alrafApiCallS91",
+  "name": "91 - 3alraf API request (signed, sub-workflow)",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a5df1347-2aee-5326-a458-6be14d29d006",
+      "name": "When called by another workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs each request for the 3alraf integration API (backend/docs/api/integration.md):\n//   X-Timestamp = unix seconds, X-Signature = hex HMAC-SHA256(secret, \"{X-Timestamp}.{raw body}\") — GET, so body = ''.\n// The bearer token is NOT here: the HTTP node adds it from the encrypted credential \"3alraf integration (bearer)\".\n// Input items: { path: 'gift-finder/stats', query: { days: 7 }, label?: 'week' }.\nconst crypto = require('crypto');\nconst base = String($env.THREEALRAF_API_BASE || '').replace(/\\/+$/, '');\nconst secret = String($env.THREEALRAF_HMAC_SECRET || '');\nif (!base || !secret) {\n  throw new Error('THREEALRAF_API_BASE / THREEALRAF_HMAC_SECRET missing in n8n/.env (run n8n/provision-client.sh, then restart n8n)');\n}\nreturn $input.all().map((item) => {\n  const path = String(item.json.path || 'ping').replace(/^\\/+/, '');\n  if (!/^[a-z0-9\\-\\/]+$/.test(path)) throw new Error('Invalid API path: ' + path);\n  const query = item.json.query || {};\n  const qs = Object.entries(query).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(String(v))).join('&'); // no URLSearchParams in the runner sandbox\n  const ts = Math.floor(Date.now() / 1000).toString();\n  const signature = crypto.createHmac('sha256', secret).update(ts + '.' + '').digest('hex');\n  return { json: { label: item.json.label || path, path, query, url: base + '/' + path + (qs ? '?' + qs : ''), ts, signature } };\n});\n"
+      },
+      "id": "058c98a0-2b02-57b6-8ecd-caaf46187dee",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "X-Signature",
+              "value": "={{ $json.signature }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "4f158078-6b93-5ea8-a0b5-cfb15796f412",
+      "name": "GET 3alraf API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3alrafIntegBearr",
+          "name": "3alraf integration (bearer)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// One result per request: { label, path, ok, status, data, error }. Never throws, so callers decide (reports throw -> error\n// handler; the health monitor alerts). Transport errors (connection refused, timeout) arrive as { error } via \"continue on fail\".\nconst reqs = $('Sign request').all();\nreturn $input.all().map((item, i) => {\n  const idx = item.pairedItem && typeof item.pairedItem.item === 'number' ? item.pairedItem.item : i;\n  const req = (reqs[idx] || reqs[i] || { json: {} }).json;\n  const r = item.json || {};\n  const base = { label: req.label, path: req.path, query: req.query };\n  if (r.error && r.statusCode === undefined) {\n    const msg = typeof r.error === 'string' ? r.error : (r.error.message || JSON.stringify(r.error));\n    return { json: { ...base, ok: false, status: 0, error: msg, data: null } };\n  }\n  let body = r.body !== undefined ? r.body : r.data;\n  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }\n  const ok = r.statusCode === 200 && !!body && body.success === true;\n  const error = ok ? null : ((body && (body.message || body.error)) || ('HTTP ' + r.statusCode));\n  return { json: { ...base, ok, status: r.statusCode, error, data: ok ? body.data : null } };\n});\n"
+      },
+      "id": "1de7c491-e231-5bfa-8e91-5bd0a2a25fec",
+      "name": "Normalize response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When called by another workflow": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "GET 3alraf API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET 3alraf API": {
+      "main": [
+        [
+          {
+            "node": "Normalize response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "3alrafErrorHnd00"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "3bbc6ce4-a856-58dd-b86c-dfdebcf018bf"
+}

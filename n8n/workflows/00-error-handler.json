@@ -1,0 +1,99 @@
+{
+  "id": "3alrafErrorHnd00",
+  "name": "00 - Error handler (notify owner)",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "830287f9-3ad0-5ba9-942b-e3c1646217dd",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Trigger payload: { execution: { id, url, error, lastNodeExecuted, mode }, workflow: { id, name } }\n// (or { trigger: { error }, workflow } when the trigger node itself failed).\nconst d = $input.first().json;\nconst wf = d.workflow || {};\nconst ex = d.execution || {};\nconst err = ex.error || (d.trigger && d.trigger.error) || {};\nconst node = ex.lastNodeExecuted || (err.node && err.node.name) || '—';\nconst lines = [\n  `سير العمل: ${wf.name || '?'} (${wf.id || '?'})`,\n  `العقدة: ${node}`,\n  `الخطأ: ${String(err.message || err.description || 'unknown error').slice(0, 800)}`,\n  `التنفيذ: ${ex.id || '—'} (${ex.mode || 'trigger'})`,\n  `الوقت: ${new Date().toLocaleString('en-GB', { timeZone: 'Africa/Cairo' })} (القاهرة)`,\n];\nreturn [{ json: { title: `فشل سير عمل n8n: ${wf.name || '?'}`, text: lines.join('\\n'), level: 'error', source: '00-error-handler', link: ex.url || null } }];\n"
+      },
+      "id": "7ed2455f-52ca-590f-bb54-930f97688ae5",
+      "name": "Build error message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafNotifyOw90"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "0022eeed-2739-503b-8031-a2e89fa24d5e",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build error message": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "37bfd56d-08e7-57a1-a6fd-56845133b3bd"
+}

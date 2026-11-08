@@ -12,7 +12,7 @@ class IntegrationClient extends Model
 
     protected array $auditExcept = ['token_hash', 'hmac_secret', 'token_prefix'];
 
-    protected $fillable = ['name', 'token_prefix', 'token_hash', 'hmac_secret', 'scopes', 'webhook_url', 'last_used_at', 'revoked_at'];
+    protected $fillable = ['name', 'token_prefix', 'token_hash', 'hmac_secret', 'scopes', 'last_used_at', 'revoked_at'];
 
     protected $hidden = ['token_hash', 'hmac_secret'];
 
@@ -26,8 +26,9 @@ class IntegrationClient extends Model
         return $this->revoked_at !== null;
     }
 
-    public function hasScope(string $scope): bool
+    /** True when the client holds at least one of the scopes (`read` | `gift_finder:read` style lists). */
+    public function hasScope(string ...$scopes): bool
     {
-        return in_array($scope, $this->scopes ?? [], true);
+        return (bool) array_intersect($scopes, $this->scopes ?? []);
     }
 }

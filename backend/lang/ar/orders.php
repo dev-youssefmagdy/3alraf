@@ -198,4 +198,12 @@ return [
     'proof_shared_warning' => 'ملف الإثبات هذا مرتبط أيضاً بطلب (طلبات) أخرى، تحقق قبل الموافقة:',
     'proof_reused' => 'تم استخدام ملف الإثبات هذا في طلب آخر. يرجى رفع إيصال التحويل الخاص بك.',
     'offline_throttled' => 'عدد كبير من طلبات الدفع بالتحويل من جهازك. حاول مرة أخرى بعد حوالي :minutes دقيقة أو تواصل مع المتجر.',
+    // Return / cancellation reason codes (order_returns.reason_code, orders.cancel_reason_code) + customer cancellation (setting customer_cancel.enabled)
+    'reason_code' => 'كود السبب',
+    'reason_codes' => ['color_differs' => 'اللون مختلف عن المتوقع', 'size_unclear' => 'المقاس غير واضح', 'damaged_packaging' => 'تغليف تالف', 'delivery_delay' => 'تأخر التوصيل', 'description_inaccurate' => 'الوصف غير دقيق', 'quality' => 'مشكلة جودة', 'wrong_item' => 'منتج خاطئ', 'changed_mind' => 'غيّر رأيه', 'other' => 'أخرى'],
+    'customer_cancel' => [
+        'title' => 'إلغاء هذا الطلب', 'reason' => 'لماذا تلغي الطلب؟', 'button' => 'إلغاء الطلب',
+        'not_allowed' => 'لا يمكن إلغاء هذا الطلب بعد الآن.', 'reason_required' => 'من فضلك اختر سببا.', 'note' => 'ألغاه العميل', 'done' => 'تم إلغاء طلبك.',
+        'setting' => 'السماح للعملاء بإلغاء طلباتهم قبل الشحن', 'setting_hint' => 'يظهر زر "إلغاء الطلب" في صفحة الطلب (وفي التطبيق) للطلبات قيد الانتظار أو المؤكدة أو قيد التجهيز، مع اختيار سبب. الإلغاء يتبع قواعد الإلغاء العادية (إرجاع المخزون).',
+    ],
 ];

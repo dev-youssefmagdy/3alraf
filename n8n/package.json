@@ -1,0 +1,20 @@
+{
+  "name": "3alraf-n8n",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Self-hosted n8n for 3alraf (gift-finder workflows). No Docker.",
+  "engines": {
+    "node": ">=20.19 <=24.x"
+  },
+  "scripts": {
+    "start": "./start.sh",
+    "n8n": "n8n"
+  },
+  "dependencies": {
+    "n8n": "1.123.92",
+    "isolated-vm": "file:./stubs/isolated-vm"
+  },
+  "overrides": {
+    "isolated-vm": "$isolated-vm"
+  }
+}

@@ -1,0 +1,257 @@
+{
+  "id": "3alrafUntagged02",
+  "name": "02 - Gift finder untagged products/bundles alert",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f18af6e1-1b96-59a6-8359-f70740058716",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 10 * * 6"
+            }
+          ]
+        }
+      },
+      "id": "9f7107aa-5d58-553c-89bb-ba33e494661d",
+      "name": "Every Saturday 10:30 (Cairo)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { label: 'untagged', path: 'gift-finder/untagged', query: { limit: 100 } } }];\n"
+      },
+      "id": "e3910acb-6245-5ba5-8184-8c6df4007414",
+      "name": "Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafApiCallS91"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "30646ce5-06fd-549d-b720-7ebf8f1f2035",
+      "name": "Call 3alraf API",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const SITE = String($env.THREEALRAF_SITE_URL || '').replace(/\\/+$/, '');\nconst OCC_AR = { birthday: 'عيد ميلاد', mothers_day: 'عيد الأم', valentine: 'عيد الحب', wedding: 'فرح', eid_fitr: 'عيد الفطر',\n  eid_adha: 'عيد الأضحى', ramadan: 'رمضان', graduation: 'تخرج', thanks: 'شكر', self: 'لنفسي' };\nconst num = (v) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });\nconst pct = (v) => (v === null || v === undefined) ? '—' : num(v) + '%';\nconst money = (v) => (v === null || v === undefined) ? '—' : num(v) + ' ج.م';\nconst requireOk = (results) => {\n  const bad = results.filter((r) => !r.ok);\n  if (bad.length) throw new Error('3alraf integration API failed: ' + bad.map((r) => `${r.path} -> ${r.status} ${r.error}`).join('; '));\n};\n\nconst MAX_LINES = 25;\nconst res = $input.all().map((i) => i.json);\nrequireOk(res);\nconst d = res[0].data;\nconst c = d.counts || {};\nconst total = (c.products || 0) + (c.bundles || 0);\nif (!total) {\n  return [{ json: { notify: false, summary: `كل المنتجات (${num(c.active_products)}) والباقات (${num(c.active_bundles)}) النشطة عليها وسوم هدايا.`, counts: c } }];\n}\nconst lines = [`منتجات نشطة بدون وسم هدية: ${num(c.products)} من ${num(c.active_products)}`,\n  `باقات بدون أي منتج موسوم: ${num(c.bundles)} من ${num(c.active_bundles)}`, ''];\nif ((d.products || []).length) {\n  lines.push('المنتجات:');\n  d.products.slice(0, MAX_LINES).forEach((p) => lines.push(`- ${p.name}${p.sku ? ' [' + p.sku + ']' : ''}${p.gift_suitable === false ? ' (غير مناسب كهدية)' : ''}: ${SITE}/admin/products/${p.id}/edit`));\n  if (c.products > MAX_LINES) lines.push(`… و${num(c.products - MAX_LINES)} منتج آخر`);\n  lines.push('');\n}\nif ((d.bundles || []).length) {\n  lines.push('الباقات:');\n  d.bundles.slice(0, MAX_LINES).forEach((b) => lines.push(`- ${b.name} (${num(b.items)} منتجات): ${SITE}/admin/bundles/${b.id}/edit`));\n  if (c.bundles > MAX_LINES) lines.push(`… و${num(c.bundles - MAX_LINES)} باقة أخرى`);\n  lines.push('');\n}\nlines.push(`أسرع طريقة: صفحة وسوم الهدايا (فيها زر الاقتراح التلقائي): ${SITE}/admin/gift-finder/tags`);\nreturn [{ json: { notify: true, title: `منتجات/باقات تحتاج وسوم هدايا (${num(total)})`, text: lines.join('\\n'), level: 'warning',\n  source: '02-gift-untagged-alert', link: SITE + '/admin/gift-finder/tags', counts: c } }];\n"
+      },
+      "id": "ba8cace1-a46e-554f-8f83-d1bee5aa52cf",
+      "name": "Build message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a10441c9-f2a5-59d7-9b6d-d2296a3d8223",
+              "leftValue": "={{ $json.notify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a4ef5f99-eeae-5a00-9fd2-33c6593ae96f",
+      "name": "Anything untagged?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "3alrafNotifyOw90"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "6ce17d0b-0891-51fe-8869-78747ac18410",
+      "name": "Notify owner",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8b3454d4-e356-5f64-98c9-604c51ced41a",
+      "name": "All tagged",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Every Saturday 10:30 (Cairo)": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request": {
+      "main": [
+        [
+          {
+            "node": "Call 3alraf API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 3alraf API": {
+      "main": [
+        [
+          {
+            "node": "Build message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build message": {
+      "main": [
+        [
+          {
+            "node": "Anything untagged?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything untagged?": {
+      "main": [
+        [
+          {
+            "node": "Notify owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All tagged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "3alrafErrorHnd00"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "76fe2488-172d-5fa2-b922-43926ade782e"
+}

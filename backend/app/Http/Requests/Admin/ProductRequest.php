@@ -7,7 +7,7 @@ use App\Http\Requests\Concerns\TranslatableRules;
 use App\Models\Language;
 use App\Models\ProductVariant;
 use App\Services\BarcodeService;
-use App\Services\Growth\GiftFinderService;
+use App\Services\GiftFinder\GiftFinderService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;

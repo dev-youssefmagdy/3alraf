@@ -54,7 +54,7 @@ class BundleService extends CrudService
     protected function payload(object $dto, ?Model $model = null): array
     {
         $data = $dto->toArray();
-        $data['slug'] = Slug::unique(Bundle::class, $model?->slug, $dto->name, $model?->id);
+        $data['slug'] = Slug::unique(Bundle::class, ($dto->slug ?? null) ?: $model?->slug, $dto->name, $model?->id);
         $image = $model?->image;
         if ($dto->removeImage && ! $dto->image) {
             $this->images->deletePath($image);

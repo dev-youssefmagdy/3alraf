@@ -39,4 +39,30 @@ class ProductListService
             Setting::put('list_limits', $limits);
         });
     }
+
+    /** Pinned product ids of a list in display order. @return int[] */
+    public function pinnedIds(ProductListType $type): array
+    {
+        return $this->items->query()->where('list_type', $type->value)->orderBy('sort_order')->orderBy('id')->pluck('product_id')->map(fn ($v) => (int) $v)->all();
+    }
+
+    /** Pin a product at a 1-based position (null = last); keeps the other pins and the list limit (P5 product suggestions). */
+    public function pin(ProductListType $type, int $productId, ?int $position = null): void
+    {
+        $ids = array_values(array_diff($this->pinnedIds($type), [$productId]));
+        $at = $position === null ? count($ids) : max(0, min(count($ids), $position - 1));
+        array_splice($ids, $at, 0, [$productId]);
+        $this->save(new ProductListData($type, $ids, $this->resolver->limitFor($type)));
+    }
+
+    public function unpin(ProductListType $type, int $productId): void
+    {
+        $this->save(new ProductListData($type, array_values(array_diff($this->pinnedIds($type), [$productId])), $this->resolver->limitFor($type)));
+    }
+
+    /** Restore an exact pinned order (rollback). */
+    public function restore(ProductListType $type, array $productIds): void
+    {
+        $this->save(new ProductListData($type, array_values(array_map('intval', $productIds)), $this->resolver->limitFor($type)));
+    }
 }

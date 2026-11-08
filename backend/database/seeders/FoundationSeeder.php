@@ -26,7 +26,7 @@ class FoundationSeeder extends Seeder
         $owner->fill(['name' => 'Owner', 'email' => 'owner@egy.test', 'password' => 'password', 'is_active' => true])->save();
         $owner->assignRole(Role::findByName('owner', PermissionSeeder::GUARD));
 
-        $this->call([OperationsSeeder::class, OrdersSeeder::class, GrowthSeeder::class]);
+        $this->call([OperationsSeeder::class, OrdersSeeder::class, MarketingDemoSeeder::class]);
         $this->demo();
     }
 

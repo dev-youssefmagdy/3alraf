@@ -398,3 +398,169 @@ Adversarial review of the uncommitted diff; regression tests in `tests/Feature/R
 - Services/commands: no `--tenant` options or per-tenant loops; one currency (no `currency_rate`); WhatsApp single session `central` (Node gateway 410 for legacy `tenant-<n>`); Flutter app without country picker (`legacy_storage_migration.dart` moves old per-slug keys once).
 - Compat kept on purpose: `GET /api/v1/tenants` (`LegacyStoreListController`, `MOBILE_LEGACY_STORE_SLUG`), legacy upload paths `tenants/{n}/…` (read only), legacy hosts in nginx (`deploy/nginx/app.conf` legacy block).
 - Config/env: `APP_CENTRAL_DOMAIN` removed (`config('app.host')` from APP_URL), `SESSION_DOMAIN=null`; docs: REQUIREMENTS §2 rewritten, historical banners on `docs/prompts`, `docs/plans`, `docs/qa`.
+
+## P1: AI module removed (MARKETER_PLAN.md, 2026-11-08)
+- Deleted: `admin.ai.*` routes (platform group + `ai.enabled` group), Ai* controllers/FormRequests/DTOs/DataTables/repositories (+ bindings), `App\Services\Ai\*`, models `Ai*`, enums `Ai*` + `SocialPlatform`, `AiException`/`AiDraftInvalidException`, jobs `RunAiGeneration`/`RunMarketTrends`/`RunGlobalMarketTrends`, command `ai:expire-drafts` + schedule, middleware `ai.enabled`, `config/ai.php`, `lang/ar/ai.php`, views `admin/ai`, AI nav group, AI switch on Settings → General, `ai_*` permissions (config + access labels), 9 Ai* test files, Growth `ContentPackageService` (only fed by the AI generators).
+- Migration `2027_01_01_000000_drop_ai_module` (IRREVERSIBLE, down() empty): drops ai_messages, ai_conversations, ai_usage_logs, ai_generations, ai_trend_snapshots, ai_settings, ai_models, ai_providers; deletes `ai_*` permissions + pivots and any `ai*` settings key. Historical migration `2026_11_09_100001_fix_ai_model_web_search_flags` rewritten with the query builder (no model class).
+- Deterministic replacements: Gift Finder `GiftExplainer` builds the text from real data only (occasion/recipient fit, category, price vs budget with leftover, approved review rating ≥ 4, top sellers among results), ar/en keys `store.gift_explain.*`; `GiftScorer` rows carry `sold`/`category` (internal, not in the API shape). `GiftTagSuggester` was already rule based. Growth (to be removed in P2, minimal): Brief has no AI summary, bundle proposals use the template wording only, interaction classifier is keyword-only (`ai_classify` switch removed), Trend Radar scans own sales movement only (inline SQL; market snapshot gone).
+- Kept on purpose: `products.content` storefront wording overlay (data written by the old AI editor; display only), `content_assets.ai_generation_id` column (P2 drops growth tables).
+- Tests: new `tests/Feature/GiftExplainerTest.php` (2); AI cases removed from GrowthContentTest/GrowthRemainingTest/GrowthOpenItemsTest/SingleStoreTest/GrowthMetricsTest.
+- Gap: `lang/en/ai.php` could not be deleted (directory `lang/en` owned by another user, not writable); it is emptied to `return [];` — delete it manually.
+- Suite: baseline 819 tests / 8 failing (pre-existing: CatalogTest bulk activate 405, SeedModesTest, 4 ImageHygieneTest, ImageOptimizationTest, SingleStoreTest products.available); after 732 tests (AI tests removed, +2) with the same 8 failing, 0 new.
+
+## P2: n8n Growth system removed, Gift Finder kept as its own module (MARKETER_PLAN.md, 2026-11-08)
+Keep / remove decisions (rule: remove everything that only served the n8n Growth system; keep what the live store needs on its own):
+
+| Item | Decision |
+|---|---|
+| `admin.growth.*` (brief, approvals, experiments, brand memory/claims, content, bundle engine + A/B, interactions, VoC, reputation, missed, seasonal, lab, inventory/supplier prices/supply terms, returns-intel, trends, CEO, small-batch, ambassadors, settings/feature switches), `App\Services\Growth\*`, `growth.enabled`/`growth.feature` middleware, `config/growth.php`, `growth:*` commands + schedules, events outbox job/listener, GrowthNotification, Growth DataTables/requests/repositories, 33 Growth models, `resources/views/admin/growth`, Growth tests, `docs/n8n` | **removed** |
+| Storefront small-batch `/{l}/launch/{code}`, tracked links `/l/{code}`, ambassador portal (web + `/api/v1/affiliate/ambassador*`, `/api/v1/launch/*`), bundle A/B display + cart recording, `storefront_visits` counters, customer-deleted Growth erasure hook | **removed** |
+| Ambassador reward ledger + ERP `AmbassadorRewardsPaid` posting path (only ran with the `ambassadors` switch ON) | **removed** (`DocumentPoster::DOCUMENT_SOURCES` keeps `ambassador_rewards` so historical journal entries still display) |
+| Supplier prices / supply terms | **removed** (only the Growth inventory engine read them; purchases/ERP never did) |
+| `orders.attribution`, `orders.channel`, `carts.attribution`, gift-session attribution, `X-Attribution` header | **kept** → `App\Services\Storefront\AttributionService` + middleware `attribution.capture` (was `growth.track`; no longer gated by Growth switches, no visit counting). Session key `growth_attr` → `first_touch`; `ab` key ignored |
+| Customer order cancel (web `orders.cancel`, API `orders/{token}/cancel`) | **kept** → `App\Services\Orders\CustomerCancellationService`, behind plain setting `customer_cancel.enabled` (default OFF = same as before, toggle on Settings → General) |
+| Return reason codes (admin returns form, `order_returns.reason_code`, `orders.cancel_reason_code`) | **kept** → enum `App\Enums\ReturnReasonCode`, labels `orders.reason_codes` |
+| Affiliate payouts / commissions (CALCULATIONS.md) | **kept**, untouched (only the ambassador hook removed from `AffiliatePayoutController::pay`) |
+| Gift Finder | **kept** → `App\Services\GiftFinder\{GiftFinderService, GiftScorer, GiftExplainer, GiftTagSuggester, GiftFinderSettings, GiftFinderInsights}`, setting `gift_finder.enabled` (default ON, Settings → General), middleware `gift_finder.enabled` (page 404 / JSON 403 `feature_disabled` when off), admin `admin.gift-finder.*` (perms `gift_finder.view|manage`), storefront nav + mobile drawer + home CTA. Scorer no longer uses Growth metrics / seasonal events (own stock + 30-day sales query) |
+| Integration API | **reduced** to `ping`, `health`, `gift-finder/{stats,untagged,occasions}` (`docs/api/integration.md`); `IntegrationClient` + `IntegrationAuth` (bearer + HMAC + 300 s window + IP allowlist + per-client throttle) kept; `integration_requests` = call log, `integration:prune` daily; scopes `read`, `gift_finder:read`; `config/integration.php`; admin `admin.integration-clients.*` (perms `integration_clients.view|manage`); `growth:openapi` + `docs/api/integration-openapi.json` deleted |
+| Lang | `growth_hub`/`growth_gaps`/`growth_capital` deleted (ar); new `lang/ar/gift_finder.php`; EN lines in `lang/en/store.php` key `gift_finder`, served as group `gift_finder` by `AppServiceProvider::registerLangShims()`; integration strings in `admin.integration`; cancel strings in `orders.customer_cancel`. `lang/growth.php` stays (it is the Phase-5 affiliates/reviews/pages group, not n8n). `GrowthSeeder` renamed `MarketingDemoSeeder` (same reason) |
+
+- Migration `2027_01_02_000000_drop_growth_system` (IRREVERSIBLE, down() empty; run on dev DB `3alraf`): drops 33 tables (brand_memory_*, approved_product_claims, content_calendar, content_assets, bundle_ab_*, experiment_ad_days, growth_* (7), interactions, missed_opportunities, reputation_alerts, improvement_tasks, ceo_challenges, trend_candidates, seasonal_* (3), small_batch_* (2), ambassador* (3), tracked_links, storefront_visits, product_supply_terms, supplier_product_prices), `integration_clients.webhook_url`, old idempotency rows, `growth.*` permissions (custom roles holding growth.view/manage get gift_finder.* / integration_clients.*), the `growth` setting, Growth notifications and queued Growth jobs. No older migration imports a deleted class.
+- Tests: new `GiftFinderTest` (10: on/off storefront + API + app flag, settings toggle, ranking, tags, suggester, attribution/stats, admin perms, removed routes 404) and `IntegrationApiTest` (5: 401 matrix incl. stale timestamp/revoked, scopes 403, endpoints, Hijri/Gregorian occasions, removed endpoints 404, admin create/rotate/revoke); MobileApiGapsTest launch/ambassador cases replaced by 404 checks. 13 Growth*Test files + `tests/Helpers/growth.php` + `tests/Fixtures/growth` deleted (`GrowthTest.php` kept: it covers affiliates/reviews/pages).
+- Suite: before (P1 end) 732 tests / 8 failing (known list); after 612 tests / 8 failing = the same known 8 (two ImageOptimization regressions from a `bundle_ab_variants` reference in `ExistingImageMigrator` were fixed and re-verified).
+- Docs: CALCULATIONS.md Growth sections replaced by "Order attribution, Gift Finder and customer cancellation"; REQUIREMENTS.md §2/§4; MOBILE_API.md + openapi-mobile.yaml (launch/ambassador removed, `features.small_batch_lab/ambassadors` always false).
+- Owner TODO: delete `lang/en/growth_hub.php`, `growth_gaps.php`, `growth_capital.php` (emptied; dir not writable for agents); optionally create `lang/en/gift_finder.php` from `store.gift_finder` (the shim then switches itself off). Flutter app still has ambassador + launch screens (hidden by `features`; launch deep links now get 404).
+
+## P2b — n8n on subdomain + gift-finder n8n flow (2026-11-08)
+
+- n8n **1.123.92** installed without Docker in `/var/www/3alraf/n8n/` (pinned `package.json` + lock). 2.9+ needs Node ≥ 22 / 2.40+ Node ≥ 24; the
+  machine has Node 20.20, and the 1.123.x line is still security-patched. `isolated-vm` (Node ≥ 22, only for the opt-in `vm` expression engine)
+  is replaced by a stub via npm overrides and `N8N_EXPRESSION_ENGINE=legacy` is set — see `n8n/README.md`. Upgrade Node → move to 2.x.
+- Runs as `systemd --user` unit `n8n.service` on 127.0.0.1:5678 (`n8n/install-user-service.sh`; fallback `n8n/start.sh --daemon`), data in
+  `n8n/data` (gitignored), env `n8n/.env` (gitignored, 0600; template `.env.example`). Owner `owner@3alraf.loc`, password in `n8n/data/OWNER_CREDENTIALS.txt`.
+- Integration client #1 "n8n (gift finder)" (scope `gift_finder:read`) created via `IntegrationClientService` (`n8n/provision-client.sh`, also rotates):
+  bearer → n8n credential "3alraf integration (bearer)", HMAC secret → `THREEALRAF_HMAC_SECRET` in `n8n/.env`.
+- Workflows `n8n/workflows/`: 00 error handler, 01 weekly report (Sat 10:00), 02 untagged alert (Sat 10:30), 03 occasion reminder (daily 09:00,
+  21/7/2 days, Hijri approximate), 04 health monitor (15 min), 90 notify owner, 91 signed API request. Imported, 01–04 active, each run once: all success.
+- Fix: `api/integration/v1/gift-finder/stats` returned `by_occasion: []` when empty → always a JSON object; test added to `IntegrationApiTest`.
+- Prepared, not applied (no sudo): `deploy/apache/000-n8n.3alraf.loc.conf` (validated with an unprivileged Apache on :18080 incl. websocket 101),
+  `deploy/nginx/n8n.conf` (prod n8n.3alraf.com, not validated: nginx not installed), `n8n/setup-local-sudo.sh`, `n8n/deploy/n8n-system.service`.
+- Owner TODO: `sudo /var/www/3alraf/n8n/setup-local-sudo.sh --linger`.
+
+## P3 — Gift finder: restore & improve (2026-11-08)
+
+- **Visibility**: gift-finder link (gift icon + label, `data-nav-gift-finder`, `aria-current` on its pages) in the header top nav from `sm` up;
+  on phones a 6th "Gifts" item in the bottom bar (`data-bottom-gift-finder`; a header icon squeezed the search box) + first entry of the mobile drawer;
+  redesigned home CTA (`data-home-gift-finder`); all behind `gift_finder.enabled`. The link at the
+  end of the category mega-menu row was dropped (it overflowed with many categories). Verified by curl on http://3alraf.loc/ar and /en.
+- **Unified ranking** (`GiftScorer`, formula in its docblock + CALCULATIONS.md "Gift Finder ranking"): products AND live bundles in one list `items`
+  (each `type: product|bundle`, `key`). Bundles: tags aggregated from their items (shares of items matching category / recipient / occasion), budget use,
+  popularity (whole bundles sold from `order_items.bundle_id`), all components available (BundleResolver rules, one stock query), +5 savings bonus;
+  margin only a tie-breaker. Category is now a hard filter (incl. sub-categories) and an occasion tag for other occasions excludes; empty list ⇒
+  relax category, then occasion (`relaxed[]` + notice). `type` (all/products/bundles) + `sort` (best/price_asc/price_desc). Near-budget `near_items`.
+  Catalog loaded once per search with eager loads (fixed query count, test); `PriceResolver::itemFor()` + `BundleCatalog::presentResolved()` extracted
+  so bundles are priced from preloaded models with the same code as the cart.
+- **Explanations**: `GiftExplainer::explainBundles()` (items list, fit, category, price vs budget, real saving, popularity), ar/en in `store.gift_explain`.
+- **Share link**: `/{lang}/gift-finder/r/{token}` (noindex, form prefilled, stored list re-rendered in stored order at current prices/stock) and
+  `GET /api/v1/gift-finder/{token}`. Sessions store `bundle_ids`, `cart_bundle_ids`, `params` (type, sort, relaxed, order, near) —
+  migration `2027_01_03_000000_gift_finder_sessions_bundles`.
+- **Cart**: `POST {token}/cart` accepts `bundle_ids[]` (only suggested bundles; `CartService::addBundle`), new `GiftFinderCartRequest`; web answers
+  422 when nothing could be added. Response adds `bundles_added` / `bundles_skipped`.
+- **Storefront UI** rewritten (mobile-first, logical properties only): budget number + slider + preset chips (`config gift_finder.budget_presets`),
+  occasion, recipient, type segmented control, category (tree), sort, restrictions under "more options"; product + bundle cards (thumbnails, old price,
+  saving badge, explanation, "add bundle to cart"), sticky "add selected" button, share (Web Share API / clipboard), `role=status` live region.
+- **API v1**: `items`, `near_items`, `relaxed`, `relaxed_notice`, `filters`, `answers`, `share_url` added; legacy `results` (products, numeric price),
+  `bundles` (BundleCatalog shape) and `near_budget` kept — the Flutter app (`app/lib/features/catalog/data/product_models.dart`) reads those.
+  MOBILE_API.md + openapi-mobile.yaml (schemas `GiftItem`, `GiftSearchResult`) updated.
+- **Admin** `/admin/gift-finder`: + bundle stats (searches suggesting bundles, bundle add-to-cart, gift orders with a bundle; also in the integration
+  `stats` endpoint as extra keys), "bundles without gift tags" card (GiftFinderInsights), history modal lists suggested bundles. Tags page unchanged.
+- Tests: new `tests/Feature/GiftFinderBundlesTest.php` (11: bundle vs product ordering + tag aggregation, unavailable/mis-tagged bundles excluded,
+  budget cap for every type × sort, relaxation, bundle cart + stats, API shape + legacy arrays + GET token, share page, setting off, nav links, query
+  count constant with catalog size, admin). Suite: 625 tests, 8 failing = the known baseline 8, no new failures.
+- Browser check: `tests/Browser/gift-finder.mjs` (playwright-core + Chrome, ar/en × 390px/1366px: nav link, search, bundle cards, live region, add
+  bundle → cart count, share page, no horizontal scroll, no JS errors) — 44/44 ok against a throw-away copy of the dev DB with stock + 4 bundles.
+
+## P4 — Marketer panel foundation + Marketing internal API (2026-11-08, MARKETER_PLAN.md)
+- **Panel** `/marketer` (`routes/marketer.php`, names `marketer.*`, guard `admin`, `admin.locale`, gate `marketing.panel` + one `can:` per route),
+  layout `<x-layouts.marketer>` (admin base/components, plum sidebar + gold accent, header "لوحة التسويق", RTL/LTR, language switch, mobile menu,
+  "Admin panel" link when the user has non-marketing permissions). Nav = `App\Support\Marketing\MarketerNav` (items hidden until their route exists:
+  P5 suggestions, P6 media/Meta placeholders already listed). Admin sidebar: top-level "لوحة التسويق" link; `/admin/welcome` shows a panel card.
+- **Moved**: Gift Finder admin → `marketer.gift-finder.*`, n8n integration clients → `marketer.integration-clients.*` (controllers `App\Http\Controllers\Marketer\*`,
+  views `resources/views/marketer/*`); `/admin/gift-finder[/…]` and `/admin/integration-clients[/…]` GET → 301. Tests updated. `/api/integration/v1` untouched.
+- **Dashboard** (default last 30 days): gross sales, orders, AOV, gross profit over costed items with coverage % + missing-cost warning (perm
+  `marketing.analytics`), coupons / flash sales / banners / bundles / low-stock counts, sales trend (Chart.js), Gift Finder, top sellers, slow movers,
+  low stock, pending-suggestions placeholder.
+- **Permissions** (config/permissions.php): `marketing.view|analytics|tokens.manage|audit.view`, `ai_suggestions.*` (7), `ai_media.*` (4),
+  `ai_seo|ai_blog|ai_theme.approve`, `meta_ads.view|draft|approve|publish`; owner/super-admin get all; preset role `marketer`
+  (`MarketingPermissions::MARKETER`: no token/log/n8n-manage/meta-publish) created once by PermissionSeeder + migration. Role-form labels added.
+- **Marketing internal API** `/api/internal/marketing/*` (`routes/api_marketing.php`, `api` group, names `marketing-api.*`): 26 GET endpoints
+  (overview, products, product, profitability, images, categories, brands, inventory, low-stock, best-sellers, slow-moving, sales-summary,
+  orders-summary, campaign-candidates, marketing-metrics, bundles, banners, offers, coupons, theme, static-pages, seo-data, blog-posts,
+  blog-categories, seasonal-calendar, gift-finder/stats). Envelope `MarketingResponse` {success,data,meta,warnings}; per_page ≤ 100; from/to ≤ 366 days.
+  Services `MarketingAnalyticsService` (reuses ReportRepository / ReportService / LowStockService / GiftFinderService), `MarketingCatalogService`,
+  `MarketingContentService`, `CampaignScorer`; repo `MarketingRepository`. Cost never invented (`missing_data` warnings, costed-only gross profit,
+  net profit only at 100 % coverage); ad spend null + `no_ad_data`; origin (local/international) not tracked ⇒ `not_tracked`; blog categories absent
+  ⇒ `not_supported`; store text returned as plain untrusted data (`StoreText`).
+- **Auth**: `marketing_api_tokens` (sha256 hash, prefix `mkt_…`, scopes, expiry, revoke, created_by) + middleware `marketing.token:{scope}`
+  (constant-time, 401 uniform, 403 scope, 120/min/token throttle) + `marketing_api_requests` log (no body/IP/PII), `marketing:prune-requests` daily
+  03:15 (30 days). Scopes: `marketing:read`; `suggestions:write` reserved for P5. Panel pages: API tokens (create → shown once, revoke, last used),
+  API request log. Migration `2027_01_04_000000_create_marketing_api_tables` (also run on the dev DB `3alraf`).
+- Docs: `docs/marketing/API_DOCUMENTATION.md`, `docs/marketing/MARKETER_PANEL.md`; CALCULATIONS.md "Marketing analytics"; REQUIREMENTS.md §2/§4.
+- Tests: `tests/Feature/MarketingApiTest.php` (7), `tests/Feature/MarketerPanelTest.php` (6). Suite (parallel): 638 tests, 8 failing = the known baseline 8 (one new route-name duplicate fixed). Browser: `tests/Browser/marketer.mjs` 91/91 on a
+  throw-away DB `3alraf_smoke` (migrate:fresh --seed, dropped afterwards): login → /admin/welcome, every panel page ar/en × 390/1366 px, dir,
+  no overflow, mobile menu, token create/use/revoke.
+- Gaps: product videos / social assets not in the API (P6/P8); no per-product ad spend or contribution margin; orders by channel only as recorded
+  (`orders.channel`); seo-data `missing_only` filters in PHP (fine for ~1.2k products); theme = compiled tokens (no runtime/seasonal theme until P5).
+
+## P5 — Suggestions Center + application engine (2026-11-08, MARKETER_PLAN.md)
+- **Tables** (migration `2027_01_05_000000_create_marketing_suggestions_tables`, also run on dev DB `3alraf`): `marketing_suggestions` (+ `_revisions`,
+  `_approvals`, `_executions` [unique idempotency_key], `_activity_logs`), `marketing_themes` (versioned seasonal palettes), `seo_redirects` (301s),
+  `seo_metas` (meta for entities without meta columns). No `ai_*` names.
+- **Engine** `App\Services\Marketing\Suggestions\SuggestionEngine` + `SuggestionTypeRegistry` + `SuggestionStateMachine` (exact §16.3 statuses,
+  illegal moves 409) + `SuggestionHasher` (content hash = type + target + normalised payload; snapshot hash of touched target values ⇒ stale
+  detection). Approval bound to (version, hash), expires after 168 h, invalidated by any edit / re-snapshot; apply idempotent (key), failure ⇒
+  `failed`; rollback (applied → archived + rolled_back_at); dedup 409 + 30-day rejected cooldown (`force_reason`); `marketing:expire-suggestions` daily 03:25.
+- **Types** (one class each, `Types/*`, through the store services only): product (overlay name/description via CatalogService, tags/gift tags via
+  new narrow `ProductService::syncTags/updateGiftTags`, list pins via new `ProductListService::pin/unpin/restore`), bundle (BundleService, created
+  inactive, margin guard), slider (BannerService, inactive, activate needs an image), offer (FlashSaleService, inactive/activate, flash < cost
+  refused), coupon (DiscountCodeService, inactive/activate, worst-case margin incl. flash stacking), seo (product overlay / blog / seo_metas / site
+  settings + slug via each service — new `ProductService::changeSlug`, optional `BundleData::$slug` — + 301 middleware `seo.redirects` on storefront
+  404s), blog (draft on apply, explicit publish / schedule), seasonal_theme (ThemeService: runtime `<style>html:root{--color-…}</style>`, cached,
+  signed admin-only preview, WCAG contrast warnings, revert / off), social_content + media_asset (schema + review, `applicable() = false`, P6 TODO
+  in `AbstractPendingSocialType`).
+- **Sanitising**: `App\Support\Marketing\RichText` (DOM allowlist, internal links only; storefront blog body now rendered with it),
+  `InternalLink`, `UnknownFields` (write API rejects undeclared keys), `Contrast`.
+- **Panel** (`marketer.suggestions.*`): overview (KPIs, by type, recent activity, filtered Yajra table), 9 type pages (themes page: versions +
+  revert/off/activate), detail (actions by permission, stale banner, compare, preview, payload, revisions, approvals, executions, activity), edit
+  (per-type fields, AJAX validate), execution & approval log; dashboard pending card live. Strings `lang/ar/marketing.php` + `lang/en/admin.php` → `marketing.suggestions`.
+- **API** (`routes/api_marketing.php`): `GET suggestions[/{id}[/status|/result]]` (marketing:read), `POST suggestions/{type}`, `PATCH suggestions/{id}`,
+  `POST suggestions/{id}/submit` (scope `suggestions:write`, now enabled). No approve/reject/apply/rollback route (tested).
+- Docs `docs/marketing/{AI_SUGGESTIONS_ARCHITECTURE, SUGGESTION_LIFECYCLE, APPROVAL_AND_EXECUTION_ENGINE, SEO_MODULE, BLOG_CONTENT_WORKFLOW,
+  SEASONAL_THEME_MANAGEMENT, MCP_SUGGESTION_TOOLS}.md`; API_DOCUMENTATION §8, MARKETER_PANEL, CALCULATIONS (suggestion margin guards), REQUIREMENTS.
+- Tests: `tests/Feature/MarketingSuggestionsApiTest.php` (7), `tests/Feature/MarketingSuggestionsEngineTest.php` (13); P4 tests adjusted (suggestions:write
+  grantable, dashboard card live). Suite (parallel): 658 tests (P4: 638), 650 pass, only the 8 known baseline failures. Browser: `tests/Browser/suggestions.mjs` 215/215 on a
+  throw-away DB `3alraf_smoke` (dropped): API create ×10 types, no approve route, every suggestions page ar/en × 390/1366 (dir, overflow, errors),
+  edit → v2, approve + apply product/SEO/coupon/theme/blog/bundle/slider/offer in the UI, blog publish, theme preview (admin only) + applied for guests, rollback.
+- Gaps: new banners have no image (owner uploads in Banners before activating); product short description / badges and image alt have no column
+  (advisory only); blog categories do not exist; social_content / media_asset apply = P6; scheduled generation (n8n §25) not built (API supports `source=scheduled`).
+
+## P6 — Product social-media library + Meta Ads drafts (MARKETER_PLAN.md, MCP.md §7, §8, §21)
+- **Tables** (migration `2027_01_06_000000_create_social_media_and_meta_tables`, also run on dev DB `3alraf`): `social_media_assets` (+ `_versions`), `meta_campaign_drafts`, `meta_campaign_approvals`, `meta_audit_logs`. New permission `ai_media.approve` (owner, super-admin, role `marketer`).
+- **Library**: `App\Services\Marketing\Media\SocialMediaLibraryService`, panel `/marketer/media`, admin product tab `?tab=social` (محتوى السوشيال ميديا). Private disk only, streamed by protected routes or a 10-minute signed preview, content-based upload validation, versions, approval.
+- **Suggestions**: `social_content` / `media_asset` now apply to a private draft library item (result entity `social_media_asset`); rollback archives it. `rules()` unchanged.
+- **Meta**: `App\Services\Marketing\Meta\{MetaGraphClient, MetaReadService, MetaCampaignDraftService, MetaPublisher, MetaAudit}`, config `config/meta.php`, panel `/marketer/meta-ads`. The client only reads and creates; campaigns, ad sets and ads are always PAUSED; no activate / budget / delete path. Approval bound to version + content hash + expiry; publish needs `meta_ads.publish`, is idempotent and resumes after failure.
+- **API** (`routes/api_marketing.php`): `media`, `media/{id}`, `products/{id}/social-media` (marketing:read); `meta/*` reads (meta:read); `meta/drafts` create / edit own / submit (meta:draft). No approve / reject / publish / activate route.
+- **Tests**: `tests/Feature/SocialMediaLibraryTest.php` (12, including 4 upload datasets), `tests/Feature/MetaAdsTest.php` (12, `Http::fake` only). Suite (parallel): 682 tests (P5: 658), 674 pass, only the 8 known baseline failures. Browser: `tests/Browser/social-meta.mjs` 152/152 on a throw-away DB `3alraf_smoke` (dropped), Meta unset, so publishing itself was not exercised in the browser.
+- Docs: `docs/marketing/{SOCIAL_MEDIA_LIBRARY, META_INTEGRATION}.md`; API_DOCUMENTATION §9, MCP_SUGGESTION_TOOLS (tool map for P7), MARKETER_PANEL, APPROVAL_AND_EXECUTION_ENGINE, REQUIREMENTS.
+- Gaps: Meta payloads tested against mocks only (verify `META_GRAPH_VERSION` and fields before going live); interests / cities are notes, not targeting; video creatives not uploaded to Meta; no ffprobe (video duration typed by hand, no video thumbnail); PHP upload limits (20M / 80M locally) must be raised for large videos; Meta spend not merged into `marketing-metrics` (`no_ad_data` stays, use `meta/insights`).
+
+## P8 — Product video slider (MARKETER_PLAN.md, Decision 6)
+- **Data model**: new table `product_videos` (migration `2027_01_07_000000_create_product_videos_table`, also run on dev DB `3alraf`): product_id, path, poster_path, poster_thumb_path, mime, size_bytes, sort_order. Files on the public `media` disk under `catalog/videos/Y/m/` (server-chosen name, extension from the detected content). `images` is untouched; both tables share one `sort_order` numbering, merged by `Storefront\ProductGallery` (tie: image first). Reordering rewrites `sort_order` in both; a new image or video goes after everything. Private `social_media_assets` is not referenced anywhere in this code.
+- **Admin**: card "Product videos and gallery order" on the product edit page (`admin/products/_media.blade.php`, outside the product form): upload with progress, optional poster (through `ImageUploadService`), move earlier / later across images and videos, delete. `ProductVideoController` → `ProductVideoRequest` / `ProductMediaOrderRequest` → DTOs → `ProductVideoService` → `ProductVideoRepository`; permission `products.edit`. MP4/WebM by content, `PRODUCT_VIDEO_MAX_MB` (default 50) capped by PHP upload limits, `PRODUCT_VIDEO_MAX_PER_PRODUCT` (default 5). Oversize gets a clear message in the browser, from Laravel (`video.max` / `video.uploaded`) and on HTTP 413.
+- **Storefront**: products with at least one video use `storefront/_product-gallery.blade.php` + `resources/js/lib/product-gallery.js` (native CSS scroll-snap). Active video plays muted + inline; leaving pauses and rewinds; off-screen / hidden tab pauses and resumes; a visitor's own pause is kept; `prefers-reduced-motion` or a refused autoplay shows a play button; inactive videos are `preload="none"`. Products without a video keep the previous markup and JS path. Variant images: an image already in the gallery is selected, a variant's own image gets a hidden extra slide, an automatic preselection does not take over a video-first gallery.
+- **Fixed on the way**: `setMainImage` rewrote `.avif` to `.webp` even on a plain `<img>`, which breaks thumbnails and variant images when `IMAGE_WEBP_FALLBACK=false` (the default).
+- **Housekeeping**: `media:prune-orphans` knows `product_videos` (without that, every video would have been pruned as an orphan); `SoftDeletePurger` removes video files with the product; `deploy/nginx/cdn.conf` now serves `.mp4` / `.webm` (it answered 404 for anything but images).
+- **API v1**: `GET /products/{slug}` gains `media[]` (`id, type, url, thumb, poster, mime, sort_order`); `images[]` unchanged. `docs/MOBILE_API.md` updated.
+- **Bundles**: the bundle page has no gallery component (single image + component list), so it is unaffected.
+- **Tests**: `tests/Feature/ProductVideoTest.php` (22). Suite (parallel): 704 tests (P6: 682), 696 pass, only the 8 known baseline failures. Browser: `tests/Browser/product-video.mjs` 395/395 on a throw-away DB `3alraf_smoke` (FoundationSeeder + fixture products; dropped), real Chrome with no autoplay flag, ar/en × 390/1366.
+- Gaps: no server-side poster (no ffprobe), so a video without a poster has a dark thumbnail; poster cannot be changed without re-uploading; no JSON-LD VideoObject; Safari / iOS not tested; production upload limits must be raised (`deploy/php/php.ini` 12M/16M, nginx `client_max_body_size 16m`).

@@ -24,7 +24,7 @@ use Illuminate\Support\Str;
  *                  (the returns / commission reports count them) -> then kept and its customer snapshot is anonymised
  *  customer        has orders or reviews -> anonymised (name/e-mail/phone/password, addresses/carts/wishlist/tokens removed), else purged
  *  variant         referenced by order items / stock / purchase / adjustment / transfer rows -> kept, else purged (+images, QR codes)
- *  product         same references (any of its variants too) -> kept, else purged (+images, variants, QR codes)
+ *  product         same references (any of its variants too) -> kept, else purged (+images, videos, variants, QR codes)
  *  packaging_option referenced by an order (packaging_option_id) -> kept, else purged (+image, cart refs cleared)
  *  bundle          referenced by an order item (bundle_id) -> kept, else purged (+image, components, cart lines)
  *  brand           still has products (even soft-deleted) -> kept, else purged (+logo)
@@ -188,7 +188,7 @@ class SoftDeletePurger
         foreach (ProductVariant::withoutGlobalScopes()->where('product_id', $p->id)->get() as $v) {
             $this->dropVariant($v);
         }
-        $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachImages($p));
+        $this->mediaFiles = array_merge($this->mediaFiles, $this->repo->detachImages($p), $this->repo->detachVideos($p));
         $this->dropListings('product_id', $p->id);
         $p->forceDelete(); // categories/tags/reviews/flash items/lists/stock levels cascade
 

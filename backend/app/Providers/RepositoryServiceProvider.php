@@ -84,9 +84,6 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     /** interface => implementation. Add new repositories here. */
     public array $bindings = [
-        \App\Repositories\Contracts\AiProviderRepositoryInterface::class => \App\Repositories\Eloquent\AiProviderRepository::class,
-        \App\Repositories\Contracts\AiModelRepositoryInterface::class => \App\Repositories\Eloquent\AiModelRepository::class,
-        \App\Repositories\Contracts\AiSettingRepositoryInterface::class => \App\Repositories\Eloquent\AiSettingRepository::class,
         AffiliateRepositoryInterface::class => AffiliateRepository::class,
         AffiliateTierRepositoryInterface::class => AffiliateTierRepository::class,
         AffiliatePayoutRepositoryInterface::class => AffiliatePayoutRepository::class,
@@ -103,12 +100,10 @@ class RepositoryServiceProvider extends ServiceProvider
         AttributeRepositoryInterface::class => AttributeRepository::class,
         CategoryRepositoryInterface::class => CategoryRepository::class,
         ProductRepositoryInterface::class => ProductRepository::class,
+        \App\Repositories\Contracts\ProductVideoRepositoryInterface::class => \App\Repositories\Eloquent\ProductVideoRepository::class,
         CityRepositoryInterface::class => CityRepository::class,
         BranchRepositoryInterface::class => BranchRepository::class,
         ReportRepositoryInterface::class => ReportRepository::class,
-        \App\Repositories\Contracts\AiConversationRepositoryInterface::class => \App\Repositories\Eloquent\AiConversationRepository::class,
-        \App\Repositories\Contracts\AiTrendRepositoryInterface::class => \App\Repositories\Eloquent\AiTrendRepository::class,
-        \App\Repositories\Contracts\AiGenerationRepositoryInterface::class => \App\Repositories\Eloquent\AiGenerationRepository::class,
         SupplierRepositoryInterface::class => SupplierRepository::class,
         ShippingCompanyRepositoryInterface::class => ShippingCompanyRepository::class,
         PaymentMethodRepositoryInterface::class => PaymentMethodRepository::class,
@@ -129,11 +124,13 @@ class RepositoryServiceProvider extends ServiceProvider
         CustomerRepositoryInterface::class => CustomerRepository::class,
         CustomerAddressRepositoryInterface::class => CustomerAddressRepository::class,
         CartRepositoryInterface::class => CartRepository::class,
-        \App\Repositories\Contracts\GrowthApprovalRepositoryInterface::class => \App\Repositories\Eloquent\GrowthApprovalRepository::class,
-        \App\Repositories\Contracts\GrowthExperimentRepositoryInterface::class => \App\Repositories\Eloquent\GrowthExperimentRepository::class,
         \App\Repositories\Contracts\IntegrationClientRepositoryInterface::class => \App\Repositories\Eloquent\IntegrationClientRepository::class,
-        \App\Repositories\Contracts\GrowthEventRepositoryInterface::class => \App\Repositories\Eloquent\GrowthEventRepository::class,
         \App\Repositories\Contracts\QrCodeRepositoryInterface::class => \App\Repositories\Eloquent\QrCodeRepository::class,
         \App\Repositories\Contracts\RetentionRepositoryInterface::class => \App\Repositories\Eloquent\RetentionRepository::class,
+        \App\Repositories\Contracts\MarketingApiTokenRepositoryInterface::class => \App\Repositories\Eloquent\MarketingApiTokenRepository::class,
+        \App\Repositories\Contracts\MarketingRepositoryInterface::class => \App\Repositories\Eloquent\MarketingRepository::class,
+        \App\Repositories\Contracts\MarketingSuggestionRepositoryInterface::class => \App\Repositories\Eloquent\MarketingSuggestionRepository::class,
+        \App\Repositories\Contracts\SocialMediaAssetRepositoryInterface::class => \App\Repositories\Eloquent\SocialMediaAssetRepository::class,
+        \App\Repositories\Contracts\MetaCampaignDraftRepositoryInterface::class => \App\Repositories\Eloquent\MetaCampaignDraftRepository::class,
     ];
 }

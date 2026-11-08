@@ -23,7 +23,7 @@ One shop, one host: the app uses **one base URL** = `APP_URL` + `/api/v1` (e.g. 
 | `Authorization: Bearer <token>` | on protected routes | Sanctum token. Customer tokens carry ability `customer`, affiliate tokens `affiliate`; they are not interchangeable |
 | `X-Cart-Token` | guests | guest cart id. The first cart call returns it in the **response header `X-Cart-Token`**; persist it and send it on every call. Cleared on logout |
 | `X-Affiliate-Ref` | optional | affiliate uuid (`ref`) of a shared link, for commission attribution |
-| `X-Attribution` | optional | growth first-touch: base64url(JSON) of `{utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session, ab}`, max 1024 chars, malformed values ignored |
+| `X-Attribution` | optional | first-touch attribution: base64url(JSON) of `{utm_source, utm_medium, utm_campaign, utm_content, ref, link, gift_session}`, max 1024 chars, malformed values and unknown keys ignored |
 
 Bodies are JSON (`Content-Type: application/json`) except endpoints with a file (`proof`), which use `multipart/form-data`.
 
@@ -60,7 +60,7 @@ Stop infinite scroll when `current_page >= last_page`.
 |---|---|---|
 | 401 | missing / wrong-type / revoked token (`Unauthenticated.`) | clear the session, go to login |
 | 403 | forbidden (e.g. return on someone else's order) | show `message` |
-| 403 `feature_disabled` | a growth feature is off for the store (`launch`, `affiliate/ambassador`, `gift-finder`). Shape: `{"success":false,"error":"feature_disabled","message":"..."}` | hide the section (see `GET /store` `features`) |
+| 403 `feature_disabled` | the Gift Finder is switched off (`gift-finder`; setting `gift_finder.enabled`). Shape: `{"success":false,"error":"feature_disabled","message":"..."}` | hide the section (see `GET /store` `features`) |
 | 404 | unknown route/slug/token or another customer's resource (`Not found.`) | not-found state |
 | 422 | validation: `message` = first error, `errors` = per field (map field names to inputs) | show inline |
 | 429 | rate limited; `Retry-After` (seconds) header | back off, show `message` |
@@ -70,7 +70,7 @@ Failed logins (5) lock the e-mail temporarily and answer 422 even with the right
 
 ## 5. Rate limits (per client IP, or per user when authenticated)
 
-Default `api`: 120 req/min. Stricter: auth 10/min per route (login, register, google, reset-password, verify, ambassador join); `forgot-password`, verification-notification, account deletion 5/min; `catalog*` 90/min; cart writes 90/min; `cart/quote` 60/min; `checkout/validate` 40/min; `checkout` 20/min; uploads (`proof`, invoice, proof file) 10/min; returns/cancel 10/min; addresses 30/min; devices 30/min; reviews 10/min; payout request 5/min; stock-requests 3/min and 15/hour; `GET /tenants` 60/min; `GET /app-config` & `/health` 120/min. Responses carry `X-RateLimit-Limit` / `X-RateLimit-Remaining`; a 429 adds `Retry-After`.
+Default `api`: 120 req/min. Stricter: auth 10/min per route (login, register, google, reset-password, verify); `forgot-password`, verification-notification, account deletion 5/min; `catalog*` 90/min; cart writes 90/min; `cart/quote` 60/min; `checkout/validate` 40/min; `checkout` 20/min; uploads (`proof`, invoice, proof file) 10/min; returns/cancel 10/min; addresses 30/min; devices 30/min; reviews 10/min; payout request 5/min; stock-requests 3/min and 15/hour; `GET /tenants` 60/min; `GET /app-config` & `/health` 120/min. Responses carry `X-RateLimit-Limit` / `X-RateLimit-Remaining`; a 429 adds `Retry-After`.
 
 ## 6. Core flows
 
@@ -119,13 +119,12 @@ Wallet/bank-transfer methods (`requires_proof`) and the prepay leg of COD (when 
 | GET | `/products/{slug}/reviews` | Optional customer bearer token | Approved reviews (paginated). |
 | GET | `/bundles` | Optional customer bearer token | Live fixed-price bundles. |
 | GET | `/bundles/{slug}` | Optional customer bearer token | One bundle. |
-| POST | `/gift-finder` | Optional customer bearer token | Gift finder search (feature `gift_finder`). |
-| POST | `/gift-finder/{token}/cart` | Optional customer bearer token | Add the suggested gift set from a search to the cart (feature `gift_finder`). |
+| POST | `/gift-finder` | Optional customer bearer token | Gift finder search (setting `gift_finder.enabled`, else 403 `feature_disabled`). |
+| GET | `/gift-finder/{token}` | Optional customer bearer token | A stored gift search re-rendered (share link), same payload as the search (setting `gift_finder.enabled`, else 403 `feature_disabled`). |
+| POST | `/gift-finder/{token}/cart` | Optional customer bearer token | Add the suggested gift set from a search to the cart (setting `gift_finder.enabled`, else 403 `feature_disabled`). |
 | GET | `/blog` | Optional customer bearer token | Published blog posts of the store, newest first. |
 | GET | `/blog/{slug}` | Optional customer bearer token | One post; `content` is HTML (sanitised server side; render with a safe HTML widget, never a WebView with JS). |
 | POST | `/stock-requests` | Optional customer bearer token | "Notify me when back in stock" (works for guests; a bearer token links the request to the customer). |
-| GET | `/launch/{code}` | Optional customer bearer token | Small-batch launch page (interest / survey / limited stock / pre-order). |
-| POST | `/launch/{code}` | Optional customer bearer token | Join a launch (idempotent per contact: |
 | POST | `/auth/register` | None | Create an account and sign in. |
 | POST | `/auth/login` | None | E-mail + password sign in. |
 | POST | `/auth/google` | None | Google sign-in with an ID token from the Google SDK (verified server side). |
@@ -177,9 +176,6 @@ Wallet/bank-transfer methods (`requires_proof`) and the prepay leg of COD (when 
 | GET | `/affiliate/products/{slug}/qr` | Affiliate bearer token | PNG QR of the share link (binary). |
 | GET | `/affiliate/payouts` | Affiliate bearer token | Payout history. |
 | POST | `/affiliate/payouts` | Affiliate bearer token | Request a payout of the approved balance. |
-| GET | `/affiliate/ambassador` | Affiliate bearer token | Ambassador portal (feature `ambassadors`, else 403): |
-| POST | `/affiliate/ambassador/join` | Affiliate bearer token | Opt in as an ambassador (disclosure + terms). |
-| POST | `/affiliate/ambassador/links` | Affiliate bearer token | Create a per-channel tracked link for a product (404 when not enrolled). |
 
 
 ---
@@ -389,8 +385,8 @@ Store profile for the UI: currency, locales (+RTL flag), branding (logo, favicon
     },
     "features": {
       "gift_finder": true,
-      "small_batch_lab": true,
-      "ambassadors": true
+      "small_batch_lab": false,
+      "ambassadors": false
     }
   },
   "meta": {}
@@ -790,6 +786,8 @@ Tag page header. Its products: `GET /catalog?tag={slug}`.
 
 Product detail: gallery, variants with exact prices/stock, options, rating, reviews, related, `in_wishlist`, `can_review`.
 
+`images[]` is unchanged (`url`, `thumb`; images only). `media[]` is additive (P8): the images **and** videos of the product in gallery order. Each item is `{id, type: "image"|"video", url, thumb, poster, mime, sort_order}`. `sort_order` is the 0-based position in the gallery. For an image `poster` and `mime` are `null`. For a video `url` is an MP4 or WebM file, `mime` is `video/mp4` or `video/webm`, and `poster` / `thumb` are `null` when no poster image was uploaded.
+
 **Example response (200):**
 
 ```json
@@ -817,6 +815,7 @@ Product detail: gallery, variants with exact prices/stock, options, rating, revi
       }
     ],
     "images": [],
+    "media": [],
     "price": "250.00",
     "regular_price": "300.00",
     "options": [],
@@ -918,16 +917,41 @@ One bundle.
 **Auth:** Optional customer bearer token  
 **Host:** `APP_URL/api/v1`
 
-Gift finder search (feature `gift_finder`).
+Gift finder search (setting `gift_finder.enabled`, else 403 `feature_disabled`). Products AND bundles ranked in one list (rules: `docs/CALCULATIONS.md` "Gift Finder ranking").
 
-**Body (`*` = required):** `budget`* (number), `occasion`, `recipient`, `category_id`, `restrictions`
+**Body (`*` = required):** `budget`* (number), `occasion`, `recipient`, `category_id`, `restrictions`, `type` (`all` default | `products` | `bundles`), `sort` (`best` default | `price_asc` | `price_desc`)
+
+**Response `data`:**
+
+| Key | Meaning |
+|---|---|
+| `token` | session token for `/gift-finder/{token}` and `/gift-finder/{token}/cart` |
+| `share_url` | storefront share link `APP_URL/{lang}/gift-finder/r/{token}` |
+| `budget`, `filters{type,sort}`, `answers{budget,occasion,recipient,category_id,restrictions,type,sort}` | the normalised answers |
+| `relaxed[]`, `relaxed_notice` | filters dropped because nothing matched (`category`, then `occasion`) and the localised notice (null when none) |
+| `items[]` | **unified ranked list** (max 12, price ≤ budget). Every item: `type` (`product`/`bundle`), `key` (`product:ID`/`bundle:ID`), `id`, `name`, `slug`, `price` (string, 2 decimals), `fit`, `category_match`, `recipient_match`, `occasion_match`, `explanation` (ar/en). Product: `product_id`, `image`, `simple`, `picker` (variable products: `options`, in-stock `variants`). Bundle: `bundle_id`, `image`, `description`, `regular_total`, `savings`, `savings_percent`, `available` (null = unlimited), `in_stock`, `components[]` {`product_id`, `variant_id`, `name`, `slug`, `quantity`, `unit_price`, `image`} |
+| `near_items[]` | same shape, slightly over budget (≤ 125%), `over_budget: true` |
+| `results[]` | legacy (app builds before P3): products only, `price` number — unchanged shape |
+| `bundles[]` | legacy: best bundles in the `GET /bundles` shape (+ `fit`, `explanation`, `type`, `key`) |
+| `near_budget[]` | legacy: near-budget products |
+
+### `GET /gift-finder/{token}`
+
+**Auth:** Optional customer bearer token  
+**Host:** `APP_URL/api/v1`
+
+A stored search (share link) re-rendered with the same answers and the same suggestions in the same order, at today's prices / stock (an item that sold out or no longer fits the budget drops out). Same payload as `POST /gift-finder` plus `shared: true`. 404 for an unknown token.
 
 ### `POST /gift-finder/{token}/cart`
 
 **Auth:** Optional customer bearer token  
 **Host:** `APP_URL/api/v1`
 
-Add the suggested gift set from a search to the cart (feature `gift_finder`).
+Add the suggested gift set from a search to the cart (setting `gift_finder.enabled`, else 403 `feature_disabled`).
+
+**Body:** `product_ids[]` (suggested products), `variants[product_id]` (variant id, required for a variable product), `bundle_ids[]` (suggested bundles; added like `POST /cart/items` with `bundle_id`). With neither `product_ids` nor `bundle_ids` the suggested products are added (legacy). Only items of that search are accepted.
+
+**Response `data`:** `added[]` / `skipped[]` (product ids), `bundles_added[]` / `bundles_skipped[]` (bundle ids).
 
 
 ---
@@ -1017,67 +1041,6 @@ One post; `content` is HTML (sanitised server side; render with a safe HTML widg
   "meta": {}
 }
 ```
-
-### `GET /launch/{code}`
-
-**Auth:** Optional customer bearer token  
-**Host:** `APP_URL/api/v1`
-
-Small-batch launch page (interest / survey / limited stock / pre-order). Feature `small_batch_lab`. `code` = 6-12 lowercase alphanumerics; draft or other-store tests = 404.
-
-**Notes:** When `preorder` is true, show `preorder_terms` and send `preorder_accepted=true`.
-
-**Example response (200):**
-
-```json
-{
-  "success": true,
-  "message": null,
-  "data": {
-    "code": "abcd1234",
-    "name": "Rose serum pilot",
-    "description": "Help us decide",
-    "mode": "survey",
-    "survey_question": "Which size would you buy?",
-    "preorder": false,
-    "preorder_terms": null,
-    "is_open": true,
-    "ends_on": null,
-    "product": {
-      "id": 1,
-      "slug": "cheap",
-      "name": "P cheap",
-      "image": null
-    }
-  },
-  "meta": {}
-}
-```
-
-### `POST /launch/{code}`
-
-**Auth:** Optional customer bearer token  
-**Host:** `APP_URL/api/v1`
-
-Join a launch (idempotent per contact: a repeat returns `created:false`, HTTP 200). 422 when the test is closed, sold out, consent/terms missing.
-
-**Body (`*` = required):** `contact`* (phone or e-mail, max 120), `answer` (survey, max 300), `quantity` (1-20), `preorder_accepted`, `consent`* (must be true)
-
-**Example response (201):**
-
-```json
-{
-  "success": true,
-  "message": "Thank you, your interest is recorded.",
-  "data": {
-    "created": true
-  },
-  "meta": {}
-}
-```
-
-
----
 
 ## Auth (customer)
 
@@ -2665,112 +2628,6 @@ Request a payout of the approved balance. 422 when nothing is available.
   "meta": {}
 }
 ```
-
-### `GET /affiliate/ambassador`
-
-**Auth:** Affiliate bearer token  
-**Host:** `APP_URL/api/v1`
-
-Ambassador portal (feature `ambassadors`, else 403): enrolment state, allowed `channels`, idea library, own tracked links and a 30-day report (valid/pending/excluded orders, new-customer share, CAC; no margins).
-
-**Example response (200):**
-
-```json
-{
-  "success": true,
-  "message": null,
-  "data": {
-    "enrolled": true,
-    "ambassador": {
-      "status": "active",
-      "disclosure": "I am a paid brand partner",
-      "terms_accepted_at": "2026-11-01T23:51:45+02:00"
-    },
-    "channels": [
-      "instagram"
-    ],
-    "ideas": [],
-    "links": [
-      {
-        "id": 1,
-        "channel": "instagram",
-        "product_id": 1,
-        "clicks": 0,
-        "url": "http://3alraf.test/l/0kcv8vr0"
-      }
-    ],
-    "report": {
-      "valid_orders": 0,
-      "pending_orders": 0,
-      "excluded_orders": 0,
-      "new_customer_share": null,
-      "window_days": 14,
-      "referral_cac": null,
-      "by_channel": {
-        "instagram": {
-          "clicks": 0,
-          "orders": 0
-        }
-      },
-      "disclosure": "I am a paid brand partner"
-    }
-  },
-  "meta": {}
-}
-```
-
-### `POST /affiliate/ambassador/join`
-
-**Auth:** Affiliate bearer token  
-**Host:** `APP_URL/api/v1`
-
-Opt in as an ambassador (disclosure + terms). Idempotent re-join updates the disclosure.
-
-**Body (`*` = required):** `disclosure`* (max 300; texts that reward fake reviews are refused with 422), `terms_accepted`* (true)
-
-**Example response (201):**
-
-```json
-{
-  "success": true,
-  "message": "Welcome, you are now an ambassador.",
-  "data": {
-    "status": "active",
-    "disclosure": "I am a paid brand partner",
-    "terms_accepted_at": "2026-11-01T23:51:45+02:00"
-  },
-  "meta": {}
-}
-```
-
-### `POST /affiliate/ambassador/links`
-
-**Auth:** Affiliate bearer token  
-**Host:** `APP_URL/api/v1`
-
-Create a per-channel tracked link for a product (404 when not enrolled). `url` is a short link on the store domain.
-
-**Body (`*` = required):** `product_id`*, `channel`* (one of `channels`, anything else is stored as `other`)
-
-**Example response (201):**
-
-```json
-{
-  "success": true,
-  "message": "Saved successfully.",
-  "data": {
-    "id": 1,
-    "channel": "instagram",
-    "product_id": 1,
-    "clicks": 0,
-    "url": "http://3alraf.test/l/0kcv8vr0"
-  },
-  "meta": {}
-}
-```
-
-
----
 
 ## Appendix A - Revision log (Phase 1 gap closure)
 

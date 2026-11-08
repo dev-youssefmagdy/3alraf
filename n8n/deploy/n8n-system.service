@@ -1,0 +1,35 @@
+# PRODUCTION systemd SYSTEM unit (n8n.3alraf.com). Install: sudo cp n8n-system.service /etc/systemd/system/n8n.service
+# Layout: code in /opt/n8n (this n8n/ folder: package.json, package-lock.json, stubs/, start.sh), data in /var/lib/n8n,
+# env in /etc/n8n/n8n.env (root:n8n 0640, same keys as .env.example with the Production values). Dedicated user `n8n`.
+[Unit]
+Description=n8n (3alraf) on 127.0.0.1:5678
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=n8n
+Group=n8n
+WorkingDirectory=/opt/n8n
+EnvironmentFile=/etc/n8n/n8n.env
+ExecStart=/usr/bin/node /opt/n8n/node_modules/n8n/bin/n8n start
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+UMask=0077
+# hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/n8n /var/log/n8n
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

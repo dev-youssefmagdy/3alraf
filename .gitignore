@@ -1,0 +1,10 @@
+# n8n (self-hosted, see n8n/README.md): dependencies, runtime data (sqlite, encryption config, logs) and secrets
+/n8n/node_modules
+/n8n/data
+/n8n/.env
+/n8n/n8n.pid
+
+# MCP server (mcp-server/README.md): dependencies, build output and secrets
+/mcp-server/node_modules
+/mcp-server/dist
+/mcp-server/.env

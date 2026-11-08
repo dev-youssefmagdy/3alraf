@@ -76,7 +76,7 @@ class StoreController extends ApiController
         $d = $detail->load($slug, auth('web')->user());
 
         return $this->respond(new ProductDetailResource([
-            'product' => $d['product'], 'picker' => $d['picker'], 'summary' => $d['summary'], 'reviews' => $d['reviews'],
+            'product' => $d['product'], 'media' => $d['media'], 'picker' => $d['picker'], 'summary' => $d['summary'], 'reviews' => $d['reviews'],
             'related' => $d['related'], 'in_wishlist' => $d['inWishlist'], 'can_review' => $d['canReview'],
         ]));
     }

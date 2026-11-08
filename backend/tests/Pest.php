@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Admin;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\Product;
@@ -7,8 +8,6 @@ use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
-
-require_once __DIR__.'/Helpers/growth.php';
 
 pest()->extend(TestCase::class)->use(RefreshDatabase::class)->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
@@ -71,19 +70,9 @@ function staffPhone(string $label): array
 /** Login payload (country + phone + password) for an existing admin looked up by e-mail. */
 function adminCreds(string $email, string $password = 'password'): array
 {
-    $a = App\Models\Admin::query()->where('email', $email)->firstOrFail();
+    $a = Admin::query()->where('email', $email)->firstOrFail();
 
     return ['country' => 'EG', 'phone' => '0'.substr($a->phone, 2), 'password' => $password];
-}
-
-/** Flip growth feature switches (setting `growth.features.{key}`) without the audited admin flow. */
-function growthFeatures(bool $on, string ...$keys): void
-{
-    $growth = (array) (setting('growth') ?? []);
-    foreach ($keys as $k) {
-        $growth['features'][$k] = $on;
-    }
-    Setting::put('growth', $growth);
 }
 
 /** Every site-wide setting, freshly decoded from the `settings` table. */
