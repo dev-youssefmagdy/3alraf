@@ -4,7 +4,7 @@
     $st = $s->status;
     $p = (array) $s->payload;
     $sm = fn ($to) => \App\Services\Marketing\Suggestions\SuggestionStateMachine::can($st, $to);
-    $editable = in_array($st, [$S::PENDING, $S::UNDER_REVIEW, $S::EDITED, $S::APPROVED, $S::FAILED], true);
+    $editable = in_array($st, $S::PANEL_EDITABLE, true);
     $isBlog = $s->type === \App\Enums\Marketing\SuggestionTypeKey::BLOG;
     $isTheme = $s->type === \App\Enums\Marketing\SuggestionTypeKey::SEASONAL_THEME;
     $loc = fn ($arr) => is_array($arr) ? (($arr[app()->getLocale()] ?? null) ?: collect($arr)->filter()->first()) : $arr;

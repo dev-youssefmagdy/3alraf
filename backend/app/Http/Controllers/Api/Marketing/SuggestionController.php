@@ -20,7 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * /api/internal/marketing/suggestions (P5). Read (scope marketing:read): list, detail, status, result. Write (scope suggestions:write):
+ * /api/internal/marketing/suggestions (P5). Read (scope marketing:read): list, detail, status, result. Write (scope suggestions:write:{type}):
  * create per type, edit own pending/edited draft, submit for review. There is NO approve / reject / apply / rollback endpoint: those are
  * dashboard-only actions (MCP.md §22.3, §27).
  */

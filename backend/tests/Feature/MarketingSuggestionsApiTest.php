@@ -13,6 +13,7 @@ use App\Models\Tag;
 use App\Services\BarcodeService;
 use App\Services\Marketing\MarketingTokenService;
 use App\Services\Marketing\Suggestions\SuggestionEngine;
+use App\Support\Marketing\SuggestionScopes;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Cache;
 
@@ -21,7 +22,7 @@ beforeEach(function () {
     Cache::flush();
     config(['app.url' => 'http://3alraf.test', 'app.host' => '3alraf.test']);
     $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
-    $this->mkToken = fn (array $scopes = ['marketing:read', 'suggestions:write']) => app(MarketingTokenService::class)->create(new MarketingTokenData('mcp', $scopes, null, null))[1];
+    $this->mkToken = fn (?array $scopes = null) => app(MarketingTokenService::class)->create(new MarketingTokenData('mcp', $scopes ?? ['marketing:read', ...SuggestionScopes::all()], null, null))[1];
     $this->tok = ($this->mkToken)();
     $this->product = function (string $slug, string $price = '100', string $cost = '60') {
         $p = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug),
@@ -187,4 +188,48 @@ it('patches common fields without resending the payload (type-required payload k
     ($this->call)('PATCH', 'suggestions/'.$id, ['title' => 'Renamed suggestion', 'priority' => 'urgent'])->assertOk()->assertJsonPath('data.title', 'Renamed suggestion')
         ->assertJsonPath('data.priority', 'urgent')->assertJsonPath('data.payload.slug', 'maqal-1');
     ($this->call)('PATCH', 'suggestions/'.$id, ['payload' => ['slug' => 'no-title']])->assertStatus(422)->assertJsonValidationErrors(['payload.title']);
+});
+
+it('requires the write scope of the suggestion type on create, edit and submit', function () {
+    $p = ($this->product)('alpha');
+    $p2 = ($this->product)('beta', '80', '30');
+    $bundle = ($this->base)(['payload' => ['name' => ['ar' => 'باقة'], 'price' => '150', 'items' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $p2->id, 'quantity' => 1]]]]);
+    $coupon = ($this->base)(['payload' => ['code' => 'save10', 'type' => 'percent', 'value' => 10, 'scope' => 'products', 'product_ids' => [$p->id], 'ends_at' => now()->addMonth()->toDateTimeString()]]);
+
+    $bundleOnly = ($this->mkToken)(['suggestions:write:bundle']);
+    ($this->call)('POST', 'suggestions/coupon', $coupon, $bundleOnly)->assertForbidden()->assertJsonPath('error', 'forbidden_scope');
+    $own = ($this->call)('POST', 'suggestions/bundle', $bundle, $bundleOnly)->assertCreated()->json('data.id');
+    ($this->call)('PATCH', 'suggestions/'.$own, ['title' => 'Renamed'], $bundleOnly)->assertOk();
+    ($this->call)('POST', 'suggestions/'.$own.'/submit', [], $bundleOnly)->assertOk();
+    expect(MarketingSuggestion::where('type', 'coupon')->count())->toBe(0);
+
+    // a saved suggestion is guarded by its own type, even for the token that created it
+    $both = ($this->mkToken)(['suggestions:write:bundle', 'suggestions:write:coupon']);
+    $id = ($this->call)('POST', 'suggestions/coupon', $coupon, $both)->assertCreated()->json('data.id');
+    App\Models\MarketingApiToken::query()->latest('id')->first()->forceFill(['scopes' => ['suggestions:write:bundle']])->save();
+    ($this->call)('PATCH', 'suggestions/'.$id, ['title' => 'Renamed'], $both)->assertForbidden()->assertJsonPath('error', 'forbidden_scope');
+    ($this->call)('POST', 'suggestions/'.$id.'/submit', [], $both)->assertForbidden();
+
+    ($this->call)('PATCH', 'suggestions/999999', ['title' => 'Long enough title'], $bundleOnly)->assertNotFound();
+    ($this->call)('PATCH', 'suggestions/999999', ['title' => 'Long enough title'], ($this->mkToken)(['marketing:read']))->assertForbidden();
+});
+
+it('offers exactly one write scope per suggestion type and no longer grants the old shared one', function () {
+    foreach (SuggestionScopes::all() as $scope) {
+        expect(config('marketing.scopes.'.$scope.'.enabled'))->toBeTrue();
+    }
+    expect(fn () => ($this->mkToken)(['suggestions:write']))->toThrow(Illuminate\Validation\ValidationException::class);
+});
+
+it('converts existing tokens to the per-type scopes without widening partial ones on rollback', function () {
+    $migration = require database_path('migrations/2027_01_08_000000_split_marketing_suggestion_write_scope.php');
+    $make = fn (array $scopes) => App\Models\MarketingApiToken::create(['name' => 'old', 'token_prefix' => 'mkt_'.uniqid(), 'token_hash' => hash('sha256', uniqid()), 'scopes' => $scopes]);
+    $full = $make(['marketing:read', 'suggestions:write']);
+    $readOnly = $make(['marketing:read']);
+    $migration->up();
+    expect($full->fresh()->scopes)->toBe(['marketing:read', ...SuggestionScopes::all()])->and($readOnly->fresh()->scopes)->toBe(['marketing:read']);
+
+    $partial = $make(['marketing:read', 'suggestions:write:bundle']);
+    $migration->down();
+    expect($full->fresh()->scopes)->toBe(['marketing:read', 'suggestions:write'])->and($partial->fresh()->scopes)->toBe(['marketing:read']);
 });

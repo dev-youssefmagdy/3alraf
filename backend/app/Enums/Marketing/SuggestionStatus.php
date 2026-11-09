@@ -16,6 +16,9 @@ enum SuggestionStatus: string
     case EXPIRED = 'expired';
     case ARCHIVED = 'archived';
 
+    /** Statuses a person can still edit in the marketer panel (an edit after approval cancels the approval). */
+    public const PANEL_EDITABLE = [self::PENDING, self::UNDER_REVIEW, self::EDITED, self::APPROVED, self::FAILED];
+
     public function label(): string
     {
         return __('marketing.suggestions.statuses.'.$this->value);

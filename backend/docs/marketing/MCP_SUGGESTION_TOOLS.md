@@ -10,18 +10,18 @@ Envelope, auth, scopes, throttling: API_DOCUMENTATION.md §1–2, §8. Store dat
 | `get_suggestion_details` / `get_suggestion` | `GET /suggestions/{id}` | marketing:read |
 | `get_suggestion_status` | `GET /suggestions/{id}/status` | marketing:read |
 | `get_suggestion_application_result` | `GET /suggestions/{id}/result` | marketing:read |
-| `create_product_suggestion` | `POST /suggestions/product` | suggestions:write |
-| `create_bundle_suggestion` | `POST /suggestions/bundle` | suggestions:write |
-| `create_slider_suggestion` | `POST /suggestions/slider` | suggestions:write |
-| `create_offer_suggestion` | `POST /suggestions/offer` | suggestions:write |
-| `create_coupon_suggestion` | `POST /suggestions/coupon` | suggestions:write |
-| `create_seo_suggestion` | `POST /suggestions/seo` | suggestions:write |
-| `create_blog_suggestion` | `POST /suggestions/blog` | suggestions:write |
-| `create_seasonal_theme_suggestion` | `POST /suggestions/seasonal_theme` | suggestions:write |
-| `create_product_social_content_suggestion` | `POST /suggestions/social_content` | suggestions:write |
-| `create_media_asset_suggestion` | `POST /suggestions/media_asset` | suggestions:write |
-| `update_suggestion_draft` | `PATCH /suggestions/{id}` | suggestions:write (own, `pending`/`edited` only) |
-| `submit_suggestion_for_review` | `POST /suggestions/{id}/submit` | suggestions:write (own) |
+| `create_product_suggestion` | `POST /suggestions/product` | suggestions:write:product |
+| `create_bundle_suggestion` | `POST /suggestions/bundle` | suggestions:write:bundle |
+| `create_slider_suggestion` | `POST /suggestions/slider` | suggestions:write:slider |
+| `create_offer_suggestion` | `POST /suggestions/offer` | suggestions:write:offer |
+| `create_coupon_suggestion` | `POST /suggestions/coupon` | suggestions:write:coupon |
+| `create_seo_suggestion` | `POST /suggestions/seo` | suggestions:write:seo |
+| `create_blog_suggestion` | `POST /suggestions/blog` | suggestions:write:blog |
+| `create_seasonal_theme_suggestion` | `POST /suggestions/seasonal_theme` | suggestions:write:seasonal_theme |
+| `create_product_social_content_suggestion` | `POST /suggestions/social_content` | suggestions:write:social_content |
+| `create_media_asset_suggestion` | `POST /suggestions/media_asset` | suggestions:write:media_asset |
+| `update_suggestion_draft` | `PATCH /suggestions/{id}` | suggestions:write:{type} of that suggestion (own, `pending`/`edited` only) |
+| `submit_suggestion_for_review` | `POST /suggestions/{id}/submit` | suggestions:write:{type} of that suggestion (own) |
 
 There is **no** approve / reject / apply / rollback / publish tool or endpoint (MCP.md §22.3): those are marketer-panel actions only.
 

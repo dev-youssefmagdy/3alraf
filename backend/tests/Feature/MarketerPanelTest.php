@@ -103,7 +103,7 @@ it('the marketer role sees only marketing: panel pages, no admin modules, no cre
 it('creates a token once (hash stored), lists it and revokes it from the panel; the API follows', function () {
     $this->actingAs($this->owner, 'admin');
     $this->postJson('/marketer/api-tokens/validate', ['name' => '', 'scopes' => []])->assertStatus(422)->assertJsonValidationErrors(['name', 'scopes']);
-    $this->postJson('/marketer/api-tokens', ['name' => 'x', 'scopes' => ['admin:all']])->assertStatus(422);   // unknown scope (suggestions:write is grantable since P5)
+    $this->postJson('/marketer/api-tokens', ['name' => 'x', 'scopes' => ['admin:all']])->assertStatus(422);   // unknown scope (the per-type suggestions:write:* scopes are grantable)
     $this->postJson('/marketer/api-tokens', ['name' => 'x', 'scopes' => ['marketing:read'], 'expires_in_days' => '7'])->assertStatus(422);
     $r = $this->postJson('/marketer/api-tokens', ['name' => 'MCP prod', 'scopes' => ['marketing:read'], 'expires_in_days' => '90'])->assertCreated()->json('data');
     $row = MarketingApiToken::findOrFail($r['id']);

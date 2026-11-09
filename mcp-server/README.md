@@ -21,7 +21,7 @@ npm start
 
 See [`.env.example`](.env.example) for every variable. Required: `LARAVEL_BASE_URL`, `LARAVEL_SERVICE_TOKEN`, and at least one of `MCP_BEARER_TOKEN` or `MCP_OAUTH_ENABLED=true` with `MCP_OAUTH_OWNER_PASSWORD`. The server refuses to start with no authentication.
 
-The service token comes from Marketer panel → Marketing API tokens, with scopes `marketing:read`, `suggestions:write`, `meta:read` and `meta:draft`.
+The service token comes from Marketer panel → Marketing API tokens, with scopes `marketing:read`, the `suggestions:write:*` scopes you want Claude to use (one per suggestion type, all 10 for full use), `meta:read` and `meta:draft`.
 
 ## Authentication for Claude
 

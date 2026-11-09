@@ -1,6 +1,6 @@
 // Suggestions Center browser check (P5). Run ONLY against a throw-away database (same setup as smoke.mjs / marketer.mjs):
 //   export DB_DATABASE=3alraf_smoke APP_URL=http://3alraf.test:8000 ; php artisan migrate:fresh --seed ; php artisan serve --port=8000 &
-//   TOKEN=<mkt_… with marketing:read + suggestions:write> FIX='{"p1":1,"p2":2,"cat":3}' PORT=8000 OUT=/path node tests/Browser/suggestions.mjs
+//   TOKEN=<mkt_… with marketing:read + all suggestions:write:* scopes> FIX='{"p1":1,"p2":2,"cat":3}' PORT=8000 OUT=/path node tests/Browser/suggestions.mjs
 // Creates one suggestion per type through the API (as the MCP server would), then in the panel: every suggestions page ar/en × mobile/desktop
 // (direction, no overflow, no JS/HTTP errors), detail + edit pages, edit a product suggestion, approve + apply product / SEO / coupon / theme /
 // blog, publish the blog draft, the seasonal theme preview on the storefront (admin only) and the applied theme for guests. Screenshots in OUT.

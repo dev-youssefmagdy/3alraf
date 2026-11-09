@@ -68,7 +68,7 @@ it('rejects every endpoint without a token, with a revoked / expired / forged to
     [$expiredRow, $expired] = ($this->token)();
     $expiredRow->forceFill(['expires_at' => now()->subMinute()])->save();
     [, $good] = ($this->token)();
-    $wrong = MarketingApiToken::create(['name' => 'w', 'token_prefix' => 'mkt_wrongscope1', 'token_hash' => hash('sha256', 'mkt_wrongscope1.secret'), 'scopes' => ['suggestions:write']]);
+    $wrong = MarketingApiToken::create(['name' => 'w', 'token_prefix' => 'mkt_wrongscope1', 'token_hash' => hash('sha256', 'mkt_wrongscope1.secret'), 'scopes' => ['suggestions:write:bundle']]);
 
     foreach (MKT_ENDPOINTS as $e) {
         $path = str_replace('{id}', (string) $p->id, $e);
@@ -207,7 +207,7 @@ it('stores only the token hash and offers only enabled scopes', function () {
     expect($row->token_hash)->toBe(hash('sha256', $plain))->and($plain)->toStartWith($row->token_prefix.'.')->and($row->token_prefix)->toStartWith('mkt_')
         ->and($row->expires_at->isFuture())->toBeTrue()->and(json_encode($row->toArray()))->not->toContain($row->token_hash);
     expect(fn () => ($this->token)(['admin:all']))->toThrow(ValidationException::class);
-    expect(($this->token)(['marketing:read', 'suggestions:write'])[0]->scopes)->toBe(['marketing:read', 'suggestions:write']);   // P5: enabled
+    expect(($this->token)(['marketing:read', 'suggestions:write:bundle'])[0]->scopes)->toBe(['marketing:read', 'suggestions:write:bundle']);   // per-type scope is grantable
 });
 
 it('exposes merchandising and content reads with their flags', function () {

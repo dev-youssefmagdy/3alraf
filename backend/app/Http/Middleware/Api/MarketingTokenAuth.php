@@ -4,8 +4,10 @@ namespace App\Http\Middleware\Api;
 
 use App\Models\MarketingApiRequest;
 use App\Models\MarketingApiToken;
+use App\Repositories\Contracts\MarketingSuggestionRepositoryInterface;
 use App\Services\Marketing\MarketingTokenService;
 use App\Support\Marketing\MarketingResponse;
+use App\Support\Marketing\SuggestionScopes;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class MarketingTokenAuth
 {
-    public function __construct(private MarketingTokenService $tokens) {}
+    public function __construct(private MarketingTokenService $tokens, private MarketingSuggestionRepositoryInterface $suggestions) {}
 
     public function handle(Request $request, Closure $next, string $scope = 'marketing:read'): Response
     {
@@ -34,7 +36,7 @@ class MarketingTokenAuth
 
             return $token ? $this->log($request, $token, $res, $started) : $res;
         }
-        if (! $token->hasScope($scope)) {
+        if (! $token->hasAnyScope($this->acceptedScopes($request, $scope))) {
             return $this->log($request, $token, MarketingResponse::error(403, 'forbidden_scope'), $started);
         }
         $limit = max(1, (int) config('marketing.throttle_per_minute', 120));
@@ -50,6 +52,17 @@ class MarketingTokenAuth
         $this->tokens->touch($token);
 
         return $this->log($request, $token, $next($request), $started);
+    }
+
+    /** `{type}` = the type in the URL, else the type of suggestion {id}. An unknown id accepts any per-type write scope, so the controller answers 404. */
+    private function acceptedScopes(Request $request, string $scope): array
+    {
+        if ($scope !== SuggestionScopes::PREFIX.'{type}') {
+            return [$scope];
+        }
+        $type = $request->route('type') ?? $this->suggestions->find((int) $request->route('id'))?->type;
+
+        return $type ? [SuggestionScopes::for($type)] : SuggestionScopes::all();
     }
 
     private function log(Request $request, MarketingApiToken $token, Response $response, float $started): Response

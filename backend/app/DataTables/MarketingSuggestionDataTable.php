@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\Enums\Marketing\SuggestionStatus;
 use App\Enums\Marketing\SuggestionTypeKey;
 use App\Models\MarketingSuggestion;
 use App\Repositories\Contracts\MarketingSuggestionRepositoryInterface;
@@ -63,6 +64,8 @@ class MarketingSuggestionDataTable extends BaseDataTable
             ->addColumn('priority_label', fn (MarketingSuggestion $s) => $s->priority->label())
             ->addColumn('source_label', fn (MarketingSuggestion $s) => $s->source->label())
             ->editColumn('created_at', fn (MarketingSuggestion $s) => $s->created_at?->format('Y-m-d H:i'))
-            ->addColumn('actions', fn (MarketingSuggestion $s) => '<a href="'.e(route('marketer.suggestions.show', $s->id)).'" class="btn-sm btn-secondary">'.e(__('marketing.suggestions.open')).'</a>');
+            ->addColumn('actions', fn (MarketingSuggestion $s) => '<a href="'.e(route('marketer.suggestions.show', $s->id)).'" class="btn-sm btn-secondary">'.e(__('marketing.suggestions.open')).'</a>'
+                .(in_array($s->status, SuggestionStatus::PANEL_EDITABLE, true) && auth('admin')->user()?->can('ai_suggestions.edit')
+                    ? ' <a href="'.e(route('marketer.suggestions.edit', $s->id)).'" class="btn-sm btn-secondary" data-action="edit">'.e(__('marketing.suggestions.btn.edit')).'</a>' : ''));
     }
 }

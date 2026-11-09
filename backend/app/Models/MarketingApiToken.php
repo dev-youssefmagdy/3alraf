@@ -50,6 +50,12 @@ class MarketingApiToken extends Model
         return in_array($scope, $this->scopes ?? [], true);
     }
 
+    /** @param  list<string>  $scopes */
+    public function hasAnyScope(array $scopes): bool
+    {
+        return (bool) array_intersect($scopes, $this->scopes ?? []);
+    }
+
     /** active | expired | revoked */
     public function state(): string
     {

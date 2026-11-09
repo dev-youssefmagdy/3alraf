@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Route;
 
 // Marketing internal API for the MCP server (P4, MARKETER_PLAN.md): /api/internal/marketing/* (bootstrap/app.php; names marketing-api.*).
 // `api` group only (no session). Auth = marketing.token:{scope} (Bearer service token, scopes, expiry/revoke, per-token throttle, request log).
-// P5: suggestion writes under `marketing.token:suggestions:write` (create / edit own draft / submit) — there is deliberately NO approve, reject,
+// Suggestion writes need the scope of that suggestion's type, `suggestions:write:{type}` (create / edit own draft / submit) — there is deliberately NO approve, reject,
 // apply or rollback route (dashboard-only). Docs: docs/marketing/API_DOCUMENTATION.md, docs/marketing/MCP_SUGGESTION_TOOLS.md.
-Route::middleware('marketing.token:suggestions:write')->prefix('suggestions')->name('suggestions.')->group(function () {
+Route::middleware('marketing.token:suggestions:write:{type}')->prefix('suggestions')->name('suggestions.')->group(function () {
     Route::post('{type}', [S::class, 'store'])->whereIn('type', SuggestionTypeKey::values())->name('store');
     Route::patch('{id}', [S::class, 'update'])->whereNumber('id')->name('update');
     Route::post('{id}/submit', [S::class, 'submit'])->whereNumber('id')->name('submit');

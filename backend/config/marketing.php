@@ -9,7 +9,17 @@ return [
     // Token scopes. `enabled=false` scopes are reserved (shown, not grantable) until the phase that needs them ships.
     'scopes' => [
         'marketing:read' => ['enabled' => true],
-        'suggestions:write' => ['enabled' => true], // P5: create / edit own pending suggestions, submit for review (never approve / apply)
+        // One per suggestion type: create / edit own pending suggestions of that type, submit for review (never approve / apply)
+        'suggestions:write:product' => ['enabled' => true],
+        'suggestions:write:bundle' => ['enabled' => true],
+        'suggestions:write:slider' => ['enabled' => true],
+        'suggestions:write:offer' => ['enabled' => true],
+        'suggestions:write:coupon' => ['enabled' => true],
+        'suggestions:write:seo' => ['enabled' => true],
+        'suggestions:write:blog' => ['enabled' => true],
+        'suggestions:write:seasonal_theme' => ['enabled' => true],
+        'suggestions:write:social_content' => ['enabled' => true],
+        'suggestions:write:media_asset' => ['enabled' => true],
         'meta:read' => ['enabled' => true],         // P6: Meta ad accounts / campaigns / ad sets / ads / insights (cached reads) + campaign drafts (read)
         'meta:draft' => ['enabled' => true],        // P6: create / edit own Meta campaign drafts, submit for approval (never approve / publish)
     ],

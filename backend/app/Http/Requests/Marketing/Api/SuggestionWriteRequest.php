@@ -12,7 +12,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 /**
- * Base of the suggestion write requests (API, scope suggestions:write): common fields + the type handler's payload schema; unknown fields
+ * Base of the suggestion write requests (API, scope suggestions:write:{type}): common fields + the type handler's payload schema; unknown fields
  * (anything not declared by those rules) ⇒ 422 `validation_failed` with errors["field"] = unknown_field. Errors use the API envelope.
  */
 abstract class SuggestionWriteRequest extends FormRequest

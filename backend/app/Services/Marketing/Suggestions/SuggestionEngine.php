@@ -93,7 +93,7 @@ class SuggestionEngine
     {
         return DB::transaction(function () use ($s, $d, $actor) {
             $s = $this->repo->lockForUpdate($s->id);
-            $allowed = $actor->isToken() ? [S::PENDING, S::EDITED] : [S::PENDING, S::UNDER_REVIEW, S::EDITED, S::APPROVED, S::FAILED];
+            $allowed = $actor->isToken() ? [S::PENDING, S::EDITED] : S::PANEL_EDITABLE;
             if (! in_array($s->status, $allowed, true)) {
                 throw SuggestionException::make('not_editable', 409, ['status' => $s->status->value]);
             }

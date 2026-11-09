@@ -414,3 +414,16 @@ it('edits through the panel form (json / list / locale fields), validating befor
     $viewer = ($this->staff)(['ai_suggestions.view'], null, 'v2@egy.test');
     $this->actingAs($viewer, 'admin')->get(route('marketer.suggestions.edit', $s->id))->assertForbidden();
 });
+
+it('shows an edit button in the suggestions table only where a person can still edit', function () {
+    $p = ($this->product)('alpha');
+    $b2 = ($this->product)('beta', '50', '20');
+    $s = ($this->make)('bundle', ['name' => ['ar' => 'باقة'], 'price' => '140', 'items' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $b2->id, 'quantity' => 1]]]);
+    $actions = fn ($who) => $this->actingAs($who, 'admin')->get('/marketer/suggestions/datatable')->assertOk()->json('data.0.actions');
+    $edit = route('marketer.suggestions.edit', $s->id);
+
+    expect($actions($this->owner))->toContain($edit);
+    expect($actions(($this->staff)(['ai_suggestions.view'], null, 'v3@egy.test')))->not->toContain($edit);
+    $s->forceFill(['status' => 'rejected'])->save();
+    expect($actions($this->owner))->not->toContain($edit);
+});

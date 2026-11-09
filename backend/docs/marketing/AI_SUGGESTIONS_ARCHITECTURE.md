@@ -4,7 +4,7 @@
 flowchart LR
     C[Claude (Pro connector)] -->|MCP tools| M[mcp-server P7]
     N[n8n / scheduler] -->|service token| A
-    M -->|Bearer mkt_… · marketing:read / suggestions:write| A[/api/internal/marketing/suggestions*/]
+    M -->|Bearer mkt_… · marketing:read / suggestions:write:type| A[/api/internal/marketing/suggestions*/]
     A --> E[SuggestionEngine]
     P[Marketer panel /marketer/suggestions] -->|session · ai_suggestions.* perms| E
     E --> R[SuggestionTypeRegistry] --> H[Type handlers]

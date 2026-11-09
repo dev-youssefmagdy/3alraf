@@ -566,3 +566,4 @@ Keep / remove decisions (rule: remove everything that only served the n8n Growth
 - Gaps: no server-side poster (no ffprobe), so a video without a poster has a dark thumbnail; poster cannot be changed without re-uploading; no JSON-LD VideoObject; Safari / iOS not tested; production upload limits must be raised (`deploy/php/php.ini` 12M/16M, nginx `client_max_body_size 16m`).
 
 - Marketer analytics page `/marketer/analytics` added (perm `marketing.analytics`; figures from `MarketingAnalyticsService`, periods zero-filled).
+- Marketing API: `suggestions:write` split into one `suggestions:write:{type}` scope per suggestion type (`App\Support\Marketing\SuggestionScopes`, migration `2027_01_08_000000`); suggestions table has an Edit action.

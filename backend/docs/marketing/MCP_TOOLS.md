@@ -10,8 +10,8 @@ The 60 tools exposed to Claude. The source of truth is `mcp-server/src/tools/`.
 |---|---:|---|
 | Store and analytics reads | 26 | `marketing:read` |
 | Suggestion reads | 6 | `marketing:read` |
-| Suggestion creation (one per type) | 10 | `suggestions:write` |
-| Suggestion management (`update_suggestion_draft`, `submit_suggestion_for_review`) | 2 | `suggestions:write` |
+| Suggestion creation (one per type) | 10 | `suggestions:write:{type}` (one per type) |
+| Suggestion management (`update_suggestion_draft`, `submit_suggestion_for_review`) | 2 | `suggestions:write:{type}` of that suggestion |
 | Media library reads | 3 | `marketing:read` |
 | Meta reads and draft reads | 10 | `meta:read` |
 | Meta drafts (`create_campaign_draft`, `update_campaign_draft`, `submit_campaign_for_approval`) | 3 | `meta:draft` |
