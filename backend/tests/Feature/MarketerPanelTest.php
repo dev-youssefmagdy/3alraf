@@ -13,7 +13,7 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
-const MARKETER_PAGES = ['/marketer', '/marketer/gift-finder', '/marketer/gift-finder/tags', '/marketer/integration-clients', '/marketer/api-tokens', '/marketer/api-log'];
+const MARKETER_PAGES = ['/marketer', '/marketer/analytics', '/marketer/gift-finder', '/marketer/gift-finder/tags', '/marketer/integration-clients', '/marketer/api-tokens', '/marketer/api-log'];
 
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);

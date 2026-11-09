@@ -40,7 +40,7 @@ Without `marketing.view` the dashboard redirects to the first panel page the adm
 | Permission | owner / super-admin | role `marketer` | Used by |
 |---|:-:|:-:|---|
 | marketing.view | ✓ | ✓ | dashboard |
-| marketing.analytics | ✓ | ✓ | profit block of the dashboard (P5+: analytics pages) |
+| marketing.analytics | ✓ | ✓ | profit block of the dashboard, `/marketer/analytics` |
 | marketing.tokens.manage | ✓ | — | API tokens page (create / revoke) |
 | marketing.audit.view | ✓ | — | API request log |
 | ai_suggestions.view / create / edit / approve / reject / apply / archive | ✓ | ✓ | P5 Suggestions Center (approve/apply are dashboard-only, never via API) |

@@ -170,15 +170,21 @@ class MarketingAnalyticsService
 
     // ---------------------------------------------------------------- sales / orders
 
+    /** Bucket key of a day in a sales series: day, the week's first day, or Y-m. */
+    public static function periodKey(CarbonImmutable $d, string $by): string
+    {
+        return match ($by) {
+            'week' => $d->startOfWeek()->toDateString(), 'month' => $d->format('Y-m'), default => $d->toDateString()
+        };
+    }
+
     public function salesSummary(MarketingQuery $q): array
     {
         $by = (string) $q->filter('group_by', 'day');
         $buckets = [];
         foreach ($this->reports->sales($q->report()) as $r) {
             $d = CarbonImmutable::parse($r['day']);
-            $key = match ($by) {
-                'week' => $d->startOfWeek()->toDateString(), 'month' => $d->format('Y-m'), default => $d->toDateString()
-            };
+            $key = self::periodKey($d, $by);
             $b = $buckets[$key] ?? ['period' => $key, 'orders' => 0, 'gross_sales' => '0.00', 'subtotal' => '0.00', 'discounts' => '0.00', 'shipping' => '0.00', 'cogs_recorded' => '0.00', 'net_profit_recorded' => '0.00'];
             $b['orders'] += (int) $r['orders'];
             foreach (['gross_sales' => 'total', 'subtotal' => 'subtotal', 'discounts' => 'discount', 'shipping' => 'shipping', 'cogs_recorded' => 'cogs', 'net_profit_recorded' => 'net_profit'] as $to => $from) {

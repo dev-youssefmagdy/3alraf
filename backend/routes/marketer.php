@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Marketer\AnalyticsController;
 use App\Http\Controllers\Marketer\ApiLogController;
 use App\Http\Controllers\Marketer\DashboardController;
 use App\Http\Controllers\Marketer\GiftFinderController;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 // Panel gate `marketing.panel` (any marketing permission) + one `can:` per route. Nav: App\Support\Marketing\MarketerNav (P5/P6/P7 add items there).
 Route::prefix('marketer')->middleware(['admin.locale', 'auth:admin', 'can:marketing.panel'])->name('marketer.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('analytics', [AnalyticsController::class, 'index'])->middleware('can:marketing.analytics')->name('analytics.index');
 
     // Suggestions Center (P5, MCP.md §16/§17/§24). View: ai_suggestions.view; each action its own permission (+ the type's own approve permission
     // ai_seo / ai_blog / ai_theme .approve, checked by SuggestionEngine). Approve / apply exist ONLY here (never on the API).

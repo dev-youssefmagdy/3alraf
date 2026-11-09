@@ -14,7 +14,7 @@ const site = `http://${DOMAIN}:${P}`;
 const failed = [];
 let checks = 0;
 const ok = (c, m) => { checks++; console.log(c ? '  ok  ' : '  FAIL', m); if (!c) failed.push(m); };
-const pages = ['/marketer', '/marketer/gift-finder', '/marketer/gift-finder/tags', '/marketer/api-tokens', '/marketer/api-log', '/marketer/integration-clients'];
+const pages = ['/marketer', '/marketer/analytics', '/marketer/gift-finder', '/marketer/gift-finder/tags', '/marketer/api-tokens', '/marketer/api-log', '/marketer/integration-clients'];
 const views = { mobile: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, desktop: { viewport: { width: 1366, height: 900 } } };
 
 for (const [vname, opts] of Object.entries(views)) {

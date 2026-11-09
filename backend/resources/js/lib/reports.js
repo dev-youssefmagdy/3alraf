@@ -24,7 +24,7 @@ export function initCharts(root = document) {
         el._chart = new Chart(el, {
             type: cfg.type,
             data: cfg,
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: pie || cfg.datasets.length > 1, position: 'bottom' } }, scales: pie ? {} : { y: { beginAtZero: true } } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: pie || cfg.datasets.length > 1, position: 'bottom' } }, scales: pie ? {} : { y: { beginAtZero: true, ticks: cfg.integer ? { precision: 0 } : {} } } },
         });
     });
 }

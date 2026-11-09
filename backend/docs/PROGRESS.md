@@ -564,3 +564,5 @@ Keep / remove decisions (rule: remove everything that only served the n8n Growth
 - **Bundles**: the bundle page has no gallery component (single image + component list), so it is unaffected.
 - **Tests**: `tests/Feature/ProductVideoTest.php` (22). Suite (parallel): 704 tests (P6: 682), 696 pass, only the 8 known baseline failures. Browser: `tests/Browser/product-video.mjs` 395/395 on a throw-away DB `3alraf_smoke` (FoundationSeeder + fixture products; dropped), real Chrome with no autoplay flag, ar/en × 390/1366.
 - Gaps: no server-side poster (no ffprobe), so a video without a poster has a dark thumbnail; poster cannot be changed without re-uploading; no JSON-LD VideoObject; Safari / iOS not tested; production upload limits must be raised (`deploy/php/php.ini` 12M/16M, nginx `client_max_body_size 16m`).
+
+- Marketer analytics page `/marketer/analytics` added (perm `marketing.analytics`; figures from `MarketingAnalyticsService`, periods zero-filled).
