@@ -2,6 +2,8 @@
 
 namespace App\Services\Erp\Backfill;
 
+use App\Models\AffiliateBonus;
+use App\Models\AffiliatePayout;
 use App\Models\Erp\Account;
 use App\Models\Erp\AuditLog;
 use App\Models\Erp\BackfillRun;
@@ -20,6 +22,7 @@ use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
 use App\Services\Erp\Accounting\PeriodService;
 use App\Services\Erp\Equity\ErpSettings;
+use App\Services\Erp\Posting\AffiliatePoster;
 use App\Services\Erp\Posting\ExpensePoster;
 use App\Services\Erp\Posting\PaymentPoster;
 use App\Services\Erp\Posting\Poster;
@@ -44,12 +47,12 @@ use Throwable;
 class BackfillService
 {
     /** Document types in processing order. `opening` posts the balance-sheet snapshot (inventory last, once the documents are in). */
-    public const TYPES = ['opening', 'purchases', 'orders', 'payments', 'returns', 'stock', 'expenses'];
+    public const TYPES = ['opening', 'purchases', 'orders', 'payments', 'returns', 'stock', 'expenses', 'affiliates'];
 
     private const CHUNK = 200;
 
     public function __construct(private SalesPoster $sales, private PaymentPoster $payments, private ReturnPoster $returns, private PurchasePoster $purchases,
-        private StockPoster $stock, private ExpensePoster $expenses, private JournalService $journals) {}
+        private StockPoster $stock, private ExpensePoster $expenses, private JournalService $journals, private AffiliatePoster $affiliates) {}
 
     /** SQL expression: first confirmation date of an order (history), falling back to placed/created date for confirmed orders without history; NULL = never confirmed. */
     private static function confExpr(): string
@@ -157,6 +160,7 @@ class BackfillService
                 ->whereHas('order', fn ($q) => $q->where('status', '!=', 'cancelled'))->lazyById(self::CHUNK),
             'stock' => $this->stockDocuments($from),
             'expenses' => Expense::where('expense_date', '>=', $from)->lazyById(self::CHUNK),
+            'affiliates' => $this->affiliateDocuments($from),
         };
     }
 
@@ -168,6 +172,16 @@ class BackfillService
             ->where(fn ($q) => $q->where('sent_at', '>=', $d)->orWhereNull('received_at')->orWhere('received_at', '>=', $d))->lazyById(self::CHUNK);
 
         return $adj->concat($trf);
+    }
+
+    /** Affiliate sales bonuses (accrual, key affbonus:{id}) then paid payouts (key affpayout:{id}). */
+    private function affiliateDocuments(string $from)
+    {
+        $d = $from.' 00:00:00';
+        $bonuses = AffiliateBonus::where('status', '!=', 'voided')->where('created_at', '>=', $d)->lazyById(self::CHUNK);
+        $payouts = AffiliatePayout::where('status', 'paid')->where('paid_at', '>=', $d)->lazyById(self::CHUNK);
+
+        return $bonuses->concat($payouts);
     }
 
     private function key(string $k): bool
@@ -205,6 +219,8 @@ class BackfillService
 
                 return ($this->live('transfer:'.$doc->id.':out') || $this->stockValue($doc) === '0.00')
                     && ($doc->status->value !== 'received' || ! $doc->received_at || $doc->received_at->toDateString() < $from || $this->live('transfer:'.$doc->id.':in') || $this->stockValue($doc) === '0.00');
+            case 'affiliates':
+                return $this->zeroValue($doc->amount) || $this->live(($doc instanceof AffiliateBonus ? 'affbonus:' : 'affpayout:').$doc->id);
             case 'expenses':
                 return JournalEntry::where('source_type', 'expense')->where('source_id', $doc->id)->where('type', 'auto')->where('status', 'posted')->exists() || $this->zeroValue($doc->amount);
         }
@@ -231,7 +247,7 @@ class BackfillService
     public function amount(string $type, $doc): string
     {
         return Money::round((string) match ($type) {
-            'purchases' => $doc->total_cost, 'orders' => $doc->total, 'payments' => $doc->paid_amount, 'returns' => $doc->return_value, 'expenses' => $doc->amount,
+            'purchases' => $doc->total_cost, 'orders' => $doc->total, 'payments' => $doc->paid_amount, 'returns' => $doc->return_value, 'expenses' => $doc->amount, 'affiliates' => $doc->amount,
             default => $this->stockValue($doc),
         });
     }
@@ -240,7 +256,7 @@ class BackfillService
     {
         return match ($type) {
             'purchases' => ['purchase_order', $doc->id], 'orders', 'payments' => ['order', $doc->id], 'returns' => ['order_return', $doc->id],
-            'expenses' => ['expense', $doc->id], default => [$doc instanceof StockAdjustment ? 'stock_adjustment' : 'stock_transfer', $doc->id],
+            'expenses' => ['expense', $doc->id], 'affiliates' => [$doc instanceof AffiliateBonus ? 'affiliate_bonus' : 'affiliate_payout', $doc->id], default => [$doc instanceof StockAdjustment ? 'stock_adjustment' : 'stock_transfer', $doc->id],
         };
     }
 
@@ -290,6 +306,13 @@ class BackfillService
                 break;
             case 'expenses':
                 $this->expenses->sync($doc); // dated by expense_date
+                break;
+            case 'affiliates':
+                if ($doc instanceof AffiliateBonus) {
+                    Poster::withDate($this->d($doc->created_at), fn () => $this->affiliates->bonusAwarded($doc));
+                } else {
+                    Poster::withDate($this->d($doc->paid_at ?? $doc->updated_at), fn () => $this->affiliates->payoutPaid($doc));
+                }
                 break;
         }
     }
@@ -535,7 +558,8 @@ class BackfillService
     }
 
     /**
-     * Source documents without journals (confirmed orders, received purchases, expenses, approved returns, stock adjustments/transfers, payments).
+     * Source documents without journals (confirmed orders, received purchases, expenses, approved returns, stock adjustments/transfers, payments,
+     * affiliate sales bonuses and paid affiliate payouts).
      * $post=true posts them through the same idempotent posters ("post missing").
      *
      * @return array<string,array{created:int,skipped:int,failed:int,amount:string,missing:array}>
@@ -544,7 +568,7 @@ class BackfillService
     {
         $from = $this->scanFrom();
         $out = [];
-        foreach (['purchases', 'orders', 'payments', 'returns', 'stock', 'expenses'] as $type) {
+        foreach (['purchases', 'orders', 'payments', 'returns', 'stock', 'expenses', 'affiliates'] as $type) {
             // posting runs in "repost" mode: a document whose auto entry was reversed by hand gets a corrected, versioned entry
             $out[$type] = $post ? Poster::reposting(fn () => $this->process($type, $from, false, $progress, $userId)) : $this->process($type, $from, true, $progress, $userId);
         }

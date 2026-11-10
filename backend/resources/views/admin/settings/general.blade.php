@@ -28,6 +28,22 @@
                 <x-checkbox name="customer_cancel_enabled" :label="__('orders.customer_cancel.setting')" :checked="$s['customer_cancel_enabled']" />
                 <p class="text-xs text-slate-500">{{ __('orders.customer_cancel.setting_hint') }}</p>
             </div>
+            {{-- affiliate sales bonus (docs/CALCULATIONS.md §Affiliate sales bonus); the launch date is shown only, never submitted --}}
+            <fieldset class="space-y-3 rounded-lg border border-dashed border-slate-300 p-4">
+                <legend class="px-1 text-sm font-semibold text-slate-700">{{ __('admin.affiliate_bonus_section') }}</legend>
+                <x-checkbox name="affiliate_bonus_enabled" :label="__('admin.fields.affiliate_bonus_enabled')" :checked="$s['affiliate_bonus_enabled']" />
+                <p class="text-xs text-slate-500">{{ __('admin.affiliate_bonus_intro') }}</p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div><x-input name="affiliate_bonus_threshold" type="number" min="1000" step="0.01" inputmode="decimal" :label="__('admin.fields.affiliate_bonus_threshold').' ('.$s['currency_code'].')'" :value="$s['affiliate_bonus_threshold']" required /></div>
+                    <div><x-input name="affiliate_bonus_amount" type="number" min="0.01" step="0.01" inputmode="decimal" :label="__('admin.fields.affiliate_bonus_amount').' ('.$s['currency_code'].')'" :value="$s['affiliate_bonus_amount']" required /></div>
+                </div>
+                <div>
+                    <label for="f-affiliate_bonus_started_at" class="form-label">{{ __('admin.fields.affiliate_bonus_started_at') }}</label>
+                    <input id="f-affiliate_bonus_started_at" type="text" class="form-control bg-slate-50 text-slate-600" dir="ltr" readonly aria-describedby="h-affiliate_bonus_started_at"
+                        value="{{ $s['affiliate_bonus_started_at'] ? \Illuminate\Support\Carbon::parse($s['affiliate_bonus_started_at'])->format('Y-m-d H:i') : __('admin.affiliate_bonus_not_started') }}">
+                    <p id="h-affiliate_bonus_started_at" class="mt-1 text-xs text-slate-500">{{ __('admin.affiliate_bonus_started_hint') }}</p>
+                </div>
+            </fieldset>
             @if ($canEdit)<x-form-actions :cancel="route('admin.dashboard')" />@endif
         </form>
     </x-card>

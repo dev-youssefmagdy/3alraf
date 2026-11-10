@@ -52,6 +52,11 @@ class Affiliate extends Authenticatable
         return $this->hasMany(AffiliateCommission::class);
     }
 
+    public function bonuses()
+    {
+        return $this->hasMany(AffiliateBonus::class);
+    }
+
     public function clicks()
     {
         return $this->hasMany(AffiliateClick::class);

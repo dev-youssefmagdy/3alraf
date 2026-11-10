@@ -17,6 +17,7 @@ final readonly class GeneralSettingsData
         public string $timezone,
         public bool $giftFinderEnabled,
         public bool $customerCancelEnabled,
+        public ?AffiliateBonusSettingsData $affiliateBonus = null,
     ) {}
 
     public static function fromRequest(GeneralSettingsRequest $r): self
@@ -25,7 +26,10 @@ final readonly class GeneralSettingsData
 
         return new self(trim($v['name']), isset($v['country']) && $v['country'] !== '' ? strtoupper($v['country']) : null,
             strtoupper($v['currency_code']), $v['currency_symbol'], $v['default_locale'], array_values(array_unique($v['locales'])),
-            $v['timezone'], $r->boolean('gift_finder_enabled'), $r->boolean('customer_cancel_enabled'));
+            $v['timezone'], $r->boolean('gift_finder_enabled'), $r->boolean('customer_cancel_enabled'),
+            array_key_exists('affiliate_bonus_threshold', $v) // section submitted
+                ? new AffiliateBonusSettingsData($r->boolean('affiliate_bonus_enabled'), (string) $v['affiliate_bonus_threshold'], (string) $v['affiliate_bonus_amount'])
+                : null);
     }
 
     /** @return array<string,mixed> the plain `settings` rows */

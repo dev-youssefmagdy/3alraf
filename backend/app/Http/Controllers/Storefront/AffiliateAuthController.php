@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\Storefront\AffiliateRegisterRequest;
 use App\Models\Affiliate;
+use App\Services\Affiliates\AffiliateBonusService;
 use App\Services\Affiliates\AffiliateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,9 +53,11 @@ class AffiliateAuthController extends Controller
         return $this->ok(__('admin.welcome_back'), route('storefront.affiliate.dashboard'));
     }
 
-    public function showRegister()
+    /** Public, indexable program page: the sales-bonus line and meta description use the live settings (only while the bonus is enabled). */
+    public function showRegister(AffiliateBonusService $bonus)
     {
-        return view('storefront.affiliate.register');
+        return view('storefront.affiliate.register', ['bonus' => $bonus->enabled() && (float) $bonus->amount() > 0
+            ? ['amount' => $bonus->amount(), 'threshold' => $bonus->threshold()] : null]);
     }
 
     public function validateRegister(AffiliateRegisterRequest $r): JsonResponse

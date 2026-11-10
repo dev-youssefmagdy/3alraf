@@ -15,6 +15,8 @@ class AffiliateDataTable extends BaseDataTable
             ->withSum(['commissions as pending_sum' => fn ($q) => $q->where('status', 'pending')], 'amount')
             ->withSum(['commissions as approved_sum' => fn ($q) => $q->where('status', 'approved')], 'amount')
             ->withSum(['commissions as paid_sum' => fn ($q) => $q->where('status', 'paid')], 'amount')
+            ->withCount(['bonuses as bonuses_count' => fn ($q) => $q->where('status', '!=', 'voided')])
+            ->withSum(['bonuses as bonuses_sum' => fn ($q) => $q->where('status', '!=', 'voided')], 'amount')
             ->latest('id');
     }
 
@@ -28,6 +30,7 @@ class AffiliateDataTable extends BaseDataTable
             ['data' => 'pending_sum', 'title' => __('growth.commission_pending'), 'searchable' => false, 'orderable' => false],
             ['data' => 'approved_sum', 'title' => __('growth.commission_approved'), 'searchable' => false, 'orderable' => false],
             ['data' => 'paid_sum', 'title' => __('growth.commission_paid'), 'searchable' => false, 'orderable' => false],
+            ['data' => 'bonuses_sum', 'title' => __('growth.bonuses_earned'), 'searchable' => false, 'orderable' => false],
             ['data' => 'status_label', 'title' => __('admin.status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'actions', 'title' => '', 'orderable' => false, 'searchable' => false],
         ];
@@ -39,6 +42,7 @@ class AffiliateDataTable extends BaseDataTable
         $dt->editColumn('pending_sum', fn (Affiliate $m) => $this->money($m->pending_sum ?? 0))
             ->editColumn('approved_sum', fn (Affiliate $m) => $this->money($m->approved_sum ?? 0))
             ->editColumn('paid_sum', fn (Affiliate $m) => $this->money($m->paid_sum ?? 0))
+            ->editColumn('bonuses_sum', fn (Affiliate $m) => $this->money($m->bonuses_sum ?? 0).' ('.(int) $m->bonuses_count.')')
             ->addColumn('status_label', fn (Affiliate $m) => '<span class="badge '.($m->status === AffiliateStatus::APPROVED ? 'badge-success' : ($m->status === AffiliateStatus::PENDING ? 'badge-warn' : 'badge-muted')).'">'.e($m->status->label()).'</span>')
             ->addColumn('actions', function (Affiliate $m) use ($u) {
                 $h = '<div class="flex items-center gap-2">';

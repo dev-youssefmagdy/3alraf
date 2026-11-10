@@ -2,6 +2,9 @@
 
 return [
     'dashboard' => 'Dashboard', 'languages' => 'Languages', 'settings' => 'Settings', 'settings_general' => 'General settings',
+    'affiliate_bonus_section' => 'Affiliate sales bonus', 'affiliate_bonus_intro' => 'Affiliates earn the bonus amount for every threshold of delivered sales (goods after discount, excluding shipping and VAT, minus returns), repeated.',
+    'affiliate_bonus_started_hint' => 'Only orders placed after this date count. Changes apply to future bonuses only; bonuses already earned keep their amount.',
+    'affiliate_bonus_not_started' => 'Not set',
     'save' => 'Save', 'cancel' => 'Cancel', 'edit' => 'Edit', 'delete' => 'Delete', 'create' => 'Create', 'add_new' => 'Add new',
     'saved' => 'Saved successfully.', 'deleted' => 'Deleted successfully.', 'confirm_delete' => 'Delete this record? This cannot be undone.',
     'confirm' => 'Confirm', 'yes' => 'Yes', 'no' => 'No', 'error' => 'Something went wrong. Please try again.', 'fix_errors' => 'Please fix the highlighted fields.',
@@ -95,6 +98,7 @@ return [
     'attribute_types' => ['select' => 'Select', 'color' => 'Color', 'text' => 'Text'],
     'product_types' => ['simple' => 'Simple', 'variable' => 'Variable'],
     'fields' => [
+        'affiliate_bonus_enabled' => 'Affiliate sales bonus enabled', 'affiliate_bonus_threshold' => 'Bonus every (sales amount)', 'affiliate_bonus_amount' => 'Bonus amount', 'affiliate_bonus_started_at' => 'Bonus start date',
         'code' => 'Code', 'name' => 'Name', 'native_name' => 'Native name', 'direction' => 'Direction', 'sort_order' => 'Sort order',
         'is_active' => 'Active', 'is_default' => 'Default language', 'slug' => 'Slug', 'country' => 'Country (ISO-2)',
         'currency_code' => 'Currency code', 'currency_symbol' => 'Currency symbol',

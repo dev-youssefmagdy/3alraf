@@ -567,3 +567,4 @@ Keep / remove decisions (rule: remove everything that only served the n8n Growth
 
 - Marketer analytics page `/marketer/analytics` added (perm `marketing.analytics`; figures from `MarketingAnalyticsService`, periods zero-filled).
 - Marketing API: `suggestions:write` split into one `suggestions:write:{type}` scope per suggestion type (`App\Support\Marketing\SuggestionScopes`, migration `2027_01_08_000000`); suggestions table has an Edit action.
+- Affiliate sales bonus (AFFILIATE_BONUS_PLAN.md, docs/CALCULATIONS.md §Affiliate sales bonus): `affiliate_bonuses`, 200 EGP per 10,000 EGP eligible delivered sales (settings in Settings → General), awarded by `affiliates:approve-commissions`, paid with commissions, ERP `affbonus:{id}`; payouts store `commission_amount` / `bonus_amount`. Tests: AffiliateBonusTest (23), AffiliateBonusEdgeTest (16).

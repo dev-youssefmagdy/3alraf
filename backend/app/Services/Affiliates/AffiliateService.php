@@ -9,6 +9,7 @@ use App\Enums\PayoutStatus;
 use App\Models\Affiliate;
 use App\Models\AffiliatePayout;
 use App\Models\Product;
+use App\Repositories\Contracts\AffiliateBonusRepositoryInterface;
 use App\Repositories\Contracts\AffiliateCommissionRepositoryInterface;
 use App\Repositories\Contracts\AffiliatePayoutRepositoryInterface;
 use App\Repositories\Contracts\AffiliateRepositoryInterface;
@@ -23,6 +24,8 @@ class AffiliateService
         private AffiliateRepositoryInterface $affiliates,
         private AffiliatePayoutRepositoryInterface $payouts,
         private AffiliateCommissionRepositoryInterface $commissions,
+        private AffiliateBonusRepositoryInterface $bonuses,
+        private AffiliateBonusService $bonusService,
         private AffiliateCommissionService $commissionService,
         private AffiliateTracker $tracker,
         private QrCodeManager $qr,
@@ -47,8 +50,15 @@ class AffiliateService
         return $a;
     }
 
+    /** Refused while the affiliate is still owed money (pending/approved commissions, approved bonuses, requested payouts): suspend instead. */
     public function delete(Affiliate $a): void
     {
+        $owed = $a->commissions()->whereIn('status', [CommissionStatus::PENDING->value, CommissionStatus::APPROVED->value])->where('amount', '>', 0)->exists()
+            || $a->bonuses()->where('status', CommissionStatus::APPROVED->value)->exists()
+            || $a->payouts()->where('status', PayoutStatus::REQUESTED->value)->exists();
+        if ($owed) {
+            throw ValidationException::withMessages(['affiliate' => __('growth.affiliate_has_unpaid')]);
+        }
         $this->qr->deleteForAffiliate($a);
         $this->affiliates->delete($a);
     }
@@ -67,6 +77,7 @@ class AffiliateService
             'conversion' => $clicks > 0 ? round($orders / $clicks * 100, 1) : 0.0,
             'sales' => $sales, 'tier' => $tier, 'next_tier' => $next,
             'commissions' => $this->commissionService->totals($a),
+            'bonus' => $this->bonusService->progress($a), // sales bonus: progress toward the next one + earned totals
         ];
     }
 
@@ -88,17 +99,21 @@ class AffiliateService
             });
     }
 
-    /** Pays out every approved, not yet requested commission. */
+    /** Pays out every approved, not yet requested commission AND sales bonus (a payout of bonuses only is allowed). */
     public function requestPayout(Affiliate $a): AffiliatePayout
     {
         return DB::transaction(function () use ($a) {
             $rows = $this->commissions->query()->where('affiliate_id', $a->id)->where('status', CommissionStatus::APPROVED->value)->whereNull('payout_id')->lockForUpdate()->get();
-            $amount = Money::round((string) $rows->sum('amount'));
-            if ($rows->isEmpty() || Money::cmp($amount, '0') <= 0) {
+            $bonuses = $this->bonuses->query()->where('affiliate_id', $a->id)->where('status', CommissionStatus::APPROVED->value)->whereNull('payout_id')->lockForUpdate()->get();
+            $commission = Money::add('0', ...$rows->pluck('amount')->map(fn ($v) => (string) $v)->all());
+            $bonus = Money::add('0', ...$bonuses->pluck('amount')->map(fn ($v) => (string) $v)->all());
+            $amount = Money::add($commission, $bonus);
+            if (($rows->isEmpty() && $bonuses->isEmpty()) || Money::cmp($amount, '0') <= 0) {
                 throw ValidationException::withMessages(['amount' => __('growth.nothing_to_payout')]);
             }
-            $payout = $this->payouts->create(['affiliate_id' => $a->id, 'amount' => $amount, 'status' => PayoutStatus::REQUESTED]);
-            $this->commissions->query()->whereIn('id', $rows->pluck('id'))->update(['payout_id' => $payout->id]);
+            $payout = $this->payouts->create(['affiliate_id' => $a->id, 'amount' => $amount, 'commission_amount' => $commission, 'bonus_amount' => $bonus, 'status' => PayoutStatus::REQUESTED]);
+            $rows->isNotEmpty() && $this->commissions->query()->whereIn('id', $rows->modelKeys())->update(['payout_id' => $payout->id]);
+            $bonuses->isNotEmpty() && $this->bonuses->query()->whereIn('id', $bonuses->modelKeys())->update(['payout_id' => $payout->id]);
 
             return $payout;
         });
@@ -114,10 +129,13 @@ class AffiliateService
 
         return DB::transaction(function () use ($p, $note, $paidFrom) {
             $p->commissions()->where('status', CommissionStatus::APPROVED->value)->update(['status' => CommissionStatus::PAID->value]);
+            $p->bonuses()->where('status', CommissionStatus::APPROVED->value)->update(['status' => CommissionStatus::PAID->value]);
             // voided commissions inside the payout reduce what is actually paid
-            $paid = Money::round((string) $p->commissions()->where('status', CommissionStatus::PAID->value)->sum('amount'));
+            $commission = Money::round((string) $p->commissions()->where('status', CommissionStatus::PAID->value)->sum('amount'));
+            $bonus = Money::round((string) $p->bonuses()->where('status', CommissionStatus::PAID->value)->sum('amount'));
+            $paid = Money::add($commission, $bonus);
 
-            $p = $this->payouts->update($p, ['status' => PayoutStatus::PAID, 'amount' => $paid, 'paid_from' => $paidFrom ?? 'cash', 'paid_at' => now(), 'note' => $note]);
+            $p = $this->payouts->update($p, ['status' => PayoutStatus::PAID, 'amount' => $paid, 'commission_amount' => $commission, 'bonus_amount' => $bonus, 'paid_from' => $paidFrom ?? 'cash', 'paid_at' => now(), 'note' => $note]);
             DB::afterCommit(fn () => event(new \App\Events\Erp\AffiliatePayoutPaid($p))); // ERP: clears the affiliate payable
 
             return $p;
@@ -130,9 +148,16 @@ class AffiliateService
 
         return DB::transaction(function () use ($p, $note) {
             $p->commissions()->update(['payout_id' => null]);
+            $p->bonuses()->update(['payout_id' => null]); // the stored commission_amount / bonus_amount split stays on the rejected payout
 
             return $this->payouts->update($p, ['status' => PayoutStatus::REJECTED, 'note' => $note]);
         });
+    }
+
+    /** Recent sales bonuses of an affiliate (dashboard list). */
+    public function bonuses(Affiliate $a, int $limit = 20)
+    {
+        return $this->bonusService->recent($a, $limit);
     }
 
     public function findPayout(int|string $id): AffiliatePayout

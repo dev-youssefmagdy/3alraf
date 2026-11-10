@@ -2,6 +2,9 @@
 
 return [
     'dashboard' => 'لوحة التحكم', 'languages' => 'اللغات', 'settings' => 'الإعدادات', 'settings_general' => 'الإعدادات العامة',
+    'affiliate_bonus_section' => 'مكافأة مبيعات المسوّقين', 'affiliate_bonus_intro' => 'يحصل المسوّق على قيمة المكافأة عن كل حدّ من المبيعات المسلَّمة (المنتجات بعد الخصم بدون الشحن والضريبة ناقص المرتجعات)، وتتكرر.',
+    'affiliate_bonus_started_hint' => 'تُحتسب فقط الطلبات المسجّلة بعد هذا التاريخ. التعديلات تسري على المكافآت القادمة فقط؛ المكافآت المكتسبة تحتفظ بقيمتها.',
+    'affiliate_bonus_not_started' => 'غير محدد',
     'save' => 'حفظ', 'cancel' => 'إلغاء', 'edit' => 'تعديل', 'delete' => 'حذف', 'create' => 'إنشاء', 'add_new' => 'إضافة جديد',
     'saved' => 'تم الحفظ بنجاح.', 'deleted' => 'تم الحذف بنجاح.', 'confirm_delete' => 'هل تريد حذف هذا السجل؟ لا يمكن التراجع.',
     'confirm' => 'تأكيد', 'yes' => 'نعم', 'no' => 'لا', 'error' => 'حدث خطأ ما. حاول مرة أخرى.', 'fix_errors' => 'يرجى تصحيح الحقول المحددة.',
@@ -95,6 +98,7 @@ return [
     'attribute_types' => ['select' => 'قائمة', 'color' => 'لون', 'text' => 'نص'],
     'product_types' => ['simple' => 'بسيط', 'variable' => 'متعدد المتغيرات'],
     'fields' => [
+        'affiliate_bonus_enabled' => 'تفعيل مكافأة مبيعات المسوقين', 'affiliate_bonus_threshold' => 'مكافأة عن كل (قيمة مبيعات)', 'affiliate_bonus_amount' => 'قيمة المكافأة', 'affiliate_bonus_started_at' => 'تاريخ بدء المكافأة',
         'code' => 'الكود', 'name' => 'الاسم', 'native_name' => 'الاسم المحلي', 'direction' => 'الاتجاه', 'sort_order' => 'الترتيب',
         'is_active' => 'نشط', 'is_default' => 'اللغة الافتراضية', 'slug' => 'الرابط المختصر', 'country' => 'الدولة (ISO-2)',
         'currency_code' => 'كود العملة', 'currency_symbol' => 'رمز العملة',

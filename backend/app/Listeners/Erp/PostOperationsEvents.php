@@ -2,6 +2,7 @@
 
 namespace App\Listeners\Erp;
 
+use App\Events\Erp\AffiliateBonusAwarded;
 use App\Events\Erp\AffiliatePayoutPaid;
 use App\Events\Erp\ExpenseDeleted;
 use App\Events\Erp\ExpenseSaved;
@@ -31,6 +32,7 @@ class PostOperationsEvents
             ExpenseSaved::class => 'onExpenseSaved',
             ExpenseDeleted::class => 'onExpenseDeleted',
             AffiliatePayoutPaid::class => 'onAffiliatePayoutPaid',
+            AffiliateBonusAwarded::class => 'onAffiliateBonusAwarded',
         ];
     }
 
@@ -69,5 +71,11 @@ class PostOperationsEvents
     {
         $p = $e->payout;
         $this->guard->run('affiliate_payout', $p->id, 'affiliate.payout_paid', fn () => $this->affiliates->payoutPaid($p));
+    }
+
+    public function onAffiliateBonusAwarded(AffiliateBonusAwarded $e): void
+    {
+        $b = $e->bonus;
+        $this->guard->run('affiliate_bonus', $b->id, 'affiliate.bonus_awarded', fn () => $this->affiliates->bonusAwarded($b));
     }
 }

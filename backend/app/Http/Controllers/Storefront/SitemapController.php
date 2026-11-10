@@ -31,6 +31,7 @@ class SitemapController extends Controller
         };
         $add('storefront.home', []);
         $add('storefront.brands.index', []);
+        $add('storefront.affiliate.register', []); // public affiliate program page
         if (Bundle::where('is_active', true)->exists()) {
             $add('storefront.bundles.index', []);
         }

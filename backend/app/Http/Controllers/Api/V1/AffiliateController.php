@@ -53,7 +53,7 @@ class AffiliateController extends ApiController
         $a = $r->user();
 
         return $this->respond(new AffiliateDashboardResource(['affiliate' => $a, 'stats' => $this->service->stats($a), 'payouts' => $a->payouts()->latest('id')->limit(20)->get(),
-            'commissions' => $a->commissions()->with('order')->latest('id')->limit(20)->get()]));
+            'commissions' => $a->commissions()->with('order')->latest('id')->limit(20)->get(), 'bonuses' => $this->service->bonuses($a)]));
     }
 
     public function products(Request $r): JsonResponse

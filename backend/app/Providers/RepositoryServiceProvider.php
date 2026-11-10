@@ -88,6 +88,7 @@ class RepositoryServiceProvider extends ServiceProvider
         AffiliateTierRepositoryInterface::class => AffiliateTierRepository::class,
         AffiliatePayoutRepositoryInterface::class => AffiliatePayoutRepository::class,
         AffiliateCommissionRepositoryInterface::class => AffiliateCommissionRepository::class,
+        \App\Repositories\Contracts\AffiliateBonusRepositoryInterface::class => \App\Repositories\Eloquent\AffiliateBonusRepository::class,
         ReviewRepositoryInterface::class => ReviewRepository::class,
         CustomPageRepositoryInterface::class => CustomPageRepository::class,
         StaticPageRepositoryInterface::class => StaticPageRepository::class,

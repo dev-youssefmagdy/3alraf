@@ -4,6 +4,7 @@ namespace App\Services\Erp\Posting;
 
 use App\Enums\OrderStatus;
 use App\Exceptions\AccountingException;
+use App\Models\AffiliateBonus;
 use App\Models\AffiliatePayout;
 use App\Models\Erp\AuditLog;
 use App\Models\Erp\JournalEntry;
@@ -24,7 +25,7 @@ use App\Services\Erp\Accounting\JournalService;
 class DocumentPoster
 {
     /** Source types whose auto entries mirror a business document (manual reversal forbidden, repost instead). */
-    public const DOCUMENT_SOURCES = ['order', 'order_return', 'purchase_order', 'stock_adjustment', 'stock_transfer', 'expense', 'affiliate_payout', 'ambassador_rewards'];
+    public const DOCUMENT_SOURCES = ['order', 'order_return', 'purchase_order', 'stock_adjustment', 'stock_transfer', 'expense', 'affiliate_payout', 'affiliate_bonus', 'ambassador_rewards'];
 
     public function __construct(private SalesPoster $sales, private PaymentPoster $payments, private ReturnPoster $returns, private PurchasePoster $purchases,
         private StockPoster $stock, private ExpensePoster $expenses, private AffiliatePoster $affiliates, private JournalService $journals) {}
@@ -104,6 +105,13 @@ class DocumentPoster
                 }
 
                 return (bool) $p;
+            case 'affiliate_bonus':
+                $b = AffiliateBonus::find($id);
+                if ($b && $b->status->value !== 'voided') {
+                    $this->affiliates->bonusAwarded($b);
+                }
+
+                return (bool) $b;
         }
 
         return false;

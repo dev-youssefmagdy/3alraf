@@ -20,6 +20,8 @@ class AffiliatePayoutDataTable extends BaseDataTable
             ['data' => 'id', 'title' => '#'],
             ['data' => 'affiliate_name', 'title' => __('growth.affiliate'), 'orderable' => false, 'searchable' => false],
             ['data' => 'amount', 'title' => __('growth.fields.amount'), 'searchable' => false],
+            ['data' => 'commission_amount', 'title' => __('growth.commissions'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'bonus_amount', 'title' => __('growth.bonuses'), 'orderable' => false, 'searchable' => false],
             ['data' => 'status_label', 'title' => __('admin.status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'created_at', 'title' => __('growth.date'), 'searchable' => false],
             ['data' => 'actions', 'title' => '', 'orderable' => false, 'searchable' => false],
@@ -31,6 +33,8 @@ class AffiliatePayoutDataTable extends BaseDataTable
         $u = auth('admin')->user();
         $dt->addColumn('affiliate_name', fn (AffiliatePayout $m) => e($m->affiliate?->name))
             ->editColumn('amount', fn (AffiliatePayout $m) => $this->money($m->amount))
+            ->editColumn('bonus_amount', fn (AffiliatePayout $m) => $this->money($m->bonus_amount))
+            ->editColumn('commission_amount', fn (AffiliatePayout $m) => $this->money($m->commission_amount))
             ->editColumn('created_at', fn (AffiliatePayout $m) => $m->created_at->format('Y-m-d H:i'))
             ->addColumn('status_label', fn (AffiliatePayout $m) => '<span class="badge '.($m->status === PayoutStatus::PAID ? 'badge-success' : ($m->status === PayoutStatus::REQUESTED ? 'badge-warn' : 'badge-muted')).'">'.e($m->status->label()).'</span>')
             ->addColumn('actions', function (AffiliatePayout $m) use ($u) {

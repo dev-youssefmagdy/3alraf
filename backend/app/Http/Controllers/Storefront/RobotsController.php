@@ -17,6 +17,7 @@ class RobotsController extends Controller
             foreach (['/admin', '/api/', '/webhooks/', '/l/', '/*/cart', '/*/checkout', '/*/account', '/*/order/', '/*/wishlist', '/*/login', '/*/register', '/*/affiliate', '/*/search', '/*/auth/', '/*/payments/'] as $path) {
                 $lines[] = 'Disallow: '.$path;
             }
+            $lines[] = 'Allow: /*/affiliate/register'; // public affiliate program page (longest match beats Disallow: /*/affiliate)
             $lines[] = 'Allow: /build/';
             $lines[] = 'Allow: /storage/';
             $lines[] = '';

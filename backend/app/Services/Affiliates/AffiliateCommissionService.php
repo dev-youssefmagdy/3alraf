@@ -8,6 +8,7 @@ use App\Models\Affiliate;
 use App\Models\AffiliateCommission;
 use App\Models\AffiliateTier;
 use App\Models\Order;
+use App\Repositories\Contracts\AffiliateBonusRepositoryInterface;
 use App\Repositories\Contracts\AffiliateCommissionRepositoryInterface;
 use App\Support\Money;
 
@@ -16,7 +17,7 @@ class AffiliateCommissionService
 {
     public const DEFAULT_RETURN_WINDOW_DAYS = 14;
 
-    public function __construct(private AffiliateCommissionRepositoryInterface $commissions) {}
+    public function __construct(private AffiliateCommissionRepositoryInterface $commissions, private AffiliateBonusRepositoryInterface $bonuses) {}
 
     /** Lifetime sales = Σ revenue_goods (excl. VAT) of the affiliate's delivered orders − Σ returned value excl. VAT of their approved/refunded returns (floored at 0). */
     public function lifetimeSales(Affiliate $a): string
@@ -109,13 +110,19 @@ class AffiliateCommissionService
         return $n;
     }
 
-    /** @return array{pending:string,approved:string,paid:string,available:string} */
+    /**
+     * pending/approved/paid = commissions only; available = everything withdrawable now (approved, un-requested commissions + sales bonuses).
+     *
+     * @return array{pending:string,approved:string,paid:string,available:string,available_commissions:string,available_bonuses:string}
+     */
     public function totals(Affiliate $a): array
     {
         $rows = $this->commissions->query()->where('affiliate_id', $a->id)->selectRaw('status, COALESCE(SUM(amount),0) s')->groupBy('status')->pluck('s', 'status');
         $by = fn (CommissionStatus $s) => Money::round((string) ($rows[$s->value] ?? 0));
-        $available = (string) $this->commissions->query()->where('affiliate_id', $a->id)->where('status', CommissionStatus::APPROVED->value)->whereNull('payout_id')->sum('amount');
+        $commissions = Money::round((string) $this->commissions->query()->where('affiliate_id', $a->id)->where('status', CommissionStatus::APPROVED->value)->whereNull('payout_id')->sum('amount'));
+        $bonuses = Money::round((string) $this->bonuses->query()->where('affiliate_id', $a->id)->where('status', CommissionStatus::APPROVED->value)->whereNull('payout_id')->sum('amount'));
 
-        return ['pending' => $by(CommissionStatus::PENDING), 'approved' => $by(CommissionStatus::APPROVED), 'paid' => $by(CommissionStatus::PAID), 'available' => Money::round($available)];
+        return ['pending' => $by(CommissionStatus::PENDING), 'approved' => $by(CommissionStatus::APPROVED), 'paid' => $by(CommissionStatus::PAID),
+            'available' => Money::add($commissions, $bonuses), 'available_commissions' => $commissions, 'available_bonuses' => $bonuses];
     }
 }
