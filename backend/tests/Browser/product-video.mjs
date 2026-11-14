@@ -1,4 +1,5 @@
-// Product gallery with videos (P8): real-browser check of autoplay, pause, swipe, arrows, thumbnails, RTL/LTR, reduced motion, autoplay refusal, variant images and the admin upload card.
+// Product gallery (P8, Swiper "gallery" preset since the storefront redesign): real-browser check of autoplay, pause, swipe, arrows, thumbnails, RTL/LTR, reduced motion,
+// autoplay refusal, variant images and the admin upload card. Arrows show from 1024px (design), so phones move with thumbnails / swipes.
 // Run ONLY against a throw-away database. No autoplay flags are passed to Chrome, so its real autoplay policy applies.
 //   export DB_DATABASE=3alraf_smoke APP_URL=http://3alraf.test:8000 MEDIA_ROOT=/scratch/media MEDIA_URL=http://3alraf.test:8001
 //   php artisan migrate:fresh --seed --force ; php setup-script (products p8-*, prints FIX) ; php artisan serve --port=8000 &
@@ -44,7 +45,7 @@ const SETTLE = 700;
 
 const state = (page, i) => page.evaluate((k) => {
     const s = document.querySelectorAll('[data-gallery-slide]')[k], v = s.querySelector('video');
-    const t = document.querySelector('[data-gallery-track]').getBoundingClientRect(), r = s.getBoundingClientRect();
+    const t = document.querySelector('[data-swiper-main]').getBoundingClientRect(), r = s.getBoundingClientRect();
     return { paused: v?.paused, muted: v?.muted, inline: v?.playsInline, t: v?.currentTime, preload: v?.preload, aligned: Math.abs(r.left - t.left) < 2, play: !s.querySelector('[data-gallery-play]')?.classList.contains('hidden') };
 }, i);
 // at least one increase over four samples (the clip loops, so a single pair could straddle the wrap)
@@ -55,7 +56,7 @@ const advancing = async (page, i) => {
 };
 const activeThumb = (page) => page.evaluate(() => [...document.querySelectorAll('[data-gallery-thumb]')].findIndex((t) => t.getAttribute('aria-current') === 'true'));
 const playing = async (page, i, tag) => {
-    await page.waitForFunction((k) => { const s = document.querySelectorAll('[data-gallery-slide]')[k], v = s.querySelector('video'), t = document.querySelector('[data-gallery-track]').getBoundingClientRect(); return v && !v.paused && v.currentTime > 0 && Math.abs(s.getBoundingClientRect().left - t.left) < 2; }, i, { timeout: 8000 }).catch(() => {});
+    await page.waitForFunction((k) => { const s = document.querySelectorAll('[data-gallery-slide]')[k], v = s.querySelector('video'), t = document.querySelector('[data-swiper-main]').getBoundingClientRect(); return v && !v.paused && v.currentTime > 0 && Math.abs(s.getBoundingClientRect().left - t.left) < 2; }, i, { timeout: 8000 }).catch(() => {});
     const s = await state(page, i);
     ok(s.paused === false, `${tag}: paused === false`);
     ok(s.muted === true, `${tag}: muted === true`);
@@ -67,7 +68,7 @@ const stopped = async (page, i, tag) => { const s = await state(page, i); ok(s.p
 // a real finger as the browser sees it: raw touch points, scrolled by the compositor
 const swipe = async (ctx, page, forward, rtl) => {
     const c = await ctx.newCDPSession(page);
-    const b = await page.locator('[data-gallery-track]').boundingBox();
+    const b = await page.locator('[data-swiper-main]').boundingBox();
     const y = b.y + b.height / 3, leftward = forward !== rtl, from = b.x + b.width * (leftward ? 0.85 : 0.15), step = (leftward ? -1 : 1) * b.width * 0.06;
     await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y }] });
     for (let i = 1; i <= 12; i++) { await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + i * step, y }] }); await page.waitForTimeout(16); }
@@ -88,6 +89,13 @@ const noErrors = async (page, tag) => {
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(over <= 1, `${tag}: no horizontal scroll (${over}px)`);
     ok(page.errs.length === 0, `${tag}: no JS errors ${page.errs.join(' | ')}`);
+};
+// next / previous slide the way a visitor would: the arrow when it is shown (≥1024), otherwise the neighbouring thumbnail
+const step = async (page, dir) => {
+    const arrow = page.locator(dir > 0 ? '[data-gallery-next]' : '[data-gallery-prev]');
+    if (await arrow.isVisible()) { await arrow.click(); return; }
+    const n = await page.locator('[data-gallery-thumb]').count(), cur = await activeThumb(page);
+    await page.locator('[data-gallery-thumb]').nth((cur + dir + n) % n).click();
 };
 const urlOf = (page, i) => page.evaluate((k) => document.querySelectorAll('[data-gallery-slide]')[k].querySelector('video').src, i);
 
@@ -111,7 +119,7 @@ for (const locale of ['ar', 'en']) {
         ok((await state(page, 1)).paused === true && (await state(page, 3)).paused === true, `${tag}: videos idle on an image slide`);
         await page.screenshot({ path: `${OUT}/${tag}-mixed-image.png` });
 
-        await page.locator('[data-gallery-next]').click();
+        await step(page, 1);
         await playing(page, 1, `${tag} next arrow -> video`);
         ok(await activeThumb(page) === 1, `${tag}: thumbnail follows the slide`);
         ok(page.videoReqs.includes(u1) && !page.videoReqs.includes(u3), `${tag}: only the active video was fetched`);
@@ -119,7 +127,7 @@ for (const locale of ['ar', 'en']) {
 
         // a user-unmuted video goes back to muted the next time it becomes active
         await page.evaluate(() => { document.querySelectorAll('[data-gallery-slide]')[1].querySelector('video').muted = false; });
-        await page.locator('[data-gallery-next]').click();
+        await step(page, 1);
         await wait(page, SETTLE);
         await stopped(page, 1, `${tag} next arrow -> left the video`);
         ok(await activeThumb(page) === 2, `${tag}: thumbnail on the image`);
@@ -161,13 +169,13 @@ for (const locale of ['ar', 'en']) {
             await swipe(ctx, page, false, rtl);
             await playing(page, 1, `${tag} touch swipe back -> video`);
         } else {
-            await page.locator('[data-gallery-track]').focus();
+            await page.locator('[data-swiper-main]').hover();
             await page.keyboard.press(rtl ? 'ArrowLeft' : 'ArrowRight');
             await playing(page, 1, `${tag} keyboard -> video`);
-            await page.locator('[data-gallery-prev]').click();
+            await step(page, -1);
             await wait(page, SETTLE);
             await stopped(page, 1, `${tag} prev arrow -> left the video`);
-            await page.locator('[data-gallery-prev]').click();   // wraps to the last slide
+            await step(page, -1);   // wraps to the last slide
             await playing(page, 3, `${tag} prev arrow wraps -> last video`);
         }
         await noErrors(page, `${tag} mixed`);
@@ -178,7 +186,7 @@ for (const locale of ['ar', 'en']) {
         await playing(page, 0, `${tag} video-first autoplays on load`);
         ok((await state(page, 0)).preload === 'metadata', `${tag}: first video preload=metadata`);
         await page.screenshot({ path: `${OUT}/${tag}-video-first.png`, fullPage: Number(width) === 390 });
-        await page.locator('[data-gallery-next]').click();
+        await step(page, 1);
         await wait(page, SETTLE);
         await stopped(page, 0, `${tag} video-first -> left`);
         await page.locator('[data-gallery-thumb]').first().click();
@@ -192,15 +200,14 @@ for (const locale of ['ar', 'en']) {
         ok(await page.locator('[data-gallery-next]').count() === 0 && await page.locator('[data-gallery-thumb]').count() === 0, `${tag}: single video has no arrows or thumbnails`);
         await page.close();
 
-        // ---- no video: the old gallery, untouched
+        // ---- no video: the same Swiper gallery with images only
         page = await open(ctx, `${site}/${locale}/product/p8-plain`);
         await wait(page, 300);
-        ok(await page.locator('[data-product-gallery]').count() === 0 && await page.locator('video').count() === 0, `${tag}: product without video has no slider`);
-        ok(await page.locator('[data-main-image]').isVisible(), `${tag}: plain main image visible`);
-        const firstSrc = await page.locator('[data-main-image]').getAttribute('src');
-        await page.locator('[data-thumb]').nth(1).click();
-        const secondSrc = await page.locator('[data-main-image]').getAttribute('src');
-        ok(secondSrc !== firstSrc && secondSrc === await page.locator('[data-thumb]').nth(1).getAttribute('data-thumb'), `${tag}: plain thumbnail still swaps the main image`);
+        ok(await page.locator('[data-swiper="gallery"][data-swiper-ready]').count() === 1 && await page.locator('video').count() === 0, `${tag}: product without video gets the image-only gallery`);
+        ok(await page.locator('[data-gallery-slide]').first().isVisible(), `${tag}: first image visible`);
+        await page.locator('[data-gallery-thumb]').nth(1).click();
+        await wait(page, SETTLE);
+        ok(await activeThumb(page) === 1 && await page.evaluate(() => { const s = document.querySelectorAll('[data-gallery-slide]')[1], t = document.querySelector('[data-swiper-main]').getBoundingClientRect(); return Math.abs(s.getBoundingClientRect().left - t.left) < 2; }), `${tag}: thumbnail moves the main image`);
         await page.screenshot({ path: `${OUT}/${tag}-plain.png` });
         await noErrors(page, `${tag} plain`);
         await page.close();
@@ -216,8 +223,8 @@ for (const locale of ['ar', 'en']) {
         await page.locator(`[data-option="${FIX.value_own}"]`).click();
         await page.locator(`[data-option="${FIX.value_own}"]`).click();
         await wait(page, SETTLE + 300);
-        const vs = await page.evaluate(() => { const slides = [...document.querySelectorAll('[data-gallery-slide]')], s = slides[slides.length - 1], t = document.querySelector('[data-gallery-track]').getBoundingClientRect(); return { hidden: s.hidden, src: s.querySelector('img').src, aligned: Math.abs(s.getBoundingClientRect().left - t.left) < 2 }; });
-        ok(!vs.hidden && vs.src === FIX.variant_image && vs.aligned, `${tag}: a variant's own image is shown`);
+        const vs = await page.evaluate(() => { const slides = [...document.querySelectorAll('[data-gallery-slide]')], s = slides[slides.length - 1], t = document.querySelector('[data-swiper-main]').getBoundingClientRect(); return { variant: s.dataset.type === 'variant', src: s.querySelector('img').src, aligned: Math.abs(s.getBoundingClientRect().left - t.left) < 2 }; });
+        ok(vs.variant && vs.src === FIX.variant_image && vs.aligned, `${tag}: a variant's own image is shown`);
         ok((await state(page, 0)).paused === true, `${tag}: video paused when the variant image takes over`);
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.locator('[data-gallery-thumb]').first().click();
@@ -225,7 +232,7 @@ for (const locale of ['ar', 'en']) {
         await page.close();
         page = await open(ctx, `${site}/${locale}/product/p8-variable?variant=${FIX.variant_own}`);
         await wait(page, SETTLE);
-        ok(await page.evaluate(() => !document.querySelector('[data-gallery-slide][data-type=variant]').hidden), `${tag}: ?variant= opens that variant's image`);
+        ok(await page.evaluate(() => !!document.querySelector('[data-gallery-slide][data-type=variant].swiper-slide-active')), `${tag}: ?variant= opens that variant's image`);
         ok((await state(page, 0)).paused === true, `${tag}: first video idle under ?variant=`);
         await noErrors(page, `${tag} variable`);
         await page.close();
@@ -305,7 +312,7 @@ await admin.waitForFunction(() => !document.querySelector('[data-media-type=vide
 ok(await admin.locator('[data-media-type=video]').count() === 0, 'admin: video deleted');
 const after = await actx.newPage();
 await after.goto(`${site}/en/product/p8-admin`, { waitUntil: 'load' });
-ok(await after.locator('[data-product-gallery]').count() === 0 && await after.locator('[data-main-image]').count() === 1, 'admin -> storefront: back to the plain gallery after delete');
+ok(await after.locator('video').count() === 0 && await after.locator('[data-gallery-slide]').count() === 1, 'admin -> storefront: back to the image-only gallery after delete');
 ok(adminErrs.length === 0, `admin: no JS errors ${adminErrs.join(' | ')}`);
 await actx.close();
 

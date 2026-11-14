@@ -1,10 +1,14 @@
 @import 'tailwindcss' source(none);
 @import 'toastr/build/toastr.min.css';
+@import 'swiper/css' layer(base);
 
 /* storefront-only build: scan just the views/scripts the public site uses (keeps the CSS small) */
 @source '../views/storefront';
 @source '../views/components';
+@source '../views/auth';
 @source '../js/lib/storefront.js';
+@source '../js/lib/sliders.js';
+@source '../js/lib/gift-finder.js';
 @source '../js/lib/ajax-form.js';
 @source '../js/lib/ui.js';
 @source '../../app/Support';
@@ -12,3 +16,265 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @import './theme.css';
+
+/*
+ * Storefront redesign tokens (docs/design/STOREFRONT_DESIGN.md §1). They live here, not in theme.css, so the admin and
+ * marketer panels (app.css) stay pixel-identical. Existing names keep their values; these only add.
+ */
+@theme {
+    --font-display: 'Baloo Bhaijaan 2', 'Cairo', ui-sans-serif, system-ui, sans-serif;
+
+    --color-brand-950: #3f1828;
+    --color-accent-dark: #7a5a22;
+
+    --color-pop-50: #ffe8f2;
+    --color-pop-100: #ffc9e0;
+    --color-pop-500: #e5177a;
+    --color-pop-600: #c80f66;
+    --color-pop-700: #a10b52;
+
+    --color-sun-100: #fff3c4;
+    --color-sun-300: #ffd95a;
+    --color-sun-400: #ffc940;
+
+    --color-mint-100: #d5f5ec;
+    --color-mint-400: #3ccfae;
+    --color-mint-700: #0b7560;
+
+    --color-violet-100: #ece7ff;
+    --color-violet-400: #8b6cff;
+    --color-violet-500: #6c4bf4;
+    --color-violet-700: #4b2bc9;
+
+    --color-red-50: #fce8eb;
+    --color-red-700: #a82d42;
+    --color-emerald-50: #e3f4ee;
+    --color-amber-50: #fdf1dc;
+    --color-amber-700: #8a5a12;
+
+    --shadow-card: 0 1px 3px rgb(47 33 41 / .06);
+    --shadow-raised: 0 6px 16px rgb(47 33 41 / .08);
+    --shadow-overlay: 0 16px 40px rgb(47 33 41 / .14);
+    --shadow-sticker: 0 4px 0 var(--color-brand-800);
+    --shadow-bar: 0 -4px 16px rgb(47 33 41 / .08);
+
+    --ease-pop: cubic-bezier(.2, .8, .2, 1);
+}
+
+@layer base {
+    html { -webkit-tap-highlight-color: transparent; }
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(229 23 122 / .45); }
+    /* Arabic is never letter-spaced */
+    :lang(ar) .tracking-wide, :lang(ar) .tracking-wider { letter-spacing: 0; }
+}
+
+/* restyled shared classes (same names as theme.css: later in the same layer, so these win on the storefront only) */
+@layer components {
+    .btn { @apply min-h-11 rounded-full px-5 py-2.5 text-sm font-bold transition duration-150 ease-(--ease-pop) focus:ring-0 focus-visible:ring-[3px] focus-visible:ring-pop-500/45 active:translate-y-0.5 disabled:opacity-45 disabled:shadow-none disabled:translate-y-0; }
+    .btn-primary { @apply bg-brand-600 text-white shadow-sticker hover:bg-brand-700 active:shadow-[0_2px_0_var(--color-brand-800)]; }
+    .btn-pop { @apply bg-pop-600 text-white shadow-[0_4px_0_var(--color-pop-700)] hover:bg-pop-700 active:shadow-[0_2px_0_var(--color-pop-700)]; }
+    .btn-sun { @apply bg-sun-400 text-slate-950 hover:bg-sun-300; }
+    .btn-secondary { @apply border border-slate-300 bg-white text-slate-950 hover:bg-slate-100; }
+    .btn-ghost { @apply bg-transparent text-brand-600 hover:bg-brand-50; }
+    .btn-danger { @apply border-0 bg-red-50 text-red-700 hover:bg-red-100; }
+    .btn-lg { @apply min-h-13 px-6 text-base; }
+    .btn-sm { @apply min-h-9 rounded-full px-3 py-1 text-xs font-bold; }
+
+    .icon-btn { @apply inline-grid size-11 shrink-0 place-items-center rounded-full transition duration-150 focus-visible:ring-[3px] focus-visible:ring-pop-500/45; }
+    .icon-btn-soft { @apply bg-brand-50 text-brand-600 hover:bg-brand-100; }
+    .icon-btn-outline { @apply border border-slate-200 bg-white text-slate-950 hover:border-brand-500 hover:text-brand-600; }
+    .icon-btn-solid { @apply bg-brand-600 text-white hover:bg-brand-700; }
+    .icon-btn-glass { @apply bg-white text-slate-950 shadow-raised hover:text-pop-600; }
+    .icon-btn-plain { @apply text-slate-950 hover:bg-slate-100; }
+
+    .form-label { @apply text-sm font-semibold text-slate-950; }
+    .form-control { @apply min-h-12 rounded-xl border-slate-300 px-4 py-2.5 text-sm text-slate-950 placeholder-slate-500 focus:border-pop-500 focus:ring-[3px] focus:ring-pop-500/20; }
+    textarea.form-control { @apply min-h-24; }
+    select.form-control { @apply appearance-none bg-no-repeat pe-10; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f2129' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-size: 1.1rem; background-position: right .9rem center; }
+    [dir='rtl'] select.form-control { background-position: left .9rem center; }
+    .form-control.is-invalid { @apply border-2 border-red-600 ring-0; }
+    .field-error { @apply mt-1 text-xs/[18px] text-red-600; }
+
+    .badge { @apply rounded-full px-2.5 py-0.5 text-[11px]/[16px] font-bold; }
+    .badge-sale { @apply bg-pop-600 text-white; }
+    .badge-new { @apply bg-violet-500 text-white; }
+    .badge-gift, .badge-flash { @apply bg-sun-400 text-slate-950; }
+    .badge-cod { @apply bg-mint-400 text-slate-950; }
+    .badge-out { @apply bg-slate-950 text-white; }
+    .badge-low { @apply bg-amber-50 text-amber-700; }
+    .badge-bundle { @apply bg-brand-50 text-brand-600; }
+    .badge-default { @apply bg-slate-100 text-slate-700; }
+
+    .price { @apply font-display font-extrabold text-slate-950; }
+    .price-sale { @apply text-pop-600; }
+    .price-old { @apply font-sans text-xs font-normal text-slate-500 line-through; }
+    .stars { @apply inline-flex items-center gap-0.5 text-sun-400; }
+
+    .chip { @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 transition hover:border-brand-500; }
+    .chip-on, .chip[aria-pressed='true'], .chip[aria-current] { @apply border-brand-600 bg-brand-600 text-white; }
+
+    .panel { @apply rounded-3xl border border-slate-200 bg-white p-4 sm:p-5; }
+    .section-title { @apply font-display text-[22px]/[30px] font-bold text-slate-950 lg:text-[28px]/9; }
+    .page-title { @apply font-display text-[32px]/[40px] font-extrabold text-slate-950 lg:text-[44px]/[52px]; }
+    .link { @apply font-semibold text-brand-600 hover:text-brand-700 hover:underline; }
+}
+
+/* ---------- layout ---------- */
+@utility sf-container { margin-inline: auto; width: 100%; max-width: 1440px; padding-inline: 1rem; @media (width >= 64rem) { padding-inline: 2rem; } @media (width >= 80rem) { padding-inline: 5rem; } }
+[data-mega-panel]::before { content: ''; position: absolute; inset-inline: 0; bottom: 100%; height: 14px; }
+[data-mega-item]:hover > [data-mega-panel], [data-mega-item]:focus-within > [data-mega-panel], [data-mega-item].is-open > [data-mega-panel] { display: block; }
+[data-mega-item].is-closed > [data-mega-panel] { display: none !important; }
+/* drag-to-scroll rows (resources/js/lib/drag-scroll.js): grab cursor, no mega panel or text selection mid-drag (no edge mask: it would also mask the mega panels inside the row) */
+[data-drag-scroll] { cursor: grab; }
+[data-drag-scroll].is-dragging { cursor: grabbing; user-select: none; }
+[data-drag-scroll].is-dragging a { cursor: grabbing; }
+[data-drag-scroll].is-dragging [data-mega-panel] { display: none !important; }
+[data-drawer-toggle][aria-expanded='true'] svg { transform: rotate(180deg); }
+
+/* ---------- Swiper (resources/js/lib/sliders.js) ---------- */
+/* slides are sized in CSS from the preset before Swiper initialises (no layout shift); Swiper then sets the same widths inline */
+[data-swiper] .swiper { container-type: inline-size; --spv: 1; --gap: 0px; }
+[data-swiper] .swiper:not(.swiper-initialized) .swiper-wrapper { gap: var(--gap); }
+[data-swiper] .swiper:not(.swiper-initialized) .swiper-slide { width: calc((100cqw - (var(--spv) - 1) * var(--gap)) / var(--spv)); }
+[data-swiper] .swiper-slide { height: auto; }
+
+[data-swiper='rail'] .swiper, [data-swiper='flash'] .swiper { --spv: 2.3; --gap: 12px; }
+[data-swiper='categories'] .swiper-slide, [data-swiper='categories'] .swiper:not(.swiper-initialized) .swiper-slide { width: 76px; margin-inline-end: 10px; }
+[data-swiper='categories'] .swiper-initialized .swiper-slide { margin-inline-end: 0; }
+[data-swiper='promo'] .swiper { --spv: 1.15; --gap: 12px; }
+[data-swiper='brands'] .swiper { --spv: 2.4; --gap: 12px; }
+[data-swiper='hero'] .swiper { --spv: 1; --gap: 12px; }
+[data-swiper='packaging'] .swiper { --spv: 2.2; --gap: 10px; }
+[data-swiper='reviews'] .swiper { --spv: 1.1; --gap: 12px; }
+[data-swiper='posts'] .swiper { --spv: 1.15; --gap: 12px; }
+[data-swiper='chips'] .swiper:not(.swiper-initialized) .swiper-slide, [data-swiper='chips'] .swiper-slide { width: auto; }
+[data-swiper='chips'] .swiper:not(.swiper-initialized) .swiper-wrapper { gap: 8px; }
+/* mobile rails bleed to the screen edge; the 16px offsets are padding before init and Swiper offsets after */
+@media (max-width: 1023.98px) {
+    [data-swiper-bleed] .swiper:not(.swiper-initialized) .swiper-wrapper { padding-inline: 16px; }
+    [data-swiper-bleed] .swiper:not(.swiper-initialized) .swiper-wrapper::after { content: ''; flex: 0 0 1px; }
+}
+@media (min-width: 768px) {
+    [data-swiper='rail'] .swiper, [data-swiper='flash'] .swiper { --spv: 3.3; }
+    [data-swiper='categories'] .swiper-slide, [data-swiper='categories'] .swiper:not(.swiper-initialized) .swiper-slide { width: 88px; }
+    [data-swiper='promo'] .swiper { --spv: 2.1; }
+    [data-swiper='brands'] .swiper { --spv: 4.4; }
+    [data-swiper='packaging'] .swiper { --spv: 3; }
+    [data-swiper='reviews'] .swiper { --spv: 2; }
+    [data-swiper='posts'] .swiper { --spv: 2.2; }
+}
+@media (min-width: 1024px) {
+    [data-swiper='rail'] .swiper, [data-swiper='flash'] .swiper { --spv: 4; --gap: 20px; }
+    [data-swiper='categories'] .swiper-slide, [data-swiper='categories'] .swiper:not(.swiper-initialized) .swiper-slide { width: 104px; }
+    [data-swiper='categories'] .swiper:not(.swiper-initialized) .swiper-slide { margin-inline-end: 16px; }
+    [data-swiper='promo'] .swiper { --spv: 3; --gap: 20px; }
+    [data-swiper='brands'] .swiper { --spv: 6; --gap: 16px; }
+    [data-swiper='reviews'] .swiper { --spv: 3; --gap: 20px; }
+    [data-swiper='posts'] .swiper { --spv: 3; --gap: 20px; }
+}
+@media (min-width: 1280px) {
+    [data-swiper='rail'] .swiper, [data-swiper='flash'] .swiper { --spv: 5; }
+    [data-swiper='brands'] .swiper { --spv: 7; }
+    [data-swiper='hero'] .swiper { --gap: 20px; }
+}
+/* gallery: main is one slide; thumbs 5.2 across (vertical column of 5 from 1024, laid out by the gallery markup) */
+[data-swiper='gallery'] [data-swiper-thumbs] { --spv: 5.2; --gap: 8px; }
+@media (min-width: 1024px) { [data-swiper='gallery'] [data-swiper-thumbs] { --spv: 5; --gap: 12px; } }
+[data-swiper='gallery'] [data-swiper-thumbs] .swiper-slide { cursor: pointer; }
+/* ≥1024 the thumbs are a vertical column of 5 (the column is absolutely sized to the main image's height) */
+@media (min-width: 1024px) {
+    [data-swiper='gallery'] [data-swiper-thumbs]:not(.swiper-initialized) .swiper-wrapper { flex-direction: column; gap: 12px; }
+    [data-swiper='gallery'] [data-swiper-thumbs]:not(.swiper-initialized) .swiper-slide { width: 100%; height: calc((100% - 48px) / 5); }
+    [data-swiper='gallery'] [data-swiper-thumbs] .swiper-slide > button { height: 100%; aspect-ratio: auto; }
+}
+/* main gallery: square slides; the video fills the slide */
+[data-swiper='gallery'] [data-swiper-main] .swiper-slide { aspect-ratio: 1; }
+[data-swiper='gallery'] [data-swiper-pagination].swiper-pagination-fraction:empty { display: none; }
+
+/* wide promo strips (CMS HOME_STRIP): 1.08 / 2 / 2 per view */
+[data-swiper='promo'][data-promo='strip'] .swiper { --spv: 1.08; }
+@media (min-width: 768px) { [data-swiper='promo'][data-promo='strip'] .swiper { --spv: 2; --gap: 16px; } }
+@media (min-width: 1024px) { [data-swiper='promo'][data-promo='strip'] .swiper { --spv: 2; --gap: 20px; } }
+
+/* hero autoplay toggle (WCAG 2.2.2): pause icon while playing, play icon while paused */
+.hero-toggle .hero-toggle-play, .hero-toggle[data-state='paused'] .hero-toggle-pause { display: none; }
+.hero-toggle[data-state='paused'] .hero-toggle-play { display: block; }
+[data-swiper='hero'] [data-swiper-pagination] .swiper-pagination-bullet { margin: 0 !important; }
+[data-swiper='gallery'] [data-swiper-thumbs] .swiper-slide-thumb-active { outline: 2px solid var(--color-brand-600); outline-offset: -2px; border-radius: 12px; }
+
+/* our controls (Figma "Slider controls" 19:354): 44px circles, hidden below 1024 and while Swiper is locked */
+[data-swiper-prev], [data-swiper-next] { display: none; }
+@media (min-width: 1024px) { [data-swiper-prev], [data-swiper-next] { display: inline-grid; } }
+[data-swiper-prev].swiper-button-lock, [data-swiper-next].swiper-button-lock { display: none !important; }
+[data-swiper-prev].swiper-button-disabled, [data-swiper-next].swiper-button-disabled { opacity: .4; cursor: default; }
+/* the chevron icons point in the reading direction */
+[dir='rtl'] [data-swiper-prev] svg, [dir='rtl'] [data-swiper-next] svg { transform: scaleX(-1); }
+
+/* pagination: bullets (hero), progressbar (rails, below 1024), fraction (gallery counter) */
+[data-swiper-pagination].swiper-pagination-bullets { display: inline-flex; align-items: center; gap: 6px; }
+[data-swiper-pagination] .swiper-pagination-bullet { display: block; width: 8px; height: 8px; border-radius: 9999px; background: rgb(255 255 255 / .7); cursor: pointer; transition: width .25s var(--ease-pop), background .25s; }
+[data-swiper-pagination] .swiper-pagination-bullet-active { width: 24px; background: var(--color-sun-400); }
+[data-swiper-pagination].swiper-pagination-progressbar { position: relative; height: 4px; overflow: hidden; border-radius: 9999px; background: var(--color-brand-100); }
+[data-swiper-pagination] .swiper-pagination-progressbar-fill { position: absolute; inset: 0; transform-origin: left top; background: var(--color-brand-600); border-radius: 9999px; }
+[dir='rtl'] [data-swiper-pagination] .swiper-pagination-progressbar-fill { transform-origin: right top; }
+[data-swiper-pagination].swiper-pagination-lock { display: none; }
+@media (min-width: 1024px) { [data-swiper-pagination].swiper-pagination-progressbar { display: none; } }
+@media (prefers-reduced-motion: reduce) { [data-swiper] .swiper-wrapper { transition-duration: 0ms !important; } }
+
+/* ---------- product card ---------- */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .product-card { transition: transform .15s var(--ease-pop), box-shadow .15s var(--ease-pop); }
+    .product-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
+    .product-card:hover .product-card-img { transform: scale(1.04); }
+    .product-card-img { transition: transform .25s var(--ease-pop); }
+}
+
+/* wishlist heart: storefront.js toggles text-red-500 / text-slate-400 + aria-pressed; the design colours follow aria-pressed */
+.card-wish[aria-pressed] { color: var(--color-slate-950); }
+.card-wish[aria-pressed='true'] { color: var(--color-pop-600); }
+/* 44px touch targets (spec §7) for the 36px icon controls (card heart, header search submit, cart stepper / remove, copy order number):
+   an invisible hit area 4px around the control, so the look stays 36px */
+.size-9:is([data-qty-minus], [data-qty-plus], [data-remove], [data-copy]):not(.absolute, .fixed) { position: relative; }
+.card-wish::after, [data-search-form] > button::after, .size-9:is([data-qty-minus], [data-qty-plus], [data-remove], [data-copy])::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 9999px;
+}
+
+/* ---------- toasts (toastr skin, Figma 21:1807) ---------- */
+#toast-container { z-index: 70; }
+#toast-container > div { opacity: 1; width: min(360px, calc(100vw - 32px)); border-radius: 16px; padding: 14px 16px; padding-inline-start: 48px; background-position: left 16px center; box-shadow: var(--shadow-overlay); font-family: var(--font-sans); font-size: 14px; line-height: 22px; font-weight: 600; }
+#toast-container > div:hover { box-shadow: var(--shadow-overlay); }
+#toast-container.toast-bottom-center { bottom: calc(88px + env(safe-area-inset-bottom)); }
+#toast-container.toast-bottom-center > div { margin-inline: auto; }
+#toast-container > .toast-success { background-color: var(--color-emerald-700); }
+#toast-container > .toast-error { background-color: var(--color-red-700); }
+#toast-container > .toast-info, #toast-container > .toast-warning { background-color: var(--color-slate-950); }
+#toast-container .toast-progress { opacity: .35; background: #fff; }
+#toast-container .toast-close-button { opacity: .8; text-shadow: none; }
+#toast-container > div.rtl { background-position: right 16px center; }
+#toast-container > div.rtl .toast-close-button { left: -.2em; right: auto; }
+
+/* ---------- forms (round C): the +20 phone prefix block matches the 48px / radius-12 field (design 7:138) ---------- */
+[data-phone-code] { min-height: 3rem; border-start-start-radius: 12px; border-end-start-radius: 12px; border-color: var(--color-slate-300); }
+[data-phone-code] + .form-control { border-start-start-radius: 0; border-end-start-radius: 0; }
+input[type='radio'], input[type='checkbox'] { accent-color: var(--color-brand-600); }
+
+/* ---------- rich content (round D): blog articles (RichText allowlist) and static pages (escaped text + <br>) ---------- */
+@layer components {
+    .sf-prose { @apply text-base/[26px] text-slate-700 [overflow-wrap:anywhere]; }
+    .sf-prose > * + * { margin-top: 1rem; }
+    .sf-prose :where(h2) { @apply mt-7 font-display text-[22px]/[30px] font-bold text-slate-950 lg:text-[26px]/[34px]; }
+    .sf-prose :where(h3) { @apply mt-6 text-lg/7 font-bold text-slate-950; }
+    .sf-prose :where(h4) { @apply mt-5 text-base font-bold text-slate-950; }
+    .sf-prose :where(strong, b) { @apply font-bold text-slate-950; }
+    .sf-prose :where(a) { @apply font-semibold text-brand-600 underline decoration-brand-500/40 underline-offset-4 hover:text-brand-700 hover:decoration-brand-600; }
+    .sf-prose :where(ul, ol) { @apply space-y-1.5 ps-6; }
+    .sf-prose :where(ul) { list-style: square; }
+    .sf-prose :where(ol) { list-style: decimal; }
+    .sf-prose :where(li)::marker { color: var(--color-pop-600); font-weight: 700; }
+    .sf-prose :where(blockquote) { @apply rounded-2xl bg-sun-100 px-5 py-4 text-lg/7 font-bold text-slate-950 lg:px-6; }
+    .sf-prose :where(blockquote) > * + * { margin-top: .5rem; }
+}
+
+/* required asterisk and field errors: red-700, AA on the tinted (brand-50) form panels too; red-500 is 4.38:1 on #fbeaf0 */
+.form-label > .text-red-500, .field-error { color: var(--color-red-700); }

@@ -28,6 +28,12 @@
     <meta name="description" content="{{ $fullTitle ?: $title.' | '.($siteName ?: config('app.name')) }}">
     @endunless
     {{ $head ?? '' }}
+    @if ($lite && ! isset($head))
+    {{-- lite storefront pages (customer login / register): same font pair as the storefront layout, loaded in the head --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap">
+    @endif
     @if ($lite || isset($head))
     @vite(['resources/css/storefront.css', 'resources/js/storefront.js'])
     @else

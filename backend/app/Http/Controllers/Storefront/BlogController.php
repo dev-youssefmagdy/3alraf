@@ -16,7 +16,10 @@ class BlogController extends Controller
 
     public function show(string $locale, string $slug)
     {
-        return view('storefront.blog.show', ['post' => $this->published()->where('slug', $slug)->firstOrFail()]);
+        $post = $this->published()->where('slug', $slug)->firstOrFail();
+
+        // "more from the blog" row under the article: the latest other published posts
+        return view('storefront.blog.show', ['post' => $post, 'related' => $this->published()->whereKeyNot($post->getKey())->latest('published_at')->limit(8)->get()]);
     }
 
     private function published(): Builder

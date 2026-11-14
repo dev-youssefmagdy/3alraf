@@ -1,0 +1,4 @@
+@props(['style' => 'icon-btn-outline'])
+{{-- Swiper prev/next (Figma "Slider controls" 19:354): 44px circles, shown from 1024px and hidden while the slider is locked (storefront.css). The chevrons point in the reading direction. --}}
+<button type="button" data-swiper-prev {{ $attributes->merge(['class' => 'icon-btn '.$style]) }} aria-label="{{ __('store.prev') }}"><svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+<button type="button" data-swiper-next {{ $attributes->merge(['class' => 'icon-btn '.$style]) }} aria-label="{{ __('store.next') }}"><svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>

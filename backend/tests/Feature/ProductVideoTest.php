@@ -206,10 +206,12 @@ it('renders the mixed slider for a product with a video', function () {
     }
 });
 
-it('leaves a product without videos exactly on the plain gallery', function () {
+it('puts a product without videos on the same Swiper gallery, images only', function () {
     ($this->addImage)($this->product, 1);
     ($this->addImage)($this->product, 2);
-    $this->get('/en/product/with-video')->assertOk()->assertSee('data-main-image', false)->assertSee('data-thumb=', false)->assertDontSee('data-product-gallery', false)->assertDontSee('<video', false);
+    $html = $this->get('/en/product/with-video')->assertOk()->getContent();
+    expect($html)->toContain('data-swiper="gallery"')->not->toContain('<video')->not->toContain('data-video-badge')
+        ->and(substr_count($html, 'data-gallery-slide'))->toBe(2)->and(substr_count($html, 'data-gallery-thumb='))->toBe(2);
 });
 
 it('adds media[] to the product API and keeps images[] unchanged', function () {
