@@ -14,11 +14,8 @@ Future<void> showNotifyMeSheet(
   BuildContext context, {
   required int productId,
   required int variantId,
-}) => showModalBottomSheet<void>(
+}) => showAppBottomSheet<void>(
   context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  useSafeArea: true,
   builder: (_) => _NotifySheet(productId: productId, variantId: variantId),
 );
 
@@ -68,8 +65,13 @@ class _NotifySheetState extends ConsumerState<_NotifySheet> {
             note: _note.text,
           );
       nav.pop();
+      if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(message ?? l10n.notifyMeSent)),
+        appSnackBar(
+          context,
+          message ?? l10n.notifyMeSent,
+          tone: SnackTone.success,
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -89,58 +91,59 @@ class _NotifySheetState extends ConsumerState<_NotifySheet> {
         (e.firstErrorFor('name') != null ||
             e.firstErrorFor('phone') != null ||
             e.firstErrorFor('note') != null);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        0,
-        AppSpacing.md,
-        MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.notifyMe, style: context.text.titleLarge),
-            const SizedBox(height: AppSpacing.xs),
-            Text(l10n.notifyMeBody, style: context.text.bodyMedium),
-            const SizedBox(height: AppSpacing.md),
-            AppTextField(
-              label: l10n.fullName,
-              controller: _name,
-              errorText: e?.firstErrorFor('name'),
-              textInputAction: TextInputAction.next,
+    return AppSheet(
+      title: l10n.notifyMe,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.notifyMeBody,
+            style: context.text.bodyMedium?.copyWith(
+              color: context.colors.onSurfaceVariant,
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            label: l10n.fullName,
+            controller: _name,
+            errorText: e?.firstErrorFor('name'),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: AppSpacing.smd),
+          AppTextField(
+            label: l10n.phone,
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            errorText: e?.firstErrorFor('phone'),
+            textInputAction: TextInputAction.next,
+            ltr: true,
+          ),
+          const SizedBox(height: AppSpacing.smd),
+          AppTextField(
+            label: l10n.noteOptional,
+            controller: _note,
+            errorText: e?.firstErrorFor('note'),
+            maxLines: 2,
+          ),
+          if (e != null && !hasFieldErrors) ...[
             const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.phone,
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              errorText: e?.firstErrorFor('phone'),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.noteOptional,
-              controller: _note,
-              errorText: e?.firstErrorFor('note'),
-              maxLines: 2,
-            ),
-            if (e != null && !hasFieldErrors) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                errorMessage(l10n, e),
-                style: TextStyle(color: context.colors.error),
+            Text(
+              errorMessage(l10n, e),
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.error,
               ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: l10n.notifyMeSend,
-              loading: _busy,
-              onPressed: _send,
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.mdl),
+          AppButton(
+            label: l10n.notifyMeSend,
+            variant: AppButtonVariant.sun,
+            size: AppButtonSize.l,
+            loading: _busy,
+            onPressed: _send,
+          ),
+        ],
       ),
     );
   }
@@ -149,11 +152,8 @@ class _NotifySheetState extends ConsumerState<_NotifySheet> {
 /// Star + text review form (`POST products/{slug}/reviews`). Resolves to the
 /// moderation message once saved.
 Future<void> showReviewSheet(BuildContext context, {required String slug}) =>
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
       builder: (_) => _ReviewSheet(slug: slug),
     );
 
@@ -197,8 +197,13 @@ class _ReviewSheetState extends ConsumerState<_ReviewSheet> {
           .addReview(widget.slug, _rating, _body.text);
       ref.invalidate(productProvider(widget.slug));
       nav.pop();
+      if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(message ?? l10n.reviewThanks)),
+        appSnackBar(
+          context,
+          message ?? l10n.reviewThanks,
+          tone: SnackTone.success,
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -213,61 +218,57 @@ class _ReviewSheetState extends ConsumerState<_ReviewSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final e = _error;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        0,
-        AppSpacing.md,
-        MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.writeReview, style: context.text.titleLarge),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                for (var i = 1; i <= 5; i++)
-                  IconButton(
-                    tooltip: l10n.ratingSemantics('$i'),
-                    iconSize: 36,
-                    onPressed: () => setState(() {
-                      _rating = i;
-                      _ratingMissing = false;
-                    }),
-                    icon: Icon(
-                      i <= _rating
-                          ? Icons.star_rounded
-                          : Icons.star_border_rounded,
-                      color: context.extra.gold,
-                    ),
+    return AppSheet(
+      title: l10n.writeReview,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 1; i <= 5; i++)
+                IconButton(
+                  tooltip: l10n.ratingSemantics('$i'),
+                  iconSize: 40,
+                  onPressed: () => setState(() {
+                    _rating = i;
+                    _ratingMissing = false;
+                  }),
+                  icon: Icon(
+                    i <= _rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    color: context.extra.sun,
                   ),
-              ],
-            ),
-            AppTextField(
-              label: l10n.reviewBody,
-              controller: _body,
-              maxLines: 4,
-              errorText: e?.firstErrorFor('body'),
-            ),
-            if (_ratingMissing ||
-                (e != null && e.firstErrorFor('body') == null)) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                _ratingMissing ? l10n.reviewPickRating : errorMessage(l10n, e!),
-                style: TextStyle(color: context.colors.error),
-              ),
+                ),
             ],
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: l10n.submitReview,
-              loading: _busy,
-              onPressed: _send,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
+            label: l10n.reviewBody,
+            controller: _body,
+            maxLines: 4,
+            errorText: e?.firstErrorFor('body'),
+          ),
+          if (_ratingMissing ||
+              (e != null && e.firstErrorFor('body') == null)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _ratingMissing ? l10n.reviewPickRating : errorMessage(l10n, e!),
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.error,
+              ),
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.mdl),
+          AppButton(
+            label: l10n.submitReview,
+            size: AppButtonSize.l,
+            loading: _busy,
+            onPressed: _send,
+          ),
+        ],
       ),
     );
   }

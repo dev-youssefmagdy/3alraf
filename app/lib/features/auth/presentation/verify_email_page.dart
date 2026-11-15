@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -78,41 +77,57 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return AuthScaffold(
+    final link = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      textStyle: context.text.labelMedium,
+    );
+    return FormPageScaffold(
       title: l10n.verifyTitle,
-      subtitle: l10n.verifyBody,
       showBack: false,
       children: [
+        FormLead(
+          icon: Icons.check_rounded,
+          tone: StateTone.mint,
+          text: l10n.verifyBody,
+        ),
         Form(
           key: _form,
-          child: AppTextField(
+          child: OtpField(
             label: l10n.codeLabel,
             controller: _code,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            prefixIcon: Icons.pin_outlined,
             errorText: _errors['code'],
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(6),
-            ],
             validator: (v) => (v ?? '').length == 6 ? null : l10n.invalidCode,
             onSubmitted: (_) => _verify(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(label: l10n.verifyAction, loading: _busy, onPressed: _verify),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.mdl),
         AppButton(
-          label: l10n.resendCode,
-          variant: AppButtonVariant.text,
-          loading: _resending,
-          onPressed: _resend,
+          label: l10n.verifyAction,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _verify,
         ),
-        AppButton(
-          label: l10n.skipForNow,
-          variant: AppButtonVariant.text,
-          onPressed: _leave,
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Flexible(
+              child: TextButton(
+                style: link,
+                onPressed: _resending ? null : _resend,
+                child: Text(l10n.resendCode),
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              style: link.copyWith(
+                foregroundColor: WidgetStatePropertyAll(
+                  context.colors.onSurfaceVariant,
+                ),
+              ),
+              onPressed: _leave,
+              child: Text(l10n.skipForNow),
+            ),
+          ],
         ),
       ],
     );

@@ -1,3 +1,4 @@
+import 'package:app/features/shell/presentation/app_bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,7 +17,7 @@ void main() {
       TextDirection.rtl,
     );
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppBottomNav), findsOneWidget);
     expect(find.text('الرئيسية'), findsWidgets);
     await tester.tap(find.text('السلة'));
     await tester.pumpAndSettle();

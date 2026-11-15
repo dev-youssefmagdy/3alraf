@@ -53,11 +53,13 @@ class AffiliateStats {
     this.tier,
     this.nextTier,
     this.commissions = const {},
+    this.bonus,
   });
 
   factory AffiliateStats.fromJson(Map<String, Object?> j) {
     final tier = asMap(j['tier']);
     final next = asMap(j['next_tier']);
+    final bonus = asMap(j['bonus']);
     return AffiliateStats(
       clicks: intOf(j['clicks']),
       orders: intOf(j['orders']),
@@ -66,6 +68,7 @@ class AffiliateStats {
       tier: tier.isEmpty ? null : AffiliateTier.fromJson(tier),
       nextTier: next.isEmpty ? null : AffiliateTier.fromJson(next),
       commissions: asMap(j['commissions']).map((k, v) => MapEntry(k, str(v))),
+      bonus: bonus.isEmpty ? null : AffiliateBonus.fromJson(bonus),
     );
   }
 
@@ -78,6 +81,40 @@ class AffiliateStats {
 
   /// pending / approved / paid / available (server money strings).
   final Map<String, String> commissions;
+
+  /// Sales bonus progress (`stats.bonus`); null on older servers.
+  final AffiliateBonus? bonus;
+}
+
+/// Sales bonus: [amount] for every [threshold] of delivered sales
+/// (`AffiliateBonusService::progress`).
+class AffiliateBonus {
+  const AffiliateBonus({
+    this.enabled = false,
+    this.threshold = '0',
+    this.amount = '0',
+    this.towardNext = '0',
+    this.percent = 0,
+    this.earnedTotal = '0',
+  });
+
+  factory AffiliateBonus.fromJson(Map<String, Object?> j) => AffiliateBonus(
+    enabled: boolOf(j['enabled']),
+    threshold: str(j['threshold'], '0'),
+    amount: str(j['amount'], '0'),
+    towardNext: str(j['toward_next'], '0'),
+    percent: doubleOrNull(j['percent']) ?? 0,
+    earnedTotal: str(j['earned_total'], '0'),
+  );
+
+  final bool enabled;
+  final String threshold;
+  final String amount;
+  final String towardNext;
+
+  /// 0..100 toward the next bonus.
+  final double percent;
+  final String earnedTotal;
 }
 
 class Payout {

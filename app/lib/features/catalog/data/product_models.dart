@@ -2,9 +2,21 @@ import '../../../core/network/json.dart';
 import 'catalog_models.dart';
 
 class ProductImage {
-  const ProductImage({required this.url, this.thumb});
+  const ProductImage({
+    required this.url,
+    this.thumb,
+    this.isVideo = false,
+    this.poster,
+  });
   final String url;
   final String? thumb;
+
+  /// A gallery video (`media[].type == 'video'`); [poster] is its still.
+  final bool isVideo;
+  final String? poster;
+
+  /// Still image for thumbnails / placeholders.
+  String? get still => isVideo ? (poster ?? thumb) : (thumb ?? url);
 }
 
 class OptionValue {
@@ -118,6 +130,7 @@ class ProductDetail {
     this.brand,
     this.categories = const [],
     this.images = const [],
+    this.media = const [],
     this.regularPrice,
     this.ratingAverage = 0,
     this.ratingCount = 0,
@@ -145,6 +158,19 @@ class ProductDetail {
           .map(
             (i) =>
                 ProductImage(url: str(i['url']), thumb: strOrNull(i['thumb'])),
+          )
+          .toList(),
+      // Additive `media` (images and videos in gallery order); older
+      // servers only send `images`.
+      media: asMapList(j['media'])
+          .where((m) => strOrNull(m['url']) != null)
+          .map(
+            (m) => ProductImage(
+              url: str(m['url']),
+              thumb: strOrNull(m['thumb']),
+              isVideo: str(m['type']) == 'video',
+              poster: strOrNull(m['poster']),
+            ),
           )
           .toList(),
       price: str(j['price']),
@@ -184,6 +210,10 @@ class ProductDetail {
   final Brand? brand;
   final List<Crumb> categories;
   final List<ProductImage> images;
+  final List<ProductImage> media;
+
+  /// Gallery slides: [media] when the server sends it, else [images].
+  List<ProductImage> get gallery => media.isNotEmpty ? media : images;
   final String price;
   final String? regularPrice;
   final List<ProductOption> options;

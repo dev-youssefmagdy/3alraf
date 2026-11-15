@@ -1,3 +1,4 @@
+import 'package:app/core/widgets/count_badge.dart';
 import 'package:app/features/auth/presentation/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,7 +27,7 @@ void main() {
     await env.pumpApp(tester);
     // Badge on the tab shows the unit count from the server cart.
     expect(
-      find.descendant(of: find.byType(Badge), matching: find.text('2')),
+      find.descendant(of: find.byType(CountBadge), matching: find.text('2')),
       findsWidgets,
     );
 
@@ -34,7 +35,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Serum'), findsOneWidget);
     expect(
-      find.textContaining('200.00'),
+      find.textContaining('200 ج.م'),
       findsWidgets,
     ); // server subtotal/total
     expect(find.text('يُحسب عند إتمام الطلب'), findsOneWidget);
@@ -44,7 +45,7 @@ void main() {
     final put = env.adapter.requests.where((r) => r.method == 'PUT').single;
     expect(put.path, '/cart/items/1');
     expect(put.data, {'quantity': 3});
-    expect(find.textContaining('300.00'), findsWidgets);
+    expect(find.textContaining('300 ج.م'), findsWidgets);
 
     await tester.tap(find.text('إتمام الطلب'));
     await tester.pumpAndSettle();

@@ -512,5 +512,87 @@
   "ambassadorNoLinks": "No links yet.",
   "ambassadorIdeas": "Content ideas",
   "showPassword": "Show password",
-  "hidePassword": "Hide password"
+  "hidePassword": "Hide password",
+  "navGifts": "Gifts",
+  "navCartCount": "Cart, {count} items",
+  "trustFast": "Fast delivery",
+  "trustFastText": "To every governorate",
+  "trustCod": "Cash on delivery",
+  "trustCodText": "Pay when your order arrives",
+  "trustAuthentic": "100% authentic products",
+  "trustAuthenticText": "From brands and authorised distributors",
+  "trustGift": "Gift wrapping",
+  "trustGiftText": "Choose your wrapping at checkout",
+  "errorTitle": "Something went wrong",
+  "offlineTitle": "You're offline",
+  "offlineBody": "Check your internet connection and try again.",
+  "noResultsTitle": "No results",
+  "carouselSlide": "Slide {index} of {count}",
+  "priceStartingFrom": "From",
+  "badgeNew": "New",
+  "bundleBadge": "Bundle",
+  "bundleItemsCount": "{count} items",
+  "countdownHours": "hrs",
+  "countdownMinutes": "min",
+  "countdownSeconds": "sec",
+  "countdownSemantics": "Offer ends in {time}",
+  "brandsCount": "{count} brands",
+  "bundlesSubtitle": "Hand-picked products together for less",
+  "sortByLabel": "Sort by:",
+  "giftStepOf": "Step {step} of {total}",
+  "giftStepCategory": "Which category?",
+  "giftBudgetChip": "Budget: {amount}",
+  "giftSuggestionsCount": "Suggestions for you ({count})",
+  "giftPick": "Select",
+  "giftSelectedCount": "{count} selected",
+  "giftAnyCategory": "Any category",
+  "cartFlashNote": "Your flash-sale price is held for a limited time",
+  "cartPayNowShipping": "Pay now (delivery)",
+  "cartPayOnDelivery": "Pay on delivery",
+  "cartSecureNote": "Secure payment · cash on delivery available",
+  "cartBundleLine": "Bundle",
+  "transferTo": "Transfer to",
+  "proofTapToUpload": "Tap to upload the transfer receipt",
+  "proofUploadHint": "A clear photo of the receipt from your gallery or camera",
+  "noFee": "No fee",
+  "orderThanksLead": "Thank you! Your order number",
+  "orderStatus": "Status",
+  "orderNumberCopy": "Copy order number",
+  "reviewsCount": "{count} reviews",
+  "galleryVideo": "Product video",
+  "galleryCounter": "{index} / {count}",
+  "variantSelected": "{option}: {value}",
+  "allLabel": "All",
+  "searchNoResultsBody": "No matching products. Try other words or browse the categories.",
+  "aboutBody": "Original products from top brands, special gift wrapping, fast delivery to every governorate and cash on delivery.",
+  "changePasswordLead": "Enter your current password, then choose a new one of at least 8 characters.",
+  "affiliateBonusTitle": "Sales bonus",
+  "affiliateBonusRule": "{amount} for every {threshold} of delivered sales",
+  "@affiliateBonusRule": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateBonusEarned": "Earned: {amount}",
+  "@affiliateBonusEarned": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateProductsIntro": "Copy your link or share the QR code. You earn a commission on every order that comes through your link.",
+  "affiliateQrHint": "Scan to open the product with your link",
+  "affiliateQrSave": "Save image",
+  "payoutHistory": "Payout history",
+  "blogReadMore": "Read more",
+  "blogBack": "Back to blog",
+  "blogSubtitle": "Care tips and gift ideas",
+  "contactHeroTitle": "We're happy to help",
+  "contactHeroBody": "Reach us on WhatsApp, by phone or by e-mail."
 }

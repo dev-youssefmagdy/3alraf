@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/context_ext.dart';
 import '../../cart/application/cart_controller.dart';
-import '../../cart/presentation/cart_badge.dart';
+import '../../../core/routing/app_routes.dart';
+import '../../../core/widgets/offline_banner.dart';
+import '../../store/application/store_controller.dart';
+import 'app_bottom_nav.dart';
 import '../../startup/application/startup_controller.dart';
 import 'app_drawer.dart';
 
@@ -22,73 +25,82 @@ class ShellMenuButton extends StatelessWidget {
   );
 }
 
-/// Bottom navigation shell (Home, Categories, Cart, Wishlist, Account) with
-/// the side drawer and the offline banner.
+/// Bottom navigation shell (Home, Categories, raised Gifts, Cart, Account)
+/// with the side drawer and the offline banner. The wishlist stays a shell
+/// branch (reached from the account menu and the drawer) but has no bottom
+/// nav slot; while it is open the Account slot is highlighted.
 class ShellScaffold extends ConsumerWidget {
   const ShellScaffold({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
+  // Branch order in app_router.dart.
+  static const _homeBranch = 0;
+  static const _categoriesBranch = 1;
+  static const _cartBranch = 2;
+  static const _wishlistBranch = 3;
+  static const _accountBranch = 4;
+
+  static AppNavItem? itemForBranch(int branch) => switch (branch) {
+    _homeBranch => AppNavItem.home,
+    _categoriesBranch => AppNavItem.categories,
+    _cartBranch => AppNavItem.cart,
+    _wishlistBranch || _accountBranch => AppNavItem.account,
+    _ => null,
+  };
+
+  void _select(BuildContext context, AppNavItem item) {
+    final branch = switch (item) {
+      AppNavItem.home => _homeBranch,
+      AppNavItem.categories => _categoriesBranch,
+      AppNavItem.cart => _cartBranch,
+      AppNavItem.account => _accountBranch,
+      AppNavItem.gifts => null,
+    };
+    if (branch == null) {
+      context.push(AppRoutes.giftFinder);
+      return;
+    }
+    shell.goBranch(branch, initialLocation: branch == shell.currentIndex);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
     ref.watch(cartControllerProvider); // starts loading for the badge
     final offline = ref.watch(
       startupControllerProvider.select((s) => s.result?.offline ?? false),
     );
+    final giftOn =
+        ref.watch(storeProfileProvider)?.features['gift_finder'] ?? false;
+    final cartCount = ref.watch(cartCountProvider);
     return Scaffold(
       key: shellScaffoldKey,
       drawer: const AppDrawer(),
       body: Column(
         children: [
           if (offline)
-            MaterialBanner(
-              content: Text(l10n.offlineBanner),
-              leading: const Icon(Icons.wifi_off_rounded),
-              actions: [
-                TextButton(
-                  onPressed: () =>
-                      ref.read(startupControllerProvider.notifier).recheck(),
-                  child: Text(l10n.retry),
-                ),
-              ],
+            OfflineBanner(
+              onRetry: () =>
+                  ref.read(startupControllerProvider.notifier).recheck(),
             ),
-          Expanded(child: shell),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: offline,
+              child: shell,
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: l10n.navHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.grid_view_outlined),
-            selectedIcon: const Icon(Icons.grid_view_rounded),
-            label: l10n.navCategories,
-          ),
-          NavigationDestination(
-            icon: const CartBadge(child: Icon(Icons.shopping_bag_outlined)),
-            selectedIcon: const CartBadge(
-              child: Icon(Icons.shopping_bag_rounded),
-            ),
-            label: l10n.navCart,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.favorite_border_rounded),
-            selectedIcon: const Icon(Icons.favorite_rounded),
-            label: l10n.navWishlist,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: l10n.navAccount,
-          ),
-        ],
+      floatingActionButton: giftOn
+          ? GiftNavButton(onTap: () => _select(context, AppNavItem.gifts))
+          : null,
+      floatingActionButtonLocation: const RaisedCenterFabLocation(),
+      bottomNavigationBar: AppBottomNav(
+        selected: itemForBranch(shell.currentIndex),
+        showGift: giftOn,
+        cartCount: cartCount,
+        onSelect: (item) => _select(context, item),
       ),
     );
   }

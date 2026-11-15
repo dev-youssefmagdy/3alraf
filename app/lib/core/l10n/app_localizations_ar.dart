@@ -1320,4 +1320,232 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get hidePassword => 'إخفاء كلمة المرور';
+
+  @override
+  String get navGifts => 'الهدايا';
+
+  @override
+  String navCartCount(int count) {
+    return 'السلة، $count منتجات';
+  }
+
+  @override
+  String get trustFast => 'شحن سريع';
+
+  @override
+  String get trustFastText => 'لكل المحافظات';
+
+  @override
+  String get trustCod => 'الدفع عند الاستلام';
+
+  @override
+  String get trustCodText => 'ادفع لما طلبك يوصل';
+
+  @override
+  String get trustAuthentic => 'منتجات أصلية 100%';
+
+  @override
+  String get trustAuthenticText => 'من الماركات والموزعين المعتمدين';
+
+  @override
+  String get trustGift => 'تغليف هدايا مميز';
+
+  @override
+  String get trustGiftText => 'اختار التغليف عند الدفع';
+
+  @override
+  String get errorTitle => 'حدث خطأ ما';
+
+  @override
+  String get offlineTitle => 'أنت غير متصل';
+
+  @override
+  String get offlineBody => 'تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.';
+
+  @override
+  String get noResultsTitle => 'لا توجد نتائج';
+
+  @override
+  String carouselSlide(int index, int count) {
+    return 'الشريحة $index من $count';
+  }
+
+  @override
+  String get priceStartingFrom => 'ابتداءً من';
+
+  @override
+  String get badgeNew => 'جديد';
+
+  @override
+  String get bundleBadge => 'باقة';
+
+  @override
+  String bundleItemsCount(int count) {
+    return '$count منتجات';
+  }
+
+  @override
+  String get countdownHours => 'ساعة';
+
+  @override
+  String get countdownMinutes => 'دقيقة';
+
+  @override
+  String get countdownSeconds => 'ثانية';
+
+  @override
+  String countdownSemantics(String time) {
+    return 'ينتهي العرض خلال $time';
+  }
+
+  @override
+  String brandsCount(int count) {
+    return '$count ماركة';
+  }
+
+  @override
+  String get bundlesSubtitle => 'منتجات مختارة معاً بسعر أقل';
+
+  @override
+  String get sortByLabel => 'ترتيب حسب:';
+
+  @override
+  String giftStepOf(int step, int total) {
+    return 'الخطوة $step من $total';
+  }
+
+  @override
+  String get giftStepCategory => 'في أي قسم تبحث؟';
+
+  @override
+  String giftBudgetChip(String amount) {
+    return 'الميزانية: $amount';
+  }
+
+  @override
+  String giftSuggestionsCount(int count) {
+    return 'اقتراحات لك ($count)';
+  }
+
+  @override
+  String get giftPick => 'اختر';
+
+  @override
+  String giftSelectedCount(int count) {
+    return 'تم اختيار $count';
+  }
+
+  @override
+  String get giftAnyCategory => 'أي قسم';
+
+  @override
+  String get cartFlashNote => 'سعر العرض الخاطف محجوز لك لفترة محدودة';
+
+  @override
+  String get cartPayNowShipping => 'ادفع الآن (التوصيل)';
+
+  @override
+  String get cartPayOnDelivery => 'الدفع عند التسليم';
+
+  @override
+  String get cartSecureNote => 'دفع آمن · الدفع عند الاستلام متاح';
+
+  @override
+  String get cartBundleLine => 'باقة';
+
+  @override
+  String get transferTo => 'حوّل إلى';
+
+  @override
+  String get proofTapToUpload => 'اضغط لرفع إيصال التحويل';
+
+  @override
+  String get proofUploadHint => 'صورة واضحة للإيصال من المعرض أو الكاميرا';
+
+  @override
+  String get noFee => 'بدون رسوم';
+
+  @override
+  String get orderThanksLead => 'شكرًا لك! رقم طلبك';
+
+  @override
+  String get orderStatus => 'الحالة';
+
+  @override
+  String get orderNumberCopy => 'نسخ رقم الطلب';
+
+  @override
+  String reviewsCount(int count) {
+    return '$count تقييم';
+  }
+
+  @override
+  String get galleryVideo => 'فيديو المنتج';
+
+  @override
+  String galleryCounter(int index, int count) {
+    return '$index / $count';
+  }
+
+  @override
+  String variantSelected(String option, String value) {
+    return '$option: $value';
+  }
+
+  @override
+  String get allLabel => 'الكل';
+
+  @override
+  String get searchNoResultsBody =>
+      'لم نجد منتجات مطابقة. جرّب كلمات أخرى أو تصفّح الأقسام.';
+
+  @override
+  String get aboutBody =>
+      'منتجات أصلية من أفضل العلامات، تغليف هدايا مميز، شحن سريع لكل المحافظات والدفع عند الاستلام.';
+
+  @override
+  String get changePasswordLead =>
+      'أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة من 8 أحرف على الأقل.';
+
+  @override
+  String get affiliateBonusTitle => 'مكافأة المبيعات';
+
+  @override
+  String affiliateBonusRule(String amount, String threshold) {
+    return '$amount عن كل $threshold من المبيعات المسلّمة';
+  }
+
+  @override
+  String affiliateBonusEarned(String amount) {
+    return 'المكتسب: $amount';
+  }
+
+  @override
+  String get affiliateProductsIntro =>
+      'انسخ رابطك الخاص أو شارك رمز QR. تُحتسب العمولة على كل طلب يأتي من رابطك.';
+
+  @override
+  String get affiliateQrHint => 'امسح الرمز لفتح المنتج برابطك';
+
+  @override
+  String get affiliateQrSave => 'حفظ الصورة';
+
+  @override
+  String get payoutHistory => 'سجل المدفوعات';
+
+  @override
+  String get blogReadMore => 'اقرأ المزيد';
+
+  @override
+  String get blogBack => 'رجوع إلى المدونة';
+
+  @override
+  String get blogSubtitle => 'نصائح للعناية وأفكار للهدايا';
+
+  @override
+  String get contactHeroTitle => 'يسعدنا مساعدتك';
+
+  @override
+  String get contactHeroBody =>
+      'تواصل معنا عبر واتساب أو الهاتف أو البريد الإلكتروني.';
 }

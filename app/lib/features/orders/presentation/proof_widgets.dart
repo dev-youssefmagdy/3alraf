@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -12,21 +13,20 @@ import '../application/proof_picker.dart';
 /// Asks camera or gallery, then returns the chosen file path.
 Future<String?> pickProof(BuildContext context, WidgetRef ref) async {
   final l10n = context.l10n;
-  final source = await showModalBottomSheet<ImageSource>(
+  final source = await showAppBottomSheet<ImageSource>(
     context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    builder: (ctx) => AppSheet(
+      title: l10n.orderUploadProof,
+      child: AppListGroup(
         children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: Text(l10n.proofGallery),
+          AppListTile(
+            icon: Icons.photo_library_outlined,
+            title: l10n.proofGallery,
             onTap: () => Navigator.pop(ctx, ImageSource.gallery),
           ),
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: Text(l10n.proofCamera),
+          AppListTile(
+            icon: Icons.photo_camera_outlined,
+            title: l10n.proofCamera,
             onTap: () => Navigator.pop(ctx, ImageSource.camera),
           ),
         ],
@@ -54,11 +54,36 @@ class ProofPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final p = path;
+    final x = context.extra;
     if (p == null) {
-      return OutlinedButton.icon(
-        onPressed: onChange,
-        icon: const Icon(Icons.upload_file_rounded),
-        label: Text(l10n.proofChoose),
+      // File upload (`7:366`): dashed pop target on pop-50.
+      return DashedBox(
+        key: const ValueKey('proof-upload'),
+        semanticLabel: l10n.proofChoose,
+        onTap: onChange,
+        color: x.pop,
+        fill: x.popSoft,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.mdl,
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.upload_rounded, color: x.pop, size: 26),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.proofTapToUpload,
+              textAlign: TextAlign.center,
+              style: context.text.labelMedium?.copyWith(color: x.pop),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l10n.proofUploadHint,
+              textAlign: TextAlign.center,
+              style: context.text.bodySmall?.copyWith(color: x.textMuted),
+            ),
+          ],
+        ),
       );
     }
     return Row(
@@ -146,6 +171,57 @@ class _ProofUploaderState extends ConsumerState<ProofUploader> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "حوّل إلى" card: brand-50 block with the LTR account number and a Pop
+/// copy button.
+class TransferToCard extends StatelessWidget {
+  const TransferToCard({super.key, required this.number});
+
+  final String number;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final x = context.extra;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: x.brandSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.transferTo,
+                  style: context.text.bodySmall?.copyWith(color: x.textMuted),
+                ),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: SelectableText(number, style: context.text.titleLarge),
+                ),
+              ],
+            ),
+          ),
+          AppButton(
+            label: l10n.copy,
+            icon: Icons.copy_rounded,
+            variant: AppButtonVariant.pop,
+            size: AppButtonSize.s,
+            expand: false,
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: number));
+              context.showSnack(l10n.copied, tone: SnackTone.success);
+            },
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2593,6 +2593,396 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إخفاء كلمة المرور'**
   String get hidePassword;
+
+  /// No description provided for @navGifts.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهدايا'**
+  String get navGifts;
+
+  /// No description provided for @navCartCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلة، {count} منتجات'**
+  String navCartCount(int count);
+
+  /// No description provided for @trustFast.
+  ///
+  /// In ar, this message translates to:
+  /// **'شحن سريع'**
+  String get trustFast;
+
+  /// No description provided for @trustFastText.
+  ///
+  /// In ar, this message translates to:
+  /// **'لكل المحافظات'**
+  String get trustFastText;
+
+  /// No description provided for @trustCod.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع عند الاستلام'**
+  String get trustCod;
+
+  /// No description provided for @trustCodText.
+  ///
+  /// In ar, this message translates to:
+  /// **'ادفع لما طلبك يوصل'**
+  String get trustCodText;
+
+  /// No description provided for @trustAuthentic.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتجات أصلية 100%'**
+  String get trustAuthentic;
+
+  /// No description provided for @trustAuthenticText.
+  ///
+  /// In ar, this message translates to:
+  /// **'من الماركات والموزعين المعتمدين'**
+  String get trustAuthenticText;
+
+  /// No description provided for @trustGift.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغليف هدايا مميز'**
+  String get trustGift;
+
+  /// No description provided for @trustGiftText.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار التغليف عند الدفع'**
+  String get trustGiftText;
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ ما'**
+  String get errorTitle;
+
+  /// No description provided for @offlineTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت غير متصل'**
+  String get offlineTitle;
+
+  /// No description provided for @offlineBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.'**
+  String get offlineBody;
+
+  /// No description provided for @noResultsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج'**
+  String get noResultsTitle;
+
+  /// No description provided for @carouselSlide.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشريحة {index} من {count}'**
+  String carouselSlide(int index, int count);
+
+  /// No description provided for @priceStartingFrom.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابتداءً من'**
+  String get priceStartingFrom;
+
+  /// No description provided for @badgeNew.
+  ///
+  /// In ar, this message translates to:
+  /// **'جديد'**
+  String get badgeNew;
+
+  /// No description provided for @bundleBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'باقة'**
+  String get bundleBadge;
+
+  /// No description provided for @bundleItemsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} منتجات'**
+  String bundleItemsCount(int count);
+
+  /// No description provided for @countdownHours.
+  ///
+  /// In ar, this message translates to:
+  /// **'ساعة'**
+  String get countdownHours;
+
+  /// No description provided for @countdownMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'دقيقة'**
+  String get countdownMinutes;
+
+  /// No description provided for @countdownSeconds.
+  ///
+  /// In ar, this message translates to:
+  /// **'ثانية'**
+  String get countdownSeconds;
+
+  /// No description provided for @countdownSemantics.
+  ///
+  /// In ar, this message translates to:
+  /// **'ينتهي العرض خلال {time}'**
+  String countdownSemantics(String time);
+
+  /// No description provided for @brandsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} ماركة'**
+  String brandsCount(int count);
+
+  /// No description provided for @bundlesSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتجات مختارة معاً بسعر أقل'**
+  String get bundlesSubtitle;
+
+  /// No description provided for @sortByLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ترتيب حسب:'**
+  String get sortByLabel;
+
+  /// No description provided for @giftStepOf.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوة {step} من {total}'**
+  String giftStepOf(int step, int total);
+
+  /// No description provided for @giftStepCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'في أي قسم تبحث؟'**
+  String get giftStepCategory;
+
+  /// No description provided for @giftBudgetChip.
+  ///
+  /// In ar, this message translates to:
+  /// **'الميزانية: {amount}'**
+  String giftBudgetChip(String amount);
+
+  /// No description provided for @giftSuggestionsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقتراحات لك ({count})'**
+  String giftSuggestionsCount(int count);
+
+  /// No description provided for @giftPick.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر'**
+  String get giftPick;
+
+  /// No description provided for @giftSelectedCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم اختيار {count}'**
+  String giftSelectedCount(int count);
+
+  /// No description provided for @giftAnyCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'أي قسم'**
+  String get giftAnyCategory;
+
+  /// No description provided for @cartFlashNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر العرض الخاطف محجوز لك لفترة محدودة'**
+  String get cartFlashNote;
+
+  /// No description provided for @cartPayNowShipping.
+  ///
+  /// In ar, this message translates to:
+  /// **'ادفع الآن (التوصيل)'**
+  String get cartPayNowShipping;
+
+  /// No description provided for @cartPayOnDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع عند التسليم'**
+  String get cartPayOnDelivery;
+
+  /// No description provided for @cartSecureNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'دفع آمن · الدفع عند الاستلام متاح'**
+  String get cartSecureNote;
+
+  /// No description provided for @cartBundleLine.
+  ///
+  /// In ar, this message translates to:
+  /// **'باقة'**
+  String get cartBundleLine;
+
+  /// No description provided for @transferTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'حوّل إلى'**
+  String get transferTo;
+
+  /// No description provided for @proofTapToUpload.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط لرفع إيصال التحويل'**
+  String get proofTapToUpload;
+
+  /// No description provided for @proofUploadHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة واضحة للإيصال من المعرض أو الكاميرا'**
+  String get proofUploadHint;
+
+  /// No description provided for @noFee.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون رسوم'**
+  String get noFee;
+
+  /// No description provided for @orderThanksLead.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكرًا لك! رقم طلبك'**
+  String get orderThanksLead;
+
+  /// No description provided for @orderStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة'**
+  String get orderStatus;
+
+  /// No description provided for @orderNumberCopy.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ رقم الطلب'**
+  String get orderNumberCopy;
+
+  /// No description provided for @reviewsCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} تقييم'**
+  String reviewsCount(int count);
+
+  /// No description provided for @galleryVideo.
+  ///
+  /// In ar, this message translates to:
+  /// **'فيديو المنتج'**
+  String get galleryVideo;
+
+  /// No description provided for @galleryCounter.
+  ///
+  /// In ar, this message translates to:
+  /// **'{index} / {count}'**
+  String galleryCounter(int index, int count);
+
+  /// No description provided for @variantSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'{option}: {value}'**
+  String variantSelected(String option, String value);
+
+  /// No description provided for @allLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get allLabel;
+
+  /// No description provided for @searchNoResultsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم نجد منتجات مطابقة. جرّب كلمات أخرى أو تصفّح الأقسام.'**
+  String get searchNoResultsBody;
+
+  /// No description provided for @aboutBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتجات أصلية من أفضل العلامات، تغليف هدايا مميز، شحن سريع لكل المحافظات والدفع عند الاستلام.'**
+  String get aboutBody;
+
+  /// No description provided for @changePasswordLead.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة من 8 أحرف على الأقل.'**
+  String get changePasswordLead;
+
+  /// No description provided for @affiliateBonusTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكافأة المبيعات'**
+  String get affiliateBonusTitle;
+
+  /// No description provided for @affiliateBonusRule.
+  ///
+  /// In ar, this message translates to:
+  /// **'{amount} عن كل {threshold} من المبيعات المسلّمة'**
+  String affiliateBonusRule(String amount, String threshold);
+
+  /// No description provided for @affiliateBonusEarned.
+  ///
+  /// In ar, this message translates to:
+  /// **'المكتسب: {amount}'**
+  String affiliateBonusEarned(String amount);
+
+  /// No description provided for @affiliateProductsIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'انسخ رابطك الخاص أو شارك رمز QR. تُحتسب العمولة على كل طلب يأتي من رابطك.'**
+  String get affiliateProductsIntro;
+
+  /// No description provided for @affiliateQrHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'امسح الرمز لفتح المنتج برابطك'**
+  String get affiliateQrHint;
+
+  /// No description provided for @affiliateQrSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ الصورة'**
+  String get affiliateQrSave;
+
+  /// No description provided for @payoutHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل المدفوعات'**
+  String get payoutHistory;
+
+  /// No description provided for @blogReadMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقرأ المزيد'**
+  String get blogReadMore;
+
+  /// No description provided for @blogBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'رجوع إلى المدونة'**
+  String get blogBack;
+
+  /// No description provided for @blogSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نصائح للعناية وأفكار للهدايا'**
+  String get blogSubtitle;
+
+  /// No description provided for @contactHeroTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'يسعدنا مساعدتك'**
+  String get contactHeroTitle;
+
+  /// No description provided for @contactHeroBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تواصل معنا عبر واتساب أو الهاتف أو البريد الإلكتروني.'**
+  String get contactHeroBody;
 }
 
 class _AppLocalizationsDelegate

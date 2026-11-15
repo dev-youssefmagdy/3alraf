@@ -16,30 +16,16 @@ import '../../auth/presentation/auth_widgets.dart';
 void _leave(BuildContext context) =>
     context.canPop() ? context.pop() : context.go(AppRoutes.account);
 
-/// Shared scaffold for the account forms: scrollable, centred, max width.
-class _FormScaffold extends StatelessWidget {
-  const _FormScaffold({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: children,
-          ),
-        ),
+/// Sticky Primary L action under an account form.
+Widget _saveBar(String label, bool busy, VoidCallback onPressed) =>
+    StickyActionBar(
+      action: AppButton(
+        label: label,
+        size: AppButtonSize.l,
+        loading: busy,
+        onPressed: onPressed,
       ),
-    ),
-  );
-}
+    );
 
 /// Edit name / e-mail / phone (`PUT auth/me`). Changing the e-mail needs the
 /// current password, so that field only appears when the e-mail was edited.
@@ -116,8 +102,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     const gap = SizedBox(height: AppSpacing.md);
-    return _FormScaffold(
+    return FormPageScaffold(
       title: l10n.profileTitle,
+      bottom: _saveBar(l10n.save, _busy, _save),
       children: [
         Form(
           key: _form,
@@ -128,7 +115,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 controller: _name,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.name],
-                prefixIcon: Icons.person_outline_rounded,
                 errorText: _errors['name'],
                 validator: (v) => requiredValidator(context, v),
               ),
@@ -139,7 +125,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
-                prefixIcon: Icons.mail_outline_rounded,
+                ltr: true,
+                helperText: _emailChanged ? l10n.profileEmailChangeHint : null,
                 errorText: _errors['email'],
                 validator: (v) => emailValidator(context, v),
               ),
@@ -150,23 +137,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.telephoneNumber],
-                prefixIcon: Icons.phone_outlined,
+                ltr: true,
                 errorText: _errors['phone'],
               ),
               if (_emailChanged) ...[
                 gap,
-                Text(
-                  l10n.profileEmailChangeHint,
-                  style: context.text.bodySmall,
-                ),
-                const SizedBox(height: AppSpacing.sm),
                 AppTextField(
                   label: l10n.currentPassword,
                   controller: _current,
                   obscure: true,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
-                  prefixIcon: Icons.lock_outline_rounded,
                   errorText: _errors['current_password'],
                   validator: (v) => requiredValidator(context, v),
                   onSubmitted: (_) => _save(),
@@ -175,8 +156,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(label: l10n.save, loading: _busy, onPressed: _save),
       ],
     );
   }
@@ -242,9 +221,15 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     const gap = SizedBox(height: AppSpacing.md);
-    return _FormScaffold(
+    return FormPageScaffold(
       title: l10n.changePasswordTitle,
+      bottom: _saveBar(l10n.save, _busy, _save),
       children: [
+        FormLead(
+          icon: Icons.shield_outlined,
+          tone: StateTone.brand,
+          text: l10n.changePasswordLead,
+        ),
         Form(
           key: _form,
           child: Column(
@@ -255,7 +240,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                 obscure: true,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.password],
-                prefixIcon: Icons.lock_outline_rounded,
                 errorText: _errors['current_password'],
                 validator: (v) => requiredValidator(context, v),
               ),
@@ -266,7 +250,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                 obscure: true,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
-                prefixIcon: Icons.lock_reset_rounded,
                 errorText: _errors['password'],
                 validator: (v) => passwordValidator(context, v),
               ),
@@ -276,7 +259,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                 controller: _confirm,
                 obscure: true,
                 textInputAction: TextInputAction.done,
-                prefixIcon: Icons.lock_reset_rounded,
                 errorText: _errors['password_confirmation'],
                 validator: (v) => v == _new.text ? null : l10n.passwordMismatch,
                 onSubmitted: (_) => _save(),
@@ -284,8 +266,6 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(label: l10n.save, loading: _busy, onPressed: _save),
       ],
     );
   }
@@ -363,49 +343,47 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return _FormScaffold(
+    return FormPageScaffold(
       title: l10n.deleteAccountTitle,
-      children: [
-        Icon(
-          Icons.warning_amber_rounded,
-          size: 56,
-          color: context.colors.error,
-          semanticLabel: l10n.deleteAccountTitle,
+      bottom: StickyActionBar(
+        action: AppButton(
+          label: l10n.deleteAccountAction,
+          icon: Icons.delete_forever_rounded,
+          variant: AppButtonVariant.danger,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _delete,
         ),
-        const SizedBox(height: AppSpacing.md),
-        Text(l10n.deleteAccountWarning, style: context.text.bodyLarge),
-        const SizedBox(height: AppSpacing.lg),
-        if (!_noPassword)
+      ),
+      children: [
+        Semantics(
+          label: l10n.deleteAccountTitle,
+          child: NoticeCard(
+            icon: Icons.warning_amber_rounded,
+            title: l10n.deleteAccountConfirmTitle,
+            text: l10n.deleteAccountWarning,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.mdl),
+        if (!_noPassword) ...[
           AppTextField(
             label: l10n.password,
             controller: _password,
             obscure: true,
             textInputAction: TextInputAction.done,
-            prefixIcon: Icons.lock_outline_rounded,
             errorText: _errors['password'],
             onSubmitted: (_) => _delete(),
           ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(l10n.deleteAccountNoPassword),
+          title: Text(
+            l10n.deleteAccountNoPassword,
+            style: context.text.bodyMedium,
+          ),
           value: _noPassword,
           onChanged: (v) => setState(() => _noPassword = v),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: context.colors.error,
-            foregroundColor: context.colors.onError,
-            minimumSize: const Size.fromHeight(48),
-          ),
-          onPressed: _busy ? null : _delete,
-          icon: _busy
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.delete_forever_rounded),
-          label: Text(l10n.deleteAccountAction),
         ),
       ],
     );

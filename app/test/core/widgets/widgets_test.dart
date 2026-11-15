@@ -50,15 +50,34 @@ void main() {
     expect(dir, TextDirection.ltr);
   });
 
-  testWidgets('PriceText renders amount verbatim with old price', (t) async {
+  testWidgets('PriceText formats amount and old price (en)', (t) async {
     await t.pumpWidget(
       host(
-        const PriceText(amount: '250.00', currency: 'EGP', oldAmount: '300.00'),
+        const PriceText(
+          amount: '1250.00',
+          currency: 'EGP',
+          oldAmount: '1300.50',
+        ),
         locale: 'en',
       ),
     );
-    expect(find.text('250.00 EGP'), findsOneWidget);
-    expect(find.text('300.00 EGP'), findsOneWidget);
+    expect(find.text('EGP 1,250'), findsOneWidget);
+    expect(find.text('EGP 1,300.50'), findsOneWidget);
+  });
+
+  testWidgets('PriceText formats amount in Arabic as 1,250 ج.م', (t) async {
+    await t.pumpWidget(
+      host(
+        const PriceText(
+          amount: '1250.00',
+          currency: 'EGP',
+          oldAmount: '1300.00',
+        ),
+        locale: 'ar',
+      ),
+    );
+    expect(find.text('1,250 ج.م'), findsOneWidget);
+    expect(find.text('1,300 ج.م'), findsOneWidget);
   });
 
   testWidgets('ProductCard shows title, discount and fires onTap', (t) async {

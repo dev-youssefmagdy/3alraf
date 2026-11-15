@@ -25,12 +25,16 @@ class PlaceholderPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(leading: const ShellMenuButton(), title: Text(title)),
-      body: EmptyState(
-        title: title,
-        message: message ?? context.l10n.comingSoon,
-        icon: icon,
-        actionLabel: actionLabel,
-        onAction: onAction,
+      body: Padding(
+        padding: const EdgeInsets.only(bottom: kRaisedNavClearance),
+        child: StateBlock(
+          icon: icon,
+          tone: StateTone.violet,
+          title: title,
+          message: message ?? context.l10n.comingSoon,
+          actionLabel: actionLabel,
+          onAction: onAction,
+        ),
       ),
     );
   }

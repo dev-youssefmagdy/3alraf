@@ -14,11 +14,8 @@ Future<CatalogQuery?> showFilterSheet(
   required ListingScope scope,
   required CatalogQuery current,
   bool priceOnly = false,
-}) => showModalBottomSheet<CatalogQuery>(
+}) => showAppBottomSheet<CatalogQuery>(
   context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  useSafeArea: true,
   builder: (_) =>
       FilterSheet(scope: scope, current: current, priceOnly: priceOnly),
 );
@@ -83,104 +80,103 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     final facets = widget.priceOnly
         ? const AsyncData<Facets>(Facets())
         : ref.watch(facetsProvider(widget.scope));
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
+    return AppSheet(
+      title: l10n.filters,
+      actions: [
+        AppButton(
+          label: l10n.applyFilters,
+          size: AppButtonSize.l,
+          onPressed: _apply,
+        ),
+        AppButton(
+          label: l10n.reset,
+          size: AppButtonSize.l,
+          variant: AppButtonVariant.outlined,
+          onPressed: _reset,
+        ),
+      ],
+      child: facets.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => SizedBox(
+          height: 320,
+          child: ErrorState(
+            error: e,
+            onRetry: () => ref.invalidate(facetsProvider(widget.scope)),
+          ),
+        ),
+        data: (f) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _label(context, l10n.price),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(l10n.filters, style: context.text.titleLarge),
-                ),
-                TextButton(onPressed: _reset, child: Text(l10n.reset)),
+                Expanded(child: _priceField(_min, l10n.priceFrom, f.priceMin)),
+                const SizedBox(width: AppSpacing.smd),
+                Expanded(child: _priceField(_max, l10n.priceTo, f.priceMax)),
               ],
             ),
-          ),
-          Flexible(
-            child: facets.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => ErrorState(
-                error: e,
-                onRetry: () => ref.invalidate(facetsProvider(widget.scope)),
-              ),
-              data: (f) => ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(AppSpacing.md),
+            if (f.brands.isNotEmpty) ...[
+              _label(context, l10n.brands),
+              for (final b in f.brands)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  dense: true,
+                  value: _brands.contains(b.id),
+                  onChanged: (_) => _toggle(_brands, b.id),
+                  title: Text(b.name, style: context.text.bodyMedium),
+                  secondary: b.productsCount == null
+                      ? null
+                      : Text(
+                          '${b.productsCount}',
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.extra.textMuted,
+                          ),
+                        ),
+                ),
+            ],
+            for (final a in f.attributes) ...[
+              _label(context, a.name),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
                 children: [
-                  _label(context, l10n.price),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _priceField(_min, l10n.priceFrom, f.priceMin),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: _priceField(_max, l10n.priceTo, f.priceMax),
-                      ),
-                    ],
-                  ),
-                  if (f.brands.isNotEmpty) ...[
-                    _label(context, l10n.brands),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        for (final b in f.brands)
-                          FilterChip(
-                            label: Text(b.name),
-                            selected: _brands.contains(b.id),
-                            onSelected: (_) => _toggle(_brands, b.id),
-                          ),
-                      ],
+                  for (final v in a.values)
+                    FilterChip(
+                      avatar: _swatch(v.color),
+                      label: Text(v.label),
+                      selected: _values.contains(v.id),
+                      onSelected: (_) => _toggle(_values, v.id),
                     ),
-                  ],
-                  for (final a in f.attributes) ...[
-                    _label(context, a.name),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        for (final v in a.values)
-                          FilterChip(
-                            avatar: _swatch(v.color),
-                            label: Text(v.label),
-                            selected: _values.contains(v.id),
-                            onSelected: (_) => _toggle(_values, v.id),
-                          ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: AppButton(label: l10n.applyFilters, onPressed: _apply),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _label(BuildContext context, String text) => Padding(
-    padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
-    child: Text(
-      text,
-      style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+    padding: const EdgeInsets.only(top: AppSpacing.mdl, bottom: AppSpacing.sm),
+    child: Semantics(
+      header: true,
+      child: Text(text, style: context.text.titleLarge),
     ),
   );
 
   Widget _priceField(TextEditingController c, String label, String? hint) =>
-      TextField(
+      AppTextField(
+        label: label,
         controller: c,
+        hint: hint,
+        ltr: true,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-        decoration: InputDecoration(labelText: label, hintText: hint),
       );
 
   Widget? _swatch(String? hex) {

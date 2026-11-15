@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
+import '../../../core/widgets/widgets.dart';
 import '../data/cart_models.dart';
 
-/// Server-computed totals. Rows with a zero value are hidden (a display
-/// decision only); nothing is added, subtracted or rounded here.
+/// Server-computed totals (Order totals `21:1971`). Rows with a zero value
+/// are hidden (a display decision only); nothing is added, subtracted or
+/// rounded here. The total is Price/L brand; when the server splits a COD
+/// order (prepaid shipping + amount on delivery) the mint block shows both.
 class TotalsCard extends StatelessWidget {
   const TotalsCard({
     super.key,
@@ -13,6 +16,7 @@ class TotalsCard extends StatelessWidget {
     required this.currency,
     this.showShippingHint = false,
     this.padding = const EdgeInsets.all(AppSpacing.md),
+    this.bare = false,
   });
 
   final CartTotals totals;
@@ -22,77 +26,119 @@ class TotalsCard extends StatelessWidget {
   final bool showShippingHint;
   final EdgeInsetsGeometry padding;
 
+  /// Without the card frame (when nested in another card).
+  final bool bare;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final c = context.colors;
+    final x = context.extra;
     final t = totals;
-    Widget row(
-      String label,
-      String value, {
-      bool strong = false,
-      Color? color,
-    }) {
-      final style = strong
-          ? context.text.titleMedium?.copyWith(fontWeight: FontWeight.w800)
-          : context.text.bodyMedium;
+    Widget row(String label, String value, {Color? color, bool raw = false}) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: style)),
+            Expanded(
+              child: Text(
+                label,
+                style: context.text.bodyMedium?.copyWith(
+                  color: c.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
             Text(
-              l10n.currencyAmount(value, currency),
-              style: style?.copyWith(color: color),
+              raw ? value : l10n.money(value, currency),
+              style: context.text.titleSmall?.copyWith(color: color),
             ),
           ],
         ),
       );
     }
 
-    return Card(
-      child: Padding(
-        padding: padding,
-        child: Column(
+    final split = !isZeroMoney(t.prepaidShipping) && !isZeroMoney(t.codAmount);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        row(l10n.cartSubtotal, t.subtotal),
+        if (!isZeroMoney(t.discount))
+          row(l10n.cartDiscount, '-${t.discount}', color: x.success),
+        if (!isZeroMoney(t.shippingNet))
+          row(l10n.cartShipping, t.shippingNet)
+        else if (showShippingHint)
+          row(l10n.cartShipping, l10n.cartShippingAtCheckout, raw: true),
+        if (!isZeroMoney(t.packagingFee))
+          row(l10n.cartPackagingFee, t.packagingFee),
+        if (!isZeroMoney(t.codFee))
+          row(t.codFeeLabel ?? l10n.cartCodFee, t.codFee),
+        if (!isZeroMoney(t.paymentFee)) row(l10n.cartPaymentFee, t.paymentFee),
+        if (!isZeroMoney(t.tax)) row(l10n.cartTax, t.tax),
+        const Divider(height: AppSpacing.lg),
+        Row(
           children: [
-            row(l10n.cartSubtotal, t.subtotal),
-            if (!isZeroMoney(t.discount))
-              row(
-                l10n.cartDiscount,
-                '-${t.discount}',
-                color: context.extra.success,
-              ),
-            if (!isZeroMoney(t.shippingNet))
-              row(l10n.cartShipping, t.shippingNet)
-            else if (showShippingHint)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.cartShipping,
-                        style: context.text.bodyMedium,
-                      ),
-                    ),
-                    Text(
-                      l10n.cartShippingAtCheckout,
-                      style: context.text.bodySmall,
-                    ),
-                  ],
+            Expanded(
+              child: Text(l10n.cartTotal, style: context.text.titleLarge),
+            ),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text(
+                  l10n.money(t.total, currency),
+                  style: context.textX.priceL.copyWith(color: c.primary),
                 ),
               ),
-            if (!isZeroMoney(t.packagingFee))
-              row(l10n.cartPackagingFee, t.packagingFee),
-            if (!isZeroMoney(t.codFee))
-              row(t.codFeeLabel ?? l10n.cartCodFee, t.codFee),
-            if (!isZeroMoney(t.paymentFee))
-              row(l10n.cartPaymentFee, t.paymentFee),
-            if (!isZeroMoney(t.tax)) row(l10n.cartTax, t.tax),
-            const Divider(height: AppSpacing.md),
-            row(l10n.cartTotal, t.total, strong: true),
+            ),
           ],
         ),
-      ),
+        if (split) ...[
+          const SizedBox(height: AppSpacing.smd),
+          Container(
+            key: const ValueKey('totals-cod-split'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.smd,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: x.mintSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Column(
+              children: [
+                for (final (label, value) in [
+                  (l10n.cartPayNowShipping, t.prepaidShipping),
+                  (l10n.cartPayOnDelivery, t.codAmount),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: context.text.bodySmall?.copyWith(
+                              color: x.mintStrong,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          l10n.money(value, currency),
+                          style: context.text.labelSmall?.copyWith(
+                            color: x.mintStrong,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
+    if (bare) return content;
+    return SectionCard(padding: padding, child: content);
   }
 }

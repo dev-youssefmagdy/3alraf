@@ -59,7 +59,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
                 for (var i = 0; i < 4; i++) ...[
-                  const AppShimmer(height: 96, radius: AppRadius.md),
+                  const AppShimmer(height: 92, radius: AppRadius.md),
                   const SizedBox(height: AppSpacing.sm),
                 ],
               ],
@@ -70,7 +70,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           }
           if (s.orders.isEmpty) {
             return EmptyState(
-              icon: Icons.receipt_long_outlined,
+              icon: Icons.inventory_2_outlined,
               title: l10n.ordersEmptyTitle,
               message: l10n.ordersEmptyBody,
               actionLabel: l10n.startShopping,
@@ -98,44 +98,98 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   );
                 }
                 final o = s.orders[i];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: ListTile(
-                    onTap: () => context.push(AppRoutes.order(o.token)),
-                    title: Row(
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+                  child: _OrderRow(order: o, currency: currency),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Order row (`60:3472`): 56 icon tile, number H3 + status badge, date ·
+/// count, total, forward chevron.
+class _OrderRow extends StatelessWidget {
+  const _OrderRow({required this.order, required this.currency});
+
+  final Order order;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final c = context.colors;
+    final x = context.extra;
+    final o = order;
+    final meta = [
+      formatDate(o.placedAt),
+      if (o.itemsCount != null) l10n.orderItemsCount(o.itemsCount!),
+    ].where((e) => e.isNotEmpty).join(' · ');
+    return Material(
+      color: c.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: c.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.order(o.token)),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.smd),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: x.brandSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(Icons.inventory_2_outlined, color: c.primary),
+              ),
+              const SizedBox(width: AppSpacing.smd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(o.number, style: context.text.titleSmall),
-                        ),
+                        Text(o.number, style: context.text.titleLarge),
                         StatusChip(
                           label: o.statusLabel,
                           tone: statusTone(o.statusValue),
                         ),
                       ],
                     ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              [
-                                formatDate(o.placedAt),
-                                if (o.itemsCount != null)
-                                  l10n.orderItemsCount(o.itemsCount!),
-                              ].where((e) => e.isNotEmpty).join(' - '),
-                            ),
-                          ),
-                          PriceText(amount: o.total, currency: currency),
-                        ],
+                    if (meta.isNotEmpty)
+                      Text(
+                        meta,
+                        style: context.text.bodySmall?.copyWith(
+                          color: x.textMuted,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.money(o.total, currency),
+                      style: context.textX.priceM.copyWith(
+                        color: c.onSurface,
+                        fontSize: 16,
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: x.textMuted),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -174,10 +228,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
 
   Future<void> _cancel(Order o) async {
     final l10n = context.l10n;
-    final code = await showModalBottomSheet<String>(
+    final code = await showAppBottomSheet<String>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => const CancelSheet(),
     );
     if (code == null || !mounted) return;
@@ -190,10 +242,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
 
   Future<void> _return(Order o) async {
     final l10n = context.l10n;
-    final data = await showModalBottomSheet<ReturnRequestData>(
+    final data = await showAppBottomSheet<ReturnRequestData>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => ReturnSheet(order: o),
     );
     if (data == null || !mounted) return;
@@ -241,19 +291,17 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       authControllerProvider.select((s) => s.signedIn),
     );
     return Scaffold(
-      appBar: AppBar(
-        title: Text(order.asData?.value.number ?? l10n.orderDetailTitle),
-        actions: [
-          if (order.asData != null)
-            IconButton(
-              tooltip: l10n.orderInvoice,
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              onPressed: _busy ? null : () => _invoice(order.asData!.value),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.orderDetailTitle)),
       body: order.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            for (final h in const [140.0, 260.0, 160.0]) ...[
+              AppShimmer(height: h, radius: AppRadius.md),
+              const SizedBox(height: AppSpacing.smd),
+            ],
+          ],
+        ),
         error: (e, _) => ErrorState(
           error: e,
           onRetry: () => ref.invalidate(orderProvider(widget.token)),
@@ -264,131 +312,186 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
             await ref.read(orderProvider(widget.token).future);
           },
           child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+              AppSpacing.xl,
+            ),
             children: [
-              _Summary(order: o),
-              if (o.canPayOnline && !o.isPaid) ...[
-                const SizedBox(height: AppSpacing.sm),
-                AppButton(
-                  label: o.payNow == null
-                      ? l10n.orderPayNow
-                      : l10n.orderPayNowAmount(
-                          l10n.currencyAmount(o.payNow!, currency),
-                        ),
-                  icon: Icons.payment_rounded,
-                  loading: _busy,
-                  onPressed: () => _payNow(o),
-                ),
-              ],
-              if (o.canUploadProof) ...[
-                const SizedBox(height: AppSpacing.sm),
+              _Summary(
+                order: o,
+                busy: _busy,
+                onInvoice: () => _invoice(o),
+                onPay: o.canPayOnline && !o.isPaid ? () => _payNow(o) : null,
+                payLabel: o.payNow == null
+                    ? l10n.orderPayNow
+                    : l10n.orderPayNowAmount(
+                        l10n.money(o.payNow!, currency),
+                      ),
+              ),
+              if (o.timeline.isNotEmpty)
                 _Section(
-                  title: l10n.orderUploadProof,
-                  child: ProofUploader(
-                    onUpload: (path) async {
-                      try {
-                        await ref
-                            .read(ordersRepositoryProvider)
-                            .uploadProof(o.token, path);
-                        _refresh();
-                        if (mounted) _snack(l10n.orderProofUploaded);
-                      } on ApiException catch (e) {
-                        if (mounted) _snack(errorMessage(l10n, e));
-                      }
-                    },
-                  ),
+                  title: l10n.orderTimeline,
+                  child: OrderTimeline(entries: o.timeline),
                 ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
               _Section(
                 title: l10n.orderItems,
                 child: Column(
                   children: [
                     for (final i in o.items)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(i.name),
-                        subtitle: Text(
-                          '${l10n.currencyAmount(i.unitPrice, currency)}  x ${i.quantity}',
-                        ),
-                        trailing: Text(
-                          l10n.currencyAmount(i.lineSubtotal, currency),
-                          style: context.text.titleSmall,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(i.name, style: context.text.titleSmall),
+                                  Text(
+                                    [
+                                      '× ${i.quantity}',
+                                      l10n.money(
+                                        i.unitPrice,
+                                        currency,
+                                      ),
+                                      ?i.bundleName,
+                                    ].join(' · '),
+                                    style: context.text.bodySmall?.copyWith(
+                                      color: context.extra.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              l10n.money(i.lineSubtotal, currency),
+                              style: context.text.titleSmall,
+                            ),
+                          ],
                         ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              TotalsCard(totals: orderTotals(o), currency: currency),
               if (o.city != null || o.address != null)
                 _Section(
                   title: l10n.reviewAddress,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      [
-                        o.customerName,
-                        '${o.city ?? ''} ${o.address ?? ''}'.trim(),
-                        if (o.shippingCompany != null) o.shippingCompany,
-                      ].whereType<String>().join('\n'),
+                  child: Text(
+                    [
+                      o.customerName,
+                      '${o.city ?? ''} ${o.address ?? ''}'.trim(),
+                      if (o.shippingCompany != null) o.shippingCompany,
+                    ].whereType<String>().join('\n'),
+                    style: context.text.bodyMedium?.copyWith(
+                      color: context.colors.onSurfaceVariant,
                     ),
                   ),
                 ),
-              if (o.timeline.isNotEmpty)
+              if (o.canUploadProof || o.proofStatus != null)
                 _Section(
-                  title: l10n.orderTimeline,
+                  title: l10n.orderUploadProof,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final t in o.timeline.reversed)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          leading: Icon(
-                            Icons.circle,
-                            size: 12,
-                            color: context.colors.primary,
+                      if (o.proofStatus != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                                color: o.proofStatus == 'rejected'
+                                    ? context.colors.error
+                                    : context.extra.warningText,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                proofStatusLabel(l10n, o.proofStatus!),
+                                style: context.text.labelSmall?.copyWith(
+                                  color: o.proofStatus == 'rejected'
+                                      ? context.colors.error
+                                      : context.extra.warningText,
+                                ),
+                              ),
+                            ],
                           ),
-                          title: Text(t.status),
-                          subtitle: Text(
-                            [
-                              formatDate(t.at),
-                              if (t.note != null) t.note!,
-                            ].where((e) => e.isNotEmpty).join(' - '),
-                          ),
+                        ),
+                      if (o.canUploadProof)
+                        ProofUploader(
+                          onUpload: (path) async {
+                            try {
+                              await ref
+                                  .read(ordersRepositoryProvider)
+                                  .uploadProof(o.token, path);
+                              _refresh();
+                              if (mounted) _snack(l10n.orderProofUploaded);
+                            } on ApiException catch (e) {
+                              if (mounted) _snack(errorMessage(l10n, e));
+                            }
+                          },
                         ),
                     ],
                   ),
                 ),
+              const SizedBox(height: AppSpacing.smd),
+              TotalsCard(totals: orderTotals(o), currency: currency),
               if (o.returns.isNotEmpty)
                 _Section(
                   title: l10n.orderReturns,
                   child: Column(
                     children: [
                       for (final r in o.returns)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(r.number),
-                          subtitle: Text(r.status),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  r.number,
+                                  style: context.text.titleSmall,
+                                ),
+                              ),
+                              StatusChip(label: r.status),
+                            ],
+                          ),
                         ),
                     ],
                   ),
                 ),
               const SizedBox(height: AppSpacing.md),
-              if (signedIn && o.canCancel)
-                AppButton(
-                  label: l10n.orderCancel,
-                  variant: AppButtonVariant.outlined,
-                  onPressed: _busy ? null : () => _cancel(o),
-                ),
-              if (signedIn &&
-                  o.canReturn &&
-                  o.items.any((i) => i.returnable > 0))
-                AppButton(
-                  label: l10n.orderReturn,
-                  variant: AppButtonVariant.outlined,
-                  onPressed: _busy ? null : () => _return(o),
-                ),
+              Row(
+                children: [
+                  if (signedIn &&
+                      o.canReturn &&
+                      o.items.any((i) => i.returnable > 0))
+                    Expanded(
+                      child: AppButton(
+                        label: l10n.orderReturn,
+                        variant: AppButtonVariant.outlined,
+                        size: AppButtonSize.l,
+                        onPressed: _busy ? null : () => _return(o),
+                      ),
+                    ),
+                  if (signedIn &&
+                      o.canReturn &&
+                      o.items.any((i) => i.returnable > 0) &&
+                      o.canCancel)
+                    const SizedBox(width: AppSpacing.smd),
+                  if (signedIn && o.canCancel)
+                    Expanded(
+                      child: AppButton(
+                        label: l10n.orderCancel,
+                        variant: AppButtonVariant.danger,
+                        size: AppButtonSize.l,
+                        onPressed: _busy ? null : () => _cancel(o),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -404,65 +507,99 @@ class _Section extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(top: AppSpacing.sm),
-    child: Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: context.text.titleSmall),
-          const SizedBox(height: AppSpacing.xs),
-          child,
-        ],
-      ),
-    ),
+  Widget build(BuildContext context) => SectionCard(
+    margin: const EdgeInsets.only(top: AppSpacing.smd),
+    title: title,
+    child: child,
   );
 }
 
+/// Header card: number, status, date, payment badge (+ proof badge), the
+/// invoice outline button and the Pop "pay now".
 class _Summary extends StatelessWidget {
-  const _Summary({required this.order});
+  const _Summary({
+    required this.order,
+    required this.busy,
+    required this.onInvoice,
+    required this.onPay,
+    required this.payLabel,
+  });
 
   final Order order;
+  final bool busy;
+  final VoidCallback onInvoice;
+  final VoidCallback? onPay;
+  final String payLabel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final o = order;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: [
-                StatusChip(
-                  label: o.statusLabel,
-                  tone: statusTone(o.statusValue),
-                ),
-                StatusChip(
-                  label: paymentStatusLabel(l10n, o.paymentStatus),
-                  tone: o.isPaid ? StatusTone.success : StatusTone.warning,
-                ),
-                if (o.proofStatus != null)
-                  StatusChip(
-                    label: proofStatusLabel(l10n, o.proofStatus!),
-                    tone: o.proofStatus == 'rejected'
-                        ? StatusTone.danger
-                        : StatusTone.neutral,
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(o.number, style: context.text.headlineMedium),
+              ),
+              StatusChip(label: o.statusLabel, tone: statusTone(o.statusValue)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (o.placedAt != null)
+                Text(
+                  '${l10n.orderPlacedAt}: ${formatDate(o.placedAt)}',
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.extra.textMuted,
                   ),
-              ],
+                ),
+              StatusChip(
+                label: paymentStatusLabel(l10n, o.paymentStatus),
+                tone: o.isPaid ? StatusTone.success : StatusTone.neutral,
+              ),
+              if (o.proofStatus != null)
+                StatusChip(
+                  label: proofStatusLabel(l10n, o.proofStatus!),
+                  tone: o.proofStatus == 'rejected'
+                      ? StatusTone.danger
+                      : StatusTone.warning,
+                ),
+            ],
+          ),
+          if (o.paymentMethodName != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              '${l10n.reviewPayment}: ${o.paymentMethodName}',
+              style: context.text.bodySmall?.copyWith(
+                color: context.extra.textMuted,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          if (onPay != null) ...[
+            AppButton(
+              label: payLabel,
+              icon: Icons.payment_rounded,
+              variant: AppButtonVariant.pop,
+              loading: busy,
+              onPressed: onPay,
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (o.placedAt != null)
-              Text('${l10n.orderPlacedAt}: ${formatDate(o.placedAt)}'),
-            if (o.paymentMethodName != null)
-              Text('${l10n.reviewPayment}: ${o.paymentMethodName}'),
           ],
-        ),
+          AppButton(
+            label: l10n.orderInvoice,
+            icon: Icons.picture_as_pdf_outlined,
+            variant: AppButtonVariant.outlined,
+            onPressed: busy ? null : onInvoice,
+          ),
+        ],
       ),
     );
   }

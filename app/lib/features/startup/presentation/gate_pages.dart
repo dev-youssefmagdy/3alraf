@@ -29,21 +29,18 @@ class UpdateRequiredPage extends ConsumerWidget {
         : config?.androidUrl;
     return PopScope(
       canPop: false,
-      child: Scaffold(
-        body: SafeArea(
-          child: EmptyState(
-            icon: Icons.system_update_rounded,
-            title: l10n.updateRequiredTitle,
-            message: l10n.updateRequiredBody,
-            actionLabel: url == null ? null : l10n.updateNow,
-            onAction: url == null
-                ? null
-                : () => launchUrl(
-                    Uri.parse(url),
-                    mode: LaunchMode.externalApplication,
-                  ),
-          ),
-        ),
+      child: GatePage(
+        icon: Icons.upload_rounded,
+        tone: StateTone.violet,
+        title: l10n.updateRequiredTitle,
+        message: l10n.updateRequiredBody,
+        actionLabel: url == null ? null : l10n.updateNow,
+        onAction: url == null
+            ? null
+            : () => launchUrl(
+                Uri.parse(url),
+                mode: LaunchMode.externalApplication,
+              ),
       ),
     );
   }
@@ -63,14 +60,107 @@ class MaintenancePage extends ConsumerWidget {
     );
     return PopScope(
       canPop: false,
-      child: Scaffold(
-        body: SafeArea(
-          child: EmptyState(
-            icon: Icons.construction_rounded,
-            title: l10n.maintenanceTitle,
-            message: message ?? l10n.maintenanceDefault,
-            actionLabel: l10n.retry,
-            onAction: () => context.go(AppRoutes.splash),
+      child: GatePage(
+        icon: Icons.schedule_rounded,
+        tone: StateTone.sun,
+        title: l10n.maintenanceTitle,
+        message: message ?? l10n.maintenanceDefault,
+        actionLabel: l10n.retry,
+        actionVariant: AppButtonVariant.outlined,
+        onAction: () => context.go(AppRoutes.splash),
+      ),
+    );
+  }
+}
+
+/// Gate page (Maintenance `64:5284` / Update required `64:5303`): a 140
+/// blob, Display/M title, body, a Primary L CTA at the bottom and a
+/// WhatsApp link when the store has one.
+class GatePage extends ConsumerWidget {
+  const GatePage({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.tone = StateTone.brand,
+    this.actionLabel,
+    this.onAction,
+    this.actionVariant = AppButtonVariant.filled,
+  });
+
+  final IconData icon;
+  final StateTone tone;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final AppButtonVariant actionVariant;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final whatsapp = ref.watch(storeProfileProvider)?.whatsapp;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.gutter),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ToneBlob(
+                          icon: icon,
+                          tone: tone,
+                          size: 140,
+                          iconSize: 56,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: context.text.displaySmall,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.smd),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: context.text.bodyLarge?.copyWith(
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (actionLabel != null && onAction != null)
+                AppButton(
+                  label: actionLabel!,
+                  size: AppButtonSize.l,
+                  variant: actionVariant,
+                  onPressed: onAction,
+                ),
+              if (whatsapp != null && whatsapp.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: Center(
+                    child: TextButton.icon(
+                      onPressed: () => launchUrl(
+                        Uri.parse('https://wa.me/$whatsapp'),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      icon: const Icon(Icons.call_outlined, size: 18),
+                      label: Text(context.l10n.contactWhatsapp),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -119,13 +209,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       ),
     ];
     final last = _index == slides.length - 1;
+    final x = context.extra;
+    final tints = [x.popSoft, x.violetSoft, x.mintSoft];
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: TextButton(onPressed: _finish, child: Text(l10n.skip)),
+              alignment: AlignmentDirectional.centerStart,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: TextButton(onPressed: _finish, child: Text(l10n.skip)),
+              ),
             ),
             Expanded(
               child: PageView.builder(
@@ -134,64 +229,41 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 onPageChanged: (i) => setState(() => _index = i),
                 itemBuilder: (context, i) {
                   final (icon, title, body) = slides[i];
-                  return Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: context.extra.tint,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            icon,
-                            size: 64,
-                            color: context.colors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        Text(
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.gutter,
+                    ),
+                    children: [
+                      _OnboardingArt(icon: icon, tint: tints[i % tints.length]),
+                      const SizedBox(height: AppSpacing.lg),
+                      Semantics(
+                        header: true,
+                        child: Text(
                           title,
                           textAlign: TextAlign.center,
-                          style: context.text.headlineSmall,
+                          style: context.text.displaySmall,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          body,
-                          textAlign: TextAlign.center,
-                          style: context.text.bodyLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.smd),
+                      Text(
+                        body,
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyLarge?.copyWith(
+                          color: context.colors.onSurfaceVariant,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   );
                 },
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < slides.length; i++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.all(4),
-                    width: i == _index ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: i == _index
-                          ? context.colors.primary
-                          : context.colors.outlineVariant,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-              ],
-            ),
+            const SizedBox(height: AppSpacing.sm),
+            CarouselDots(index: _index, count: slides.length),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.gutter),
               child: AppButton(
                 label: last ? l10n.getStarted : l10n.next,
+                size: AppButtonSize.l,
                 onPressed: last
                     ? _finish
                     : () => _controller.nextPage(
@@ -201,6 +273,61 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Onboarding art panel: tinted, radius 32, a sun quarter blob at the
+/// inline-end, a sparkle and a big white-ringed icon circle.
+class _OnboardingArt extends StatelessWidget {
+  const _OnboardingArt({required this.icon, required this.tint});
+
+  final IconData icon;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final x = context.extra;
+    return ExcludeSemantics(
+      child: AspectRatio(
+        aspectRatio: 1.2,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: tint,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PositionedDirectional(
+                top: -60,
+                end: -60,
+                child: DecorCircle(
+                  size: 200,
+                  color: x.sun.withValues(alpha: 0.75),
+                ),
+              ),
+              PositionedDirectional(
+                top: 28,
+                start: 28,
+                child: Icon(Icons.auto_awesome_rounded, color: x.pop, size: 28),
+              ),
+              Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceContainerLowest,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 6),
+                  boxShadow: AppShadows.raised,
+                ),
+                child: Icon(icon, size: 76, color: context.colors.primary),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -243,45 +370,64 @@ class _LanguageSelectionPageState extends ConsumerState<LanguageSelectionPage> {
       canPop: false,
       child: Scaffold(
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.xl),
-                Image.asset('assets/branding/splash_logo.png', height: 120),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  l10n.chooseLanguageTitle,
-                  textAlign: TextAlign.center,
-                  style: context.text.headlineSmall,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  l10n.chooseLanguageSubtitle,
-                  textAlign: TextAlign.center,
-                  style: context.text.bodyLarge,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                for (final code in options)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Card(
-                      child: ListTile(
-                        key: ValueKey('lang-$code'),
-                        title: Text(languageName(code)),
-                        trailing: code == current
-                            ? Icon(
-                                Icons.check_rounded,
-                                color: context.colors.primary,
-                              )
-                            : null,
-                        onTap: () => _pick(code),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.gutter),
+                  children: [
+                    const SizedBox(height: AppSpacing.lg),
+                    Center(
+                      child: AppLogo(
+                        semanticLabel: store.name.isEmpty
+                            ? l10n.appName
+                            : store.name,
+                        width: 120,
+                        height: 100,
                       ),
                     ),
-                  ),
-              ],
-            ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        l10n.chooseLanguageTitle,
+                        textAlign: TextAlign.center,
+                        style: context.text.displaySmall,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      l10n.chooseLanguageSubtitle,
+                      textAlign: TextAlign.center,
+                      style: context.text.bodyMedium?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    for (final code in options)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+                        child: LanguageOptionCard(
+                          key: ValueKey('lang-$code'),
+                          code: code,
+                          selected: code == current,
+                          onTap: () => _pick(code),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.gutter),
+                child: AppButton(
+                  label: l10n.continueAction,
+                  size: AppButtonSize.l,
+                  loading: _busy,
+                  onPressed: () => _pick(current),
+                ),
+              ),
+            ],
           ),
         ),
       ),

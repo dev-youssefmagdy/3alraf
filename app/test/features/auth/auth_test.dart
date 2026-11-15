@@ -1,3 +1,4 @@
+import 'package:app/features/shell/presentation/app_bottom_nav.dart';
 import 'package:app/core/network/network_providers.dart';
 import 'package:app/features/auth/application/auth_controller.dart';
 import 'package:dio/dio.dart';
@@ -125,15 +126,18 @@ void main() {
     final env = TestEnv(prefs: {'onboarding_done': true}, extra: authApi());
     await env.pumpApp(tester);
     // /wishlist is a protected route: a guest lands on login directly.
-    await tester.tap(find.text('المفضلة').last);
+    // Wishlist is not in the bottom nav; it is opened from the drawer.
+    tester.firstState<ScaffoldState>(find.byType(Scaffold)).openDrawer();
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationBar), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('drawer-wishlist')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBottomNav), findsNothing);
     await tester.enterText(field(0), 'mona@x.test');
     await tester.enterText(field(1), 'password1');
     await tester.tap(find.widgetWithText(FilledButton, 'تسجيل الدخول'));
     await tester.pumpAndSettle();
     // Back on the wishlist tab.
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppBottomNav), findsOneWidget);
     expect(find.byType(WishlistPage), findsOneWidget);
     expect(env.secrets.data['auth_token'], '12|secret');
   });
@@ -160,7 +164,7 @@ void main() {
     expect(env.requestsTo('/auth/email/verify').single.data, {
       'code': '123456',
     });
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppBottomNav), findsOneWidget);
   });
 
   testWidgets('forgot password -> reset with code -> login screen', (
@@ -210,10 +214,10 @@ void main() {
     await env.secrets.write('auth_token', 'stale');
     await tester.pumpWidget(envApp(env));
     await settle(tester);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppBottomNav), findsOneWidget);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(NavigationBar)),
+      tester.element(find.byType(AppBottomNav)),
     );
     expect(container.read(authControllerProvider).signedIn, isTrue);
     // Fire the request without awaiting (fake-async zone), ignore its error.
@@ -225,7 +229,7 @@ void main() {
 
     expect(container.read(authControllerProvider).signedIn, isFalse);
     expect(env.secrets.data.containsKey('auth_token'), isFalse);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(AppBottomNav), findsNothing);
     expect(find.text('انتهت جلستك. سجّل الدخول مرة أخرى.'), findsOneWidget);
   });
 }

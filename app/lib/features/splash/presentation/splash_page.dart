@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/routing/app_routes.dart';
 import '../../../core/storage/storage_providers.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../startup/application/startup_controller.dart';
@@ -60,29 +61,88 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: _failed
-            ? Column(
+    final l10n = context.l10n;
+    if (_failed) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: AppSpacing.xxxl),
+              LogoCircle(semanticLabel: l10n.appName, size: 120),
+              Expanded(
+                child: ErrorState(message: l10n.errorNetwork, onRetry: _boot),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final x = context.extra;
+    final version = ref.watch(appVersionProvider).value;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: x.brandStrong,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            PositionedDirectional(
+              top: 70,
+              start: -70,
+              child: DecorCircle(
+                size: 180,
+                color: x.gold.withValues(alpha: 0.75),
+              ),
+            ),
+            PositionedDirectional(
+              bottom: -90,
+              end: -80,
+              child: DecorCircle(
+                size: 260,
+                color: x.pop.withValues(alpha: 0.5),
+              ),
+            ),
+            SafeArea(
+              child: Column(
                 children: [
-                  const SizedBox(height: 48),
-                  Image.asset('assets/branding/splash_logo.png', width: 140),
-                  Expanded(
-                    child: ErrorState(
-                      message: context.l10n.errorNetwork,
-                      onRetry: _boot,
+                  const Spacer(),
+                  LogoCircle(semanticLabel: '3alraf', size: 160),
+                  const SizedBox(height: AppSpacing.lg),
+                  ExcludeSemantics(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < 3; i++)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: i == 2
+                                  ? x.sun
+                                  : Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  const Spacer(),
+                  if (version != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: Text(
+                        l10n.appVersion(version),
+                        style: context.text.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
                 ],
-              )
-            : Center(
-                child: Image.asset(
-                  'assets/branding/splash_logo.png',
-                  width: 220,
-                  semanticLabel: '3alraf',
-                ),
               ),
+            ),
+          ],
+        ),
       ),
     );
   }

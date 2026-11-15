@@ -53,23 +53,20 @@ class _ListingPageState extends ConsumerState<ListingPage> {
     final sorts = widget.scope.customPage != null
         ? catalogSorts.where((s) => s != 'top_rated').toList()
         : catalogSorts;
-    final picked = await showModalBottomSheet<String>(
+    final picked = await showAppBottomSheet<String>(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => AppSheet(
+        title: ctx.l10n.sortBy,
         child: RadioGroup<String>(
           groupValue: state.query.sort,
           onChanged: (v) => Navigator.of(ctx).pop(v),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(ctx.l10n.sortBy, style: ctx.text.titleMedium),
-              ),
               for (final s in sorts)
                 RadioListTile<String>(
                   value: s,
+                  contentPadding: EdgeInsets.zero,
                   title: Text(sortLabel(ctx.l10n, s)),
                 ),
             ],
@@ -122,57 +119,128 @@ class _ListingPageState extends ConsumerState<ListingPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _Toolbar(
-            state: state,
-            onSort: () => _sort(state),
-            onFilter: () => _filter(state),
-          ),
-          Expanded(child: _body(context, state, info)),
-        ],
-      ),
+      body: _body(context, state, info, title),
     );
   }
 
-  Widget _body(BuildContext context, ListingState state, ScopeInfo? info) {
+  HeaderTone get _tone => widget.scope.isSearch
+      ? HeaderTone.violet
+      : widget.scope.brand != null
+      ? HeaderTone.sun
+      : HeaderTone.pop;
+
+  Future<void> _applyFrom(CatalogQuery q) async {
+    await _controller.applyQuery(q);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  /// Header block, toolbar and the active filter chips (scrolls away).
+  List<Widget> _top(
+    BuildContext context,
+    ListingState state,
+    ScopeInfo? info,
+    String title,
+  ) {
+    final hasDescription =
+        info?.description != null && info!.description!.trim().isNotEmpty;
+    return [
+      _ScopeHeader(
+        title: title,
+        tone: _tone,
+        count: state.loading && state.items.isEmpty
+            ? null
+            : (info?.productsCount ?? state.page.total),
+        subcategories: info?.children ?? const [],
+      ),
+      if (hasDescription)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.smd,
+            AppSpacing.gutter,
+            0,
+          ),
+          child: Text(
+            info.description!,
+            style: context.text.bodyMedium?.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      _Toolbar(
+        state: state,
+        onSort: () => _sort(state),
+        onFilter: () => _filter(state),
+      ),
+      if (state.query.activeFilters > 0)
+        _ActiveFilters(
+          scope: widget.scope,
+          query: state.query,
+          onChange: _applyFrom,
+        ),
+    ];
+  }
+
+  Widget _body(
+    BuildContext context,
+    ListingState state,
+    ScopeInfo? info,
+    String title,
+  ) {
     final l10n = context.l10n;
     if (state.loading && state.items.isEmpty) {
-      return const ProductGridSkeleton();
+      return ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          ..._top(context, state, info, title),
+          const SizedBox(height: 640, child: ProductGridSkeleton(count: 4)),
+        ],
+      );
     }
     if (state.error != null) {
       return ErrorState(error: state.error, onRetry: _controller.refresh);
     }
-    final header = info == null ? null : _ScopeHeader(info: info);
+    final top = _top(context, state, info, title);
     if (state.items.isEmpty) {
+      final filtered = state.query.activeFilters > 0;
+      final suggestions = widget.scope.isSearch
+          ? ref.watch(homeProvider).asData?.value.recommended ??
+                const <ProductSummary>[]
+          : const <ProductSummary>[];
       return RefreshIndicator(
         onRefresh: _controller.refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
           children: [
-            ?header,
-            SizedBox(
-              height: 360,
-              child: EmptyState(
-                title: l10n.noProducts,
-                message: state.query.activeFilters > 0
-                    ? l10n.noProductsFiltered
-                    : null,
-                icon: Icons.search_off_rounded,
-                actionLabel: state.query.activeFilters > 0
-                    ? l10n.resetFilters
-                    : null,
-                onAction: state.query.activeFilters > 0
-                    ? () => _controller.applyQuery(
-                        state.query.copyWith(
-                          brandIds: const {},
-                          valueIds: const {},
-                          clearPrice: true,
-                        ),
-                      )
-                    : null,
-              ),
+            ...top,
+            StateBlock(
+              icon: Icons.search_rounded,
+              tone: StateTone.violet,
+              title: l10n.noProducts,
+              message: filtered
+                  ? l10n.noProductsFiltered
+                  : widget.scope.isSearch
+                  ? l10n.searchNoResultsBody
+                  : null,
+              actionLabel: filtered ? l10n.resetFilters : null,
+              actionVariant: AppButtonVariant.outlined,
+              onAction: filtered
+                  ? () => _controller.applyQuery(
+                      state.query.copyWith(
+                        brandIds: const {},
+                        valueIds: const {},
+                        clearPrice: true,
+                      ),
+                    )
+                  : null,
             ),
+            if (suggestions.isNotEmpty)
+              ProductRail(
+                title: l10n.relatedProducts,
+                products: suggestions,
+                scope: 'search-empty',
+              ),
           ],
         ),
       );
@@ -183,16 +251,26 @@ class _ListingPageState extends ConsumerState<ListingPage> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          if (header != null) SliverToBoxAdapter(child: header),
+          SliverList.list(children: top),
           SliverPadding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              AppSpacing.sm,
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+            ),
             sliver: SliverGrid.builder(
-              gridDelegate: productGridDelegate(context),
+              gridDelegate: productGridDelegate(
+                context,
+                withFlash: anyFlash(state.items),
+                withSale: anySale(state.items),
+              ),
               itemCount: state.items.length,
               itemBuilder: (_, i) => ProductTile(
                 key: ValueKey(state.items[i].id),
                 product: state.items[i],
                 heroScope: 'list',
+                index: i,
               ),
             ),
           ),
@@ -211,9 +289,24 @@ class _ListingPageState extends ConsumerState<ListingPage> {
                     ),
                   )
                 : state.loadingMore
-                ? const Padding(
-                    padding: EdgeInsets.all(AppSpacing.md),
-                    child: Center(child: CircularProgressIndicator()),
+                ? Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.4),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          l10n.loading,
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.extra.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 : const SizedBox(height: AppSpacing.lg),
           ),
@@ -231,6 +324,8 @@ String sortLabel(AppLocalizations l10n, String sort) => switch (sort) {
   _ => l10n.sortNewest,
 };
 
+/// Toolbar: "تصفية" outline pill with a pop count badge and the sort pill
+/// "ترتيب حسب: …".
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
     required this.state,
@@ -245,30 +340,86 @@ class _Toolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final c = context.colors;
     final filters = state.query.activeFilters;
+    final pillStyle = OutlinedButton.styleFrom(
+      minimumSize: const Size(44, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      textStyle: context.text.labelMedium,
+      foregroundColor: c.onSurface,
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.md,
+        AppSpacing.gutter,
+        0,
+      ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              state.loading ? '' : l10n.productsCount(state.page.total),
-              style: context.text.bodySmall,
-            ),
-          ),
-          TextButton.icon(
-            onPressed: onSort,
-            icon: const Icon(Icons.swap_vert_rounded),
-            label: Text(sortLabel(l10n, state.query.sort)),
-          ),
-          TextButton.icon(
+          OutlinedButton(
+            key: const ValueKey('listing-filter'),
+            style: pillStyle,
             onPressed: onFilter,
-            icon: Badge(
-              isLabelVisible: filters > 0,
-              label: Text('$filters'),
-              child: const Icon(Icons.tune_rounded),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.filter_alt_outlined, size: 18),
+                const SizedBox(width: 6),
+                Text(l10n.filters),
+                if (filters > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 20),
+                    height: 20,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: context.extra.pop,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$filters',
+                      style: context.textX.labelXs.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            label: Text(l10n.filters),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: OutlinedButton(
+              key: const ValueKey('listing-sort'),
+              style: pillStyle,
+              onPressed: onSort,
+              child: Row(
+                children: [
+                  const Icon(Icons.swap_vert_rounded, size: 18),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      l10n.sortByLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodySmall,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      sortLabel(l10n, state.query.sort),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -276,49 +427,150 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-class _ScopeHeader extends StatelessWidget {
-  const _ScopeHeader({required this.info});
+/// Active filter chips (brand-50 with ×) + "إعادة ضبط التصفية". Brand and
+/// value names come from the facets already used by the filter sheet.
+class _ActiveFilters extends ConsumerWidget {
+  const _ActiveFilters({
+    required this.scope,
+    required this.query,
+    required this.onChange,
+  });
 
-  final ScopeInfo info;
+  final ListingScope scope;
+  final CatalogQuery query;
+  final ValueChanged<CatalogQuery> onChange;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final c = context.colors;
+    final x = context.extra;
+    final facets = scope.customPage != null
+        ? null
+        : ref.watch(facetsProvider(scope)).asData?.value;
+    final currency = ref.watch(currencyLabelProvider);
+    Widget chip(String label, VoidCallback onRemove) => InputChip(
+      label: Text(label),
+      backgroundColor: x.brandSoft,
+      side: BorderSide.none,
+      labelStyle: context.textX.labelXs.copyWith(
+        color: c.primary,
+        fontSize: 12,
+      ),
+      deleteIcon: Icon(Icons.close_rounded, size: 16, color: c.primary),
+      onDeleted: onRemove,
+      deleteButtonTooltipMessage: l10n.clear,
+    );
+    final chips = <Widget>[
+      if (facets != null)
+        for (final b in facets.brands)
+          if (query.brandIds.contains(b.id))
+            chip(
+              b.name,
+              () => onChange(
+                query.copyWith(brandIds: {...query.brandIds}..remove(b.id)),
+              ),
+            ),
+      if (facets != null)
+        for (final a in facets.attributes)
+          for (final v in a.values)
+            if (query.valueIds.contains(v.id))
+              chip(
+                v.label,
+                () => onChange(
+                  query.copyWith(valueIds: {...query.valueIds}..remove(v.id)),
+                ),
+              ),
+      if (query.priceMin != null || query.priceMax != null)
+        chip(
+          l10n.money(
+            [query.priceMin ?? '0', ?query.priceMax].join(' - '),
+            currency,
+          ),
+          () => onChange(query.copyWith(clearPrice: true)),
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.smd,
+        AppSpacing.gutter,
+        0,
+      ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ...chips,
+          TextButton(
+            onPressed: () => onChange(
+              query.copyWith(
+                brandIds: const {},
+                valueIds: const {},
+                clearPrice: true,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: x.pop,
+              textStyle: context.textX.labelXs.copyWith(fontSize: 12),
+              minimumSize: const Size(44, 36),
+            ),
+            child: Text(l10n.resetFilters),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Colour header block: Display/M title, product count and sub-category
+/// chips ("الكل" selected first).
+class _ScopeHeader extends StatelessWidget {
+  const _ScopeHeader({
+    required this.title,
+    required this.tone,
+    required this.count,
+    required this.subcategories,
+  });
+
+  final String title;
+  final HeaderTone tone;
+  final int? count;
+  final List<CategoryNode> subcategories;
 
   @override
   Widget build(BuildContext context) {
-    final hasDescription =
-        info.description != null && info.description!.trim().isNotEmpty;
-    if (!hasDescription && info.children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasDescription)
-            Text(info.description!, style: context.text.bodyMedium),
-          if (info.children.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              height: 40,
+    final l10n = context.l10n;
+    return ColorHeaderBlock(
+      key: const ValueKey('listing-header'),
+      title: title,
+      tone: tone,
+      subtitle: count == null ? null : l10n.productsCount(count!),
+      child: subcategories.isEmpty
+          ? null
+          : SizedBox(
+              height:
+                  40 * MediaQuery.textScalerOf(context).scale(1).clamp(1, 1.4),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: info.children.length,
+                itemCount: subcategories.length + 1,
                 separatorBuilder: (_, _) =>
                     const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (_, i) => ActionChip(
-                  label: Text(info.children[i].name),
-                  onPressed: () =>
-                      context.push(AppRoutes.category(info.children[i].slug)),
-                ),
+                itemBuilder: (_, i) => i == 0
+                    ? HeaderChip(
+                        label: l10n.allLabel,
+                        selected: true,
+                        onTap: null,
+                      )
+                    : HeaderChip(
+                        label: subcategories[i - 1].name,
+                        onTap: () => context.push(
+                          AppRoutes.category(subcategories[i - 1].slug),
+                        ),
+                      ),
               ),
             ),
-          ],
-        ],
-      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../auth/application/auth_controller.dart';
@@ -27,7 +28,8 @@ class WishlistPage extends ConsumerWidget {
       body = EmptyState(
         title: l10n.navWishlist,
         message: l10n.wishlistSignInBody,
-        icon: Icons.favorite_border_rounded,
+        icon: Icons.favorite_rounded,
+        tone: StateTone.pop,
         actionLabel: l10n.login,
         onAction: () =>
             context.push(AppRoutes.loginWithReturn(AppRoutes.wishlist)),
@@ -43,23 +45,46 @@ class WishlistPage extends ConsumerWidget {
       body = EmptyState(
         title: l10n.wishlistEmptyTitle,
         message: l10n.wishlistEmptyBody,
-        icon: Icons.favorite_border_rounded,
+        icon: Icons.favorite_rounded,
+        tone: StateTone.pop,
         actionLabel: l10n.startShopping,
         onAction: () => context.go(AppRoutes.home),
       );
     } else {
       body = RefreshIndicator(
         onRefresh: () => ref.read(wishlistProvider.notifier).load(),
-        child: GridView.builder(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          gridDelegate: productGridDelegate(context),
-          itemCount: state.items.length,
-          itemBuilder: (_, i) => ProductTile(
-            key: ValueKey(state.items[i].id),
-            product: state.items[i],
-            heroScope: 'wishlist',
-          ),
+          slivers: [
+            SliverToBoxAdapter(
+              child: PageTitleRow(
+                title: l10n.navWishlist,
+                count: l10n.productsCount(state.items.length),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                0,
+                AppSpacing.gutter,
+                AppSpacing.lg + kRaisedNavClearance,
+              ),
+              sliver: SliverGrid.builder(
+                gridDelegate: productGridDelegate(
+                  context,
+                  withFlash: anyFlash(state.items),
+                  withSale: anySale(state.items),
+                ),
+                itemCount: state.items.length,
+                itemBuilder: (_, i) => ProductTile(
+                  key: ValueKey(state.items[i].id),
+                  product: state.items[i],
+                  heroScope: 'wishlist',
+                  index: i,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }

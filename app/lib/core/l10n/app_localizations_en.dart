@@ -1341,4 +1341,233 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hidePassword => 'Hide password';
+
+  @override
+  String get navGifts => 'Gifts';
+
+  @override
+  String navCartCount(int count) {
+    return 'Cart, $count items';
+  }
+
+  @override
+  String get trustFast => 'Fast delivery';
+
+  @override
+  String get trustFastText => 'To every governorate';
+
+  @override
+  String get trustCod => 'Cash on delivery';
+
+  @override
+  String get trustCodText => 'Pay when your order arrives';
+
+  @override
+  String get trustAuthentic => '100% authentic products';
+
+  @override
+  String get trustAuthenticText => 'From brands and authorised distributors';
+
+  @override
+  String get trustGift => 'Gift wrapping';
+
+  @override
+  String get trustGiftText => 'Choose your wrapping at checkout';
+
+  @override
+  String get errorTitle => 'Something went wrong';
+
+  @override
+  String get offlineTitle => 'You\'re offline';
+
+  @override
+  String get offlineBody => 'Check your internet connection and try again.';
+
+  @override
+  String get noResultsTitle => 'No results';
+
+  @override
+  String carouselSlide(int index, int count) {
+    return 'Slide $index of $count';
+  }
+
+  @override
+  String get priceStartingFrom => 'From';
+
+  @override
+  String get badgeNew => 'New';
+
+  @override
+  String get bundleBadge => 'Bundle';
+
+  @override
+  String bundleItemsCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String get countdownHours => 'hrs';
+
+  @override
+  String get countdownMinutes => 'min';
+
+  @override
+  String get countdownSeconds => 'sec';
+
+  @override
+  String countdownSemantics(String time) {
+    return 'Offer ends in $time';
+  }
+
+  @override
+  String brandsCount(int count) {
+    return '$count brands';
+  }
+
+  @override
+  String get bundlesSubtitle => 'Hand-picked products together for less';
+
+  @override
+  String get sortByLabel => 'Sort by:';
+
+  @override
+  String giftStepOf(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get giftStepCategory => 'Which category?';
+
+  @override
+  String giftBudgetChip(String amount) {
+    return 'Budget: $amount';
+  }
+
+  @override
+  String giftSuggestionsCount(int count) {
+    return 'Suggestions for you ($count)';
+  }
+
+  @override
+  String get giftPick => 'Select';
+
+  @override
+  String giftSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get giftAnyCategory => 'Any category';
+
+  @override
+  String get cartFlashNote =>
+      'Your flash-sale price is held for a limited time';
+
+  @override
+  String get cartPayNowShipping => 'Pay now (delivery)';
+
+  @override
+  String get cartPayOnDelivery => 'Pay on delivery';
+
+  @override
+  String get cartSecureNote => 'Secure payment · cash on delivery available';
+
+  @override
+  String get cartBundleLine => 'Bundle';
+
+  @override
+  String get transferTo => 'Transfer to';
+
+  @override
+  String get proofTapToUpload => 'Tap to upload the transfer receipt';
+
+  @override
+  String get proofUploadHint =>
+      'A clear photo of the receipt from your gallery or camera';
+
+  @override
+  String get noFee => 'No fee';
+
+  @override
+  String get orderThanksLead => 'Thank you! Your order number';
+
+  @override
+  String get orderStatus => 'Status';
+
+  @override
+  String get orderNumberCopy => 'Copy order number';
+
+  @override
+  String reviewsCount(int count) {
+    return '$count reviews';
+  }
+
+  @override
+  String get galleryVideo => 'Product video';
+
+  @override
+  String galleryCounter(int index, int count) {
+    return '$index / $count';
+  }
+
+  @override
+  String variantSelected(String option, String value) {
+    return '$option: $value';
+  }
+
+  @override
+  String get allLabel => 'All';
+
+  @override
+  String get searchNoResultsBody =>
+      'No matching products. Try other words or browse the categories.';
+
+  @override
+  String get aboutBody =>
+      'Original products from top brands, special gift wrapping, fast delivery to every governorate and cash on delivery.';
+
+  @override
+  String get changePasswordLead =>
+      'Enter your current password, then choose a new one of at least 8 characters.';
+
+  @override
+  String get affiliateBonusTitle => 'Sales bonus';
+
+  @override
+  String affiliateBonusRule(String amount, String threshold) {
+    return '$amount for every $threshold of delivered sales';
+  }
+
+  @override
+  String affiliateBonusEarned(String amount) {
+    return 'Earned: $amount';
+  }
+
+  @override
+  String get affiliateProductsIntro =>
+      'Copy your link or share the QR code. You earn a commission on every order that comes through your link.';
+
+  @override
+  String get affiliateQrHint => 'Scan to open the product with your link';
+
+  @override
+  String get affiliateQrSave => 'Save image';
+
+  @override
+  String get payoutHistory => 'Payout history';
+
+  @override
+  String get blogReadMore => 'Read more';
+
+  @override
+  String get blogBack => 'Back to blog';
+
+  @override
+  String get blogSubtitle => 'Care tips and gift ideas';
+
+  @override
+  String get contactHeroTitle => 'We\'re happy to help';
+
+  @override
+  String get contactHeroBody => 'Reach us on WhatsApp, by phone or by e-mail.';
 }

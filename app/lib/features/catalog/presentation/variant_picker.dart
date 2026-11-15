@@ -28,10 +28,8 @@ class VariantPickerView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.md),
             child: Text(
-              o.name,
-              style: context.text.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              _groupLabel(context, o, selection),
+              style: context.text.titleSmall,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -59,6 +57,18 @@ class VariantPickerView extends StatelessWidget {
   }
 }
 
+/// "الحجم: 50 مل" once a value is chosen, else the option name.
+String _groupLabel(
+  BuildContext context,
+  ProductOption o,
+  Map<int, int> selection,
+) {
+  final chosen = o.values.where((v) => v.id == selection[o.id]).firstOrNull;
+  return chosen == null
+      ? o.name
+      : context.l10n.variantSelected(o.name, chosen.label);
+}
+
 class _Choice extends StatelessWidget {
   const _Choice({
     required this.value,
@@ -76,44 +86,56 @@ class _Choice extends StatelessWidget {
   Widget build(BuildContext context) {
     final swatch = parseHexColor(value.color);
     final scheme = context.colors;
+    final fg = selected
+        ? scheme.onPrimary
+        : available
+        ? scheme.onSurface
+        : scheme.onSurface.withValues(alpha: 0.4);
     return Semantics(
       button: true,
       selected: selected,
       enabled: available,
       label: value.label,
       excludeSemantics: true,
-      child: InkWell(
-        onTap: available ? onTap : null,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            color: selected ? context.extra.tint : null,
-            border: Border.all(
-              color: selected ? scheme.primary : scheme.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (swatch != null) ...[
-                CircleAvatar(radius: 9, backgroundColor: swatch),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                value.label,
-                style: TextStyle(
-                  color: available
-                      ? scheme.onSurface
-                      : scheme.onSurface.withValues(alpha: 0.4),
-                  decoration: available ? null : TextDecoration.lineThrough,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+      child: Material(
+        color: selected ? scheme.primary : scheme.surfaceContainerLowest,
+        shape: StadiumBorder(
+          side: BorderSide(color: selected ? scheme.primary : scheme.outline),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: available ? onTap : null,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (selected) ...[
+                  Icon(Icons.check_rounded, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                ],
+                if (swatch != null) ...[
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: swatch,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  value.label,
+                  style: context.text.labelMedium?.copyWith(
+                    color: fg,
+                    decoration: available ? null : TextDecoration.lineThrough,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

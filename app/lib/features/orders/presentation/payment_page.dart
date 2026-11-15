@@ -127,27 +127,59 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               : Stack(
                   children: [
                     WebViewWidget(controller: _web!),
-                    if (_loading) const LinearProgressIndicator(),
+                    if (_loading)
+                      LinearProgressIndicator(
+                        minHeight: 3,
+                        color: context.extra.pop,
+                        backgroundColor: context.extra.popSoft,
+                      ),
                   ],
                 ),
         _Phase.confirming => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: AppSpacing.md),
-              Text(l10n.paymentConfirming),
-            ],
+          child: Container(
+            key: const ValueKey('payment-confirming'),
+            margin: const EdgeInsets.all(AppSpacing.xl),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: context.colors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              boxShadow: AppShadows.overlay,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox.square(
+                  dimension: 48,
+                  child: CircularProgressIndicator(strokeWidth: 4),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.paymentConfirming,
+                  textAlign: TextAlign.center,
+                  style: context.text.headlineSmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.paymentPendingBody,
+                  textAlign: TextAlign.center,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.extra.textMuted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        _Phase.paid => EmptyState(
-          icon: Icons.check_circle_outline_rounded,
+        _Phase.paid => StateBlock(
+          icon: Icons.check_rounded,
+          tone: StateTone.mint,
           title: l10n.paymentSuccess,
           actionLabel: l10n.orderViewOrder,
           onAction: () => context.pop(true),
         ),
-        _Phase.pending => EmptyState(
+        _Phase.pending => StateBlock(
           icon: Icons.hourglass_bottom_rounded,
+          tone: StateTone.sun,
           title: l10n.paymentPendingTitle,
           message: l10n.paymentPendingBody,
           actionLabel: l10n.orderViewOrder,

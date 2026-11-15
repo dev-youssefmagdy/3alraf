@@ -1,0 +1,4 @@
+tags:
+  # QA screenshot harness (test/screenshots); skipped unless run with
+  # `flutter test test/screenshots --update-goldens`.
+  screenshots:

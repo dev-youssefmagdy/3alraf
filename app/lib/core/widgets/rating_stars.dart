@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/context_ext.dart';
 
+/// Rating (`7:306`): sun stars plus an optional muted count.
 class RatingStars extends StatelessWidget {
   const RatingStars({
     super.key,
@@ -17,7 +18,8 @@ class RatingStars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gold = context.extra.gold;
+    final x = context.extra;
+    final empty = context.colors.outline;
     return Semantics(
       label: context.l10n.ratingSemantics(rating.toStringAsFixed(1)),
       excludeSemantics: true,
@@ -30,13 +32,16 @@ class RatingStars extends StatelessWidget {
                   ? Icons.star_rounded
                   : (rating >= i - 0.5
                         ? Icons.star_half_rounded
-                        : Icons.star_outline_rounded),
+                        : Icons.star_rounded),
               size: size,
-              color: gold,
+              color: rating >= i - 0.5 ? x.sun : empty,
             ),
           if (count != null) ...[
             const SizedBox(width: 4),
-            Text('($count)', style: context.text.labelSmall),
+            Text(
+              '($count)',
+              style: context.text.bodySmall?.copyWith(color: x.textMuted),
+            ),
           ],
         ],
       ),

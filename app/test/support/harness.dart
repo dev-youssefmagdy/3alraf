@@ -101,6 +101,8 @@ class TestEnv {
     this.appConfig = const {},
     Map<String, Object?> prefs = const {},
     bool languageChosen = true,
+    this.storeProfile,
+    this.splashMinDuration = Duration.zero,
     ResponseBody? Function(RequestOptions o)? extra,
   }) : store = store ?? storeInfoJson(),
        _extra = extra,
@@ -110,6 +112,12 @@ class TestEnv {
   Map<String, Object?>? store;
   bool appConfigDown;
   Map<String, Object?> appConfig;
+
+  /// `GET /store` body; defaults to [storeJson].
+  Map<String, Object?>? storeProfile;
+
+  /// How long the splash stays up (zero in tests).
+  final Duration splashMinDuration;
   final Map<String, Object?> initialPrefs;
   final ResponseBody? Function(RequestOptions o)? _extra;
   final MemoryKeyValueStore secrets = MemoryKeyValueStore();
@@ -137,7 +145,7 @@ class TestEnv {
         ...appConfig,
       });
     }
-    if (path == '/store') return envelope(storeJson());
+    if (path == '/store') return envelope(storeProfile ?? storeJson());
     if (path == '/auth/logout') return envelope(null);
     final r = _extra?.call(o);
     if (r != null) return r;
@@ -157,7 +165,7 @@ class TestEnv {
   List<Override> get overrides => [
     preferencesProvider.overrideWithValue(AppPreferences(prefs)),
     keyValueStoreProvider.overrideWithValue(secrets),
-    splashMinDurationProvider.overrideWithValue(Duration.zero),
+    splashMinDurationProvider.overrideWithValue(splashMinDuration),
     appVersionProvider.overrideWith((ref) => '1.0.0'),
     dioProvider.overrideWith(
       (ref) => buildDio(

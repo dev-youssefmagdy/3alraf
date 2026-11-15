@@ -197,6 +197,6 @@ return [
     |
     */
 
-    'attributes' => [],
+    'attributes' => ['city_id' => 'city', 'shipping_company_id' => 'shipping company', 'payment_method_id' => 'payment method'],
 
 ];

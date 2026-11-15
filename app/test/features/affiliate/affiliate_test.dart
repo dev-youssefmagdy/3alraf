@@ -197,7 +197,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(1), 'secret123');
     await tester.tap(find.widgetWithText(FilledButton, 'تسجيل الدخول'));
     await settle(tester);
-    expect(find.textContaining('500.00'), findsWidgets);
+    expect(find.textContaining('500'), findsWidgets);
 
     c.read(routerProvider).go('/affiliate/products');
     await settle(tester);

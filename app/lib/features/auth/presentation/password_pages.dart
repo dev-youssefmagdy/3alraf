@@ -61,10 +61,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return AuthScaffold(
+    return FormPageScaffold(
       title: l10n.forgotTitle,
-      subtitle: l10n.forgotBody,
       children: [
+        FormLead(icon: Icons.info_outline_rounded, text: l10n.forgotBody),
         Form(
           key: _form,
           child: AppTextField(
@@ -72,14 +72,19 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
             controller: _email,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
-            prefixIcon: Icons.mail_outline_rounded,
+            ltr: true,
             errorText: _errors['email'],
             validator: (v) => emailValidator(context, v),
             onSubmitted: (_) => _submit(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(label: l10n.sendCode, loading: _busy, onPressed: _submit),
+        const SizedBox(height: AppSpacing.mdl),
+        AppButton(
+          label: l10n.sendCode,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _submit,
+        ),
       ],
     );
   }
@@ -146,10 +151,18 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     const gap = SizedBox(height: AppSpacing.md);
-    return AuthScaffold(
+    return FormPageScaffold(
       title: l10n.resetTitle,
-      subtitle: l10n.resetBody,
       children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.mdl),
+          child: Text(
+            l10n.resetBody,
+            style: context.text.bodyMedium?.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ),
         Form(
           key: _form,
           child: Column(
@@ -159,7 +172,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                prefixIcon: Icons.mail_outline_rounded,
+                ltr: true,
                 errorText: _errors['email'],
                 validator: (v) => emailValidator(context, v),
               ),
@@ -169,7 +182,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _code,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
-                prefixIcon: Icons.pin_outlined,
+                ltr: true,
+                autofillHints: const [AutofillHints.oneTimeCode],
                 errorText: _errors['code'],
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -185,7 +199,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 obscure: true,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
-                prefixIcon: Icons.lock_outline_rounded,
                 errorText: _errors['password'],
                 validator: (v) => passwordValidator(context, v),
               ),
@@ -195,7 +208,6 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 controller: _confirm,
                 obscure: true,
                 textInputAction: TextInputAction.done,
-                prefixIcon: Icons.lock_outline_rounded,
                 errorText: _errors['password_confirmation'],
                 validator: (v) =>
                     v == _password.text ? null : l10n.passwordMismatch,
@@ -204,8 +216,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
-        AppButton(label: l10n.resetAction, loading: _busy, onPressed: _submit),
+        const SizedBox(height: AppSpacing.mdl),
+        AppButton(
+          label: l10n.resetAction,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _submit,
+        ),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import 'package:app/features/shell/presentation/app_bottom_nav.dart';
 import 'package:app/core/l10n/locale_provider.dart';
 import 'package:app/core/routing/app_routes.dart';
 import 'package:app/core/storage/legacy_storage_migration.dart';
@@ -149,7 +150,7 @@ void main() {
       expect(find.text('Skip'), findsOneWidget);
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(AppBottomNav), findsOneWidget);
       expect(env.prefs.getBool('onboarding_done'), isTrue);
     });
 
@@ -159,10 +160,10 @@ void main() {
       bigScreen(tester);
       final env = TestEnv(prefs: {'onboarding_done': true, 'locale': 'en'});
       await env.pumpApp(tester);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(AppBottomNav), findsOneWidget);
       expect(find.text('Choose your language'), findsNothing);
       expect(
-        Directionality.of(tester.element(find.byType(NavigationBar))),
+        Directionality.of(tester.element(find.byType(AppBottomNav))),
         TextDirection.ltr,
       );
     });
@@ -180,7 +181,7 @@ void main() {
       env.appConfigDown = false;
       await tester.tap(find.text('إعادة المحاولة'));
       await settle(tester);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(AppBottomNav), findsOneWidget);
     });
 
     testWidgets('offline with cached store: Home with retry banner', (
@@ -197,7 +198,7 @@ void main() {
         },
       );
       await env.pumpApp(tester);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(AppBottomNav), findsOneWidget);
       expect(find.text(_offline), findsOneWidget);
       env.appConfigDown = false;
       await tester.tap(find.widgetWithText(TextButton, 'إعادة المحاولة'));
@@ -213,7 +214,7 @@ void main() {
       );
       await env.pumpApp(tester);
       expect(find.text('Back soon'), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(AppBottomNav), findsNothing);
     });
   });
 }

@@ -49,15 +49,18 @@ class AddressesPage extends ConsumerWidget {
     final state = ref.watch(addressesProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.addressesTitle)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppRoutes.addressEdit),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.addressAdd),
-      ),
       body: Builder(
         builder: (context) {
           if (!state.loaded && state.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.gutter),
+              children: [
+                for (var i = 0; i < 3; i++) ...[
+                  const AppShimmer(height: 96, radius: AppRadius.md),
+                  const SizedBox(height: AppSpacing.smd),
+                ],
+              ],
+            );
           }
           if (!state.loaded && state.error != null) {
             return ErrorState(
@@ -66,42 +69,73 @@ class AddressesPage extends ConsumerWidget {
             );
           }
           if (state.items.isEmpty) {
-            return EmptyState(
+            return StateBlock(
               icon: Icons.location_on_outlined,
               title: l10n.addressesEmpty,
               message: l10n.addressesEmptyBody,
+              actionLabel: l10n.addressAdd,
+              actionIcon: Icons.add_rounded,
+              onAction: () => context.push(AppRoutes.addressEdit),
             );
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(addressesProvider.notifier).load(),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                96,
+                AppSpacing.gutter,
+                AppSpacing.gutter,
+                AppSpacing.gutter,
+                AppSpacing.xl,
               ),
               children: [
-                for (final a in state.items)
+                for (final a in state.items) ...[
                   AddressCard(
                     address: a,
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (v) {
-                        if (v == 'edit') {
-                          context.push(AppRoutes.addressEdit, extra: a);
-                        } else {
-                          _delete(context, ref, a);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text(l10n.delete),
+                    selected: a.isDefault,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _EditPill(
+                          label: l10n.edit,
+                          onTap: () =>
+                              context.push(AppRoutes.addressEdit, extra: a),
+                        ),
+                        IconButton(
+                          tooltip: l10n.delete,
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 20,
+                            color: context.colors.error,
+                          ),
+                          onPressed: () => _delete(context, ref, a),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.smd),
+                ],
+                DashedBox(
+                  key: const ValueKey('address-add'),
+                  onTap: () => context.push(AppRoutes.addressEdit),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_rounded,
+                        size: 20,
+                        color: context.colors.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        l10n.addressAdd,
+                        style: context.text.labelMedium?.copyWith(
+                          color: context.colors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -109,6 +143,42 @@ class AddressesPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Small outline "edit" pill with a pencil.
+class _EditPill extends StatelessWidget {
+  const _EditPill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: context.colors.surfaceContainerLowest,
+    shape: StadiumBorder(side: BorderSide(color: context.colors.outline)),
+    child: InkWell(
+      customBorder: const StadiumBorder(),
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 32),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                size: 14,
+                color: context.colors.onSurface,
+              ),
+              const SizedBox(width: 4),
+              Text(label, style: context.text.labelSmall),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class AddressCard extends StatelessWidget {
@@ -128,40 +198,79 @@ class AddressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final c = context.colors;
+    final x = context.extra;
     final a = address;
-    return Card(
+    final muted = context.text.bodySmall?.copyWith(color: c.onSurfaceVariant);
+    return Material(
+      color: selected ? x.brandSoft : c.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         side: BorderSide(
-          color: selected ? context.colors.primary : Colors.transparent,
-          width: 2,
+          color: selected ? c.primary : c.outlineVariant,
+          width: selected ? 1.5 : 1,
         ),
       ),
-      child: ListTile(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
-        leading: Icon(
-          selected
-              ? Icons.radio_button_checked_rounded
-              : Icons.location_on_outlined,
-          color: context.colors.primary,
-        ),
-        title: Row(
-          children: [
-            Flexible(
-              child: Text(
-                a.label?.isNotEmpty == true ? a.label! : a.name,
-                overflow: TextOverflow.ellipsis,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.md,
+            AppSpacing.smd,
+            AppSpacing.xs,
+            AppSpacing.smd,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Icon(
+                  Icons.location_on_outlined,
+                  size: 20,
+                  color: c.primary,
+                ),
               ),
-            ),
-            if (a.isDefault) ...[
-              const SizedBox(width: 6),
-              StatusChip(label: l10n.addressDefault, tone: StatusTone.brand),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          a.label?.isNotEmpty == true ? a.label! : a.name,
+                          style: context.text.titleMedium,
+                        ),
+                        if (a.isDefault)
+                          StatusChip(
+                            label: l10n.addressDefault,
+                            tone: StatusTone.brand,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '${a.name} · '),
+                          TextSpan(text: '\u2066${a.phone}\u2069'),
+                        ],
+                      ),
+                      style: muted,
+                    ),
+                    Text('${a.city} - ${a.address}', style: muted),
+                  ],
+                ),
+              ),
+              ?trailing,
             ],
-          ],
+          ),
         ),
-        subtitle: Text('${a.name} - ${a.phone}\n${a.city}, ${a.address}'),
-        isThreeLine: true,
-        trailing: trailing,
       ),
     );
   }
@@ -200,10 +309,8 @@ class _AddressFormPageState extends ConsumerState<AddressFormPage> {
   String? _err(String f) => _errors[f]?.firstOrNull;
 
   Future<void> _pickCity(List<City> cities) async {
-    final id = await showModalBottomSheet<int>(
+    final id = await showAppBottomSheet<int>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => CityPickerSheet(cities: cities, selected: _cityId),
     );
     if (id != null) setState(() => _cityId = id);
@@ -265,100 +372,88 @@ class _AddressFormPageState extends ConsumerState<AddressFormPage> {
         .firstOrNull;
     String? required(String? v) =>
         (v == null || v.trim().isEmpty) ? l10n.fieldRequired : null;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.existing == null ? l10n.addressAdd : l10n.addressEdit,
+    return FormPageScaffold(
+      title: widget.existing == null ? l10n.addressAdd : l10n.addressEdit,
+      bottom: StickyActionBar(
+        action: AppButton(
+          label: l10n.save,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _save,
         ),
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            AppTextField(
-              label: l10n.addressLabel,
-              controller: _label,
-              errorText: _err('label'),
-              prefixIcon: Icons.bookmark_outline_rounded,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.fullName,
-              controller: _name,
-              validator: required,
-              errorText: _err('name'),
-              prefixIcon: Icons.person_outline_rounded,
-              autofillHints: const [AutofillHints.name],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.phone,
-              controller: _phone,
-              validator: required,
-              errorText: _err('phone'),
-              keyboardType: TextInputType.phone,
-              prefixIcon: Icons.phone_outlined,
-              autofillHints: const [AutofillHints.telephoneNumber],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: l10n.addressCity,
-                errorText: _err('city_id'),
-                prefixIcon: const Icon(Icons.location_city_outlined),
+      children: [
+        Form(
+          key: _form,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppTextField(
+                label: l10n.addressLabel,
+                controller: _label,
+                errorText: _err('label'),
               ),
-              child: InkWell(
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: l10n.fullName,
+                controller: _name,
+                validator: required,
+                errorText: _err('name'),
+                autofillHints: const [AutofillHints.name],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: l10n.phone,
+                controller: _phone,
+                validator: required,
+                errorText: _err('phone'),
+                keyboardType: TextInputType.phone,
+                ltr: true,
+                autofillHints: const [AutofillHints.telephoneNumber],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _SelectField(
+                label: l10n.addressCity,
+                value: cityName,
+                hint: l10n.addressCityPick,
+                loading: cities.isLoading,
+                errorText: _err('city_id'),
                 onTap: cities.asData == null
                     ? null
                     : () => _pickCity(cities.asData!.value),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: cities.isLoading
-                            ? const LinearProgressIndicator()
-                            : Text(cityName ?? l10n.addressCityPick),
-                      ),
-                      const Icon(Icons.arrow_drop_down_rounded),
-                    ],
-                  ),
+              ),
+              if (cities.hasError)
+                TextButton(
+                  onPressed: () => ref.invalidate(citiesProvider),
+                  child: Text(l10n.retry),
                 ),
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: l10n.addressLine,
+                controller: _line,
+                validator: required,
+                errorText: _err('address'),
+                maxLines: 2,
               ),
-            ),
-            if (cities.hasError)
-              TextButton(
-                onPressed: () => ref.invalidate(citiesProvider),
-                child: Text(l10n.retry),
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: l10n.noteOptional,
+                controller: _notes,
+                errorText: _err('notes'),
               ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.addressLine,
-              controller: _line,
-              validator: required,
-              errorText: _err('address'),
-              maxLines: 2,
-              prefixIcon: Icons.home_outlined,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppTextField(
-              label: l10n.noteOptional,
-              controller: _notes,
-              errorText: _err('notes'),
-              prefixIcon: Icons.notes_rounded,
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.addressSetDefault),
-              value: _default,
-              onChanged: (v) => setState(() => _default = v),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AppButton(label: l10n.save, loading: _busy, onPressed: _save),
-          ],
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  l10n.addressSetDefault,
+                  style: context.text.titleSmall,
+                ),
+                value: _default,
+                onChanged: (v) => setState(() => _default = v),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -383,31 +478,41 @@ class _CityPickerSheetState extends State<CityPickerSheet> {
     final list = widget.cities
         .where((c) => c.name.toLowerCase().contains(_q.toLowerCase()))
         .toList();
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+    return AppSheet(
+      title: l10n.addressCity,
+      scrollable: false,
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.7,
+        height: MediaQuery.sizeOf(context).height * 0.6,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: l10n.addressCitySearch,
-                  prefixIcon: const Icon(Icons.search_rounded),
-                ),
-                onChanged: (v) => setState(() => _q = v),
+            TextField(
+              decoration: InputDecoration(
+                hintText: l10n.addressCitySearch,
+                prefixIcon: const Icon(Icons.search_rounded),
               ),
+              onChanged: (v) => setState(() => _q = v),
             ),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: list.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final c = list[i];
+                  final sel = c.id == widget.selected;
                   return ListTile(
-                    title: Text(c.name),
-                    trailing: c.id == widget.selected
-                        ? const Icon(Icons.check_rounded)
+                    title: Text(
+                      c.name,
+                      style: context.text.titleSmall?.copyWith(
+                        color: sel ? context.colors.primary : null,
+                      ),
+                    ),
+                    selected: sel,
+                    trailing: sel
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: context.colors.primary,
+                          )
                         : null,
                     onTap: () => Navigator.pop(context, c.id),
                   );
@@ -417,6 +522,103 @@ class _CityPickerSheetState extends State<CityPickerSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Field (Select) `7:138`: label above, a 48 white control with a chevron
+/// that opens a picker sheet; 2px red border + alert row on error.
+class _SelectField extends StatelessWidget {
+  const _SelectField({
+    required this.label,
+    required this.hint,
+    required this.onTap,
+    this.value,
+    this.errorText,
+    this.loading = false,
+  });
+
+  final String label;
+  final String hint;
+  final String? value;
+  final String? errorText;
+  final bool loading;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final error = errorText;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(label, style: context.text.titleSmall),
+        ),
+        Semantics(
+          button: true,
+          label: label,
+          value: value ?? hint,
+          excludeSemantics: true,
+          child: Material(
+            color: c.surfaceContainerLowest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              side: BorderSide(
+                color: error != null ? c.error : c.outline,
+                width: error != null ? 2 : 1,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: loading
+                            ? const LinearProgressIndicator()
+                            : Text(
+                                value ?? hint,
+                                style: context.text.bodyLarge?.copyWith(
+                                  color: value == null
+                                      ? context.extra.textMuted
+                                      : null,
+                                ),
+                              ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: c.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline_rounded, size: 14, color: c.error),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    error,
+                    style: context.text.bodySmall?.copyWith(color: c.error),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

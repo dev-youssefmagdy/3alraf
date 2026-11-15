@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import '../error/api_exception.dart';
 import '../utils/context_ext.dart';
 import '../utils/error_messages.dart';
 import 'app_button.dart';
+import 'state_block.dart';
 
 /// Error view with retry. Pass the caught [error] (usually an
-/// `ApiException`) and it is turned into a localised message.
+/// `ApiException`) and it is turned into a localised message. Network
+/// failures render the sun Offline variant.
 class ErrorState extends StatelessWidget {
   const ErrorState({super.key, this.error, this.message, this.onRetry});
 
@@ -16,40 +18,21 @@ class ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final text =
         message ??
-        (error == null
-            ? context.l10n.errorGeneric
-            : errorMessage(context.l10n, error!));
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 56,
-              color: context.colors.error,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: context.text.bodyLarge,
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              AppButton(
-                label: context.l10n.retry,
-                icon: Icons.refresh_rounded,
-                onPressed: onRetry,
-                expand: false,
-              ),
-            ],
-          ],
-        ),
-      ),
+        (error == null ? l10n.errorGeneric : errorMessage(l10n, error!));
+    final offline =
+        error != null && ApiException.from(error!).kind == ApiErrorKind.network;
+    return StateBlock(
+      icon: offline ? Icons.language_rounded : Icons.warning_amber_rounded,
+      tone: offline ? StateTone.sun : StateTone.error,
+      title: offline ? l10n.offlineTitle : l10n.errorTitle,
+      message: text,
+      actionLabel: onRetry == null ? null : l10n.retry,
+      actionIcon: Icons.refresh_rounded,
+      actionVariant: AppButtonVariant.outlined,
+      onAction: onRetry,
     );
   }
 }

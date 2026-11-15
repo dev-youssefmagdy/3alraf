@@ -25,6 +25,10 @@ class NetworkImageX extends StatelessWidget {
   final int? cacheWidth;
   final String? semanticLabel;
 
+  /// Test-only: resolves URLs to local images (QA screenshot harness).
+  @visibleForTesting
+  static ImageProvider Function(String url)? debugImageOverride;
+
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
@@ -32,14 +36,23 @@ class NetworkImageX extends StatelessWidget {
     final Widget fallback = Container(
       width: width,
       height: height,
-      color: scheme.surfaceContainerHigh,
+      color: scheme.surfaceContainerHighest,
       child: Icon(
         Icons.image_not_supported_outlined,
         color: scheme.onSurfaceVariant,
       ),
     );
+    final override = debugImageOverride;
     final Widget image = (url == null || url!.isEmpty)
         ? fallback
+        : override != null
+        ? Image(
+            image: override(url!),
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, _, _) => fallback,
+          )
         : CachedNetworkImage(
             imageUrl: url!,
             width: width,

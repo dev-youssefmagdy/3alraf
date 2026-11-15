@@ -51,31 +51,55 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final recents = ref.watch(recentSearchesProvider);
+    final c = context.colors;
+    final pill = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      borderSide: BorderSide.none,
+    );
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onChanged: _onChanged,
-          onSubmitted: _submit,
-          decoration: InputDecoration(
-            hintText: l10n.searchHint,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            filled: false,
-            suffixIcon: _controller.text.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: l10n.clear,
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () {
-                      _controller.clear();
-                      _onChanged('');
-                    },
+        title: Padding(
+          padding: const EdgeInsetsDirectional.only(end: AppSpacing.gutter),
+          child: SizedBox(
+            height: 44,
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onChanged: _onChanged,
+              onSubmitted: _submit,
+              style: context.text.bodyMedium,
+              decoration: InputDecoration(
+                hintText: l10n.searchHint,
+                filled: true,
+                fillColor: c.surfaceContainerHighest,
+                isDense: true,
+                contentPadding: const EdgeInsetsDirectional.only(
+                  start: AppSpacing.md,
+                  end: AppSpacing.xs,
+                ),
+                border: pill,
+                enabledBorder: pill,
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide(
+                    color: context.extra.popBright,
+                    width: 2,
                   ),
+                ),
+                suffixIcon: _controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: l10n.clear,
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () {
+                          _controller.clear();
+                          _onChanged('');
+                        },
+                      ),
+              ),
+            ),
           ),
         ),
       ),
@@ -102,43 +126,48 @@ class _Recents extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     if (recents.isEmpty) {
-      return EmptyState(
+      return StateBlock(
         title: l10n.searchEmptyTitle,
         message: l10n.searchEmptyBody,
         icon: Icons.search_rounded,
+        tone: StateTone.violet,
       );
     }
     return ListView(
+      padding: const EdgeInsets.all(AppSpacing.gutter),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.sm,
-            0,
-          ),
-          child: Row(
-            children: [
-              Expanded(
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
                 child: Text(
                   l10n.recentSearches,
-                  style: context.text.titleMedium,
+                  style: context.text.titleLarge,
                 ),
               ),
-              TextButton(
-                onPressed: () =>
-                    ref.read(recentSearchesProvider.notifier).clear(),
-                child: Text(l10n.clear),
-              ),
-            ],
-          ),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: context.extra.pop),
+              onPressed: () =>
+                  ref.read(recentSearchesProvider.notifier).clear(),
+              child: Text(l10n.clear),
+            ),
+          ],
         ),
-        for (final t in recents)
-          ListTile(
-            leading: const Icon(Icons.history_rounded),
-            title: Text(t),
-            onTap: () => onPick(t),
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final t in recents)
+              ActionChip(
+                avatar: const Icon(Icons.history_rounded, size: 16),
+                label: Text(t),
+                onPressed: () => onPick(t),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -161,42 +190,123 @@ class _Suggestions extends ConsumerWidget {
         error: e,
         onRetry: () => ref.invalidate(suggestProvider(term)),
       ),
-      data: (s) => ListView(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.search_rounded),
-            title: Text(l10n.searchFor(term)),
-            onTap: () => onSubmit(term),
-          ),
-          for (final c in s.categories)
-            ListTile(
-              leading: const Icon(Icons.grid_view_rounded),
-              title: Text(c.name),
-              subtitle: Text(l10n.navCategories),
-              onTap: () => context.push(AppRoutes.category(c.slug)),
+      data: (s) {
+        final c = context.colors;
+        Widget row({
+          required Widget leading,
+          required String title,
+          Widget? subtitle,
+          required VoidCallback onTap,
+        }) => InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.smd),
+            child: Row(
+              children: [
+                leading,
+                const SizedBox(width: AppSpacing.smd),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.titleSmall,
+                      ),
+                      ?subtitle,
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: context.extra.textMuted,
+                ),
+              ],
             ),
-          for (final p in s.products)
-            ListTile(
-              leading: SizedBox(
-                width: 48,
-                height: 48,
-                child: NetworkImageX(
-                  url: p.image,
-                  radius: AppRadius.sm,
-                  cacheWidth: 48,
+          ),
+        );
+        final rows = <Widget>[
+          for (final cat in s.categories)
+            row(
+              leading: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: context.extra.brandSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(Icons.grid_view_rounded, color: c.primary),
+              ),
+              title: cat.name,
+              subtitle: Text(
+                l10n.navCategories,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.extra.textMuted,
                 ),
               ),
-              title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(l10n.currencyAmount(p.price, currency)),
+              onTap: () => context.push(AppRoutes.category(cat.slug)),
+            ),
+          for (final p in s.products)
+            row(
+              leading: NetworkImageX(
+                url: p.image,
+                width: 52,
+                height: 52,
+                radius: AppRadius.sm,
+                cacheWidth: 104,
+              ),
+              title: p.name,
+              subtitle: Text(
+                l10n.money(p.price, currency),
+                style: context.textX.priceM.copyWith(
+                  color: context.extra.pop,
+                  fontSize: 16,
+                ),
+              ),
               onTap: () => openProduct(context, p.slug),
             ),
-          if (s.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Center(child: Text(l10n.noSuggestions)),
+        ];
+        return ListView(
+          padding: const EdgeInsets.all(AppSpacing.gutter),
+          children: [
+            if (rows.isNotEmpty)
+              SectionCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < rows.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      rows[i],
+                    ],
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Center(
+                  child: Text(
+                    l10n.noSuggestions,
+                    style: context.text.bodyMedium?.copyWith(
+                      color: context.extra.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.smd),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: () => onSubmit(term),
+                icon: const Icon(Icons.search_rounded, size: 18),
+                label: Text(l10n.searchFor(term)),
+              ),
             ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/utils/context_ext.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../content/application/content_providers.dart';
 import '../../startup/application/startup_controller.dart';
 import '../../store/application/store_controller.dart';
@@ -28,28 +29,25 @@ Future<void> rateApp(BuildContext context, WidgetRef ref) async {
 /// Light / dark / system chooser (persisted).
 Future<void> showThemePicker(BuildContext context, WidgetRef ref) async {
   final current = ref.read(themeModeProvider);
-  final picked = await showModalBottomSheet<ThemeMode>(
+  final picked = await showAppBottomSheet<ThemeMode>(
     context: context,
-    showDragHandle: true,
+    useRootNavigator: true,
     builder: (c) {
       final l10n = c.l10n;
-      Widget option(ThemeMode m, String label, IconData icon) => ListTile(
-        leading: Icon(icon),
-        title: Text(label),
-        trailing: m == current
-            ? Icon(Icons.check_rounded, color: c.colors.primary)
-            : null,
-        selected: m == current,
-        onTap: () => Navigator.pop(c, m),
+      Widget option(ThemeMode m, String label, IconData icon) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: ChoiceCard(
+          title: label,
+          leading: Icon(icon, color: c.colors.primary),
+          selected: m == current,
+          onTap: () => Navigator.pop(c, m),
+        ),
       );
-      return SafeArea(
+      return AppSheet(
+        title: l10n.themeTitle,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(l10n.themeTitle, style: c.text.titleLarge),
-            ),
             option(ThemeMode.light, l10n.themeLight, Icons.light_mode_outlined),
             option(ThemeMode.dark, l10n.themeDark, Icons.dark_mode_outlined),
             option(
@@ -83,54 +81,88 @@ class AboutPage extends ConsumerWidget {
     final storeName = ref.watch(storeControllerProvider).name;
     final version = ref.watch(appVersionProvider).value;
     final pages = ref.watch(pagesProvider).asData?.value ?? const [];
+    final x = context.extra;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.aboutTitle)),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.gutter),
         children: [
-          Center(
-            child: Image.asset(
-              'assets/branding/splash_logo.png',
-              width: 140,
-              semanticLabel: l10n.appName,
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: x.brandSoft,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Column(
+              children: [
+                LogoCircle(
+                  semanticLabel: storeName.isEmpty ? l10n.appName : storeName,
+                  size: 112,
+                  shadow: false,
+                ),
+                const SizedBox(height: AppSpacing.smd),
+                Text(
+                  storeName.isEmpty ? l10n.appName : storeName,
+                  textAlign: TextAlign.center,
+                  style: context.text.headlineSmall,
+                ),
+                if (version != null)
+                  Text(
+                    l10n.appVersion(version),
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Center(
-            child: Text(
-              storeName.isEmpty ? l10n.appName : storeName,
-              style: context.text.titleLarge,
+          const SizedBox(height: AppSpacing.mdl),
+          Text(
+            l10n.aboutBody,
+            style: context.text.bodyLarge?.copyWith(
+              color: context.colors.onSurfaceVariant,
             ),
           ),
-          if (version != null)
-            Center(
-              child: Text(
-                l10n.appVersion(version),
-                style: context.text.bodySmall,
+          const SizedBox(height: AppSpacing.mdl),
+          AppListGroup(
+            children: [
+              for (final p in pages)
+                AppListTile(
+                  key: ValueKey('page:${p.slug}'),
+                  icon: pageIcon(p.slug),
+                  title: p.title,
+                  onTap: () => context.push(AppRoutes.page(p.slug)),
+                ),
+              AppListTile(
+                icon: Icons.support_agent_rounded,
+                title: l10n.contactTitle,
+                onTap: () => context.push(AppRoutes.contact),
               ),
-            ),
-          const SizedBox(height: AppSpacing.md),
-          ListTile(
-            leading: const Icon(Icons.star_outline_rounded),
-            title: Text(l10n.rateApp),
-            onTap: () => rateApp(context, ref),
+              AppListTile(
+                icon: Icons.star_rounded,
+                title: l10n.rateApp,
+                onTap: () => rateApp(context, ref),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.support_agent_rounded),
-            title: Text(l10n.contactTitle),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => context.push(AppRoutes.contact),
-          ),
-          for (final p in pages)
-            ListTile(
-              key: ValueKey('page:${p.slug}'),
-              leading: const Icon(Icons.description_outlined),
-              title: Text(p.title),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => context.push(AppRoutes.page(p.slug)),
-            ),
         ],
       ),
     );
   }
+}
+
+/// Icon for a static page by its slug (privacy / terms / returns / other).
+IconData pageIcon(String slug) {
+  final s = slug.toLowerCase();
+  if (s.contains('privacy')) return Icons.privacy_tip_outlined;
+  if (s.contains('return') || s.contains('refund')) {
+    return Icons.inventory_2_outlined;
+  }
+  if (s.contains('shipping') || s.contains('delivery')) {
+    return Icons.local_shipping_outlined;
+  }
+  if (s.contains('term') || s.contains('condition')) {
+    return Icons.gavel_rounded;
+  }
+  return Icons.description_outlined;
 }

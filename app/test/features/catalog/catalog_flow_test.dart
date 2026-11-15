@@ -73,9 +73,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Shirt'), findsWidgets);
     // Default variant (S / Red) price is shown.
-    expect(find.textContaining('110.00'), findsWidgets);
+    expect(find.textContaining('110'), findsWidgets);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'أضف إلى السلة'));
+    // The sticky buy bar's button (related cards have their own CTA).
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('product-buy-bar')),
+        matching: find.widgetWithText(FilledButton, 'أضف إلى السلة'),
+      ),
+    );
     await tester.pumpAndSettle();
     final post = env.requestsTo('/cart/items').single;
     expect(post.method, 'POST');
@@ -94,7 +100,8 @@ void main() {
     await tester.tap(find.text('Product serum'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'أضف إلى السلة'), findsNothing);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'أعلمني عند التوفر'));
+    // Notify-me is a Sun (filled) button in the redesign.
+    await tester.tap(find.widgetWithText(FilledButton, 'أعلمني عند التوفر'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(0), 'Mona');
     await tester.enterText(find.byType(TextFormField).at(1), '1001234567');

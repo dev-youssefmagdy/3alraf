@@ -25,14 +25,38 @@ class SafeHtml extends StatelessWidget {
   final String html;
 
   @override
-  Widget build(BuildContext context) => HtmlWidget(
-    html,
-    textStyle: context.text.bodyMedium,
-    onTapUrl: (url) async {
-      await openLink(context, url);
-      return true;
-    },
-  );
+  Widget build(BuildContext context) {
+    final x = context.extra;
+    String css(Color c) =>
+        '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    return HtmlWidget(
+      html,
+      textStyle: context.text.bodyLarge?.copyWith(
+        color: context.colors.onSurfaceVariant,
+      ),
+      customStylesBuilder: (e) => switch (e.localName) {
+        'h1' || 'h2' || 'h3' => {
+          'color': css(context.colors.onSurface),
+          'font-weight': '700',
+          'margin': '16px 0 8px 0',
+        },
+        'blockquote' => {
+          'background-color': css(x.sunSoft),
+          'border-right': '4px solid ${css(x.sun)}',
+          'border-left': '4px solid ${css(x.sun)}',
+          'padding': '12px 16px',
+          'margin': '12px 0',
+          'color': css(context.colors.onSurface),
+        },
+        'a' => {'color': css(context.colors.primary), 'font-weight': '600'},
+        _ => null,
+      },
+      onTapUrl: (url) async {
+        await openLink(context, url);
+        return true;
+      },
+    );
+  }
 }
 
 /// `GET /pages/{slug}` (terms, privacy, about...).
@@ -53,11 +77,29 @@ class StaticPageView extends ConsumerWidget {
           onRetry: () => ref.invalidate(staticPageProvider(slug)),
         ),
         data: (p) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.gutter),
           children: [
-            Text(p.title, style: context.text.headlineSmall),
-            const SizedBox(height: AppSpacing.md),
-            SafeHtml(p.content),
+            SectionCard(
+              padding: const EdgeInsets.all(AppSpacing.mdl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ToneBlob(
+                    icon: Icons.inventory_2_outlined,
+                    tone: StateTone.sun,
+                    size: 48,
+                    iconSize: 24,
+                  ),
+                  const SizedBox(height: AppSpacing.smd),
+                  Semantics(
+                    header: true,
+                    child: Text(p.title, style: context.text.headlineMedium),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SafeHtml(p.content),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -72,8 +114,10 @@ class _TextSkeleton extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(AppSpacing.md),
     children: [
+      const AppShimmer(height: 28, width: 220, radius: AppRadius.xs),
+      const SizedBox(height: AppSpacing.md),
       for (var i = 0; i < 6; i++) ...[
-        const AppShimmer(height: 16, radius: AppRadius.sm),
+        const AppShimmer(height: 16, radius: AppRadius.xs),
         const SizedBox(height: AppSpacing.sm),
       ],
     ],
@@ -116,13 +160,21 @@ class _BlogListPageState extends ConsumerState<BlogListPage> {
       appBar: AppBar(title: Text(l10n.blogTitle)),
       body: Builder(
         builder: (context) {
+          final header = ColorHeaderBlock(
+            title: l10n.blogTitle,
+            subtitle: l10n.blogSubtitle,
+            tone: HeaderTone.mint,
+            margin: EdgeInsets.zero,
+          );
           if (s.posts.isEmpty && s.loading) {
             return ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.gutter),
               children: [
-                for (var i = 0; i < 4; i++) ...[
-                  const AppShimmer(height: 88, radius: AppRadius.md),
-                  const SizedBox(height: AppSpacing.sm),
+                header,
+                const SizedBox(height: AppSpacing.md),
+                for (var i = 0; i < 3; i++) ...[
+                  const AppShimmer(height: 220, radius: AppRadius.md),
+                  const SizedBox(height: AppSpacing.smd),
                 ],
               ],
             );
@@ -140,10 +192,17 @@ class _BlogListPageState extends ConsumerState<BlogListPage> {
             onRefresh: c.refresh,
             child: ListView.builder(
               controller: _scroll,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              itemCount: s.posts.length + (s.hasMore ? 1 : 0),
+              padding: const EdgeInsets.all(AppSpacing.gutter),
+              itemCount: s.posts.length + 1 + (s.hasMore ? 1 : 0),
               itemBuilder: (context, i) {
-                if (i >= s.posts.length) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: header,
+                  );
+                }
+                final index = i - 1;
+                if (index >= s.posts.length) {
                   return Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Center(
@@ -156,24 +215,13 @@ class _BlogListPageState extends ConsumerState<BlogListPage> {
                     ),
                   );
                 }
-                final post = s.posts[i];
-                return Card(
-                  key: ValueKey('post:${post.slug}'),
-                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(AppSpacing.md),
-                    title: Text(post.title, style: context.text.titleMedium),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        [
-                          formatDate(post.publishedAt).split(' ').first,
-                          if (post.excerpt != null) post.excerpt!,
-                        ].where((e) => e.isNotEmpty).join('\n'),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                final post = s.posts[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+                  child: BlogPostCard(
+                    key: ValueKey('post:${post.slug}'),
+                    post: post,
+                    index: index,
                     onTap: () => context.push(AppRoutes.blogPost(post.slug)),
                   ),
                 );
@@ -181,6 +229,132 @@ class _BlogListPageState extends ConsumerState<BlogListPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Blog post card (`62:4466`): tinted cover band, date, H3 title, two-line
+/// excerpt and a brand "read more" link. The whole card is one button.
+class BlogPostCard extends StatelessWidget {
+  const BlogPostCard({
+    super.key,
+    required this.post,
+    required this.index,
+    required this.onTap,
+  });
+
+  final BlogPost post;
+  final int index;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final date = formatDate(post.publishedAt).split(' ').first;
+    return Material(
+      color: c.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: c.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _CoverBand(index: index, height: 120),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (date.isNotEmpty)
+                    Text(
+                      date,
+                      style: context.text.bodySmall?.copyWith(
+                        color: context.extra.textMuted,
+                      ),
+                    ),
+                  const SizedBox(height: 2),
+                  Text(post.title, style: context.text.titleLarge),
+                  if (post.excerpt != null && post.excerpt!.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      post.excerpt!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodyMedium?.copyWith(
+                        color: c.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  ExcludeSemantics(
+                    child: Row(
+                      children: [
+                        Text(
+                          context.l10n.blogReadMore,
+                          style: context.text.labelMedium?.copyWith(
+                            color: c.primary,
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: c.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Decorative cover band for posts without a photo: a soft tint (rotated
+/// by [index]) with blobs and an icon.
+class _CoverBand extends StatelessWidget {
+  const _CoverBand({required this.index, required this.height});
+
+  final int index;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final x = context.extra;
+    final tint = x.cardTint(index);
+    final ring = x.ring(index + 1);
+    return ExcludeSemantics(
+      child: Container(
+        height: height,
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(color: tint),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            PositionedDirectional(
+              top: -40,
+              end: -30,
+              child: DecorCircle(
+                size: 130,
+                color: ring.withValues(alpha: 0.35),
+              ),
+            ),
+            PositionedDirectional(
+              bottom: -30,
+              start: 30,
+              child: DecorCircle(size: 70, color: x.sun.withValues(alpha: 0.6)),
+            ),
+            Icon(Icons.auto_stories_outlined, size: 44, color: ring),
+          ],
+        ),
       ),
     );
   }
@@ -195,23 +369,43 @@ class BlogPostPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final post = ref.watch(blogPostProvider(slug));
+    final url = post.asData?.value.url;
+    void share() {
+      final p = post.asData!.value;
+      SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.url}'));
+    }
+
+    final back = AppButton(
+      label: l10n.blogBack,
+      variant: AppButtonVariant.outlined,
+      onPressed: () =>
+          context.canPop() ? context.pop() : context.go(AppRoutes.blog),
+    );
     return Scaffold(
       appBar: AppBar(
-        title: Text(post.asData?.value.title ?? l10n.blogTitle),
+        title: Text(l10n.blogTitle),
         actions: [
-          if (post.asData?.value.url != null)
+          if (url != null)
             IconButton(
               tooltip: l10n.share,
               icon: const Icon(Icons.share_outlined),
-              onPressed: () {
-                final p = post.asData!.value;
-                SharePlus.instance.share(
-                  ShareParams(text: '${p.title}\n${p.url}'),
-                );
-              },
+              onPressed: share,
             ),
         ],
       ),
+      bottomNavigationBar: post.hasValue
+          ? StickyActionBar(
+              leading: url == null ? null : Expanded(child: back),
+              action: url == null
+                  ? back
+                  : AppButton(
+                      label: l10n.share,
+                      icon: Icons.share_outlined,
+                      variant: AppButtonVariant.pop,
+                      onPressed: share,
+                    ),
+            )
+          : null,
       body: post.when(
         loading: () => const _TextSkeleton(),
         error: (e, _) => ErrorState(
@@ -219,19 +413,38 @@ class BlogPostPage extends ConsumerWidget {
           onRetry: () => ref.invalidate(blogPostProvider(slug)),
         ),
         data: (p) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
           children: [
-            Text(p.title, style: context.text.headlineSmall),
-            if (p.publishedAt != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  formatDate(p.publishedAt).split(' ').first,
-                  style: context.text.bodySmall,
-                ),
+            _CoverBand(index: slug.length, height: 160),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.mdl,
+                AppSpacing.gutter,
+                0,
               ),
-            const SizedBox(height: AppSpacing.md),
-            SafeHtml(p.content ?? p.excerpt ?? ''),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(p.title, style: context.text.headlineMedium),
+                  ),
+                  if (p.publishedAt != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        formatDate(p.publishedAt).split(' ').first,
+                        style: context.text.bodySmall?.copyWith(
+                          color: context.extra.textMuted,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  SafeHtml(p.content ?? p.excerpt ?? ''),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -323,122 +536,189 @@ class _LaunchPageState extends ConsumerState<LaunchPage> {
           onRetry: () => ref.invalidate(launchProvider(widget.code)),
         ),
         data: (l) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.gutter),
           children: [
-            if (l.product?.image != null)
-              NetworkImageX(
-                url: l.product!.image,
-                height: 200,
-                radius: AppRadius.md,
-                semanticLabel: l.product!.name,
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: context.extra.violet,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-            const SizedBox(height: AppSpacing.md),
-            Text(l.name, style: context.text.headlineSmall),
-            if (l.description != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(l.description!),
-            ],
-            if (l.product != null)
-              TextButton.icon(
-                onPressed: () =>
-                    context.push(AppRoutes.product(l.product!.slug)),
-                icon: const Icon(Icons.open_in_new_rounded),
-                label: Text(l.product!.name),
+              child: Stack(
+                children: [
+                  PositionedDirectional(
+                    top: -50,
+                    end: -40,
+                    child: DecorCircle(
+                      size: 150,
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.mdl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (l.product?.image != null) ...[
+                          NetworkImageX(
+                            url: l.product!.image,
+                            width: double.infinity,
+                            height: 180,
+                            radius: AppRadius.sm,
+                            semanticLabel: l.product!.name,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ] else ...[
+                          const ToneBlob(
+                            icon: Icons.rocket_launch_outlined,
+                            tone: StateTone.sun,
+                            size: 56,
+                            iconSize: 28,
+                          ),
+                          const SizedBox(height: AppSpacing.smd),
+                        ],
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            l.name,
+                            style: context.text.headlineMedium?.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (l.description != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            l.description!,
+                            style: context.text.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ],
+                        if (l.product != null) ...[
+                          const SizedBox(height: AppSpacing.smd),
+                          HeaderChip(
+                            label: l.product!.name,
+                            icon: Icons.open_in_new_rounded,
+                            onTap: () => context.push(
+                              AppRoutes.product(l.product!.slug),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
             const SizedBox(height: AppSpacing.md),
             if (_done)
-              Card(
-                color: context.extra.tint,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        color: context.extra.success,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: Text(l10n.launchThanks)),
-                    ],
-                  ),
-                ),
+              NoticeCard(
+                icon: Icons.check_circle_rounded,
+                tone: StateTone.mint,
+                text: l10n.launchThanks,
               )
             else if (!l.isOpen)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(l10n.launchClosed),
-                ),
+              NoticeCard(
+                icon: Icons.lock_clock_outlined,
+                tone: StateTone.sun,
+                text: l10n.launchClosed,
               )
-            else ...[
-              AppTextField(
-                label: l10n.launchContact,
-                controller: _contact,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                prefixIcon: Icons.alternate_email_rounded,
-                errorText: _errors['contact'],
-              ),
-              if (l.isSurvey) ...[
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  label: l.surveyQuestion!,
-                  controller: _answer,
-                  maxLines: 3,
-                  errorText: _errors['answer'],
-                ),
-              ],
-              if (l.asksQuantity) ...[
-                const SizedBox(height: AppSpacing.md),
-                Row(
+            else
+              SectionCard(
+                padding: const EdgeInsets.all(AppSpacing.mdl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(child: Text(l10n.launchQuantity)),
-                    QuantityStepper(
-                      value: _quantity,
-                      min: 1,
-                      max: 20,
-                      onChanged: (v) => setState(() => _quantity = v),
+                    AppTextField(
+                      label: l10n.launchContact,
+                      controller: _contact,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      ltr: true,
+                      errorText: _errors['contact'],
+                    ),
+                    if (l.isSurvey) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        label: l.surveyQuestion!,
+                        controller: _answer,
+                        maxLines: 3,
+                        errorText: _errors['answer'],
+                      ),
+                    ],
+                    if (l.asksQuantity) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.launchQuantity,
+                              style: context.text.titleSmall,
+                            ),
+                          ),
+                          QuantityStepper(
+                            value: _quantity,
+                            min: 1,
+                            max: 20,
+                            onChanged: (v) => setState(() => _quantity = v),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (l.preorder) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      if (l.preorderTerms != null)
+                        Text(
+                          l.preorderTerms!,
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant,
+                          ),
+                        ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(
+                          l10n.launchAcceptTerms,
+                          style: context.text.bodyMedium,
+                        ),
+                        subtitle: _errors['preorder_accepted'] == null
+                            ? null
+                            : Text(
+                                _errors['preorder_accepted']!,
+                                style: TextStyle(color: context.colors.error),
+                              ),
+                        value: _preorder,
+                        onChanged: (v) =>
+                            setState(() => _preorder = v ?? false),
+                      ),
+                    ],
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                        l10n.launchConsent,
+                        style: context.text.bodyMedium,
+                      ),
+                      subtitle: _errors['consent'] == null
+                          ? null
+                          : Text(
+                              _errors['consent']!,
+                              style: TextStyle(color: context.colors.error),
+                            ),
+                      value: _consent,
+                      onChanged: (v) => setState(() => _consent = v ?? false),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppButton(
+                      label: l10n.launchJoin,
+                      size: AppButtonSize.l,
+                      loading: _busy,
+                      onPressed: () => _submit(l),
                     ),
                   ],
                 ),
-              ],
-              if (l.preorder) ...[
-                const SizedBox(height: AppSpacing.sm),
-                if (l.preorderTerms != null) Text(l.preorderTerms!),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(l10n.launchAcceptTerms),
-                  subtitle: _errors['preorder_accepted'] == null
-                      ? null
-                      : Text(
-                          _errors['preorder_accepted']!,
-                          style: TextStyle(color: context.colors.error),
-                        ),
-                  value: _preorder,
-                  onChanged: (v) => setState(() => _preorder = v ?? false),
-                ),
-              ],
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(l10n.launchConsent),
-                subtitle: _errors['consent'] == null
-                    ? null
-                    : Text(
-                        _errors['consent']!,
-                        style: TextStyle(color: context.colors.error),
-                      ),
-                value: _consent,
-                onChanged: (v) => setState(() => _consent = v ?? false),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              AppButton(
-                label: l10n.launchJoin,
-                loading: _busy,
-                onPressed: () => _submit(l),
-              ),
-            ],
           ],
         ),
       ),
@@ -474,42 +754,140 @@ class ContactPage extends ConsumerWidget {
               title: l10n.contactEmpty,
             )
           : ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.gutter),
               children: [
-                if (whatsapp != null && whatsapp.isNotEmpty)
-                  ListTile(
-                    leading: const Icon(Icons.chat_outlined),
-                    title: Text(l10n.contactWhatsapp),
-                    subtitle: Text('+$whatsapp'),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: context.extra.violetSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Column(
+                    children: [
+                      ExcludeSemantics(
+                        child: Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: context.extra.violet,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.call_outlined,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.smd),
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.contactHeroTitle,
+                          textAlign: TextAlign.center,
+                          style: context.text.headlineSmall,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        l10n.contactHeroBody,
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (whatsapp != null && whatsapp.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _MintPillButton(
+                    label: l10n.contactWhatsapp,
                     onTap: () => _open('https://wa.me/$whatsapp'),
                   ),
-                if (phone != null && phone.isNotEmpty)
-                  ListTile(
-                    leading: const Icon(Icons.phone_outlined),
-                    title: Text(l10n.contactPhone),
-                    subtitle: Text(phone, textDirection: TextDirection.ltr),
-                    onTap: () => _open(
-                      'tel:${phone.replaceAll(RegExp(r'[^0-9+]'), '')}',
-                    ),
-                  ),
-                if (email != null && email.isNotEmpty)
-                  ListTile(
-                    leading: const Icon(Icons.mail_outline_rounded),
-                    title: Text(l10n.email),
-                    subtitle: Text(email, textDirection: TextDirection.ltr),
-                    onTap: () => _open('mailto:$email'),
-                  ),
-                for (final e in social.entries)
-                  if (e.value.isNotEmpty)
-                    ListTile(
-                      leading: Icon(_socialIcon(e.key)),
-                      title: Text(_capitalize(e.key)),
-                      onTap: () => _open(e.value),
-                    ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                AppListGroup(
+                  children: [
+                    if (phone != null && phone.isNotEmpty)
+                      AppListTile(
+                        icon: Icons.call_outlined,
+                        title: l10n.contactPhone,
+                        value: '\u2066$phone\u2069',
+                        onTap: () => _open(
+                          'tel:${phone.replaceAll(RegExp(r'[^0-9+]'), '')}',
+                        ),
+                      ),
+                    if (email != null && email.isNotEmpty)
+                      AppListTile(
+                        icon: Icons.mail_outline_rounded,
+                        title: l10n.email,
+                        value: '\u2066$email\u2069',
+                        onTap: () => _open('mailto:$email'),
+                      ),
+                    if (whatsapp != null && whatsapp.isNotEmpty)
+                      AppListTile(
+                        icon: Icons.chat_outlined,
+                        title: l10n.contactWhatsapp,
+                        value: '\u2066+$whatsapp\u2069',
+                        onTap: () => _open('https://wa.me/$whatsapp'),
+                      ),
+                    for (final e in social.entries)
+                      if (e.value.isNotEmpty)
+                        AppListTile(
+                          icon: _socialIcon(e.key),
+                          title: _capitalize(e.key),
+                          onTap: () => _open(e.value),
+                        ),
+                  ],
+                ),
               ],
             ),
     );
   }
+}
+
+/// Full-width mint pill (WhatsApp CTA): mint-400 with ink text.
+class _MintPillButton extends StatelessWidget {
+  const _MintPillButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: Material(
+      color: context.extra.mint,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.chat_rounded,
+                size: 20,
+                color: AppColors.slate950,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(
+                  label,
+                  style: context.text.labelLarge?.copyWith(
+                    color: AppColors.slate950,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 IconData _socialIcon(String key) => switch (key) {

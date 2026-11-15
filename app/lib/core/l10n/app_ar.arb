@@ -612,5 +612,183 @@
   "ambassadorNoLinks": "لا توجد روابط بعد.",
   "ambassadorIdeas": "أفكار للمحتوى",
   "showPassword": "إظهار كلمة المرور",
-  "hidePassword": "إخفاء كلمة المرور"
+  "hidePassword": "إخفاء كلمة المرور",
+  "navGifts": "الهدايا",
+  "navCartCount": "السلة، {count} منتجات",
+  "@navCartCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trustFast": "شحن سريع",
+  "trustFastText": "لكل المحافظات",
+  "trustCod": "الدفع عند الاستلام",
+  "trustCodText": "ادفع لما طلبك يوصل",
+  "trustAuthentic": "منتجات أصلية 100%",
+  "trustAuthenticText": "من الماركات والموزعين المعتمدين",
+  "trustGift": "تغليف هدايا مميز",
+  "trustGiftText": "اختار التغليف عند الدفع",
+  "errorTitle": "حدث خطأ ما",
+  "offlineTitle": "أنت غير متصل",
+  "offlineBody": "تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.",
+  "noResultsTitle": "لا توجد نتائج",
+  "carouselSlide": "الشريحة {index} من {count}",
+  "@carouselSlide": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "priceStartingFrom": "ابتداءً من",
+  "badgeNew": "جديد",
+  "bundleBadge": "باقة",
+  "bundleItemsCount": "{count} منتجات",
+  "@bundleItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countdownHours": "ساعة",
+  "countdownMinutes": "دقيقة",
+  "countdownSeconds": "ثانية",
+  "countdownSemantics": "ينتهي العرض خلال {time}",
+  "@countdownSemantics": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "brandsCount": "{count} ماركة",
+  "@brandsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bundlesSubtitle": "منتجات مختارة معاً بسعر أقل",
+  "sortByLabel": "ترتيب حسب:",
+  "giftStepOf": "الخطوة {step} من {total}",
+  "@giftStepOf": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "giftStepCategory": "في أي قسم تبحث؟",
+  "giftBudgetChip": "الميزانية: {amount}",
+  "@giftBudgetChip": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "giftSuggestionsCount": "اقتراحات لك ({count})",
+  "@giftSuggestionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "giftPick": "اختر",
+  "giftSelectedCount": "تم اختيار {count}",
+  "@giftSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "giftAnyCategory": "أي قسم",
+  "cartFlashNote": "سعر العرض الخاطف محجوز لك لفترة محدودة",
+  "cartPayNowShipping": "ادفع الآن (التوصيل)",
+  "cartPayOnDelivery": "الدفع عند التسليم",
+  "cartSecureNote": "دفع آمن · الدفع عند الاستلام متاح",
+  "cartBundleLine": "باقة",
+  "transferTo": "حوّل إلى",
+  "proofTapToUpload": "اضغط لرفع إيصال التحويل",
+  "proofUploadHint": "صورة واضحة للإيصال من المعرض أو الكاميرا",
+  "noFee": "بدون رسوم",
+  "orderThanksLead": "شكرًا لك! رقم طلبك",
+  "orderStatus": "الحالة",
+  "orderNumberCopy": "نسخ رقم الطلب",
+  "reviewsCount": "{count} تقييم",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "galleryVideo": "فيديو المنتج",
+  "galleryCounter": "{index} / {count}",
+  "@galleryCounter": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "variantSelected": "{option}: {value}",
+  "@variantSelected": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "allLabel": "الكل",
+  "searchNoResultsBody": "لم نجد منتجات مطابقة. جرّب كلمات أخرى أو تصفّح الأقسام.",
+  "aboutBody": "منتجات أصلية من أفضل العلامات، تغليف هدايا مميز، شحن سريع لكل المحافظات والدفع عند الاستلام.",
+  "changePasswordLead": "أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة من 8 أحرف على الأقل.",
+  "affiliateBonusTitle": "مكافأة المبيعات",
+  "affiliateBonusRule": "{amount} عن كل {threshold} من المبيعات المسلّمة",
+  "@affiliateBonusRule": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateBonusEarned": "المكتسب: {amount}",
+  "@affiliateBonusEarned": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "affiliateProductsIntro": "انسخ رابطك الخاص أو شارك رمز QR. تُحتسب العمولة على كل طلب يأتي من رابطك.",
+  "affiliateQrHint": "امسح الرمز لفتح المنتج برابطك",
+  "affiliateQrSave": "حفظ الصورة",
+  "payoutHistory": "سجل المدفوعات",
+  "blogReadMore": "اقرأ المزيد",
+  "blogBack": "رجوع إلى المدونة",
+  "blogSubtitle": "نصائح للعناية وأفكار للهدايا",
+  "contactHeroTitle": "يسعدنا مساعدتك",
+  "contactHeroBody": "تواصل معنا عبر واتساب أو الهاتف أو البريد الإلكتروني."
 }

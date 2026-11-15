@@ -9,7 +9,6 @@ import '../../../core/utils/context_ext.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../addresses/application/address_controller.dart';
 import '../../addresses/data/address_models.dart';
-import '../../addresses/presentation/addresses_pages.dart';
 import '../../cart/application/cart_controller.dart';
 import '../../cart/data/cart_models.dart';
 import '../../cart/presentation/totals_card.dart';
@@ -96,71 +95,55 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   ),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.all(AppSpacing.md),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.gutter,
+                        AppSpacing.sm,
+                        AppSpacing.gutter,
+                        AppSpacing.lg,
+                      ),
                       children: [
-                        switch (s.step) {
-                          CheckoutStep.address => _AddressStep(state: s),
-                          CheckoutStep.shipping => _ShippingStep(
-                            state: s,
-                            currency: currency,
-                          ),
-                          CheckoutStep.packaging => _PackagingStep(
-                            state: s,
-                            currency: currency,
-                          ),
-                          CheckoutStep.payment => _PaymentStep(state: s),
-                          CheckoutStep.review => _ReviewStep(
-                            state: s,
-                            currency: currency,
-                          ),
-                        },
+                        SectionCard(
+                          number: index + 1,
+                          title: _stepLabel(context, s.step),
+                          child: switch (s.step) {
+                            CheckoutStep.address => _AddressStep(state: s),
+                            CheckoutStep.shipping => _ShippingStep(
+                              state: s,
+                              currency: currency,
+                            ),
+                            CheckoutStep.packaging => _PackagingStep(
+                              state: s,
+                              currency: currency,
+                            ),
+                            CheckoutStep.payment => _PaymentStep(
+                              state: s,
+                              currency: currency,
+                            ),
+                            CheckoutStep.review => _ReviewStep(
+                              state: s,
+                              currency: currency,
+                            ),
+                          },
+                        ),
                       ],
                     ),
                   ),
-                  SafeArea(
-                    top: false,
-                    child: Material(
-                      elevation: 8,
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Row(
-                          children: [
-                            if (quoteTotal != null)
-                              Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  end: AppSpacing.md,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      l10n.cartTotal,
-                                      style: context.text.bodySmall,
-                                    ),
-                                    PriceText(
-                                      amount: quoteTotal,
-                                      currency: currency,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            Expanded(
-                              child: AppButton(
-                                label: last
-                                    ? l10n.placeOrder
-                                    : l10n.continueAction,
-                                loading: s.working,
-                                onPressed: last
-                                    ? _place
-                                    : s.canLeave(s.step)
-                                    ? c.next
-                                    : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                  StickyActionBar(
+                    leading: quoteTotal == null
+                        ? null
+                        : BarTotal(
+                            label: l10n.cartTotal,
+                            amount: l10n.money(quoteTotal, currency),
+                          ),
+                    action: AppButton(
+                      label: last ? l10n.placeOrder : l10n.continueAction,
+                      size: AppButtonSize.l,
+                      loading: s.working,
+                      onPressed: last
+                          ? _place
+                          : s.canLeave(s.step)
+                          ? c.next
+                          : null,
                     ),
                   ),
                 ],
@@ -184,38 +167,61 @@ class _StepHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cur = steps.indexOf(current);
+    final c = context.colors;
+    final x = context.extra;
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.smd,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < steps.length; i++) ...[
+          for (var i = 0; i < steps.length; i++)
             Expanded(
               child: InkWell(
                 onTap: () => onTap(steps[i]),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: Semantics(
                   label: _stepLabel(context, steps[i]),
                   selected: i == cur,
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: i <= cur
-                            ? context.colors.primary
-                            : context.colors.surfaceContainerHigh,
-                        foregroundColor: i <= cur
-                            ? context.colors.onPrimary
-                            : context.colors.onSurfaceVariant,
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i < cur
+                              ? x.success
+                              : i == cur
+                              ? c.primary
+                              : c.surfaceContainerHighest,
+                        ),
                         child: i < cur
-                            ? const Icon(Icons.check_rounded, size: 16)
-                            : Text('${i + 1}'),
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              )
+                            : Text(
+                                '${i + 1}',
+                                style: context.textX.labelXs.copyWith(
+                                  color: i == cur ? c.onPrimary : x.textMuted,
+                                ),
+                              ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _stepLabel(context, steps[i]),
-                        style: context.text.labelSmall,
+                        style: context.textX.labelXs.copyWith(
+                          color: i < cur
+                              ? x.success
+                              : i == cur
+                              ? c.primary
+                              : x.textMuted,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -224,7 +230,6 @@ class _StepHeader extends StatelessWidget {
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -241,7 +246,12 @@ class _ErrorText extends StatelessWidget {
       ? const SizedBox.shrink()
       : Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: Text(text!, style: TextStyle(color: context.colors.error)),
+          child: Text(
+            text!,
+            style: context.text.bodySmall?.copyWith(
+              color: context.colors.error,
+            ),
+          ),
         );
 }
 
@@ -260,8 +270,6 @@ class _AddressStep extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.stepAddress, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
         _ErrorText(
           state.errorFor('address_id') ??
               state.errorFor('city_id') ??
@@ -274,22 +282,66 @@ class _AddressStep extends ConsumerWidget {
         else if (addresses.items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(l10n.addressNone, textAlign: TextAlign.center),
+            child: Text(
+              l10n.addressNone,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
           ),
-        for (final a in addresses.items)
-          AddressCard(
-            address: a,
+        for (final a in addresses.items) ...[
+          ChoiceCard(
+            key: ValueKey('checkout-address-${a.id}'),
+            title: a.label ?? a.name,
             selected: a.id == state.addressId,
             onTap: () => c.selectAddress(a),
+            badge: a.isDefault
+                ? StatusChip(label: l10n.addressDefault, tone: StatusTone.pop)
+                : null,
+            subtitle:
+                '${a.name} · \u2066${a.phone}\u2069\n${a.city} - ${a.address}',
+            trailing: OutlinedButton.icon(
+              onPressed: () async {
+                final saved = await context.push<Address>(
+                  AppRoutes.addressEdit,
+                  extra: a,
+                );
+                if (saved != null && saved.id == state.addressId) {
+                  await c.selectAddress(saved);
+                }
+              },
+              icon: const Icon(Icons.edit_outlined, size: 14),
+              label: Text(l10n.edit),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(44, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                textStyle: context.textX.labelXs.copyWith(fontSize: 12),
+                backgroundColor: context.colors.surfaceContainerLowest,
+              ),
+            ),
           ),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.add_rounded),
-          label: Text(l10n.addressAdd),
-          onPressed: () async {
+          const SizedBox(height: AppSpacing.smd),
+        ],
+        DashedBox(
+          semanticLabel: l10n.addressAdd,
+          onTap: () async {
             final saved = await context.push<Address>(AppRoutes.addressEdit);
             if (saved != null) await c.selectAddress(saved);
           },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_rounded, size: 18, color: context.colors.primary),
+              const SizedBox(width: 6),
+              Text(
+                l10n.addressAdd,
+                style: context.text.labelMedium?.copyWith(
+                  color: context.colors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -311,50 +363,38 @@ class _ShippingStep extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.stepShipping, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
         _ErrorText(state.errorFor('shipping_company_id')),
         if (state.loadingShipping)
           const Center(child: CircularProgressIndicator())
         else if (state.shippingOptions.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(l10n.shippingNoOptions, textAlign: TextAlign.center),
-          ),
-        for (final o in state.shippingOptions)
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              side: BorderSide(
-                color: o.id == state.shippingId
-                    ? context.colors.primary
-                    : Colors.transparent,
-                width: 2,
+            child: Text(
+              l10n.shippingNoOptions,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
               ),
             ),
-            child: ListTile(
-              onTap: () => c.selectShipping(o.id),
-              leading: Icon(
-                o.id == state.shippingId
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: context.colors.primary,
-              ),
-              title: Text(o.name),
-              subtitle: o.etaDays == null
-                  ? null
-                  : Text(l10n.shippingEta(o.etaDays!)),
-              trailing: o.free
-                  ? StatusChip(
-                      label: l10n.shippingFree,
-                      tone: StatusTone.success,
-                    )
-                  : Text(
-                      l10n.currencyAmount(o.fee, currency),
-                      style: context.text.titleSmall,
+          ),
+        for (final o in state.shippingOptions) ...[
+          ChoiceCard(
+            title: o.name,
+            icon: Icons.local_shipping_outlined,
+            selected: o.id == state.shippingId,
+            onTap: () => c.selectShipping(o.id),
+            subtitle: o.etaDays == null ? null : l10n.shippingEta(o.etaDays!),
+            trailing: o.free
+                ? StatusChip(label: l10n.shippingFree, tone: StatusTone.success)
+                : Text(
+                    l10n.money(o.fee, currency),
+                    style: context.text.titleSmall?.copyWith(
+                      color: context.extra.successText,
                     ),
-            ),
+                  ),
           ),
+          const SizedBox(height: AppSpacing.smd),
+        ],
       ],
     );
   }
@@ -379,45 +419,41 @@ class _PackagingStep extends ConsumerWidget {
       String? price,
       String? image,
       required VoidCallback onTap,
-    }) => Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(
-          color: selected ? context.colors.primary : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: ListTile(
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+      child: ChoiceCard(
+        selected: selected,
+        title: title,
+        subtitle: subtitle,
         onTap: onTap,
         leading: image == null
-            ? Icon(
-                selected
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: context.colors.primary,
-              )
-            : NetworkImageX(
-                url: image,
-                width: 48,
-                height: 48,
-                radius: 8,
-                cacheWidth: 96,
+            ? null
+            : Container(
+                decoration: BoxDecoration(
+                  color: context.extra.goldSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: NetworkImageX(
+                  url: image,
+                  width: 56,
+                  height: 56,
+                  radius: AppRadius.sm,
+                  cacheWidth: 112,
+                ),
               ),
-        title: Text(title),
-        subtitle: subtitle == null ? null : Text(subtitle),
         trailing: price == null
             ? null
             : Text(
-                l10n.currencyAmount(price, currency),
-                style: context.text.titleSmall,
+                '+ ${l10n.money(price, currency)}',
+                style: context.text.titleSmall?.copyWith(
+                  color: context.extra.goldText,
+                ),
               ),
       ),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.stepPackaging, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
         _ErrorText(state.errorFor('packaging_option_id')),
         tile(
           selected: state.packagingId == null,
@@ -441,116 +477,153 @@ class _PackagingStep extends ConsumerWidget {
 // -- payment ---------------------------------------------------------------
 
 class _PaymentStep extends ConsumerWidget {
-  const _PaymentStep({required this.state});
+  const _PaymentStep({required this.state, required this.currency});
 
   final CheckoutState state;
+  final String currency;
+
+  /// "+ 2.5%" / "+ 15 EGP" / "no fee", from the method's server values.
+  Widget _fee(BuildContext context, PaymentMethod m) {
+    final l10n = context.l10n;
+    final parts = [
+      if (!isZeroMoney(m.feePercent)) '+ ${m.feePercent}%',
+      if (!isZeroMoney(m.feeFixed))
+        '+ ${l10n.money(m.feeFixed, currency)}',
+    ];
+    return Text(
+      parts.isEmpty ? l10n.noFee : parts.join(' '),
+      style: context.textX.labelXs.copyWith(
+        color: context.extra.successText,
+        fontSize: 12,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final x = context.extra;
+    final c = ref.read(checkoutControllerProvider.notifier);
+    final methods = state.payments.methods;
+    final selected = state.payment;
+    final proofMethod = state.needsPrepay ? state.prepay : selected;
+    final proof = state.proofRequired && proofMethod != null
+        ? _ProofBlock(state: state, method: proofMethod)
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ErrorText(state.errorFor('payment_method_id')),
+        if (methods.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Text(
+              l10n.paymentNoMethods,
+              textAlign: TextAlign.center,
+              style: context.text.bodyMedium?.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        for (final m in methods) ...[
+          ChoiceCard(
+            title: m.name,
+            icon: Icons.payments_outlined,
+            selected: m.id == state.paymentId,
+            onTap: () => c.selectPayment(m.id),
+            subtitle: m.isCod || m.instructions == null
+                ? null
+                : m.instructions!,
+            trailing: _fee(context, m),
+          ),
+          const SizedBox(height: AppSpacing.smd),
+          // COD: the mint "pay shipping upfront" block with the transfer
+          // methods; other methods show their proof block under the card.
+          if (m.id == state.paymentId && state.needsPrepay) ...[
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: x.mintSoft,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.paymentPrepayTitle,
+                    style: context.text.titleSmall?.copyWith(
+                      color: x.mintStrong,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.paymentPrepayBody,
+                    style: context.text.bodySmall?.copyWith(
+                      color: x.mintStrong,
+                    ),
+                  ),
+                  _ErrorText(state.errorFor('prepay_method_id')),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (final p in state.payments.prepayCandidates) ...[
+                    ChoiceCard(
+                      title: p.name,
+                      icon: Icons.account_balance_wallet_outlined,
+                      selected: state.prepayId == p.id,
+                      onTap: () => c.selectPrepay(p.id),
+                      subtitle: p.instructions,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.smd),
+          ],
+          if (m.id == state.paymentId && proof != null) ...[
+            proof,
+            const SizedBox(height: AppSpacing.smd),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// "حوّل إلى" account card with a Pop copy button, then the dashed proof
+/// upload target (opens the gallery / camera sheet).
+class _ProofBlock extends ConsumerWidget {
+  const _ProofBlock({required this.state, required this.method});
+
+  final CheckoutState state;
+  final PaymentMethod method;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final c = ref.read(checkoutControllerProvider.notifier);
-    final methods = state.payments.methods;
-    final selected = state.payment;
-    final proofMethod = state.needsPrepay ? state.prepay : selected;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.stepPayment, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        _ErrorText(state.errorFor('payment_method_id')),
-        if (methods.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Text(l10n.paymentNoMethods, textAlign: TextAlign.center),
-          ),
-        for (final m in methods)
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              side: BorderSide(
-                color: m.id == state.paymentId
-                    ? context.colors.primary
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: ListTile(
-              onTap: () => c.selectPayment(m.id),
-              leading: Icon(
-                m.id == state.paymentId
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: context.colors.primary,
-              ),
-              title: Text(m.name),
-              subtitle: m.isCod || m.instructions == null
-                  ? null
-                  : Text(m.instructions!),
-            ),
-          ),
-        if (state.needsPrepay) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(l10n.paymentPrepayTitle, style: context.text.titleSmall),
-          Text(l10n.paymentPrepayBody, style: context.text.bodySmall),
-          _ErrorText(state.errorFor('prepay_method_id')),
-          RadioGroup<int>(
-            groupValue: state.prepayId,
-            onChanged: (v) => v == null ? null : c.selectPrepay(v),
-            child: Column(
-              children: [
-                for (final m in state.payments.prepayCandidates)
-                  RadioListTile<int>(
-                    value: m.id,
-                    title: Text(m.name),
-                    subtitle: m.instructions == null
-                        ? null
-                        : Text(m.instructions!),
-                  ),
-              ],
-            ),
-          ),
+        if (method.accountNumber != null) ...[
+          TransferToCard(number: method.accountNumber!),
+          const SizedBox(height: AppSpacing.smd),
         ],
-        if (state.proofRequired && proofMethod != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            color: context.colors.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.proofRequired, style: context.text.titleSmall),
-                  if (proofMethod.accountNumber != null)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: SelectableText(proofMethod.accountNumber!),
-                      trailing: IconButton(
-                        tooltip: l10n.copy,
-                        icon: const Icon(Icons.copy_rounded),
-                        onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(text: proofMethod.accountNumber!),
-                          );
-                          context.showSnack(l10n.copied);
-                        },
-                      ),
-                    ),
-                  _ErrorText(state.errorFor('proof')),
-                  ProofPreview(
-                    path: state.proofPath,
-                    onChange: () async {
-                      final p = await pickProof(context, ref);
-                      if (p != null) c.setProof(p);
-                    },
-                    onRemove: state.proofPath == null
-                        ? null
-                        : () => c.setProof(null),
-                  ),
-                ],
-              ),
-            ),
+        _ErrorText(state.errorFor('proof')),
+        ProofPreview(
+          path: state.proofPath,
+          onChange: () async {
+            final p = await pickProof(context, ref);
+            if (p != null) c.setProof(p);
+          },
+          onRemove: state.proofPath == null ? null : () => c.setProof(null),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.proofRequired,
+          style: context.text.bodySmall?.copyWith(
+            color: context.extra.textMuted,
           ),
-        ],
+        ),
       ],
     );
   }
@@ -588,39 +661,68 @@ class _ReviewStep extends ConsumerWidget {
       String body,
       CheckoutStep step, {
       bool editable = true,
-    }) => Card(
-      child: ListTile(
-        title: Text(title, style: context.text.labelMedium),
-        subtitle: Text(body, style: context.text.bodyMedium),
-        trailing: editable
-            ? TextButton(onPressed: () => c.goTo(step), child: Text(l10n.edit))
-            : null,
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.extra.textMuted,
+                  ),
+                ),
+                Text(body, style: context.text.titleSmall),
+              ],
+            ),
+          ),
+          if (editable)
+            TextButton(
+              onPressed: () => c.goTo(step),
+              style: TextButton.styleFrom(
+                foregroundColor: context.extra.pop,
+                minimumSize: const Size(44, 36),
+                textStyle: context.textX.labelXs.copyWith(fontSize: 12),
+              ),
+              child: Text(l10n.edit),
+            ),
+        ],
       ),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.stepReview, style: context.text.titleMedium),
-        const SizedBox(height: AppSpacing.sm),
-        if (problems.isNotEmpty)
-          Card(
-            color: context.colors.errorContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final p in problems)
-                    Text(p, style: TextStyle(color: context.colors.error)),
-                ],
-              ),
+        if (problems.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: context.colors.errorContainer,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final p in problems)
+                  Text(
+                    p,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.colors.onErrorContainer,
+                    ),
+                  ),
+              ],
             ),
           ),
+          const SizedBox(height: AppSpacing.smd),
+        ],
         if (address != null)
           section(
             l10n.reviewAddress,
-            '${address.name} - ${address.phone}\n${address.city}, ${address.address}',
+            '${address.name} - \u2066${address.phone}\u2069\n${address.city}, ${address.address}',
             CheckoutStep.address,
           ),
         if (ship != null)
@@ -628,7 +730,7 @@ class _ReviewStep extends ConsumerWidget {
             l10n.reviewShipping,
             ship.free
                 ? '${ship.name} - ${l10n.shippingFree}'
-                : '${ship.name} - ${l10n.currencyAmount(ship.fee, currency)}',
+                : '${ship.name} - ${l10n.money(ship.fee, currency)}',
             CheckoutStep.shipping,
           ),
         if (pack != null)
@@ -639,15 +741,14 @@ class _ReviewStep extends ConsumerWidget {
             state.payment!.name,
             CheckoutStep.payment,
           ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         AppTextField(
           label: l10n.reviewNotes,
           hint: l10n.reviewNotesHint,
           maxLines: 2,
-          prefixIcon: Icons.notes_rounded,
           onChanged: c.setNotes,
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         if (state.working && cart == null)
           const Center(child: CircularProgressIndicator())
         else if (cart != null)

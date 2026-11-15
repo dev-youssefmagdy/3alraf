@@ -70,6 +70,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return AuthScaffold(
       title: l10n.login,
       subtitle: widget.expired ? l10n.sessionExpiredNotice : l10n.loginSubtitle,
+      footer: Center(
+        child: TextButton(
+          onPressed: () => context.go(AppRoutes.home),
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
+          child: Text(l10n.continueAsGuest),
+        ),
+      ),
       children: [
         Form(
           key: _form,
@@ -81,7 +88,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
-                prefixIcon: Icons.mail_outline_rounded,
+                ltr: true,
                 errorText: _errors['email'],
                 validator: (v) => emailValidator(context, v),
               ),
@@ -92,7 +99,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 obscure: true,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.password],
-                prefixIcon: Icons.lock_outline_rounded,
                 errorText: _errors['password'],
                 validator: (v) => requiredValidator(context, v),
                 onSubmitted: (_) => _submit(),
@@ -101,29 +107,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
         Align(
-          alignment: AlignmentDirectional.centerEnd,
+          alignment: AlignmentDirectional.centerStart,
           child: TextButton(
             onPressed: () => context.push(AppRoutes.forgotPassword),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            ),
             child: Text(l10n.forgotPasswordLink),
           ),
         ),
-        AppButton(label: l10n.login, loading: _busy, onPressed: _submit),
-        GoogleSignInButton(onSignedIn: _done),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(l10n.noAccountPrompt),
-            TextButton(
-              onPressed: () =>
-                  context.pushReplacement('${AppRoutes.register}$qs'),
-              child: Text(l10n.register),
-            ),
-          ],
+        const SizedBox(height: AppSpacing.xs),
+        AppButton(
+          label: l10n.login,
+          size: AppButtonSize.l,
+          loading: _busy,
+          onPressed: _submit,
         ),
-        TextButton(
-          onPressed: () => context.go(AppRoutes.home),
-          child: Text(l10n.continueAsGuest),
+        GoogleSignInButton(onSignedIn: _done),
+        const SizedBox(height: AppSpacing.sm),
+        AuthSwitchLine(
+          prompt: l10n.noAccountPrompt,
+          action: l10n.register,
+          onTap: () => context.pushReplacement('${AppRoutes.register}$qs'),
         ),
       ],
     );

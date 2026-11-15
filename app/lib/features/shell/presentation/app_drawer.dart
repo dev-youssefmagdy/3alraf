@@ -10,187 +10,230 @@ import '../../../core/routing/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/utils/context_ext.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../account/presentation/about_page.dart';
 import '../../content/application/content_providers.dart';
 import '../../startup/application/startup_controller.dart';
 import '../../startup/presentation/language_picker.dart';
 import '../../store/application/store_controller.dart';
 
-/// Side menu: catalog shortcuts, custom/static pages, blog, affiliate,
-/// track order, about / contact / rate app, language, theme.
+/// Side menu (Drawer `62:4164`): 320 wide from the start side with 24
+/// radius on the inner corners · logo + close · violet gift CTA · the
+/// "collections & offers" group (brands, bundles, wishlist, custom pages,
+/// blog, affiliate, track order) · the "info" group (static pages, contact,
+/// about, rate app, theme, language) · mint WhatsApp pill · version.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final x = context.extra;
     final store = ref.watch(storeControllerProvider);
     final locale = ref.watch(localeProvider);
     final version = ref.watch(appVersionProvider).value;
     final name = store.name;
     final whatsapp = store.profile?.whatsapp;
+    final giftOn = store.profile?.features['gift_finder'] ?? false;
     final customPages =
         ref.watch(customPagesProvider).asData?.value ?? const [];
     final pages = ref.watch(pagesProvider).asData?.value ?? const [];
     final themeMode = ref.watch(themeModeProvider);
+    void close() => Navigator.of(context).pop();
     return Drawer(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadiusDirectional.horizontal(
+          end: Radius.circular(AppRadius.lg),
+        ),
+      ),
       child: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 4, 8),
+              child: Row(
                 children: [
-                  Image.asset('assets/branding/splash_logo.png', width: 120),
-                  if (name.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(name, style: context.text.titleMedium),
-                  ],
+                  AppLogo(
+                    semanticLabel: name.isEmpty ? l10n.appName : name,
+                    width: 72,
+                    height: 56,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: l10n.close,
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: close,
+                  ),
                 ],
               ),
             ),
             const Divider(height: 1),
             Expanded(
               child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  _nav(
-                    context,
-                    Icons.sell_outlined,
-                    l10n.brands,
-                    AppRoutes.brands,
-                  ),
-                  _nav(
-                    context,
-                    Icons.inventory_2_outlined,
-                    l10n.bundles,
-                    AppRoutes.bundles,
-                  ),
-                  if (store.profile?.features['gift_finder'] ?? false)
-                    _nav(
-                      context,
-                      Icons.card_giftcard_rounded,
-                      l10n.giftFinder,
-                      AppRoutes.giftFinder,
-                    ),
-                  if (customPages.isNotEmpty)
-                    ExpansionTile(
-                      leading: const Icon(Icons.local_offer_outlined),
-                      title: Text(l10n.drawerCollections),
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      children: [
-                        for (final p in customPages)
-                          ListTile(
-                            key: ValueKey('custom:${p.slug}'),
-                            contentPadding: const EdgeInsetsDirectional.only(
-                              start: 72,
-                              end: 16,
-                            ),
-                            title: Text(p.title),
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.push(AppRoutes.customPage(p.slug));
-                            },
-                          ),
-                      ],
-                    ),
-                  if (store.profile?.hasBlog ?? true)
-                    _nav(
-                      context,
-                      Icons.article_outlined,
-                      l10n.blogTitle,
-                      AppRoutes.blog,
-                    ),
-                  const Divider(),
-                  _nav(
-                    context,
-                    Icons.handshake_outlined,
-                    l10n.affiliateTitle,
-                    AppRoutes.affiliate,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.local_shipping_outlined),
-                    title: Text(l10n.trackOrder),
-                    onTap: () {
-                      final router = GoRouter.of(context);
-                      Navigator.of(context).pop();
-                      showTrackOrderDialog(router);
-                    },
-                  ),
-                  if (pages.isNotEmpty)
-                    ExpansionTile(
-                      leading: const Icon(Icons.description_outlined),
-                      title: Text(l10n.drawerInfoPages),
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      children: [
-                        for (final p in pages)
-                          ListTile(
-                            key: ValueKey('page:${p.slug}'),
-                            contentPadding: const EdgeInsetsDirectional.only(
-                              start: 72,
-                              end: 16,
-                            ),
-                            title: Text(p.title),
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.push(AppRoutes.page(p.slug));
-                            },
-                          ),
-                      ],
-                    ),
-                  _nav(
-                    context,
-                    Icons.support_agent_rounded,
-                    l10n.contactTitle,
-                    AppRoutes.contact,
-                  ),
-                  _nav(
-                    context,
-                    Icons.info_outline_rounded,
-                    l10n.aboutTitle,
-                    AppRoutes.about,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.star_outline_rounded),
-                    title: Text(l10n.rateApp),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      rateApp(context, ref);
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.brightness_6_outlined),
-                    title: Text(l10n.themeTitle),
-                    subtitle: Text(themeLabel(context, themeMode)),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      showThemePicker(context, ref);
-                    },
-                  ),
-                  if (store.availableLocales.length > 1)
-                    ListTile(
-                      leading: const Icon(Icons.translate_rounded),
-                      title: Text(l10n.language),
-                      subtitle: Text(languageName(locale.languageCode)),
+                  if (giftOn) ...[
+                    _GiftCta(
                       onTap: () {
-                        Navigator.of(context).pop();
-                        showLanguagePicker(ref);
+                        close();
+                        context.push(AppRoutes.giftFinder);
                       },
                     ),
-                  if (whatsapp != null && whatsapp.isNotEmpty)
-                    ListTile(
-                      leading: const Icon(Icons.chat_outlined),
-                      title: Text(l10n.contactWhatsapp),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        launchUrl(
-                          Uri.parse('https://wa.me/$whatsapp'),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      },
+                    const SizedBox(height: AppSpacing.mdl),
+                  ],
+                  AppListGroup(
+                    title: l10n.drawerCollections,
+                    children: [
+                      _nav(
+                        context,
+                        Icons.sell_outlined,
+                        l10n.brands,
+                        AppRoutes.brands,
+                      ),
+                      _nav(
+                        context,
+                        Icons.inventory_2_outlined,
+                        l10n.bundles,
+                        AppRoutes.bundles,
+                      ),
+                      AppListTile(
+                        key: const ValueKey('drawer-wishlist'),
+                        icon: Icons.favorite_border_rounded,
+                        title: l10n.navWishlist,
+                        onTap: () {
+                          close();
+                          context.go(AppRoutes.wishlist);
+                        },
+                      ),
+                      for (final p in customPages)
+                        AppListTile(
+                          key: ValueKey('custom:${p.slug}'),
+                          icon: Icons.local_offer_outlined,
+                          title: p.title,
+                          onTap: () {
+                            close();
+                            context.push(AppRoutes.customPage(p.slug));
+                          },
+                        ),
+                      if (store.profile?.hasBlog ?? true)
+                        _nav(
+                          context,
+                          Icons.article_outlined,
+                          l10n.blogTitle,
+                          AppRoutes.blog,
+                        ),
+                      _nav(
+                        context,
+                        Icons.handshake_outlined,
+                        l10n.affiliateTitle,
+                        AppRoutes.affiliate,
+                      ),
+                      AppListTile(
+                        icon: Icons.local_shipping_outlined,
+                        title: l10n.trackOrder,
+                        onTap: () {
+                          final router = GoRouter.of(context);
+                          close();
+                          showTrackOrderDialog(router);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.mdl),
+                  AppListGroup(
+                    title: l10n.drawerInfoPages,
+                    children: [
+                      for (final p in pages)
+                        AppListTile(
+                          key: ValueKey('page:${p.slug}'),
+                          icon: Icons.description_outlined,
+                          title: p.title,
+                          onTap: () {
+                            close();
+                            context.push(AppRoutes.page(p.slug));
+                          },
+                        ),
+                      _nav(
+                        context,
+                        Icons.support_agent_rounded,
+                        l10n.contactTitle,
+                        AppRoutes.contact,
+                      ),
+                      _nav(
+                        context,
+                        Icons.info_outline_rounded,
+                        l10n.aboutTitle,
+                        AppRoutes.about,
+                      ),
+                      AppListTile(
+                        icon: Icons.star_outline_rounded,
+                        title: l10n.rateApp,
+                        onTap: () {
+                          close();
+                          rateApp(context, ref);
+                        },
+                      ),
+                      AppListTile(
+                        icon: Icons.brightness_6_outlined,
+                        title: l10n.themeTitle,
+                        value: themeLabel(context, themeMode),
+                        onTap: () {
+                          close();
+                          showThemePicker(context, ref);
+                        },
+                      ),
+                      if (store.availableLocales.length > 1)
+                        AppListTile(
+                          icon: Icons.translate_rounded,
+                          title: l10n.language,
+                          value: languageName(locale.languageCode),
+                          onTap: () {
+                            close();
+                            showLanguagePicker(ref);
+                          },
+                        ),
+                    ],
+                  ),
+                  if (whatsapp != null && whatsapp.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.mdl),
+                    Material(
+                      color: x.mint,
+                      shape: const StadiumBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () {
+                          close();
+                          launchUrl(
+                            Uri.parse('https://wa.me/$whatsapp'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.smd,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.chat_outlined,
+                                size: 20,
+                                color: AppColors.slate950,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                l10n.contactWhatsapp,
+                                style: context.text.labelMedium?.copyWith(
+                                  color: AppColors.slate950,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -210,14 +253,72 @@ class AppDrawer extends ConsumerWidget {
 }
 
 Widget _nav(BuildContext context, IconData icon, String title, String route) =>
-    ListTile(
-      leading: Icon(icon),
-      title: Text(title),
+    AppListTile(
+      icon: icon,
+      title: title,
       onTap: () {
         Navigator.of(context).pop();
         context.push(route);
       },
     );
+
+/// Violet gift finder CTA at the top of the drawer.
+class _GiftCta extends StatelessWidget {
+  const _GiftCta({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final x = context.extra;
+    return Material(
+      color: x.violet,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: x.sun, shape: BoxShape.circle),
+                child: const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: AppColors.slate950,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.smd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.giftFinder,
+                      style: context.text.titleMedium?.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      l10n.giftCtaBody,
+                      style: context.text.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 final _uuid = RegExp(r'[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}');
 
@@ -233,35 +334,66 @@ Future<void> showTrackOrderDialog(GoRouter router) async {
   final token = await showDialog<String>(
     context: context,
     builder: (c) => StatefulBuilder(
-      builder: (c, setState) => AlertDialog(
-        title: Text(c.l10n.trackOrder),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textDirection: TextDirection.ltr,
-          decoration: InputDecoration(
-            labelText: c.l10n.trackOrderHint,
-            errorText: error,
+      builder: (c, setState) {
+        void submit() {
+          final t = parseOrderToken(controller.text);
+          if (t == null) {
+            setState(() => error = c.l10n.trackOrderInvalid);
+          } else {
+            Navigator.pop(c, t);
+          }
+        }
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: Text(c.l10n.cancel),
+          icon: const ToneBlob(
+            icon: Icons.local_shipping_outlined,
+            tone: StateTone.sun,
+            size: 64,
+            iconSize: 30,
           ),
-          TextButton(
-            onPressed: () {
-              final t = parseOrderToken(controller.text);
-              if (t == null) {
-                setState(() => error = c.l10n.trackOrderInvalid);
-              } else {
-                Navigator.pop(c, t);
-              }
-            },
-            child: Text(c.l10n.continueAction),
+          title: Text(c.l10n.trackOrder, style: c.text.headlineSmall),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textDirection: TextDirection.ltr,
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+              hintText: c.l10n.trackOrderHint,
+              errorText: error,
+              prefixIcon: const Icon(Icons.link_rounded),
+            ),
           ),
-        ],
-      ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: c.l10n.cancel,
+                    variant: AppButtonVariant.outlined,
+                    onPressed: () => Navigator.pop(c),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.smd),
+                Expanded(
+                  child: AppButton(
+                    label: c.l10n.continueAction,
+                    onPressed: submit,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     ),
   );
   controller.dispose();

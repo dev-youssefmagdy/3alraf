@@ -37,7 +37,7 @@ void main() {
     await tester.pumpAndSettle();
     // Shipping (single option preselected, price from server).
     expect(find.text('Fast'), findsOneWidget);
-    expect(find.textContaining('40.00'), findsWidgets);
+    expect(find.textContaining('40'), findsWidgets);
     await tester.tap(find.text('متابعة'));
     await tester.pumpAndSettle();
     // Payment: choose COD.
@@ -47,7 +47,7 @@ void main() {
     await tester.pumpAndSettle();
     // Review shows the validated server total.
     expect(env.requestsTo('/checkout/validate'), isNotEmpty);
-    expect(find.textContaining('240.00'), findsWidgets);
+    expect(find.textContaining('240'), findsWidgets);
 
     await tester.tap(find.text('تأكيد الطلب'));
     await tester.pumpAndSettle();

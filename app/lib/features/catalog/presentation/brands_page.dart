@@ -19,18 +19,26 @@ class BrandsPage extends ConsumerWidget {
     final l10n = context.l10n;
     final brands = ref.watch(brandsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.brands)),
+      appBar: AppBar(
+        title: Text(l10n.brands),
+        actions: [
+          IconButton(
+            tooltip: l10n.searchHint,
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () => context.push(AppRoutes.search),
+          ),
+        ],
+      ),
       body: brands.when(
         loading: () => GridView.count(
-          crossAxisCount: 3,
-          padding: const EdgeInsets.all(AppSpacing.md),
+          crossAxisCount: 2,
+          padding: const EdgeInsets.all(AppSpacing.gutter),
+          mainAxisSpacing: AppSpacing.grid,
+          crossAxisSpacing: AppSpacing.grid,
           physics: const NeverScrollableScrollPhysics(),
           children: [
-            for (var i = 0; i < 9; i++)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.sm),
-                child: AppShimmer(height: 80, radius: AppRadius.md),
-              ),
+            for (var i = 0; i < 6; i++)
+              const AppShimmer(height: double.infinity, radius: AppRadius.md),
           ],
         ),
         error: (e, _) =>
@@ -44,22 +52,46 @@ class BrandsPage extends ConsumerWidget {
                       .read(brandsProvider.future)
                       .catchError((_) => const <Brand>[]);
                 },
-                child: GridView.builder(
+                child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 130,
-                    mainAxisExtent: 124,
-                    mainAxisSpacing: AppSpacing.sm,
-                    crossAxisSpacing: AppSpacing.sm,
-                  ),
-                  itemCount: list.length,
-                  itemBuilder: (_, i) => CircleLabel(
-                    label: list[i].name,
-                    imageUrl: list[i].logo,
-                    contain: true,
-                    onTap: () => context.push(AppRoutes.brand(list[i].slug)),
-                  ),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: ColorHeaderBlock(
+                        title: l10n.brands,
+                        subtitle: l10n.brandsCount(list.length),
+                        tone: HeaderTone.sun,
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.all(AppSpacing.gutter),
+                      sliver: SliverLayoutBuilder(
+                        builder: (context, constraints) {
+                          final w = constraints.crossAxisExtent;
+                          final cols = w >= 560 ? 3 : 2;
+                          final cell =
+                              (w - AppSpacing.grid * (cols - 1)) / cols;
+                          return SliverGrid.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: cols,
+                                  mainAxisSpacing: AppSpacing.grid,
+                                  crossAxisSpacing: AppSpacing.grid,
+                                  mainAxisExtent: BrandTile.extentFor(
+                                    context,
+                                    cell,
+                                  ),
+                                ),
+                            itemCount: list.length,
+                            itemBuilder: (_, i) => BrandTile(
+                              brand: list[i],
+                              onTap: () =>
+                                  context.push(AppRoutes.brand(list[i].slug)),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
       ),

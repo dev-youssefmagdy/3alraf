@@ -35,8 +35,8 @@ class CategoriesPage extends ConsumerWidget {
                 children: [
                   for (var i = 0; i < 8; i++)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: AppShimmer(height: 56, radius: AppRadius.sm),
+                      padding: EdgeInsets.only(bottom: AppSpacing.smd),
+                      child: AppShimmer(height: 84, radius: AppRadius.md),
                     ),
                 ],
               ),
@@ -56,13 +56,19 @@ class CategoriesPage extends ConsumerWidget {
                             .read(menuProvider.future)
                             .catchError((_) => const <CategoryNode>[]);
                       },
-                      child: ListView(
+                      child: ListView.separated(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                        children: [
-                          for (final n in nodes)
-                            CategoryTile(node: n, depth: 0),
-                        ],
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.gutter,
+                          AppSpacing.xs,
+                          AppSpacing.gutter,
+                          AppSpacing.lg + kRaisedNavClearance,
+                        ),
+                        itemCount: nodes.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.smd),
+                        itemBuilder: (_, i) =>
+                            CategoryTile(node: nodes[i], depth: 0, index: i),
                       ),
                     ),
             ),
@@ -73,71 +79,138 @@ class CategoriesPage extends ConsumerWidget {
   }
 }
 
-/// One tree row; recursion handles any depth.
-class CategoryTile extends StatelessWidget {
-  const CategoryTile({super.key, required this.node, required this.depth});
+/// One root category card (`52:1119`): 60 ring + photo, name H3 and a
+/// chevron. Cards with children expand (brand border) to show the
+/// sub-category chips, "all in …" first; a leaf opens its listing.
+class CategoryTile extends StatefulWidget {
+  const CategoryTile({
+    super.key,
+    required this.node,
+    required this.depth,
+    this.index = 0,
+  });
 
   final CategoryNode node;
   final int depth;
+  final int index;
+
+  @override
+  State<CategoryTile> createState() => _CategoryTileState();
+}
+
+class _CategoryTileState extends State<CategoryTile> {
+  bool _open = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final leading = SizedBox(
-      width: 44,
-      height: 44,
-      child: ClipOval(
+    final c = context.colors;
+    final x = context.extra;
+    final node = widget.node;
+    final hasChildren = node.children.isNotEmpty;
+    final letter = node.name.isEmpty ? '' : node.name.characters.first;
+    final avatar = Container(
+      width: 60,
+      height: 60,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: x.ring(widget.index),
+      ),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: x.brandSoft,
+          border: Border.all(color: c.surfaceContainerLowest, width: 2),
+        ),
         child: node.image != null
-            ? NetworkImageX(url: node.image, cacheWidth: 44)
-            : ColoredBox(
-                color: context.extra.tint,
-                child: Center(
-                  child: Text(
-                    node.name.isEmpty ? '' : node.name.characters.first,
-                    style: TextStyle(
-                      color: context.colors.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+            ? NetworkImageX(url: node.image, cacheWidth: 60)
+            : Center(
+                child: Text(
+                  letter,
+                  style: context.text.titleLarge?.copyWith(color: c.primary),
                 ),
               ),
       ),
     );
-    final padding = EdgeInsetsDirectional.only(
-      start: AppSpacing.md + depth * AppSpacing.md,
-      end: AppSpacing.md,
-    );
-    if (node.children.isEmpty) {
-      return ListTile(
-        contentPadding: padding,
-        leading: leading,
-        title: Text(node.name),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => context.push(AppRoutes.category(node.slug)),
-      );
-    }
-    return ExpansionTile(
-      tilePadding: padding,
-      shape: const Border(),
-      collapsedShape: const Border(),
-      leading: leading,
-      title: Text(node.name),
-      children: [
-        ListTile(
-          contentPadding: padding.add(
-            const EdgeInsetsDirectional.only(start: AppSpacing.md),
-          ),
-          title: Text(
-            l10n.allInCategory(node.name),
-            style: TextStyle(
-              color: context.colors.primary,
-              fontWeight: FontWeight.w700,
+    final header = InkWell(
+      onTap: hasChildren
+          ? () => setState(() => _open = !_open)
+          : () => context.push(AppRoutes.category(node.slug)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.smd),
+        child: Row(
+          children: [
+            ExcludeSemantics(child: avatar),
+            const SizedBox(width: AppSpacing.smd),
+            Expanded(
+              child: Text(
+                node.name,
+                style: context.text.titleLarge,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          onTap: () => context.push(AppRoutes.category(node.slug)),
+            Icon(
+              hasChildren
+                  ? (_open
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded)
+                  : Icons.chevron_right_rounded,
+              color: c.onSurfaceVariant,
+            ),
+          ],
         ),
-        for (final c in node.children) CategoryTile(node: c, depth: depth + 1),
-      ],
+      ),
+    );
+    return Semantics(
+      expanded: hasChildren ? _open : null,
+      child: Material(
+        color: c.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(
+            color: _open ? c.primary : c.outlineVariant,
+            width: _open ? 1.5 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            if (hasChildren && _open)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.smd,
+                  0,
+                  AppSpacing.smd,
+                  AppSpacing.md,
+                ),
+                child: Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    ChoiceChip(
+                      selected: true,
+                      label: Text(l10n.allInCategory(node.name)),
+                      onSelected: (_) =>
+                          context.push(AppRoutes.category(node.slug)),
+                    ),
+                    for (final child in node.children)
+                      ChoiceChip(
+                        selected: false,
+                        label: Text(child.name),
+                        onSelected: (_) =>
+                            context.push(AppRoutes.category(child.slug)),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
