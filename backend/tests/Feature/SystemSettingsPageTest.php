@@ -9,6 +9,6 @@ it('renders the system settings page, lists it in the sidebar and saves', functi
     $admin->assignRole('super-admin');
     $this->actingAs($admin, 'admin');
 
-    $this->get('/admin/settings/system')->assertOk()->assertSee(route('admin.system-settings.edit'), false);
+    $this->get('/admin/settings/system')->assertOk()->assertSee('href="'.route('admin.system-settings.edit').'" class="side-link', false);
     $this->postJson('/admin/settings/system/validate', ['app_url' => 'bad'])->assertStatus(422);
 });
