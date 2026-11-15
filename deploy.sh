@@ -43,7 +43,7 @@ artisan down --retry=15 || true
 trap 'step "Leaving maintenance mode"; artisan up || true' EXIT
 
 step "Composer install"
-sudo -u "$WEB_USER" env COMPOSER_HOME=/tmp/composer composer install --no-dev --optimize-autoloader --no-interaction
+COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_HOME=/tmp/composer composer install --no-dev --optimize-autoloader --no-interaction
 
 if [ "$BUILD" -eq 1 ]; then
   step "Building frontend assets"
