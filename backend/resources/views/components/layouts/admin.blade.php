@@ -53,6 +53,7 @@
             ['admin.tags.index', 'tags', 'M7 7h.01M3 11V5a2 2 0 012-2h6l9 9-8 8-9-9z', 'tags.view'],
             ['admin.attributes.index', 'attributes', 'M4 6h16M4 12h16M4 18h7', 'attributes.view'],
             ['admin.general-settings.edit', 'settings_general', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z', 'general_settings.view', 'admin.general-settings.*'],
+            ['admin.system-settings.edit', 'settings_system', 'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2', 'general_settings.view', 'admin.system-settings.*'],
             ['admin.languages.index', 'languages', 'M3 5h12M9 3v2m1 4c-1 4-4 7-7 8m3-5c1 2 4 5 8 6M12 21l4-9 4 9M13.5 18h5', 'languages.view']];
 @endphp
 <x-layouts.base :title="$title">
@@ -79,7 +80,7 @@
                     ['admin.nav.finance', 'M12 8c-2 0-3 1-3 2s1 2 3 2 3 1 3 2-1 2-3 2m0-10V6m0 12v-2', ['admin.erp.hub', 'admin.erp.anomalies', 'admin.expenses.index', 'admin.expense-categories.index', 'admin.cod-fees.edit', 'admin.payment-methods.index']],
                     ['admin.nav.logistics', 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', ['admin.shipping-companies.index', 'admin.cities.index', 'admin.branches.index']],
                     ['admin.nav.team_access', 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z', ['admin.admins.index', 'admin.roles.index', 'admin.audit.index']],
-                    ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['admin.reports.index', 'admin.general-settings.edit', 'admin.languages.index', 'admin.notification-settings.edit', 'admin.whatsapp.index', 'admin.seo.edit']],
+                    ['admin.nav.insights_settings', 'M4 19V9m5 10V5m5 14v-7m5 7V8', ['admin.reports.index', 'admin.general-settings.edit', 'admin.system-settings.edit', 'admin.languages.index', 'admin.notification-settings.edit', 'admin.whatsapp.index', 'admin.seo.edit']],
                 ];
                 $badges = ! $user ? [] : app(\App\Services\Admin\NavBadges::class)->for($user);
                 $badge = fn ($n) => $n > 0 ? '<span class="ms-auto min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">'.($n > 99 ? '99+' : $n).'</span>' : '';

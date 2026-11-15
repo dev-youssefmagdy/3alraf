@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'dashboard' => 'Dashboard', 'languages' => 'Languages', 'settings' => 'Settings', 'settings_general' => 'General settings',
+    'dashboard' => 'Dashboard', 'languages' => 'Languages', 'settings' => 'Settings', 'settings_general' => 'General settings', 'settings_system' => 'System settings',
     'affiliate_bonus_section' => 'Affiliate sales bonus', 'affiliate_bonus_intro' => 'Affiliates earn the bonus amount for every threshold of delivered sales (goods after discount, excluding shipping and VAT, minus returns), repeated.',
     'affiliate_bonus_started_hint' => 'Only orders placed after this date count. Changes apply to future bonuses only; bonuses already earned keep their amount.',
     'affiliate_bonus_not_started' => 'Not set',
@@ -657,6 +657,24 @@ return [
             'levels' => ['campaign' => 'Campaigns', 'adset' => 'Ad sets', 'ad' => 'Ads'],
             'presets' => ['today' => 'Today', 'yesterday' => 'Yesterday', 'last_7d' => 'Last 7 days', 'last_14d' => 'Last 14 days', 'last_30d' => 'Last 30 days', 'last_90d' => 'Last 90 days',
                 'this_month' => 'This month', 'last_month' => 'Last month', 'maximum' => 'All time'],
+        ],
+    ],
+
+    'system_settings' => [
+        'intro' => 'Former .env keys. Saved values override the server defaults; secrets are stored encrypted and are never shown again (leave a secret field empty to keep it). APP_KEY, APP_ENV, maintenance mode, trusted proxies and database/cache/queue/mail drivers stay in .env because they are needed before the database is reachable.',
+        'secret_keep' => 'Saved. Leave empty to keep',
+        'secret_empty' => 'Not set',
+        'groups' => ['app' => 'Application', 'media' => 'Media & images', 'google' => 'Google sign-in', 'whatsapp' => 'WhatsApp gateway', 'reverb' => 'Real-time notifications (Reverb)', 'meta' => 'Meta Marketing API'],
+        'fields' => [
+            'app_debug' => 'Debug mode (APP_DEBUG)', 'app_url' => 'Application URL (APP_URL)', 'app_fallback_locale' => 'Fallback locale', 'app_faker_locale' => 'Faker locale',
+            'mobile_legacy_store_slug' => 'Mobile legacy store id', 'soft_delete_retention_days' => 'Soft-delete retention (days)', 'integration_ips' => 'Integration API IP allowlist (comma separated, empty = any)',
+            'media_disk' => 'Public media disk', 'media_private_disk' => 'Private files disk', 'media_url' => 'Public media URL (CDN)', 'media_signed_ttl' => 'Signed URL lifetime (minutes)',
+            'product_video_max_mb' => 'Max product video size (MB)', 'product_video_max_per_product' => 'Max videos per product', 'social_media_image_max_kb' => 'Social library image max (KB)', 'social_media_video_max_kb' => 'Social library video max (KB)', 'image_webp_fallback' => 'WebP fallback for images',
+            'google_client_id' => 'Google client ID', 'google_client_secret' => 'Google client secret', 'google_mobile_client_ids' => 'Mobile client IDs (comma separated)',
+            'whatsapp_service_url' => 'Service URL', 'whatsapp_service_token' => 'Service token', 'whatsapp_callback_secret' => 'Callback secret',
+            'reverb_app_id' => 'App ID', 'reverb_app_key' => 'App key', 'reverb_app_secret' => 'App secret', 'reverb_host' => 'Public host', 'reverb_port' => 'Public port', 'reverb_scheme' => 'Scheme (http/https)', 'reverb_server_host' => 'Server bind host', 'reverb_server_port' => 'Server bind port',
+            'meta_graph_version' => 'Graph API version', 'meta_graph_url' => 'Graph API URL', 'meta_access_token' => 'Access token', 'meta_app_id' => 'App ID', 'meta_app_secret' => 'App secret', 'meta_ad_account_id' => 'Ad account ID', 'meta_page_id' => 'Page ID', 'meta_instagram_user_id' => 'Instagram user ID', 'meta_currency' => 'Currency',
+            'meta_cache_minutes' => 'Cache (minutes)', 'meta_approval_valid_hours' => 'Approval validity (hours)', 'meta_min_daily_budget' => 'Min daily budget', 'meta_max_daily_budget' => 'Max daily budget', 'meta_max_lifetime_budget' => 'Max lifetime budget',
         ],
     ],
 ];

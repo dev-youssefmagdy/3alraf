@@ -37,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Former .env keys, now Admin → System settings (stored in `settings`); must run first so every later boot step sees them.
+        \App\Support\SystemSettings::apply();
         // Site timezone (setting `timezone`): set once per process (web, console, queue), never per request. Missing while installing → app default (UTC).
         if (($tz = Setting::get('timezone')) && in_array($tz, timezone_identifiers_list(), true)) {
             config(['app.timezone' => $tz]);
@@ -97,7 +99,7 @@ class AppServiceProvider extends ServiceProvider
     private function registerLangShims(): void
     {
         // lang/en is owned by another user: groups without an en file read their English strings from a host file (`store.gift_finder`, `admin.marketing`).
-        foreach (['gift_finder' => 'store', 'marketing' => 'admin'] as $group => $host) {
+        foreach (['gift_finder' => 'store', 'marketing' => 'admin', 'system_settings' => 'admin'] as $group => $host) {
             if (is_file(lang_path("en/{$group}.php"))) {
                 continue;
             }

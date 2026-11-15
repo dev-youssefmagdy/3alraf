@@ -99,6 +99,11 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::post('settings/general/validate', [GeneralSettingsController::class, 'validateForm'])->name('general-settings.validate');
         Route::put('settings/general', [GeneralSettingsController::class, 'update'])->name('general-settings.update');
 
+        // Settings → System (former .env keys: URLs, media, Google, WhatsApp, Reverb, Meta)
+        Route::get('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'edit'])->name('system-settings.edit');
+        Route::post('settings/system/validate', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
+        Route::put('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('system-settings.update');
+
         // Languages + products / categories / brands / tags / attributes
         Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');
         Route::post('languages/validate/{language?}', [LanguageController::class, 'validateForm'])->name('languages.validate');
