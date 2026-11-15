@@ -44,6 +44,6 @@ class SystemSettingsRequest extends FormRequest
 
     public function attributes(): array
     {
-        return trans('system_settings.fields');
+        return trans('admin.system_settings.fields');
     }
 }

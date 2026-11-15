@@ -99,7 +99,7 @@ class AppServiceProvider extends ServiceProvider
     private function registerLangShims(): void
     {
         // lang/en is owned by another user: groups without an en file read their English strings from a host file (`store.gift_finder`, `admin.marketing`).
-        foreach (['gift_finder' => 'store', 'marketing' => 'admin', 'system_settings' => 'admin'] as $group => $host) {
+        foreach (['gift_finder' => 'store', 'marketing' => 'admin'] as $group => $host) {
             if (is_file(lang_path("en/{$group}.php"))) {
                 continue;
             }
