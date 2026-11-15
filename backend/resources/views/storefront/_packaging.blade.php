@@ -3,29 +3,36 @@
     $packSelected = app(\App\Services\Orders\CartService::class)->packagingOptionId();
 @endphp
 @if ($packOptions->isNotEmpty())
-    <div class="space-y-2 rounded-xl border border-slate-200 p-3 text-sm" data-packaging>
-        <label class="flex cursor-pointer items-center gap-2 font-semibold">
-            <input type="checkbox" class="accent-brand-600" data-packaging-toggle @checked($packSelected)>
+    {{-- Packaging option (design 21:2019): the "special packaging" checkbox reveals the options, a `packaging` Swiper of gold-soft cards; radios stay native --}}
+    <div class="space-y-3" data-packaging>
+        <label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold text-slate-950">
+            <input type="checkbox" class="size-[22px] shrink-0 rounded-md border-slate-300 accent-brand-600" data-packaging-toggle @checked($packSelected)>
             {{ __('store.packaging') }}
         </label>
-        <div class="{{ $packSelected ? '' : 'hidden' }} space-y-2" data-packaging-picker role="radiogroup" aria-label="{{ __('store.packaging_choose') }}">
+        <div class="{{ $packSelected ? '' : 'hidden' }}" data-packaging-picker role="radiogroup" aria-label="{{ __('store.packaging_choose') }}">
             <input type="radio" name="packaging_option_id" value="" class="sr-only" data-packaging-select tabindex="-1" aria-hidden="true" @checked(! $packSelected)>
-            @foreach ($packOptions as $o)
-                <label class="group relative flex cursor-pointer items-center gap-4 rounded-2xl border border-slate-200 bg-white p-3 pe-4 shadow-sm transition hover:border-brand-300 hover:shadow-md has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/50 has-[:checked]:shadow-md has-[:checked]:ring-1 has-[:checked]:ring-brand-500 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500" data-packaging-card="{{ $o->id }}">
-                    <input type="radio" name="packaging_option_id" value="{{ $o->id }}" class="peer sr-only" data-packaging-select @checked($packSelected === $o->id)>
-                    @if ($o->imageUrl())
-                        <img src="{{ $o->imageUrl() }}" alt="{{ $o->name }}" loading="lazy" class="h-20 w-20 shrink-0 rounded-xl bg-slate-100 object-cover ring-1 ring-slate-200 sm:h-24 sm:w-24">
-                    @endif
-                    <span class="flex min-w-0 flex-1 flex-col gap-1">
-                        <span class="text-sm font-bold leading-snug text-slate-900">{{ $o->name }}</span>
-                        @if ($o->description)<span class="line-clamp-2 text-xs leading-relaxed text-slate-500">{{ $o->description }}</span>@endif
-                        <span class="mt-1"><bdi dir="ltr" class="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">+ {{ \App\Support\Money::format((string) $o->price, setting('currency_code')) }}</bdi></span>
-                    </span>
-                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 bg-white text-transparent transition peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white" aria-hidden="true">
-                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 011.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z" clip-rule="evenodd"/></svg>
-                    </span>
-                </label>
-            @endforeach
+            <section data-swiper="packaging" aria-label="{{ __('store.packaging_choose') }}">
+                <div class="swiper"><div class="swiper-wrapper">
+                    @foreach ($packOptions as $o)
+                        <div class="swiper-slide">
+                            <label class="relative flex h-full cursor-pointer flex-col gap-2 rounded-2xl border-2 border-slate-200 bg-white p-2 text-center transition hover:border-accent has-[:checked]:border-accent has-[:checked]:bg-accent-light has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-pop-500/45" data-packaging-card="{{ $o->id }}">
+                                <input type="radio" name="packaging_option_id" value="{{ $o->id }}" class="peer sr-only" data-packaging-select @checked($packSelected === $o->id)>
+                                <span class="absolute start-3 top-3 z-[1] hidden size-6 place-items-center rounded-full bg-brand-600 text-white shadow-raised peer-checked:grid" aria-hidden="true">
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg>
+                                </span>
+                                @if ($o->imageUrl())
+                                    <img src="{{ $o->imageUrl() }}" alt="" loading="lazy" class="aspect-[4/3] w-full rounded-xl bg-mint-100 object-cover">
+                                @else
+                                    <span class="grid aspect-[4/3] w-full place-items-center rounded-xl bg-accent-light text-accent-dark" aria-hidden="true"><svg class="size-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg></span>
+                                @endif
+                                <span class="line-clamp-2 text-sm font-bold leading-snug text-slate-950">{{ $o->name }}</span>
+                                @if ($o->description)<span class="line-clamp-2 text-xs/[18px] text-slate-600">{{ $o->description }}</span>@endif
+                                <span class="mt-auto text-xs font-bold text-accent-dark"><bdi dir="ltr">+ {{ \App\Support\Money::format((string) $o->price, setting('currency_code')) }}</bdi></span>
+                            </label>
+                        </div>
+                    @endforeach
+                </div></div>
+            </section>
         </div>
     </div>
 @endif

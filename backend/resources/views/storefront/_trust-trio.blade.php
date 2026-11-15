@@ -1,0 +1,6 @@
+{{-- Trust trio under the buy box (product / bundle pages, design 24:3881): authentic, fast delivery, cash on delivery. --}}
+<ul class="grid grid-cols-3 gap-2 text-center text-[11px]/[14px] font-bold sm:text-xs">
+    <li class="flex flex-col items-center gap-1 rounded-2xl bg-violet-100 px-2 py-3 text-violet-700"><svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6zM9 12l2 2 4-4"/></svg>{{ __('store.trust_authentic') }}</li>
+    <li class="flex flex-col items-center gap-1 rounded-2xl bg-sun-100 px-2 py-3 text-accent-dark"><svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>{{ __('store.trust_fast') }}</li>
+    <li class="flex flex-col items-center gap-1 rounded-2xl bg-mint-100 px-2 py-3 text-mint-700"><svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v10H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 10v4M18 10v4"/></svg>{{ __('store.trust_cod') }}</li>
+</ul>

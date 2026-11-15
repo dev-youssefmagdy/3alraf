@@ -168,7 +168,7 @@ it('registers affiliates as pending, blocks login until approved, and shows dash
 
     $this->get("{$this->s}/affiliate")->assertOk()->assertSee(__('growth.dashboard'));
     $link = "/ar/product/p1?utm_source=affiliate&aff={$new->uuid}";
-    $this->get("{$this->s}/affiliate/products")->assertOk()->assertSee(e($link), false)->assertSee($this->product->barcode)->assertSee('/qr/products/p', false);
+    $this->get("{$this->s}/affiliate/products")->assertOk()->assertSee(e($link), false)->assertDontSee($this->product->barcode)->assertSee('/qr/products/p', false);   // QR only, no barcode (owner, 2026-11-14)
     $this->get("{$this->s}/affiliate/qr/p1")->assertOk()->assertHeader('Content-Type', 'image/png');
     $this->post("{$this->s}/affiliate/logout")->assertRedirect();
     $this->get("{$this->s}/affiliate")->assertRedirect("{$this->s}/affiliate/login");
