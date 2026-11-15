@@ -144,6 +144,10 @@ return [
 
     // Field names (ERP forms + shared admin fields). Nested line fields use the "lines.*.x" form.
     'attributes' => [
+        'shipping_company_id' => 'شركة الشحن',
+        'city_id' => 'المدينة',
+        'payment_method_id' => 'طريقة الدفع',
+        'address' => 'العنوان',
         'entry_date' => 'تاريخ القيد', 'description' => 'الوصف', 'type' => 'النوع', 'lines' => 'سطور القيد', 'lines.*.account_id' => 'حساب السطر',
         'lines.*.debit' => 'مدين السطر', 'lines.*.credit' => 'دائن السطر', 'lines.*.memo' => 'بيان السطر', 'post_now' => 'الترحيل الآن', 'attachment' => 'المرفق',
         'reason' => 'السبب', 'year' => 'السنة', 'date' => 'التاريخ', 'from' => 'من تاريخ', 'to' => 'إلى تاريخ', 'as_of' => 'حتى تاريخ', 'period' => 'الفترة',

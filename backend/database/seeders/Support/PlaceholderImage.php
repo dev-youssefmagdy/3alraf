@@ -4,10 +4,17 @@ namespace Database\Seeders\Support;
 
 use Illuminate\Support\Facades\Storage;
 
-/** Generates local gradient placeholder images (GD, no network) onto the media disk as AVIF + WebP fallback (SeedImage, same family as a real upload). */
+/**
+ * Seeded pictures onto the media disk as AVIF + WebP fallback (SeedImage, same family as a real upload), no network:
+ * a bundled free photo when database/seeders/assets/stock has one for the key (demo catalog products / categories / banners,
+ * CC0 or public domain, provenance in SOURCES.json), otherwise a local gradient name card.
+ */
 class PlaceholderImage
 {
     private const FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+
+    /** Media-disk folder => stock folder; other folders (e.g. the real gift catalog) never get a stock photo. */
+    public const STOCK_BUCKETS = ['catalog/products' => 'products', 'catalog/categories' => 'categories', 'banners' => 'banners'];
 
     /** @return array{path:string,thumb_path:string} */
     public static function make(string $dir, string $key, string $label, int $w = 800, int $h = 800, int $seed = 0): array
@@ -19,17 +26,36 @@ class PlaceholderImage
             return ['path' => $path, 'thumb_path' => $thumb];
         }
 
-        return SeedImage::save(self::render($w, $h, (crc32($key) + $seed * 47) % 360, $label), $dir, $key);
+        return SeedImage::save(self::stock($dir, $key) ?? self::render($w, $h, (crc32($key) + $seed * 47) % 360, $label), $dir, $key);
     }
 
     public static function banner(string $dir, string $key, string $label, int $w = 1600, int $h = 500, int $seed = 0): string
     {
         $path = "$dir/$key.avif";
         if (! Storage::disk(config('media.disk'))->exists($path)) {
-            SeedImage::save(self::render($w, $h, (crc32($key) + $seed * 61) % 360, $label), $dir, $key, 'banner', thumb: false);
+            SeedImage::save(self::stock($dir, $key) ?? self::render($w, $h, (crc32($key) + $seed * 61) % 360, $label), $dir, $key, 'banner', thumb: false);
         }
 
         return $path;
+    }
+
+    /** Bundled photo file for a seeded key (banner keys `demo-{i}-{locale}` share one photo per banner), or null. */
+    public static function stockFile(string $dir, string $key): ?string
+    {
+        $bucket = self::STOCK_BUCKETS[$dir] ?? null;
+        if ($bucket === 'banners') {
+            $key = preg_match('/^demo-(\d+)-/', $key, $m) ? $m[1] : $key;
+        }
+        $file = $bucket ? database_path("seeders/assets/stock/$bucket/$key.webp") : null;
+
+        return $file && is_file($file) ? $file : null;
+    }
+
+    public static function stock(string $dir, string $key): ?\GdImage
+    {
+        $file = self::stockFile($dir, $key);
+
+        return $file ? (@imagecreatefromwebp($file) ?: null) : null;
     }
 
     private static function render(int $w, int $h, int $hue, string $label): \GdImage

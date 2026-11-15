@@ -1,6 +1,7 @@
 import $ from 'jquery';
 import toastr from 'toastr';
-import { initProductGallery } from './product-gallery';
+import './sliders'; // evaluated first: the product gallery (Swiper) exists before the product page code below runs
+import './drag-scroll'; // desktop category bar: drag / wheel to scroll sideways
 
 const sf = window.__sf;
 if (sf) init();
@@ -58,10 +59,10 @@ function init() {
     function renderMini(c) {
         const $b = $('[data-mini-cart]');
         if (!$b.length) return;
-        if (!c.items.length) { $b.html('<p class="py-4 text-center text-slate-500">' + esc(T.cart_empty) + '</p>'); $('[data-mini-cart-foot]').addClass('hidden'); return; }
-        $b.html(c.items.map((i) => '<div class="flex gap-2 py-2">' + (i.image ? '<img src="' + esc(i.image) + '" class="size-12 rounded object-cover" alt="">' : '<div class="size-12 rounded bg-slate-100"></div>')
+        if (!c.items.length) { $b.html('<p class="py-6 text-center text-slate-600">' + esc(T.cart_empty) + '</p>'); $('[data-mini-cart-foot]').addClass('hidden'); return; }
+        $b.html(c.items.map((i) => '<div class="flex gap-3 py-3">' + (i.image ? '<img src="' + esc(i.image) + '" class="size-14 rounded-xl bg-slate-100 object-cover" alt="">' : '<div class="size-14 rounded-xl bg-slate-100"></div>')
             + '<div class="min-w-0 flex-1"><p class="line-clamp-1 font-semibold">' + esc(i.name) + '</p><p class="text-xs text-slate-500">' + i.qty + ' &times; ' + money(i.unit_price) + '</p></div>'
-            + '<button type="button" data-mini-remove="' + i.id + '" class="self-start text-lg leading-none text-slate-400 hover:text-red-600" aria-label="' + esc(T.remove) + '">&times;</button></div>').join(''));
+            + '<button type="button" data-mini-remove="' + i.id + '" class="grid size-9 shrink-0 place-items-center self-start rounded-full text-xl leading-none text-slate-500 hover:bg-red-50 hover:text-red-700" aria-label="' + esc(T.remove) + '">&times;</button></div>').join(''));
         $('[data-mini-cart-foot]').removeClass('hidden');
         $('[data-mini-subtotal]').text(c.totals ? money(c.totals.subtotal) : '');
     }
@@ -105,9 +106,70 @@ function init() {
     })();
 
     /* ---------- generic UI ---------- */
-    $(document).on('click', '[data-drawer-open]', () => $('[data-drawer]').removeClass('hidden'));
-    $(document).on('click', '[data-drawer-close]', () => $('[data-drawer]').addClass('hidden'));
-    $(document).on('click', '[data-filters-toggle]', () => $('[data-filter-form]').toggleClass('hidden'));
+    // drawer is a modal dialog (role=dialog aria-modal): focus moves in on open, Tab stays inside, focus returns to the opener on close
+    let drawerOpener = null;
+    const drawerTabbables = () => $('[data-drawer]').find('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])').filter(':visible');
+    const drawerClose = () => {
+        const $d = $('[data-drawer]');
+        if ($d.hasClass('hidden')) return;
+        $d.addClass('hidden');
+        drawerOpener?.focus?.(); drawerOpener = null;
+    };
+    $(document).on('click', '[data-drawer-open]', function () {
+        drawerOpener = this;
+        $('[data-drawer]').removeClass('hidden');
+        $('[data-drawer]').find('aside [data-drawer-close]').first().trigger('focus');
+    });
+    $(document).on('click', '[data-drawer-close]', drawerClose);
+    $(document).on('keydown', '[data-drawer]', (e) => {
+        if (e.key !== 'Tab') return;
+        const $t = drawerTabbables(); if (!$t.length) return;
+        const first = $t[0], last = $t[$t.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    $(document).on('click', '[data-drawer-toggle]', function () {
+        const open = $(this).attr('aria-expanded') !== 'true';
+        $(this).attr('aria-expanded', open);
+        $('#' + $(this).attr('aria-controls')).toggleClass('hidden', !open);
+    });
+    $(document).on('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        drawerClose();
+        $('[data-mega-item]').removeClass('is-open').addClass('is-closed').children('a[aria-expanded]').attr('aria-expanded', 'false');
+    });
+    // mega menu: CSS opens it on hover / focus-within; this keeps aria-expanded in step and lets Esc close it until the pointer leaves
+    $('[data-mega-item]').on('mouseenter focusin', function () { $(this).removeClass('is-closed').children('a[aria-expanded]').attr('aria-expanded', 'true'); })
+        .on('mouseleave focusout', function (e) { if (!this.contains(e.relatedTarget)) $(this).removeClass('is-closed').children('a[aria-expanded]').attr('aria-expanded', 'false'); });
+    /* catalog filters: a sidebar from 1024px, a bottom sheet below (design 32:2442) */
+    const filtersOpen = (open) => {
+        $('[data-filter-form]').toggleClass('hidden', !open).attr({ role: open ? 'dialog' : null, 'aria-modal': open ? 'true' : null });
+        $('[data-filters-scrim]').toggleClass('hidden', !open);
+        $('[data-filters-toggle][aria-expanded]').attr('aria-expanded', String(open));
+        document.documentElement.classList.toggle('max-lg:overflow-hidden', open);
+        if (open) filterTabbables().first().trigger('focus'); // the sheet's close button (an h2 is not focusable)
+    };
+    const filterTabbables = () => $('[data-filter-form]').find('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea').filter(':visible');
+    // while it is a bottom-sheet dialog, Tab stays inside it
+    $(document).on('keydown', '[data-filter-form][aria-modal=true]', (e) => {
+        if (e.key !== 'Tab') return;
+        const $t = filterTabbables(); if (!$t.length) return;
+        const first = $t[0], last = $t[$t.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    $(document).on('click', '[data-filters-toggle]', () => filtersOpen($('[data-filter-form]').hasClass('hidden')));
+    $(document).on('click', '[data-filters-scrim]', () => filtersOpen(false));
+    $(document).on('keydown', (e) => { if (e.key === 'Escape' && !$('[data-filters-scrim]').hasClass('hidden')) { filtersOpen(false); $('[data-filters-toggle][aria-expanded]').trigger('focus'); } });
+    // a desktop resize must not leave the page locked behind a closed sheet
+    matchMedia('(min-width: 1024px)').addEventListener?.('change', (m) => { if (m.matches) { $('[data-filters-scrim]').addClass('hidden'); document.documentElement.classList.remove('max-lg:overflow-hidden'); } });
+
+    /* share (product page): the native share sheet, or copy the link */
+    $(document).on('click', '[data-share-url]', async function () {
+        const url = this.dataset.shareUrl;
+        try {
+            if (navigator.share) { await navigator.share({ url, title: this.dataset.shareTitle || document.title }); return; }
+            await navigator.clipboard.writeText(url); toastr.success(T.link_copied || url);
+        } catch (e) { if (e?.name !== 'AbortError') window.prompt('', url); }
+    });
 
     function tickCountdowns() {
         $('[data-countdown]').each(function () {
@@ -133,9 +195,9 @@ function init() {
                 $.get(sf.routes.suggest, { q }).done((r) => {
                     if (q !== last) return;
                     let h = '';
-                    if (r.categories.length) h += '<p class="bg-slate-50 px-4 py-1 text-xs font-bold text-slate-500">' + esc(T.categories) + '</p>' + r.categories.map((c) => '<a class="block px-4 py-2 text-sm hover:bg-slate-50" href="' + esc(c.url) + '">' + esc(c.name) + '</a>').join('');
-                    if (r.products.length) h += '<p class="bg-slate-50 px-4 py-1 text-xs font-bold text-slate-500">' + esc(T.products) + '</p>' + r.products.map((p) => '<a class="flex items-center gap-3 px-4 py-2 text-sm hover:bg-slate-50" href="' + esc(p.url) + '">'
-                        + (p.image ? '<img src="' + esc(p.image) + '" class="size-10 rounded object-cover" alt="">' : '<span class="size-10 rounded bg-slate-100"></span>') + '<span class="flex-1">' + esc(p.name) + '</span><b class="text-brand-600">' + money(p.price) + '</b></a>').join('');
+                    if (r.categories.length) h += '<p class="px-4 pb-1 pt-2 text-xs font-bold text-slate-500">' + esc(T.categories) + '</p><div class="flex flex-wrap gap-2 px-4 pb-2">' + r.categories.map((c) => '<a class="chip !min-h-9 !px-3 !text-xs" href="' + esc(c.url) + '">' + esc(c.name) + '</a>').join('') + '</div>';
+                    if (r.products.length) h += '<p class="px-4 pb-1 pt-2 text-xs font-bold text-slate-500">' + esc(T.products) + '</p>' + r.products.map((p) => '<a class="flex min-h-14 items-center gap-3 px-4 py-2 text-sm hover:bg-slate-100" href="' + esc(p.url) + '">'
+                        + (p.image ? '<img src="' + esc(p.image) + '" class="size-11 rounded-xl bg-slate-100 object-cover" alt="">' : '<span class="size-11 rounded-xl bg-slate-100"></span>') + '<span class="line-clamp-2 flex-1 font-semibold text-slate-950">' + esc(p.name) + '</span><b class="whitespace-nowrap font-display text-pop-600">' + money(p.price) + '</b></a>').join('');
                     $box.html(h || '<p class="px-4 py-3 text-sm text-slate-500">' + esc(T.no_results) + '</p>').removeClass('hidden');
                 });
             }, 250);
@@ -144,67 +206,35 @@ function init() {
         $in.on('keydown', (e) => { if (e.key === 'Escape') hide(); });
     })();
 
-    /* ---------- hero slider + popup ---------- */
-    // Swipeable slider (no library): pointer drag follows the finger, snaps on release, autoplay pauses while touched/hovered, dots + arrows + keys.
-    $('[data-slider]').each(function () {
-        const $s = $(this), $track = $s.find('[data-slides]'), n = $s.find('[data-slide]').length, $dots = $s.find('[data-dots] span'), rtl = sf.dir === 'rtl', dir = rtl ? 1 : -1;
-        let i = 0, timer, startX = 0, startY = 0, dx = 0, dragging = false, locked = null, moved = false;
-        const width = () => $s.width() || 1;
-        const render = (px, animate) => {
-            $track.css({ transition: animate ? 'transform .45s ease' : 'none', transform: 'translate3d(' + (dir * i * width() + px) + 'px,0,0)' });
-        };
-        const go = (k) => {
-            i = (k + n) % n; // wraps around
-            render(0, true);
-            $dots.removeClass('bg-white').addClass('bg-white/60').eq(i).removeClass('bg-white/60').addClass('bg-white');
-        };
-        const auto = () => { clearInterval(timer); if (n > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(() => go(i + 1), 5000); };
-        if (n > 1) {
-            $s.css('touch-action', 'pan-y').attr({ tabindex: 0, role: 'region' });
-            $s.on('pointerdown', (e) => {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-                dragging = true; locked = null; moved = false; dx = 0; startX = e.clientX; startY = e.clientY; clearInterval(timer);
-            });
-            $(window).on('pointermove', (e) => {
-                if (!dragging) return;
-                const mx = e.clientX - startX, my = e.clientY - startY;
-                if (locked === null && (Math.abs(mx) > 6 || Math.abs(my) > 6)) locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
-                if (locked !== 'x') return;
-                moved = true; dx = mx;
-                render(dx, false);
-            });
-            const release = () => {
-                if (!dragging) return; dragging = false;
-                if (locked === 'x' && Math.abs(dx) > Math.min(80, width() * 0.15)) go(i + (dx * dir > 0 ? 1 : -1)); // dragging the track toward `dir` reveals the next slide
-                else render(0, true);
-                dx = 0; auto();
-            };
-            $(window).on('pointerup pointercancel', release);
-            // a drag must not open the banner link
-            $s.on('click', 'a', (e) => { if (moved) { e.preventDefault(); moved = false; } });
-            $s.on('dragstart', 'img', (e) => e.preventDefault());
-            $s.on('mouseenter', () => clearInterval(timer)).on('mouseleave', () => { if (!dragging) auto(); });
-            $s.on('keydown', (e) => { if (e.key === 'ArrowRight') { go(i + (rtl ? -1 : 1)); auto(); } else if (e.key === 'ArrowLeft') { go(i + (rtl ? 1 : -1)); auto(); } });
-            $s.on('click', '[data-dots] span', function () { go($(this).index()); auto(); });
-            $(window).on('resize', () => render(0, false));
-        }
-        $s.on('click', '[data-slide-next]', (e) => { e.preventDefault(); go(i + 1); auto(); });
-        $s.on('click', '[data-slide-prev]', (e) => { e.preventDefault(); go(i - 1); auto(); });
-        go(0); auto();
-    });
+    /* ---------- popup banner (the hero and every other horizontal row are Swiper: sliders.js) ---------- */
     $('[data-popup]').each(function () {
         const key = 'popup-' + $(this).data('popup'); let seen = false;
         try { seen = sessionStorage.getItem(key); } catch (e) { /* ignore */ }
         if (seen) return;
         const $p = $(this);
-        setTimeout(() => $p.removeClass('hidden').addClass('grid'), 1500);
-        $p.on('click', (e) => { if (e.target === this || $(e.target).closest('[data-popup-close]').length) { $p.addClass('hidden').removeClass('grid'); try { sessionStorage.setItem(key, '1'); } catch (er) { /* ignore */ } } });
+        const close = () => { $p.addClass('hidden').removeClass('grid'); try { sessionStorage.setItem(key, '1'); } catch (er) { /* ignore */ } };
+        setTimeout(() => { $p.removeClass('hidden').addClass('grid'); $p.find('[data-popup-close]').trigger('focus'); }, 1500);
+        $p.on('click', (e) => { if (e.target === this || $(e.target).closest('[data-popup-close]').length) close(); });
+        $(document).on('keydown', (e) => { if (e.key === 'Escape' && $p.hasClass('grid')) close(); });
     });
 
     /* ---------- catalog: AJAX filters ---------- */
     $('[data-catalog]').each(function () {
         const $c = $(this), $form = $c.find('[data-filter-form]'), action = $c.data('action');
         let busy = null;
+        // active filter chips (each removes its filter) + the count on the phone "Filters" button
+        const chips = () => {
+            const on = [];
+            $form.find('input[type=checkbox]:checked').each(function () { on.push({ label: this.dataset.label || this.value, el: this }); });
+            $form.find('input[type=number]').each(function () { if (this.value !== '') on.push({ label: (this.placeholder || this.name) + ' ' + this.value, el: this }); });
+            const $box = $c.find('[data-active-filters]').empty();
+            on.forEach((f) => $('<button type="button" class="chip chip-on !min-h-9 !gap-1 !px-3 !text-xs"></button>').text(f.label)
+                .attr('aria-label', (T.remove_filter || '').replace(':name', f.label) || f.label)
+                .append('<svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>')
+                .on('click', () => { if (f.el.type === 'checkbox') f.el.checked = false; else f.el.value = ''; load(1); })
+                .appendTo($box));
+            $c.find('[data-filters-count]').text(on.length).toggleClass('hidden', !on.length);
+        };
         const load = (page, push = true) => {
             const params = $form.serialize() + (page > 1 ? '&page=' + page : '');
             $c.find('[data-grid]').css('opacity', 0.5);
@@ -213,6 +243,7 @@ function init() {
                 $c.find('[data-grid]').html(r.html).css('opacity', 1);
                 $c.find('[data-pagination]').html(r.pagination);
                 $c.find('[data-count]').text(r.label);
+                chips();
                 if (push) history.pushState(null, '', action + '?' + params);
                 $c.find('[data-grid]')[0].scrollIntoView({ block: 'start', behavior: 'smooth' });
             }).fail((x) => { if (x.statusText !== 'abort') { $c.find('[data-grid]').css('opacity', 1); toastr.error(window.__t?.error); } });
@@ -220,11 +251,12 @@ function init() {
         let t;
         $form.on('change', 'input[type=checkbox]', () => load(1));
         $form.on('input', 'input[type=number]', () => { clearTimeout(t); t = setTimeout(() => load(1), 600); });
-        $form.on('submit', (e) => { e.preventDefault(); load(1); });
+        $form.on('submit', (e) => { e.preventDefault(); load(1); if (!matchMedia('(min-width: 1024px)').matches) filtersOpen(false); });
         $form.on('click', '[data-filter-reset]', function (e) { e.preventDefault(); $form.find('input[type=checkbox]').prop('checked', false); $form.find('input[type=number]').val(''); load(1); $(this).remove(); });
         $c.on('change', '[data-sort]', function () { $form.find('[data-sort-input]').val(this.value); load(1); });
         $c.on('click', '[data-page-link]', function (e) { e.preventDefault(); const p = new URL(this.href).searchParams.get('page'); load(parseInt(p, 10) || 1); });
         window.addEventListener('popstate', () => location.reload());
+        chips();
     });
 
     /* ---------- product page ---------- */
@@ -235,8 +267,7 @@ function init() {
         const $btn = $p.find('[data-add-to-cart-page]');
         const matches = (v, s) => Object.values(s).every((id) => v.values.includes(id));
         const nGroups = picker.options.length;
-        const galleryEl = $p.find('[data-product-gallery]')[0]; // only products with a video have the slider
-        const gallery = galleryEl ? initProductGallery(galleryEl) : null;
+        const gallery = $p.find('[data-swiper="gallery"]')[0]?.gallery || null; // Swiper gallery API (sliders.js)
         let firstRefresh = true;
 
         function refresh() {
@@ -255,19 +286,22 @@ function init() {
             const v = current;
             $p.find('[data-price]').text(v ? nf.format(v.price) : '—');
             $p.find('[data-old]').toggleClass('hidden', !(v && v.old)).text(v && v.old ? nf.format(v.old) : '');
+            $p.find('[data-price-wrap]').toggleClass('price-sale', !!(v && v.old)).toggleClass('text-brand-600', !(v && v.old));
+            const $save = $p.find('[data-save]');
+            $save.toggleClass('hidden', !(v && v.old)).text(v && v.old ? String($save.data('save-tpl') || '').replace(':amount', nf.format(v.old - v.price)) : '');
             $p.find('[data-sku]').text(v ? v.sku || '' : '');
             $p.find('[data-barcode]').text(v ? v.barcode || '' : '');
             let st = '';
-            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (v.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+            if (v) st = !v.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (v.stock !== null && v.stock <= (v.alert ?? picker.alert ?? 5) ? '<span class="text-amber-700">' + esc(T.low_stock.replace(':n', v.stock)) + '</span>' : '<span class="text-emerald-700">' + esc(T.in_stock) + '</span>');
             $p.find('[data-stock]').html(st);
-            if (v && v.image) {
-                if (gallery) gallery.showVariantImage(v.image, { initial: firstRefresh, explicit: !!(wanted && v.id === wanted) });
-                else setMainImage($p, v.image);
-            }
+            if (v && v.image && gallery) gallery.showVariantImage(v.image, { initial: firstRefresh, explicit: !!(wanted && v.id === wanted) });
             $btn.prop('disabled', !(v && v.in_stock));
             $p.find('[data-stock-request-page]').toggleClass('hidden', !(v && !v.in_stock)).data('variant', v ? v.id : 0);
+            // the sticky bar mirrors the buy box (its buttons forward the click)
+            $p.find('[data-sticky-add]').prop('disabled', !(v && v.in_stock)).toggleClass('hidden', !!(v && !v.in_stock));
+            $p.find('[data-sticky-request]').toggleClass('hidden', !(v && !v.in_stock));
             $p.find('[data-variant-status]').toggleClass('hidden', !picker.variable).html(picker.variable ? '<p class="mb-2 text-sm font-bold">' + esc(T.variants_availability) + '</p>' + picker.variants.map((x) => {
-                const state = !x.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (x.stock !== null && x.stock <= (x.alert ?? picker.alert ?? 5) ? '<span class="text-amber-600">' + esc(T.low_stock.replace(':n', x.stock)) + '</span>' : '<span class="text-emerald-600">' + esc(T.in_stock) + '</span>');
+                const state = !x.in_stock ? '<span class="text-red-600">' + esc(T.out_of_stock) + '</span>' : (x.stock !== null && x.stock <= (x.alert ?? picker.alert ?? 5) ? '<span class="text-amber-700">' + esc(T.low_stock.replace(':n', x.stock)) + '</span>' : '<span class="text-emerald-700">' + esc(T.in_stock) + '</span>');
                 const req = x.in_stock ? '' : ' <button type="button" class="btn-sm btn-secondary" data-request-variant="' + x.id + '">' + esc(T.request_now) + '</button>';
                 return '<div class="flex items-center justify-between gap-2 border-t border-slate-100 py-1.5 text-sm first-of-type:border-0"><span>' + esc(x.label || '') + '</span><span class="flex items-center gap-2">' + state + req + '</span></div>';
             }).join('') : '');
@@ -299,10 +333,23 @@ function init() {
             const x = picker.variants.find((r) => r.id === $(this).data('request-variant'));
             window.openStockRequest(pid, x.id, $p.find('[data-stock-request-page]').data('name') + (x.label ? ' - ' + x.label : ''));
         });
-        $p.on('click', '[data-thumb]', function () {
-            setMainImage($p, $(this).data('thumb'));
-            $p.find('[data-thumb]').removeClass('border-brand-600').addClass('border-transparent'); $(this).addClass('border-brand-600').removeClass('border-transparent');
+        // quantity stepper around the native number input
+        $p.on('click', '[data-qty-step]', function () {
+            const $q = $p.find('[data-qty]').first(), max = parseInt($q.attr('max'), 10);
+            let n = (parseInt($q.val(), 10) || 1) + Number($(this).data('qty-step'));
+            n = Math.max(1, Number.isFinite(max) ? Math.min(max, n) : n);
+            $q.val(n).trigger('change');
         });
+        $p.on('click', '[data-sticky-add]', () => $btn.trigger('click'));
+        $p.on('click', '[data-sticky-request]', () => $p.find('[data-stock-request-page]').first().trigger('click'));
+        // sticky add-to-cart bar (below 1024px) once the buy box has scrolled out of view
+        const $sticky = $p.find('[data-sticky-buy]'), box = $p.find('[data-buy-box]')[0];
+        if ($sticky.length && box && 'IntersectionObserver' in window) {
+            new IntersectionObserver(([e]) => {
+                const show = !e.isIntersecting && e.boundingClientRect.top < 0;
+                $sticky.attr('data-shown', show ? '' : null).attr('aria-hidden', String(!show)).find('button').attr('tabindex', show ? null : '-1');
+            }).observe(box);
+        }
         $btn.on('click', function () {
             if (!current) { toastr.error(T.unavailable); return; }
             $btn.prop('disabled', true);
@@ -318,17 +365,19 @@ function init() {
     /* ---------- totals renderer ---------- */
     function renderTotals($dl, t, opts = {}) {
         if (!t) { $dl.empty(); return; }
-        const row = (label, val, cls = '') => '<div class="flex justify-between ' + cls + '"><dt>' + esc(label) + '</dt><dd>' + val + '</dd></div>';
+        // Order totals (design 21:1971): label / value rows, the total in Price L brand, the COD split in a mint block
+        const row = (label, val, cls = '') => '<div class="flex items-baseline justify-between gap-3 ' + (cls || 'text-slate-600') + '"><dt>' + esc(label) + '</dt><dd class="whitespace-nowrap font-semibold text-slate-950">' + val + '</dd></div>';
         let h = row(T.subtotal, money(t.subtotal));
-        if (Number(t.discount) > 0) h += row(T.discount, '-' + money(t.discount), 'text-emerald-600');
+        if (Number(t.discount) > 0) h += row(T.discount, '<span class="text-emerald-700">-' + money(t.discount) + '</span>', 'text-emerald-700');
         if (opts.shipping) h += row(T.shipping, Number(t.shippingNet) > 0 ? money(t.shippingNet) : esc(T.free));
         if (Number(t.packagingFee) > 0) h += row(T.packaging, money(t.packagingFee));
         if (Number(t.tax) > 0) h += row(T.tax, money(t.tax));
         if (Number(t.paymentFeeCharged) > 0) h += row(T.payment_fee, money(t.paymentFeeCharged));
         if (Number(t.codFee) > 0) h += row(t.codFeeLabel || T.cod_fee, money(t.codFee));
-        h += row(T.total, '<span class="text-brand-600">' + money(t.total) + '</span>', 'border-t border-slate-100 pt-2 text-base font-extrabold');
+        h += '<div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-3"><dt class="text-base font-bold text-slate-950">' + esc(T.total) + '</dt><dd class="whitespace-nowrap"><span class="text-brand-600 font-display text-[26px]/[32px] font-extrabold lg:text-[30px]/9">' + money(t.total) + '</span></dd></div>';
         if (Number(t.prepaidShipping) > 0 && Number(t.codAmount) > 0) { // COD split: delivery fee now, the rest on delivery
-            h += row(T.prepaid_now, money(t.prepaidShipping), 'text-sm') + row(T.cod_balance, money(t.codAmount), 'text-sm');
+            const mint = (label, val, cls) => '<div class="flex items-baseline justify-between gap-3 bg-mint-100 px-3 text-xs font-semibold text-mint-700 ' + cls + '"><dt>' + esc(label) + '</dt><dd class="whitespace-nowrap font-bold">' + val + '</dd></div>';
+            h += mint(T.prepaid_now, money(t.prepaidShipping), '!mb-0 rounded-t-xl pt-2.5') + mint(T.cod_balance, money(t.codAmount), '!mt-0 rounded-b-xl pb-2.5 pt-1');
         }
         $dl.html(h);
     }
@@ -337,28 +386,50 @@ function init() {
     $(document).on('change', '[data-packaging-toggle]', function () {
         const $w = $(this).closest('[data-packaging]'), on = this.checked;
         $w.find('[data-packaging-picker]').toggleClass('hidden', !on);
+        if (on) $w.find('[data-swiper]').each(function () { this.swiper?.update(); });
         const $r = $w.find('input[data-packaging-select]'); // radios; the first one (value "") means "no packaging"
         if (!on) { $r.filter('[value=""]').prop('checked', true).trigger('change'); }
         else if (!$r.filter(':checked').val()) { $r.filter('[value!=""]').first().prop('checked', true).trigger('change'); }
     });
 
     /* ---------- cart page ---------- */
+    const icon = (d, cls = 'size-5') => '<svg class="' + cls + ' shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="' + d + '"/></svg>';
+    const ICON = {
+        trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+        minus: 'M5 12h14', plus: 'M12 5v14M5 12h14',
+        box: 'M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+        truck: 'M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+    };
+    const TINTS = ['bg-mint-100', 'bg-pop-50', 'bg-sun-100', 'bg-violet-100'];
+    const thumb = (i, k, cls) => i.image ? '<img src="' + esc(i.image) + '" class="' + cls + ' block shrink-0 rounded-xl object-cover ' + TINTS[k % 4] + '" alt="" loading="lazy">' : '<span class="' + cls + ' block shrink-0 rounded-xl ' + TINTS[k % 4] + '" aria-hidden="true"></span>';
     $('[data-cart-page]').each(function () {
         const $pg = $(this);
+        const href = (i) => (i.slug ? esc(location.pathname.replace(/\/cart.*$/, '') + (i.is_bundle ? '/bundle/' : '/product/') + i.slug) : '#');
+        // Cart line (design 21:2005): Default / Unavailable; a bundle line sits under a gold "Bundle: …" header
+        const line = (i, k) => '<div class="overflow-hidden rounded-2xl border bg-white ' + (i.is_bundle ? 'border-accent' : 'border-slate-200') + '" data-line="' + i.id + '">'
+            + (i.is_bundle ? '<p class="flex items-center gap-2 bg-accent-light px-3 py-2 text-xs font-bold text-accent-dark">' + icon(ICON.box, 'size-4') + esc(T.bundle) + ': ' + esc(i.name) + '</p>' : '')
+            + '<div class="flex gap-3 p-3">'
+            + '<a href="' + href(i) + '" tabindex="-1" aria-hidden="true">' + thumb(i, k, 'size-20 sm:size-[88px]') + '</a>'
+            + '<div class="flex min-w-0 flex-1 flex-col gap-1">'
+            + '<div class="flex items-start gap-2"><a class="line-clamp-2 flex-1 text-sm font-bold text-slate-950 hover:text-brand-600" href="' + href(i) + '">' + esc(i.name) + '</a>'
+            + '<button type="button" class="-me-1 -mt-1 grid size-9 shrink-0 place-items-center rounded-full text-slate-600 transition hover:bg-red-50 hover:text-red-700" data-remove aria-label="' + esc(T.remove + ': ' + (i.name || '')) + '">' + icon(ICON.trash, 'size-[18px]') + '</button></div>'
+            + (i.is_bundle ? '<ul class="space-y-0.5 text-xs text-slate-600">' + (i.components || []).map((c) => '<li>' + esc(c.name) + ' &times; ' + (c.quantity * i.qty) + '</li>').join('') + '</ul>' : '')
+            + '<p class="text-xs text-slate-600">' + esc(T.unit) + ': <bdi>' + money(i.unit_price) + '</bdi></p>'
+            + (i.available ? '' : '<p><span class="badge bg-red-50 text-red-700">' + esc(T.item_unavailable) + '</span></p>')
+            + '<div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">'
+            + '<div class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5" dir="ltr" role="group" aria-label="' + esc(T.qty) + '">'
+            + '<button type="button" class="grid size-9 place-items-center rounded-full bg-brand-50 text-brand-600 transition hover:bg-brand-100" data-qty-minus aria-label="' + esc(T.qty_decrease) + '">' + icon(ICON.minus, 'size-4') + '</button>'
+            + '<span class="min-w-8 text-center text-sm font-bold text-slate-950" aria-live="polite">' + i.qty + '</span>'
+            + '<button type="button" class="grid size-9 place-items-center rounded-full bg-brand-50 text-brand-600 transition hover:bg-brand-100" data-qty-plus aria-label="' + esc(T.qty_increase) + '">' + icon(ICON.plus, 'size-4') + '</button></div>'
+            + '<b class="price whitespace-nowrap text-base lg:text-lg">' + money(i.qty * i.unit_price) + '</b>'
+            + '</div></div></div></div>';
         function render(c) {
             const has = c.items.length > 0;
             $pg.find('[data-cart-empty]').toggleClass('hidden', has);
-            $pg.find('[data-cart-lines]').toggleClass('hidden', !has);
-            $pg.find('[data-cart-summary]').toggleClass('hidden', !has);
-            $pg.find('[data-cart-flash]').toggleClass('hidden', !c.flash);
-            $pg.find('[data-cart-lines]').html(c.items.map((i) => '<div class="flex flex-wrap items-center gap-3 p-3" data-line="' + i.id + '">'
-                + (i.image ? '<img src="' + esc(i.image) + '" class="size-20 rounded-lg object-cover" alt="">' : '<div class="size-20 rounded-lg bg-slate-100"></div>')
-                + '<div class="min-w-0 flex-1"><a class="font-semibold hover:text-brand-600" href="' + (i.slug ? esc(location.pathname.replace(/\/cart.*$/, '') + (i.is_bundle ? '/bundle/' : '/product/') + i.slug) : '#') + '">' + esc(i.name) + '</a>'
-                + (i.is_bundle ? '<ul class="mt-1 list-disc ps-5 text-xs text-slate-500">' + (i.components || []).map((c) => '<li>' + esc(c.name) + ' &times; ' + (c.quantity * i.qty) + '</li>').join('') + '</ul>' : '')
-                + (i.available ? '' : '<p class="text-xs text-red-600">' + esc(T.item_unavailable) + '</p>') + '<p class="text-sm text-slate-500">' + esc(T.unit) + ': ' + money(i.unit_price) + '</p></div>'
-                + '<div class="flex items-center rounded-lg border border-slate-300"><button type="button" class="px-3 py-1.5" data-qty-minus aria-label="-">&minus;</button><span class="min-w-8 text-center text-sm font-bold">' + i.qty + '</span><button type="button" class="px-3 py-1.5" data-qty-plus aria-label="+">+</button></div>'
-                + '<b class="w-28 text-end">' + money(i.qty * i.unit_price) + '</b>'
-                + '<button type="button" class="text-2xl leading-none text-slate-400 hover:text-red-600" data-remove aria-label="' + esc(T.remove) + '">&times;</button></div>').join(''));
+            $pg.find('[data-cart-lines], [data-cart-summary], [data-cart-head]').toggleClass('hidden', !has);
+            $pg.find('[data-cart-continue]').toggleClass('hidden', !has).toggleClass('inline-flex', has);
+            $pg.find('[data-cart-flash]').toggleClass('hidden', !c.flash).toggleClass('flex', !!c.flash);
+            $pg.find('[data-cart-lines]').html(c.items.map(line).join(''));
             renderTotals($pg.find('[data-totals]'), c.totals);
         }
         $(document).on('cart:updated', (_e, c) => render(c));
@@ -384,15 +455,19 @@ function init() {
             return $.post(sf.routes.quote, data).done((r) => {
                 renderTotals($f.find('[data-totals]'), r.data.totals, { shipping: true });
                 togglePrepay(r.data.totals);
-                if (fromApply && $f.find('[name=discount_code]').val()) toastr.success(T.code_applied);
+                const applied = !!(fromApply && $f.find('[name=discount_code]').val());
+                if (applied) toastr.success(T.code_applied);
+                if (fromApply !== undefined) $f.find('[data-code-ok]').toggleClass('hidden', !applied).toggleClass('flex', applied);
             }).fail((xhr) => {
                 const errs = xhr.responseJSON?.errors || {};
-                if (errs.discount_code) { $f.find('[name=discount_code]').val(''); toastr.error(errs.discount_code[0]); quote(false); return; }
+                if (errs.discount_code) { $f.find('[name=discount_code]').val(''); $f.find('[data-code-ok]').addClass('hidden').removeClass('flex'); toastr.error(errs.discount_code[0]); quote(false); return; }
                 toastr.error(firstError(xhr));
             });
         };
         function renderLines(c) {
-            $f.find('[data-checkout-lines]').html(c.items.map((i) => '<div class="flex justify-between gap-2 py-2"><span>' + esc(i.name) + ' <span class="text-slate-400">&times; ' + i.qty + '</span></span><b>' + money(i.qty * i.unit_price) + '</b></div>').join(''));
+            $f.find('[data-checkout-lines]').html(c.items.map((i, k) => '<div class="flex items-center gap-3">' + thumb(i, k, 'size-11')
+                + '<div class="min-w-0 flex-1"><p class="line-clamp-1 text-xs font-bold text-slate-950">' + esc(i.name) + '</p><p class="text-xs text-slate-600"><bdi>' + i.qty + ' &times; ' + money(i.unit_price) + '</bdi></p></div>'
+                + '<b class="whitespace-nowrap text-xs font-bold text-slate-950">' + money(i.qty * i.unit_price) + '</b></div>').join(''));
         }
         function togglePrepay(t) { // COD with a delivery fee to prepay: ask for the online/wallet method
             const cod = $f.find('input[name=payment_method_id]:checked').data('type') === 'cod';
@@ -414,13 +489,15 @@ function init() {
             if ($src.data('instructions')) $('<div>').text($src.data('instructions')).appendTo($d);
             if ($src.data('account')) $('<div>').text($file.data('msg-transfer') + ': ' + $src.data('account')).appendTo($d);
         }
+        const $proofName = $f.find('[data-proof-name]'), proofCta = $proofName.text();
         $f.on('change', 'input[type=file][name=proof]', function () { // client-side guard (the server re-checks everything)
             const f = this.files[0];
+            $proofName.text(f ? f.name : proofCta);
             if (!f) return;
             const okType = /\.(jpe?g|png|webp|pdf)$/i.test(f.name) && (!f.type || /^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.type));
             if (!okType || f.size > Number($(this).data('max-kb')) * 1024) {
                 toastr.error(!okType ? $(this).data('msg-type') : $(this).data('msg-size'));
-                $(this).val('');
+                $(this).val(''); $proofName.text(proofCta);
             }
         });
         function applyCodRule() {
@@ -433,14 +510,16 @@ function init() {
         function loadShipping() {
             const city = cityId();
             shippingRate = null; $f.find('[data-shipping-input]').val('');
-            if (!city) { $f.find('[data-shipping-options]').html('<p class="text-slate-500">' + esc(T.select_city_hint) + '</p>'); applyCodRule(); quote(); return; }
+            if (!city) { $f.find('[data-shipping-options]').html('<p class="rounded-2xl bg-slate-100 px-4 py-3 text-slate-600">' + esc(T.select_city_hint) + '</p>'); applyCodRule(); quote(); return; }
             $.get(sf.routes.shipping, { city_id: city }).done((r) => {
                 shippingOpts = r.data.options;
-                if (!shippingOpts.length) { $f.find('[data-shipping-options]').html('<p class="text-red-600">' + esc(T.no_shipping) + '</p>'); applyCodRule(); quote(); return; }
-                $f.find('[data-shipping-options]').html(shippingOpts.map((o, k) => '<label class="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50">'
-                    + '<span class="flex items-center gap-2"><input type="radio" name="ship_opt" value="' + o.id + '" class="accent-brand-600"' + (k === 0 ? ' checked' : '') + '><b>' + esc(o.name) + '</b>'
-                    + (o.eta && o.eta !== '—' ? '<small class="text-slate-500">' + esc(T.eta.replace(':d', o.eta)) + '</small>' : '') + '</span>'
-                    + '<span class="text-end"><b>' + (o.free ? esc(T.free) : money(o.fee)) + '</b></span></label>').join(''));
+                if (!shippingOpts.length) { $f.find('[data-shipping-options]').html('<p class="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 font-bold text-amber-700" role="alert">' + icon(ICON.truck) + esc(T.no_shipping) + '</p>'); applyCodRule(); quote(); return; }
+                // shipping choice cards (design 7:233): radio, truck, name + ETA, price at the end
+                $f.find('[data-shipping-options]').html(shippingOpts.map((o, k) => '<label class="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-slate-200 bg-white p-3.5 transition hover:border-brand-300 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-pop-500/45">'
+                    + '<input type="radio" name="ship_opt" value="' + o.id + '" class="mt-0.5 size-[22px] shrink-0 accent-brand-600"' + (k === 0 ? ' checked' : '') + '>'
+                    + '<span class="min-w-0 flex-1"><span class="flex items-center gap-2 text-base font-bold text-slate-950"><span class="text-mint-700">' + icon(ICON.truck) + '</span>' + esc(o.name) + '</span>'
+                    + (o.eta && o.eta !== '—' ? '<span class="mt-0.5 block text-xs text-slate-600">' + esc(T.eta.replace(':d', o.eta)) + '</span>' : '') + '</span>'
+                    + '<b class="whitespace-nowrap text-sm ' + (o.free ? 'text-mint-700' : 'text-slate-950') + '">' + (o.free ? esc(T.free) : money(o.fee)) + '</b></label>').join(''));
                 selectShipping(shippingOpts[0].id);
             });
         }
@@ -450,7 +529,7 @@ function init() {
             applyCodRule(); quote();
         }
         $f.on('change', 'input[name=ship_opt]', function () { selectShipping(this.value); });
-        $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => { toggleOfflineProof(); quote(); });
+        $f.on('change', 'input[name=payment_method_id], input[name=prepay_method_id]', () => { $f.find('[data-payment-options]').removeClass('is-invalid').next('.field-error').remove(); toggleOfflineProof(); quote(); });
         $f.on('change', 'input[name=address_id]', loadShipping);
 
         // add / edit address modal (the form lives outside the checkout form)
@@ -464,12 +543,28 @@ function init() {
                 $af.find('[name=city_id]').val(String(a.city_id)); $af.find('[name=address]').val(a.address); $af.find('[name=is_default]').prop('checked', !!a.is_default);
             } else { $af.attr('action', $af.data('store-url')).removeData('method'); }
             $modal.find('h3').text($modal.find('[data-title-add]').data('title-' + (a ? 'edit' : 'add')));
+            lastFocus = document.activeElement;
             $modal.removeClass('hidden').addClass('flex');
+            document.documentElement.classList.add('overflow-hidden');
+            setTimeout(() => $af.find('input:not([type=hidden]), select').first().trigger('focus'), 30);
         };
+        let lastFocus = null;
+        const closeAddress = () => { if ($modal.hasClass('hidden')) return; $modal.addClass('hidden').removeClass('flex'); document.documentElement.classList.remove('overflow-hidden'); lastFocus?.focus?.(); };
+        $modal.on('click', function (e) { if (e.target === this) closeAddress(); }).on('click', '[data-modal-close]', closeAddress);
+        $(document).on('keydown', (e) => { if (e.key === 'Escape') closeAddress(); });
+        // the first invalid field gets focus after a refused save
+        $(document).ajaxComplete((_e, xhr, o) => { if (xhr.status === 422 && !$modal.hasClass('hidden') && (o.url === $af.data('validate-url') || o.url === $af.attr('action'))) setTimeout(() => $af.find('.is-invalid').first().trigger('focus'), 0); });
+        $modal.on('keydown', function (e) {
+            if (e.key !== 'Tab') return; // keep focus inside the dialog
+            const f = $modal.find('a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea').filter(':visible');
+            if (!f.length) return;
+            if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.last().trigger('focus'); } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f.first().trigger('focus'); }
+        });
         $f.on('click', '[data-address-add]', () => openAddress(null));
         $f.on('click', '[data-address-edit]', function (e) { e.preventDefault(); openAddress($(this).data('address')); });
         $af.on('ajax-form:success', (_e, res) => {
-            $modal.addClass('hidden').removeClass('flex');
+            closeAddress();
+            $f.find('[data-step=address]').removeClass('is-error').find('.field-error').remove();
             const $list = $f.find('[data-address-list]');
             $.get($list.data('list-url'), { select: res.data?.address?.id }).done((html) => { $list.html(html); loadShipping(); });
         });
@@ -477,9 +572,57 @@ function init() {
         $f.on('change', '[data-packaging-select]', () => quote());
         $f.on('click', '[data-apply-code]', () => quote(true));
         $f.on('keydown', '[name=discount_code]', (e) => { if (e.key === 'Enter') { e.preventDefault(); quote(true); } });
+        // checkout errors (design 32:2080): a summary alert on top and a red address step when the address is missing
+        $(document).ajaxComplete((_e, xhr, o) => {
+            if (o.url !== $f.data('validate-url') && o.url !== $f.attr('action')) return;
+            const errs = xhr.status === 422 ? (xhr.responseJSON?.errors || {}) : null;
+            const $sum = $f.find('[data-checkout-errors]').toggleClass('hidden', !errs).toggleClass('flex', !!errs);
+            $f.find('[data-step=address]').toggleClass('is-error', !!(errs && errs.address_id));
+            if (errs && !$f.find('.is-invalid').length) $sum[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+        $f.on('change', 'input[name=address_id]', function () { $f.find('[data-step=address]').removeClass('is-error').find('.field-error').remove(); });
         $(document).on('cart:updated', (_e, c) => { if (!c.items.length) { location.href = sf.routes.cart; return; } renderLines(c); });
         if (cart.items.length) renderLines(cart);
         loadShipping();
+    });
+
+    /* ---------- account: pill tabs below 1024px (all panels show from 1024) ---------- */
+    $('[data-account-tabs]').each(function () {
+        const $tabs = $(this).find('[data-account-tab]');
+        const show = (name, focus) => {
+            $tabs.each(function () { const on = this.dataset.accountTab === name; $(this).attr({ 'aria-selected': String(on), tabindex: on ? null : '-1' }); if (on && focus) this.focus(); });
+            $('[data-account-panel]').each(function () { $(this).toggleClass('max-lg:hidden', this.dataset.accountPanel !== name); });
+        };
+        $tabs.on('click', function () { show(this.dataset.accountTab); history.replaceState(null, '', '#' + this.dataset.accountTab); });
+        $tabs.on('keydown', function (e) {
+            const k = { ArrowRight: -1, ArrowLeft: 1 }[e.key]; if (!k) return;
+            const i = $tabs.index(this), dir = document.documentElement.dir === 'rtl' ? k : -k;
+            show($tabs.eq((i + dir + $tabs.length) % $tabs.length).data('account-tab'), true);
+        });
+        const want = location.hash.slice(1);
+        if ($tabs.filter('[data-account-tab="' + want + '"]').length) show(want);
+        // a validation error inside a hidden panel: show that panel
+        $(document).ajaxComplete((_e, xhr) => { if (xhr.status !== 422) return; setTimeout(() => { const p = $('[data-account-panel] .is-invalid').first().closest('[data-account-panel]').data('account-panel'); if (p) show(p); }, 0); });
+    });
+
+    /* copy a value (order number, affiliate links: data-copied = the toast text) */
+    $(document).on('click', '[data-copy]', async function () {
+        try { await navigator.clipboard.writeText(String(this.dataset.copy)); toastr.success(this.dataset.copied || T.copied); } catch (e) { window.prompt('', this.dataset.copy); }
+    });
+    /* affiliate dashboard: POST action buttons (request payout), same contract as the admin ops-form helper */
+    $(document).on('click', '[data-post-action]', function () {
+        const $b = $(this);
+        if ($b.data('confirm') && !window.confirm($b.data('confirm'))) return;
+        $b.prop('disabled', true);
+        $.ajax({ url: $b.data('post-action'), method: 'POST' })
+            .done((res) => { if (res.message) toastr.success(res.message); setTimeout(() => (res.redirect ? (location.href = res.redirect) : location.reload()), 500); })
+            .fail((xhr) => { toastr.error(firstError(xhr)); $b.prop('disabled', false); });
+    });
+    /* file picker inside a drop box: show the chosen file name */
+    $(document).on('change', 'input[type=file][data-file-label]', function () {
+        const $t = $(this).closest('label').find('[data-file-text]');
+        if (!$t.data('cta')) $t.data('cta', $t.text());
+        $t.text(this.files[0]?.name || $t.data('cta'));
     });
 
     /* ---------- retry an online payment from the order page ---------- */
@@ -490,51 +633,4 @@ function init() {
     });
 
     loadCart();
-}
-
-// Horizontal rows: [data-scroll-row] gets a left and a right arrow (physical sides, works in RTL), hidden at the ends.
-const initScrollRows = () => {
-    document.querySelectorAll('[data-scroll-row]:not([data-scroll-ready])').forEach((row) => {
-        row.dataset.scrollReady = '1';
-        const wrap = document.createElement('div');
-        wrap.className = 'relative';
-        row.parentNode.insertBefore(wrap, row);
-        wrap.appendChild(row);
-        const mk = (dir) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.dir = 'ltr';
-            b.setAttribute('aria-label', dir < 0 ? 'Scroll left' : 'Scroll right');
-            b.className = `absolute top-1/2 z-10 hidden size-9 -translate-y-1/2 place-items-center rounded-full bg-white text-lg text-slate-700 shadow ring-1 ring-slate-200 hover:text-brand-600 sm:grid ${dir < 0 ? 'left-1' : 'right-1'}`;
-            b.textContent = dir < 0 ? '‹' : '›';
-            b.addEventListener('click', () => row.scrollBy({ left: dir * row.clientWidth * 0.8, behavior: 'smooth' }));
-            wrap.appendChild(b);
-            return b;
-        };
-        const l = mk(-1), r = mk(1);
-        const sync = () => {
-            const max = row.scrollWidth - row.clientWidth;
-            const x = Math.abs(row.scrollLeft);
-            const rtl = getComputedStyle(row).direction === 'rtl';
-            const atLeft = rtl ? x >= max - 2 : x <= 2;
-            const atRight = rtl ? x <= 2 : x >= max - 2;
-            l.style.visibility = max > 2 && !atLeft ? '' : 'hidden';
-            r.style.visibility = max > 2 && !atRight ? '' : 'hidden';
-        };
-        row.addEventListener('scroll', sync, { passive: true });
-        window.addEventListener('resize', sync);
-        sync();
-        setTimeout(sync, 400);
-    });
-};
-document.addEventListener('DOMContentLoaded', initScrollRows);
-
-
-/** Swap the main product image; keeps a <picture>'s AVIF <source> and WebP fallback <img> in step (a stale <source> would win otherwise). */
-function setMainImage($p, url) {
-    const $img = $p.find('[data-main-image]'), $picture = $img.closest('picture');
-    if (!$picture.length) { $img.attr('src', url); return; } // plain <img> (x-media-img): there may be no .webp sibling (IMAGE_WEBP_FALLBACK=false)
-    const isAvif = /\.avif(\?|$)/.test(url);
-    $picture.find('source').attr('srcset', isAvif ? url : '');
-    $img.attr('src', isAvif ? url.replace(/\.avif/, '.webp') : url);
 }

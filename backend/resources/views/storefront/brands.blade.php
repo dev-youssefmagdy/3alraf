@@ -1,25 +1,17 @@
-<x-layouts.storefront :title="__('store.all_brands')">
-    <div class="mb-6">
-        <h1 class="text-2xl font-extrabold">{{ __('store.all_brands') }}</h1>
-        <p class="mt-1 text-sm text-slate-500">{{ $brands->count() }} {{ __('store.brands') }}</p>
-    </div>
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+<x-layouts.storefront :title="__('store.all_brands')" :breadcrumbs="[[__('store.breadcrumb_home'), route('storefront.home')], [__('store.all_brands'), url()->current()]]">
+    {{-- design 27:8105 / 27:8337: sun header, 2 / 3 / 4 / 6-col brand tiles --}}
+    <x-breadcrumbs :items="[[__('store.breadcrumb_home'), route('storefront.home')], [__('store.all_brands'), url()->current()]]" />
+    <header class="relative mb-6 overflow-hidden rounded-3xl bg-sun-400 px-5 py-7 text-slate-950 lg:mb-8 lg:rounded-[32px] lg:px-10 lg:py-10">
+        <span class="pointer-events-none absolute -bottom-16 -end-10 size-36 rounded-full bg-pop-600 lg:size-56" aria-hidden="true"></span>
+        <span class="pointer-events-none absolute -top-5 end-28 size-12 rounded-full border-[6px] border-white/70 max-sm:hidden" aria-hidden="true"></span>
+        <h1 class="page-title relative">{{ __('store.all_brands') }}</h1>
+        <p class="relative mt-1 text-sm font-bold">{{ __('store.brands_count', ['n' => $brands->count()]) }}</p>
+    </header>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 lg:gap-5">
         @forelse ($brands as $br)
-            <a href="{{ route('storefront.brand.show', $br->slug) }}" class="group flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:-translate-y-1 hover:shadow-lg hover:ring-brand-500">
-                <span class="grid aspect-[4/3] place-items-center bg-slate-50 p-6">
-                    @if ($br->logo_url)
-                        <img src="{{ $br->logo_url }}" alt="{{ $br->name }}" class="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-110" loading="lazy">
-                    @else
-                        <span class="grid size-20 place-items-center rounded-full bg-brand-50 text-3xl font-extrabold text-brand-600">{{ mb_strtoupper(mb_substr($br->name, 0, 1)) }}</span>
-                    @endif
-                </span>
-                <span class="border-t border-slate-100 px-3 py-3 text-center">
-                    <span class="block truncate text-sm font-bold text-slate-800 group-hover:text-brand-600">{{ $br->name }}</span>
-                    <span class="mt-0.5 block text-xs text-slate-500">{{ $br->sellable_count }} {{ __('store.brand_products') }}</span>
-                </span>
-            </a>
+            @include('storefront._brand-tile', ['br' => $br, 'i' => $loop->index])
         @empty
-            <p class="col-span-full text-slate-500">{{ __('store.brands_empty') }}</p>
+            <x-empty-state type="search" :title="__('store.brands_empty')" :href="route('storefront.home')" :action="__('store.continue_shopping')" />
         @endforelse
     </div>
 </x-layouts.storefront>

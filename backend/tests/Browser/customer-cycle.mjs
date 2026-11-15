@@ -6,6 +6,8 @@
 // ONLY against the throw-away DB (the script refuses any other, it places orders and toggles a setting):
 //   mysql -e 'CREATE DATABASE `3alraf_smoke_qa`'; export DB_DATABASE=3alraf_smoke_qa APP_URL=http://3alraf.test:8099
 //   php artisan migrate --force && php artisan db:seed --force      # then opening stock + 2 active bundles (see docs/qa/marketer-release.md)
+//   (the full `db:seed` gift catalogue is required: with the generic CatalogSeeder/DemoSeeder catalogue the test cart passes the shipping
+//    rate's free_over (1000), shipping_net becomes 0, nothing is prepaid and COD never offers the prepaid wallet step - correct behaviour, wrong data)
 //   PHP_CLI_SERVER_WORKERS=6 php artisan serve --port=8099 &
 //   MYSQL_PWD=... DB_USERNAME=root PORT=8099 OUT=/path/to/screens node tests/Browser/customer-cycle.mjs   (ONLY=ar-desktop to limit browsing)
 import { chromium } from 'playwright-core';

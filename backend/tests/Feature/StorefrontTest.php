@@ -59,7 +59,7 @@ test('home renders menu, rails, flash sale countdown and banners', function () {
     FlashSaleItem::create(['flash_sale_id' => $fs->id, 'product_id' => $this->p1->id, 'product_variant_id' => 0, 'discount_type' => 'percent', 'value' => 20]);
     Banner::create(['placement' => 'home_hero', 'title' => ['ar' => 'بانر', 'en' => 'Hero'], 'images' => ['ar' => 'banners/x.webp'], 'link_url' => '/ar', 'sort_order' => 1, 'is_active' => true]);
 
-    $this->get("{$this->s}")->assertOk()->assertSee('dir="rtl"', false)->assertSee('أجهزة')->assertSee('data-slider', false)->assertSee('data-countdown', false)
+    $this->get("{$this->s}")->assertOk()->assertSee('dir="rtl"', false)->assertSee('أجهزة')->assertSee('data-swiper="hero"', false)->assertSee('data-countdown', false)
         ->assertSee('منتج cheap')->assertSee('80.00')->assertSee('data-cart-count', false)->assertSee('hreflang="en"', false)->assertSee('application/ld+json', false);
     $this->get('/en')->assertOk()->assertSee('dir="ltr"', false)->assertSee('Devices');
 });
