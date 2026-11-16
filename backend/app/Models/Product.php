@@ -31,7 +31,7 @@ class Product extends Model
 
     protected function casts(): array
     {
-        return ['type' => ProductType::class, 'is_active' => 'bool', 'weight' => 'decimal:3',
+        return ['type' => ProductType::class, 'is_active' => 'bool', 'weight' => 'int' /* grams */,
             'price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'min_stock_alert_qty' => 'int',
             'content' => 'array', 'gift_suitable' => 'bool', 'gift_recipients' => 'array', 'gift_occasions' => 'array'];
     }

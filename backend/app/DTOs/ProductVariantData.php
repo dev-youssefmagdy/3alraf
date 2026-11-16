@@ -11,7 +11,7 @@ final readonly class ProductVariantData
         public ?int $id,
         public array $valueIds,
         public ?string $sku,
-        public ?string $weight,
+        public ?int $weight, // grams
         public bool $isActive,
         public ?UploadedFile $image,
         public ?string $price = null,

@@ -145,7 +145,7 @@ class CatalogSeeder extends Seeder
             $p = Product::create([
                 'brand_id' => $brands[$brand]->id, 'type' => $axes ? 'variable' : 'simple', 'name' => ['ar' => $ar, 'en' => $en],
                 'description' => ['ar' => "وصف تجريبي لـ $ar. جودة عالية وضمان معتمد.", 'en' => "Demo description for $en. High quality with warranty."],
-                'slug' => $slug, 'sku' => sprintf('SKU-%04d', $i + 1), 'barcode' => $axes ? null : $barcodes->generateUnique(), 'weight' => 1 + ($i % 7), 'is_active' => true,
+                'slug' => $slug, 'sku' => sprintf('SKU-%04d', $i + 1), 'barcode' => $axes ? null : $barcodes->generateUnique(), 'weight' => (1 + ($i % 7)) * 1000, // grams 'is_active' => true,
             ]);
             $p->categories()->sync([$cats[$leaf]->id]);
             $p->tags()->sync([$tags[$i % 3]->id]);

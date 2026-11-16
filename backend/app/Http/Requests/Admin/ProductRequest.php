@@ -44,7 +44,7 @@ class ProductRequest extends FormRequest
             'sku' => ['required', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product?->id)],
             'barcode' => ['nullable', 'digits:13', Rule::unique('products', 'barcode')->ignore($product?->id), Rule::unique('product_variants', 'barcode'),
                 fn ($a, $v, $fail) => BarcodeService::isValidEan13((string) $v) ?: $fail(__('admin.invalid_ean13'))],
-            'weight' => ['nullable', 'numeric', 'min:0', 'max:9999999'],
+            'weight' => ['nullable', 'integer', 'min:0', 'max:1000000'], // grams
             'is_active' => ['nullable', 'boolean'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999999999', 'required_with:sale_price,cost', 'required_if_accepted:is_active'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
@@ -65,7 +65,7 @@ class ProductRequest extends FormRequest
                 'variants.*.id' => ['nullable', 'integer'],
                 'variants.*.values' => ['required', 'array', 'min:1'],
                 'variants.*.values.*' => ['integer', 'exists:attribute_values,id'],
-                'variants.*.weight' => ['nullable', 'numeric', 'min:0'],
+                'variants.*.weight' => ['nullable', 'integer', 'min:0', 'max:1000000'], // grams
                 'variants.*.is_active' => ['nullable', 'boolean'],
                 'variants.*.price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
                 'variants.*.sale_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],

@@ -119,7 +119,7 @@ return [
         'description' => 'الوصف',
         'sku' => 'رمز المنتج SKU',
         'barcode' => 'الباركود (EAN-13)',
-        'weight' => 'الوزن (كجم)',
+        'weight' => 'الوزن (جم)',
         'meta_title' => 'عنوان SEO',
         'meta_description' => 'وصف SEO',
         'price' => 'السعر',

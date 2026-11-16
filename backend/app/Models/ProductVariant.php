@@ -18,7 +18,7 @@ class ProductVariant extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'bool', 'weight' => 'decimal:3', 'price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'min_stock_alert_qty' => 'int'];
+        return ['is_active' => 'bool', 'weight' => 'int', 'price' => 'decimal:2', 'sale_price' => 'decimal:2', 'cost' => 'decimal:2', 'min_stock_alert_qty' => 'int'];
     }
 
     /** Effective selling price: own price / sale price, falling back to the product's. */

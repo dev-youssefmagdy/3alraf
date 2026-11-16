@@ -119,7 +119,7 @@ return [
         'description' => 'Description',
         'sku' => 'SKU',
         'barcode' => 'Barcode (EAN-13)',
-        'weight' => 'Weight (kg)',
+        'weight' => 'Weight (g)',
         'meta_title' => 'Meta title',
         'meta_description' => 'Meta description',
         'price' => 'Price',

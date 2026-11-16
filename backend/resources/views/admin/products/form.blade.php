@@ -156,7 +156,7 @@
                             <img src="{{ route('admin.barcode', $product->barcode) }}?h=50" alt="{{ $product->barcode }}" class="mt-2 h-12">
                         @endif
                     </div>
-                    <x-input name="weight" type="number" step="0.001" min="0" :label="__('admin.fields.weight')" :value="$product->weight" />
+                    <x-input name="weight" type="number" step="1" min="0" inputmode="numeric" :label="__('admin.fields.weight')" :value="$product->weight" />
                 </div>
             </x-card>
 
