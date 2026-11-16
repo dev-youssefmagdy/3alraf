@@ -69,8 +69,25 @@
             <x-card :title="__('admin.variants')" data-variant-section id="variant-section">
                 <div id="variant-generator" data-attributes='@json($attrJson)' data-used='@json($usedValueIds)' class="space-y-4">
                     <p class="text-sm text-slate-500">{{ __('admin.variant_generator_hint') }}</p>
-                    <div data-attr-pickers class="space-y-3"></div>
-                    <button type="button" data-generate class="btn btn-secondary">{{ __('admin.generate_variants') }}</button>
+                    @if ($attrJson->isEmpty())
+                        <p class="text-sm text-slate-500">{{ __('admin.variant_builder.no_attributes') }}
+                            @can('attributes.create')<a href="{{ route('admin.attributes.create') }}" class="text-brand-600 underline" target="_blank">{{ __('admin.variant_builder.create_attribute') }}</a>@endcan</p>
+                    @else
+                        <div class="flex flex-wrap items-end gap-2">
+                            <label class="min-w-56 flex-1 sm:max-w-sm">
+                                <span class="form-label">{{ __('admin.variant_builder.add_attribute') }}</span>
+                                <select data-attr-add data-search class="form-control" placeholder="{{ __('admin.variant_builder.choose_attribute') }}">
+                                    <option value="">{{ __('admin.variant_builder.choose_attribute') }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div data-attr-groups class="space-y-3"></div>
+                        <p data-attr-empty class="rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">{{ __('admin.variant_builder.empty') }}</p>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button type="button" data-generate class="btn btn-secondary" disabled>{{ __('admin.generate_variants') }}</button>
+                            <span data-attr-summary class="text-sm text-slate-500"></span>
+                        </div>
+                    @endif
                 </div>
                 <div data-repeater class="mt-5 overflow-x-auto" id="variant-repeater">
                     <table class="w-full text-sm">

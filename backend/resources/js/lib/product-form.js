@@ -2,56 +2,139 @@ import $ from 'jquery';
 import { clearErrors, showErrors } from './ajax-form';
 
 /**
- * Product form: toggles simple/variable sections and builds the variant matrix
- * (cartesian product of the ticked attribute values) into the variants repeater.
+ * Product form: toggles simple/variable sections and builds the variant matrix into the variants repeater.
+ * Attributes are added one at a time (searchable picker) into groups; the cartesian product of the ticked values is generated.
  * Existing combinations are never duplicated (matched on sorted value-id hash, same as ProductVariant::hashFor).
+ * The picker inputs have no `name`: only the generated variant rows are submitted.
  */
 const hashOf = (ids) => [...ids].map(Number).sort((a, b) => a - b).join('-');
 const esc = (s) => $('<div>').text(s ?? '').html();
+const t = (k, fallback) => window.__t?.[k] || fallback;
 
 function toggleType() {
     const variable = $('#f-type').val() === 'variable';
-    $('#variant-section').toggle(variable).find('input,select').prop('disabled', !variable);
+    $('#variant-section').toggle(variable).find('input,select,button').not('[data-generate]').prop('disabled', !variable);
     $('[data-simple-section]').toggle(!variable);
+    if (variable) { syncPicker(); refreshSummary(); }
 }
 
 function refreshEmpty() {
     $('#variant-repeater [data-empty]').toggle($('#variant-repeater [data-repeater-item]').length === 0);
+    refreshSummary();
 }
 
-function buildPickers($gen) {
-    const attrs = $gen.data('attributes') || [];
-    const used = new Set(($gen.data('used') || []).map(Number));
-    const $box = $gen.find('[data-attr-pickers]').empty();
-    attrs.forEach((a) => {
-        const vals = a.values.map((v) => {
-            const sw = v.color ? '<span class="inline-block size-3 rounded-full border" style="background:' + esc(v.color) + '"></span>' : '';
-            return '<label class="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-xs"><input type="checkbox" data-pick="' + a.id + '" value="' + v.id + '" ' + (used.has(v.id) ? 'checked' : '') + '> ' + sw + esc(v.name) + '</label>';
-        }).join(' ');
-        $box.append('<div><div class="mb-1 text-sm font-semibold">' + esc(a.name) + '</div><div class="flex flex-wrap gap-2">' + vals + '</div></div>');
+const $gen = () => $('#variant-generator');
+const attrsById = () => new Map(($gen().data('attributes') || []).map((a) => [Number(a.id), a]));
+const addedIds = () => $gen().find('[data-attr-group]').map((_, el) => Number($(el).data('attr-group'))).get();
+const existingHashes = () => new Set($('#variant-repeater [data-repeater-item]').map((_, el) => String($(el).data('hash'))).get());
+
+/** Ticked values per added group, in the order the groups were added (empty groups are skipped). */
+function pickedGroups() {
+    const byId = attrsById();
+    return addedIds().map((id) => {
+        const a = byId.get(id);
+        const picked = $gen().find('[data-pick="' + id + '"]:checked').map((_, el) => Number(el.value)).get();
+        return { attr: a, values: picked.map((vid) => ({ id: vid, name: a.values.find((v) => Number(v.id) === vid).name })) };
+    }).filter((g) => g.values.length);
+}
+
+const combosOf = (groups) => groups.reduce((acc, g) => acc.flatMap((c) => g.values.map((v) => [...c, v])), [[]]);
+
+/** Keep the "add attribute" picker in sync: only attributes that are not added yet. */
+function syncPicker() {
+    const sel = $gen().find('[data-attr-add]')[0];
+    if (!sel) return;
+    const added = new Set(addedIds());
+    const free = ($gen().data('attributes') || []).filter((a) => !added.has(Number(a.id)));
+    const ts = sel.tomselect;
+    if (ts) {
+        ts.clear(true);
+        ts.clearOptions();
+        free.forEach((a) => ts.addOption({ value: String(a.id), text: a.name }));
+        ts.refreshOptions(false);
+        free.length ? ts.enable() : ts.disable();
+    } else {
+        $(sel).find('option:not([value=""])').remove();
+        free.forEach((a) => $(sel).append($('<option>').val(a.id).text(a.name)));
+        $(sel).val('').prop('disabled', !free.length);
+    }
+}
+
+function groupHtml(a, checked) {
+    const chips = a.values.map((v) => {
+        const sw = v.color ? '<span class="inline-block size-3 rounded-full border" style="background:' + esc(v.color) + '"></span>' : '';
+        return '<label class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-xs has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50">'
+            + '<input type="checkbox" data-pick="' + a.id + '" value="' + v.id + '"' + (checked.has(Number(v.id)) ? ' checked' : '') + '> ' + sw + esc(v.name) + '</label>';
+    }).join(' ');
+    const empty = a.values.length ? '' : '<p class="text-xs text-slate-500">' + esc(t('vb_no_values', 'This attribute has no values yet.')) + '</p>';
+    return '<div data-attr-group="' + a.id + '" class="rounded-lg border border-slate-200 p-3">'
+        + '<div class="mb-2 flex flex-wrap items-center gap-2">'
+        + '<span class="text-sm font-semibold">' + esc(a.name) + '</span>'
+        + '<span data-attr-count dir="ltr" class="badge badge-muted"></span>'
+        + '<span class="ms-auto flex items-center gap-1">'
+        + '<button type="button" data-attr-all class="btn-sm btn-secondary">' + esc(t('vb_select_all', 'Select all')) + '</button>'
+        + '<button type="button" data-attr-none class="btn-sm btn-secondary">' + esc(t('vb_clear', 'Clear')) + '</button>'
+        + '<button type="button" data-attr-remove class="btn-sm btn-secondary" aria-label="' + esc(t('vb_remove', 'Remove')) + '" title="' + esc(t('vb_remove', 'Remove')) + '">&times;</button>'
+        + '</span></div>'
+        + '<div class="flex flex-wrap gap-2">' + chips + '</div>' + empty + '</div>';
+}
+
+function addGroup(id, checked = new Set()) {
+    const a = attrsById().get(Number(id));
+    if (!a || addedIds().includes(Number(id))) return;
+    $gen().find('[data-attr-groups]').append(groupHtml(a, checked));
+    syncPicker();
+    refreshSummary();
+}
+
+/** Group counters, empty state, live "A (2) × B (3) = 6 combinations · 4 new" line, Generate button state. */
+function refreshSummary() {
+    const $g = $gen();
+    if (!$g.length) return;
+    $g.find('[data-attr-group]').each(function () {
+        const $grp = $(this), total = $grp.find('[data-pick]').length, on = $grp.find('[data-pick]:checked').length;
+        $grp.find('[data-attr-count]').text(on + ' / ' + total);
     });
+    $g.find('[data-attr-empty]').toggle(addedIds().length === 0);
+
+    const groups = pickedGroups();
+    const $sum = $g.find('[data-attr-summary]');
+    let fresh = 0;
+    if (groups.length) {
+        const have = existingHashes();
+        const combos = combosOf(groups);
+        fresh = combos.filter((c) => !have.has(hashOf(c.map((v) => v.id)))).length;
+        const formula = groups.map((g) => esc(g.attr.name) + ' (' + g.values.length + ')').join(' × ');
+        $sum.html(formula + ' = <strong>' + combos.length + '</strong> ' + esc(t('vb_combinations', 'combinations')) + ' · <strong>' + fresh + '</strong> ' + esc(t('vb_new', 'new')));
+    } else {
+        $sum.text(addedIds().length ? t('pick_values', 'Select attribute values first.') : '');
+    }
+    $g.find('[data-generate]').prop('disabled', fresh === 0 || $('#f-type').val() !== 'variable');
+}
+
+function initBuilder() {
+    const $g = $gen();
+    const byId = attrsById();
+    const used = new Set(($g.data('used') || []).map(Number));
+    syncPicker();
+    // editing: pre-add the attributes the existing variants use, with their values ticked
+    byId.forEach((a) => { if (a.values.some((v) => used.has(Number(v.id)))) addGroup(a.id, used); });
+    refreshSummary();
 }
 
 function generate() {
-    const $gen = $('#variant-generator');
-    const attrs = $gen.data('attributes') || [];
-    const groups = attrs.map((a) => {
-        const picked = $gen.find('[data-pick="' + a.id + '"]:checked').map((_, el) => Number(el.value)).get();
-        return picked.map((id) => ({ id, name: a.values.find((v) => v.id === id).name }));
-    }).filter((g) => g.length);
-    if (!groups.length) return window.toastr?.warning(window.__t?.pick_values || 'Select attribute values first.');
+    const groups = pickedGroups();
+    if (!groups.length) return window.toastr?.warning(t('pick_values', 'Select attribute values first.'));
 
-    const combos = groups.reduce((acc, g) => acc.flatMap((c) => g.map((v) => [...c, v])), [[]]);
     const $rep = $('#variant-repeater');
-    const have = new Set($rep.find('[data-repeater-item]').map((_, el) => String($(el).data('hash'))).get());
+    const have = existingHashes();
     const baseSku = ($('#f-sku').val() || 'SKU').trim();
     let added = 0;
 
-    combos.forEach((combo) => {
+    combosOf(groups).forEach((combo) => {
         const ids = combo.map((c) => c.id);
         const hash = hashOf(ids);
         if (have.has(hash)) return;
-        $rep.find('[data-repeater-add]').length || null;
         const tpl = $rep.find('[data-repeater-template]').first().html().replaceAll('__INDEX__', 'n' + Date.now() + added);
         const $row = $(tpl).find('tr').first();
         $row.attr('data-hash', hash).data('hash', hash);
@@ -64,15 +147,21 @@ function generate() {
         added++;
     });
     refreshEmpty();
-    if (!added) window.toastr?.info(window.__t?.nothing_new || 'No new combinations.');
+    if (added) window.toastr?.success(t('vb_generated', ':n variants added.').replace(':n', added));
+    else window.toastr?.info(t('nothing_new', 'No new combinations.'));
 }
 
 $(() => {
     if (!$('#variant-generator').length) return;
-    buildPickers($('#variant-generator'));
+    initBuilder();
     toggleType();
     refreshEmpty();
     $(document).on('change', '#f-type', toggleType);
+    $(document).on('change', '#variant-generator [data-attr-add]', function () { if (this.value) addGroup(this.value); });
+    $(document).on('change', '#variant-generator [data-pick]', refreshSummary);
+    $(document).on('click', '#variant-generator [data-attr-all]', function () { $(this).closest('[data-attr-group]').find('[data-pick]').prop('checked', true); refreshSummary(); });
+    $(document).on('click', '#variant-generator [data-attr-none]', function () { $(this).closest('[data-attr-group]').find('[data-pick]').prop('checked', false); refreshSummary(); });
+    $(document).on('click', '#variant-generator [data-attr-remove]', function () { $(this).closest('[data-attr-group]').remove(); syncPicker(); refreshSummary(); });
     $(document).on('click', '#variant-generator [data-generate]', generate);
     $(document).on('repeater:changed', '#variant-repeater', refreshEmpty);
 });

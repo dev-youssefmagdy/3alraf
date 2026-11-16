@@ -6,6 +6,13 @@
         'error' => __('admin.error'),
         'pick_values' => __('admin.pick_values'),
         'nothing_new' => __('admin.nothing_new'),
+        'vb_select_all' => __('admin.variant_builder.select_all'),
+        'vb_clear' => __('admin.variant_builder.clear'),
+        'vb_remove' => __('admin.variant_builder.remove'),
+        'vb_no_values' => __('admin.variant_builder.no_values'),
+        'vb_combinations' => __('admin.variant_builder.combinations'),
+        'vb_new' => __('admin.variant_builder.new'),
+        'vb_generated' => __('admin.variant_builder.generated'),
         'cmdk_empty' => __('admin.cmdk_empty'),
         'datatable' => [
             'search' => __('admin.search').':',

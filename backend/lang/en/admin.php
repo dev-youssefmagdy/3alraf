@@ -84,7 +84,7 @@ return [
     'barcode_auto' => 'Auto on save',
     'invalid_ean13' => 'Invalid EAN-13 barcode (check digit mismatch).',
     'duplicate_variant' => 'This combination is duplicated.',
-    'variant_generator_hint' => 'Tick the attribute values to combine, then generate the variant matrix. Existing variants are kept.',
+    'variant_generator_hint' => 'Add the attributes this product varies by, one at a time, tick their values, then generate. Existing variants are kept.',
     'generate_variants' => 'Generate variants',
     'no_variants_yet' => 'No variants yet.',
     'variant_override_hint' => 'Leave empty to inherit the product price / cost.',
@@ -721,5 +721,11 @@ return [
         'save' => 'Save as draft', 'publish' => 'Save & publish', 'badge' => 'Draft', 'title' => 'Drafts', 'all' => 'All',
         'hint' => 'A draft needs only a name. It stays hidden from the store until you save it with all required fields.',
         'notice' => 'hidden from the store. Fill in the remaining fields and click "Save & publish".',
+    ],
+    'variant_builder' => [
+        'add_attribute' => 'Add attribute', 'choose_attribute' => 'Search attributes…', 'empty' => 'No attributes added yet. Pick one above (for example Color, then Size).',
+        'no_attributes' => 'No attributes defined yet.', 'create_attribute' => 'Create an attribute',
+        'select_all' => 'Select all', 'clear' => 'Clear', 'remove' => 'Remove', 'no_values' => 'This attribute has no values yet.',
+        'combinations' => 'combinations', 'new' => 'new', 'generated' => ':n variants added.',
     ],
 ];
