@@ -29,7 +29,7 @@ class ActivateProductsRequest extends FormRequest
                 continue;
             }
             $rules["rows.$productId.price"] = ['required', 'numeric', 'min:0', 'max:999999999999'];
-            $rules["rows.$productId.sale_price"] = ['nullable', 'numeric', 'min:0', "lt:rows.$productId.price"];
+            $rules["rows.$productId.sale_price"] = ['nullable', 'numeric', 'min:0', "lte:rows.$productId.price"];
             $rules["rows.$productId.cost"] = ['required', 'numeric', 'min:0', 'max:999999999999'];
         }
 

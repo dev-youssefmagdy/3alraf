@@ -47,7 +47,7 @@ class ProductRequest extends FormRequest
             'weight' => ['nullable', 'integer', 'min:0', 'max:1000000'], // grams
             'is_active' => ['nullable', 'boolean'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999999999', 'required_with:sale_price,cost', 'required_if_accepted:is_active'],
-            'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:price'], // equal = no discount shown (storefront strikes through only when lower)
             'cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'gift_suitable' => ['nullable', 'boolean'],
@@ -105,8 +105,8 @@ class ProductRequest extends FormRequest
                 }
                 $skus[$sku] = true;
                 $price = ($row['price'] ?? '') !== '' ? $row['price'] : $this->input('price');
-                if (($row['sale_price'] ?? '') !== '' && is_numeric($price) && is_numeric($row['sale_price']) && bccomp((string) $row['sale_price'], (string) $price, 2) >= 0) {
-                    $v->errors()->add("variants.$key.sale_price", __('validation.lt.numeric', ['attribute' => __('admin.fields.sale_price'), 'value' => __('admin.fields.price')]));
+                if (($row['sale_price'] ?? '') !== '' && is_numeric($price) && is_numeric($row['sale_price']) && bccomp((string) $row['sale_price'], (string) $price, 2) > 0) {
+                    $v->errors()->add("variants.$key.sale_price", __('validation.lte.numeric', ['attribute' => __('admin.fields.sale_price'), 'value' => __('admin.fields.price')]));
                 }
             }
         }];

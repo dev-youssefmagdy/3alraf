@@ -160,7 +160,7 @@ it('activates catalog products in bulk with their prices (listing data lives on 
     $rows[$tv->id] = array_merge($rows[$tv->id], ['price' => '250', 'sale_price' => '240', 'cost' => '90', 'min_stock_alert_qty' => '4', 'is_active' => 0]);
     $this->putJson("{$this->t}/products/{$tpV->id}", $base + ['variants' => $rows])->assertOk();
     expect((string) $tv->fresh()->price)->toBe('250.00')->and((string) $tv->fresh()->sale_price)->toBe('240.00')->and((string) $tv->fresh()->cost)->toBe('90.00')->and($tv->fresh()->min_stock_alert_qty)->toBe(4)->and($tv->fresh()->is_active)->toBeFalse();
-    $rows[$tv->id]['sale_price'] = '260'; // sale >= variant price
+    $rows[$tv->id]['sale_price'] = '260'; // sale > variant price (equal is allowed)
     $this->putJson("{$this->t}/products/{$tpV->id}", $base + ['variants' => $rows])->assertStatus(422)->assertJsonValidationErrors(["variants.{$tv->id}.sale_price"]);
 
     $this->getJson("{$this->t}/products/datatable?draw=1&start=0&length=10")->assertOk()->assertJsonPath('recordsTotal', 3);
