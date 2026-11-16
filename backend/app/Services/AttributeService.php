@@ -40,7 +40,10 @@ class AttributeService
         if ($this->usedValueIds($attribute->values()->pluck('id')->all())) {
             throw ValidationException::withMessages(['attribute' => __('admin.attribute_in_use')]);
         }
-        $this->attributes->delete($attribute);
+        DB::transaction(function () use ($attribute) {
+            $attribute->values()->delete(); // soft: removed variants keep their labels
+            $this->attributes->delete($attribute);
+        });
     }
 
     private function payload(AttributeData $dto, ?Attribute $attr = null): array
@@ -73,8 +76,17 @@ class AttributeService
     }
 
     /** @return int[] ids of values referenced by variants */
+    /**
+     * Values used by a LIVE variant of a LIVE product. Variants replaced in the product form (or of a deleted product) are only
+     * soft-deleted for history: they must not block deleting the attribute. Attributes / values are soft-deleted too, so those
+     * removed variants keep their value links and labels; retention:purge drops a value only once no variant references it.
+     */
     private function usedValueIds(array $ids): array
     {
-        return $ids ? DB::table('product_variant_values')->whereIn('attribute_value_id', $ids)->distinct()->pluck('attribute_value_id')->all() : [];
+        return $ids ? DB::table('product_variant_values as pvv')
+            ->join('product_variants as v', 'v.id', '=', 'pvv.product_variant_id')
+            ->join('products as p', 'p.id', '=', 'v.product_id')
+            ->whereIn('pvv.attribute_value_id', $ids)->whereNull('v.deleted_at')->whereNull('p.deleted_at')
+            ->distinct()->pluck('pvv.attribute_value_id')->all() : [];
     }
 }

@@ -41,13 +41,16 @@ class ProductVariant extends Model
 
     public function values(): BelongsToMany
     {
-        return $this->belongsToMany(AttributeValue::class, 'product_variant_values');
+        // withTrashed: removed variants keep their label after an attribute / value is deleted (live variants can never use a deleted one)
+        return $this->belongsToMany(AttributeValue::class, 'product_variant_values')->withTrashed();
     }
 
     /** "Red / XL" label from the loaded values. */
     public function label(): string
     {
-        return $this->values->map->value->implode(' / ');
+        $label = $this->values->map->value->implode(' / ');
+
+        return $label !== '' ? $label : (string) $this->sku; // safety net: a variant without values
     }
 
     public static function hashFor(array $valueIds): string

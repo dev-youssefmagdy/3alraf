@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Models\Branch;
 use App\Models\Bundle;
 use App\Models\PackagingOption;
@@ -32,6 +34,8 @@ return [
         'brand' => Brand::class,
         'category' => Category::class,
         'tag' => Tag::class,
+        'attribute_value' => AttributeValue::class, // after variants: purging a variant frees its values
+        'attribute' => Attribute::class,             // after its values
         'discount_code' => DiscountCode::class,
         'payment_method' => PaymentMethod::class,
         'shipping_company' => ShippingCompany::class,

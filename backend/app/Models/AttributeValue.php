@@ -5,10 +5,11 @@ namespace App\Models;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AttributeValue extends Model
 {
-    use HasTranslations;
+    use HasTranslations, SoftDeletes;
 
     protected array $translatable = ['value'];
 
@@ -16,6 +17,6 @@ class AttributeValue extends Model
 
     public function attribute(): BelongsTo
     {
-        return $this->belongsTo(Attribute::class);
+        return $this->belongsTo(Attribute::class)->withTrashed(); // history rows may point at a deleted attribute
     }
 }

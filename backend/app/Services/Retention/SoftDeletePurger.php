@@ -30,6 +30,8 @@ use Illuminate\Support\Str;
  *  brand           still has products (even soft-deleted) -> kept, else purged (+logo)
  *  category        still has products or sub-categories -> kept, else purged (+image)
  *  tag             always purged (pivot cascades; not used by any report)
+ *  attribute_value used by any variant (even soft-deleted: it is that variant's label in history) -> kept, else purged
+ *  attribute       still has values (even soft-deleted) -> kept, else purged
  *  discount code   used by an order or has usage rows -> kept, else purged
  *  payment method  used by an order / payment event -> kept, else purged
  *  shipping co.    used by an order -> kept, else purged (rates cascade)
@@ -253,6 +255,26 @@ class SoftDeletePurger
     private function purgeTag(Model $t): string
     {
         $t->forceDelete();
+
+        return self::PURGED;
+    }
+
+    private function purgeAttributeValue(Model $v): string
+    {
+        if ($this->repo->referenced('product_variant_values', 'attribute_value_id', $v->id)) {
+            return self::RETAINED;
+        }
+        $v->forceDelete();
+
+        return self::PURGED;
+    }
+
+    private function purgeAttribute(Model $a): string
+    {
+        if ($this->repo->referenced('attribute_values', 'attribute_id', $a->id)) {
+            return self::RETAINED;
+        }
+        $a->forceDelete();
 
         return self::PURGED;
     }
