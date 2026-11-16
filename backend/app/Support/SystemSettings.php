@@ -43,6 +43,16 @@ final class SystemSettings
                 'social_media_video_max_kb' => ['int', ['marketing.media.video_max_kb'], 'SOCIAL_MEDIA_VIDEO_MAX_KB'],
                 'image_webp_fallback' => ['bool', ['images.webp_fallback'], 'IMAGE_WEBP_FALLBACK'],
             ],
+            'mail' => [
+                'mail_mailer' => ['string', ['mail.default'], 'MAIL_MAILER'],
+                'mail_scheme' => ['string', ['mail.mailers.smtp.scheme'], 'MAIL_SCHEME'],
+                'mail_host' => ['string', ['mail.mailers.smtp.host'], 'MAIL_HOST'],
+                'mail_port' => ['int', ['mail.mailers.smtp.port'], 'MAIL_PORT'],
+                'mail_username' => ['string', ['mail.mailers.smtp.username'], 'MAIL_USERNAME'],
+                'mail_password' => ['secret', ['mail.mailers.smtp.password'], 'MAIL_PASSWORD'],
+                'mail_from_address' => ['string', ['mail.from.address'], 'MAIL_FROM_ADDRESS'],
+                'mail_from_name' => ['string', ['mail.from.name'], 'MAIL_FROM_NAME'],
+            ],
             'google' => [
                 'google_client_id' => ['string', ['services.google.client_id'], 'GOOGLE_CLIENT_ID'],
                 'google_client_secret' => ['secret', ['services.google.client_secret'], 'GOOGLE_CLIENT_SECRET'],

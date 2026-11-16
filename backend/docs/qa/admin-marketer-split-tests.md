@@ -46,6 +46,8 @@ php artisan test --testsuite=Migrations        # if the parallel run mixes it ba
 
 - [x] System health page (`tests/Feature/HealthPageTest.php`, 4 tests): page + 11 checks, JSON per check, off / warn / fail states, permission gate. Manual: open /admin/health with WhatsApp connected and disconnected.
 
+- [x] System settings → Mail (SMTP) group (`SystemSettingsPageTest`, 5 new tests): saved encrypted, applied to `mail.*` config, empty password keeps the old one, validation, test e-mail button (readable SMTP error), permission gate. Manual: save real SMTP values, press "Send test e-mail", then check /admin/health → E-mail is green.
+
 ## 2. Browser scripts (one run each, throw-away DB)
 
 ```bash

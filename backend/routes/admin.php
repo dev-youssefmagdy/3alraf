@@ -105,6 +105,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'edit'])->name('system-settings.edit');
         Route::post('settings/system/validate', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
         Route::put('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('system-settings.update');
+        Route::post('settings/system/test-mail', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'testMail'])->middleware('throttle:5,1')->name('system-settings.test-mail');
 
         // Languages + products / categories / brands / tags / attributes
         Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');

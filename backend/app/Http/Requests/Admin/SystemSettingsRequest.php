@@ -35,6 +35,13 @@ class SystemSettingsRequest extends FormRequest
         $rules['whatsapp_service_url'] = ['required', 'url:http,https', 'max:255'];
         $rules['meta_graph_url'] = ['required', 'url:https', 'max:255'];
         $rules['reverb_scheme'] = ['required', 'in:http,https'];
+        // mail: SMTP (real sending) or log (development: messages go to the log file, nothing is sent)
+        $rules['mail_mailer'] = ['required', 'in:smtp,log'];
+        $rules['mail_scheme'] = ['nullable', 'in:smtp,smtps'];
+        $rules['mail_host'] = ['required_if:mail_mailer,smtp', 'nullable', 'string', 'max:255'];
+        $rules['mail_port'] = ['required', 'integer', 'min:1', 'max:65535'];
+        $rules['mail_from_address'] = ['required', 'email', 'max:255'];
+        $rules['mail_from_name'] = ['required', 'string', 'max:255'];
         foreach (['media_disk', 'media_private_disk', 'app_fallback_locale', 'app_faker_locale', 'mobile_legacy_store_slug', 'meta_graph_version', 'meta_currency'] as $k) {
             $rules[$k] = ['required', 'string', 'max:100'];
         }
