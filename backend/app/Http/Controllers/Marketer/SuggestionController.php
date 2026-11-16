@@ -71,7 +71,7 @@ class SuggestionController extends Controller
         $s = $this->repo->findOrFail($id);
         $h = $this->engine->registry()->get($s->type);
         $check = $this->engine->warnings($s);
-        $admin = auth('admin')->user();
+        $admin = auth('marketer')->user();
         $can = fn (string $base) => collect($this->engine->permissionsFor($s, $base))->every(fn ($p) => $admin->can($p));
 
         return view('marketer.suggestions.show', [
@@ -102,7 +102,7 @@ class SuggestionController extends Controller
     public function update(SuggestionEditRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
-            [$s] = $this->engine->update($this->repo->findOrFail($id), SuggestionEditData::fromArray($r->editData()), SuggestionActor::admin($r->user('admin')));
+            [$s] = $this->engine->update($this->repo->findOrFail($id), SuggestionEditData::fromArray($r->editData()), SuggestionActor::marketer($r->user('marketer')));
 
             return $this->ok(__('marketing.suggestions.done.saved', ['v' => $s->version]), route('marketer.suggestions.show', $s->id));
         });
@@ -110,33 +110,33 @@ class SuggestionController extends Controller
 
     public function review(int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->startReview($this->repo->findOrFail($id), auth('admin')->user()) ? $this->ok(__('marketing.suggestions.done.review')) : null);
+        return $this->run(fn () => $this->engine->startReview($this->repo->findOrFail($id), auth('marketer')->user()) ? $this->ok(__('marketing.suggestions.done.review')) : null);
     }
 
     public function approve(SuggestionActionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->approve($this->repo->findOrFail($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.suggestions.done.approved')) : null);
+        return $this->run(fn () => $this->engine->approve($this->repo->findOrFail($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.suggestions.done.approved')) : null);
     }
 
     public function reject(SuggestionActionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->reject($this->repo->findOrFail($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.suggestions.done.rejected')) : null);
+        return $this->run(fn () => $this->engine->reject($this->repo->findOrFail($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.suggestions.done.rejected')) : null);
     }
 
     public function archive(int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->archive($this->repo->findOrFail($id), auth('admin')->user()) ? $this->ok(__('marketing.suggestions.done.archived')) : null);
+        return $this->run(fn () => $this->engine->archive($this->repo->findOrFail($id), auth('marketer')->user()) ? $this->ok(__('marketing.suggestions.done.archived')) : null);
     }
 
     public function resnapshot(int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->resnapshot($this->repo->findOrFail($id), auth('admin')->user()) ? $this->ok(__('marketing.suggestions.done.resnapshot')) : null);
+        return $this->run(fn () => $this->engine->resnapshot($this->repo->findOrFail($id), auth('marketer')->user()) ? $this->ok(__('marketing.suggestions.done.resnapshot')) : null);
     }
 
     public function apply(SuggestionActionRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
-            $exec = $this->engine->apply($this->repo->findOrFail($id), $r->user('admin'), $r->input('idempotency_key'), (array) $r->input('options', []));
+            $exec = $this->engine->apply($this->repo->findOrFail($id), $r->user('marketer'), $r->input('idempotency_key'), (array) $r->input('options', []));
             if ($exec->status === SuggestionExecutionStatus::FAILED) {
                 return response()->json(['success' => false, 'message' => __('marketing.suggestions.done.apply_failed', ['error' => Str::limit((string) $exec->error, 300)]),
                     'data' => ['execution_id' => $exec->id]], 422);
@@ -148,14 +148,14 @@ class SuggestionController extends Controller
 
     public function rollback(int $id): JsonResponse
     {
-        return $this->run(fn () => $this->engine->rollback($this->repo->findOrFail($id), auth('admin')->user()) ? $this->ok(__('marketing.suggestions.done.rolled_back')) : null);
+        return $this->run(fn () => $this->engine->rollback($this->repo->findOrFail($id), auth('marketer')->user()) ? $this->ok(__('marketing.suggestions.done.rolled_back')) : null);
     }
 
     public function publish(SuggestionActionRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
             $at = $r->filled('publish_at') ? \Carbon\CarbonImmutable::parse((string) $r->input('publish_at')) : null;
-            $this->engine->publishBlog($this->repo->findOrFail($id), $r->user('admin'), $at, $r->input('idempotency_key'));
+            $this->engine->publishBlog($this->repo->findOrFail($id), $r->user('marketer'), $at, $r->input('idempotency_key'));
 
             return $this->ok(__('marketing.suggestions.done.'.($at ? 'scheduled' : 'published')));
         });
@@ -189,21 +189,21 @@ class SuggestionController extends Controller
     public function themeActivate(int $id): JsonResponse
     {
         MarketingTheme::query()->findOrFail($id);
-        $this->themes->activateVersion($id, auth('admin')->id());
+        $this->themes->activateVersion($id, auth('marketer')->id());
 
         return $this->ok(__('marketing.suggestions.done.theme'));
     }
 
     public function themeRevert(): JsonResponse
     {
-        $this->themes->revert(auth('admin')->id());
+        $this->themes->revert(auth('marketer')->id());
 
         return $this->ok(__('marketing.suggestions.done.theme'));
     }
 
     public function themeOff(): JsonResponse
     {
-        $this->themes->activateVersion(null, auth('admin')->id());
+        $this->themes->activateVersion(null, auth('marketer')->id());
 
         return $this->ok(__('marketing.suggestions.done.theme'));
     }

@@ -159,7 +159,7 @@ it('carries the gift session into the order attribution and reports gift orders'
 
 it('admin: stats + tags pages work without any Growth switch, are permission-gated, and save tags', function () {
     $a = ($this->product)('a', '100', '40', 20);
-    ($this->owner)()->get('/marketer/gift-finder')->assertOk();
+    $this->actingAs(marketerOwner(), 'marketer')->get('/marketer/gift-finder')->assertOk();
     $this->get('/marketer/gift-finder/tags')->assertOk()->assertSee($a->name);
     $this->post('/marketer/gift-finder/tags', ['tags' => [$a->id => ['suitable' => 1, 'recipients' => ['mother'], 'occasions' => ['ramadan']]]])->assertRedirect('/marketer/gift-finder/tags');
     $tp = Product::find($a->id);
@@ -168,11 +168,11 @@ it('admin: stats + tags pages work without any Growth switch, are permission-gat
     ($this->off)();
     $this->get('/marketer/gift-finder')->assertOk()->assertSee(__('gift_finder.disabled_hint'));   // admin keeps working while the storefront is off
 
-    $viewer = Admin::create(['name' => 'V', 'email' => 'v@egy.test', 'password' => 'password', 'is_active' => true]);
-    $this->actingAs($viewer, 'admin')->get('/marketer/gift-finder')->assertForbidden();
+    $viewer = makeMarketer([], null, 'v@egy.test');
+    $this->actingAs($viewer, 'marketer')->get('/marketer/gift-finder')->assertForbidden();
     $viewer->givePermissionTo('gift_finder.view');
-    $this->actingAs($viewer->fresh(), 'admin')->get('/marketer/gift-finder')->assertOk();
-    $this->actingAs($viewer->fresh(), 'admin')->post('/marketer/gift-finder/tags', ['tags' => []])->assertForbidden();
+    $this->actingAs($viewer->fresh(), 'marketer')->get('/marketer/gift-finder')->assertOk();
+    $this->actingAs($viewer->fresh(), 'marketer')->post('/marketer/gift-finder/tags', ['tags' => []])->assertForbidden();
 });
 
 it('the removed Growth admin and storefront routes are gone', function () {

@@ -12,7 +12,7 @@ class DashboardController extends Controller
 {
     public function index(MarketerDashboardRequest $r, MarketingDashboardService $svc)
     {
-        $user = auth('admin')->user();
+        $user = auth('marketer')->user();
         if (! $user->can('marketing.view')) {
             $first = MarketerNav::firstRoute($user);
             abort_if($first === null || $first === 'marketer.dashboard', 403);

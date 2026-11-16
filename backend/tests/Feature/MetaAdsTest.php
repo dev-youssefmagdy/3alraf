@@ -36,25 +36,18 @@ beforeEach(function () {
     Cache::flush();
     config(['app.url' => 'http://3alraf.test', 'app.host' => '3alraf.test', 'meta.access_token' => META_TEST_TOKEN, 'meta.app_secret' => META_TEST_SECRET,
         'meta.ad_account_id' => 'act_111', 'meta.page_id' => '222', 'meta.graph_version' => 'v99.0', 'meta.graph_url' => 'https://graph.test']);
-    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
-    $this->staff = function (array $perms = [], ?string $role = null, string $email = 's@egy.test') {
-        $a = Admin::create(['name' => 'S '.$email, 'email' => $email, 'password' => 'password', 'is_active' => true]);
-        $perms && $a->givePermissionTo($perms);
-        $role && $a->assignRole($role);
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        return $a->fresh();
-    };
+    $this->owner = marketerOwner();
+    $this->staff = fn (array $perms = [], ?string $role = null, string $email = 's@egy.test') => makeMarketer($perms, $role, $email);
     $this->product = listProduct(Product::create(['type' => 'simple', 'name' => ['en' => 'Ad item', 'ar' => 'صنف'], 'description' => ['en' => 'x'], 'slug' => 'ad-item', 'sku' => 'AD-1',
         'barcode' => app(BarcodeService::class)->generateUnique()]), ['price' => '100', 'cost' => '60', 'is_active' => true]);
     $this->input = fn (array $o = []) => array_replace(['name' => 'Eid sale', 'objective' => 'OUTCOME_SALES', 'product_ids' => [$this->product->id], 'budget_type' => 'daily', 'budget_amount' => 200,
         'start_at' => now()->addDays(2)->format('Y-m-d H:i:s'), 'copy' => ['primary_text' => 'جرب الآن', 'headline' => 'عرض العيد'], 'cta' => 'SHOP_NOW',
         'audience' => ['age_min' => 21, 'age_max' => 45, 'genders' => 'female'], 'locations' => ['countries' => ['eg']], 'expected_kpis' => ['ctr' => '1.5%'], 'risks' => 'Low stock', 'assumptions' => 'Eid demand'], $o);
     $this->drafts = app(MetaCampaignDraftService::class);
-    $this->draft = fn (array $o = []) => $this->drafts->create(MetaCampaignDraftData::fromArray(($this->input)($o)), SuggestionActor::admin($this->owner))[0];
+    $this->draft = fn (array $o = []) => $this->drafts->create(MetaCampaignDraftData::fromArray(($this->input)($o)), SuggestionActor::marketer($this->owner))[0];
     $this->approved = function (array $o = []) {
         $d = ($this->draft)($o);
-        $this->drafts->submit($d, SuggestionActor::admin($this->owner));
+        $this->drafts->submit($d, SuggestionActor::marketer($this->owner));
         $this->drafts->approve($d->fresh(), $this->owner);
 
         return $d->fresh();
@@ -170,10 +163,10 @@ it('binds approval to version + hash: edit invalidates, tampering and expiry blo
     $hash = $d->content_hash;
     expect($d->validApproval()?->content_hash)->toBe($hash)->and($d->validApproval()->draft_version)->toBe(1);
     // a no-op edit changes nothing
-    [$same] = $this->drafts->update($d, ['name' => 'Second'], SuggestionActor::admin($this->owner));
+    [$same] = $this->drafts->update($d, ['name' => 'Second'], SuggestionActor::marketer($this->owner));
     expect($same->fresh()->status->value)->toBe('approved')->and($same->fresh()->version)->toBe(1);
     // a real edit: version + 1, new hash, approval invalidated, back to draft
-    [$e] = $this->drafts->update($d->fresh(), ['budget_amount' => 300], SuggestionActor::admin($this->owner));
+    [$e] = $this->drafts->update($d->fresh(), ['budget_amount' => 300], SuggestionActor::marketer($this->owner));
     $e->refresh();
     expect($e->status->value)->toBe('draft')->and($e->version)->toBe(2)->and($e->content_hash)->not->toBe($hash)->and($e->validApproval())->toBeNull()
         ->and(MetaCampaignApproval::where('draft_id', $e->id)->where('approval_status', 'invalidated')->where('invalidated_reason', 'edited')->count())->toBe(1);
@@ -217,7 +210,7 @@ it('is idempotent and resumes after a failure without duplicating objects', func
     expect($res->execution_status)->toBe('failed')->and($f->status->value)->toBe('failed')->and($f->meta_campaign_id)->toBe('1001')->and($f->meta_adset_id)->toBeNull()
         ->and($f->last_error)->not->toContain(META_TEST_TOKEN)->toContain('[redacted]')->and($res->execution_error)->not->toContain(META_TEST_TOKEN)->and(MetaAuditLog::where('action', 'publish_failed')->count())->toBe(1);
     // frozen: objects exist in Meta
-    expect(fn () => $this->drafts->update($f, ['budget_amount' => 300], SuggestionActor::admin($this->owner)))->toThrow(fn (MarketingActionException $x) => expect($x->errorCode)->toBe('frozen'));
+    expect(fn () => $this->drafts->update($f, ['budget_amount' => 300], SuggestionActor::marketer($this->owner)))->toThrow(fn (MarketingActionException $x) => expect($x->errorCode)->toBe('frozen'));
     $ok = $pub->publish($f, $this->owner);
     $edges = ($this->posts)()->map(fn ($r) => basename(parse_url($r->url(), PHP_URL_PATH)))->all();
     expect($ok->execution_status)->toBe('succeeded')->and($f->fresh()->status->value)->toBe('published')->and(array_count_values($edges)['campaigns'])->toBe(1)->and(array_count_values($edges)['ads'])->toBe(1);
@@ -250,11 +243,11 @@ it('fails loudly when Meta does not report PAUSED and never tries to change it',
 it('uploads an approved library image as the creative', function () {
     Illuminate\Support\Facades\Storage::fake(config('media.private_disk'));
     ($this->fake)();
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = $this->post('/marketer/media', ['product_id' => $this->product->id, 'file' => Illuminate\Http\UploadedFile::fake()->image('ad.jpg', 600, 600)], ['Accept' => 'application/json'])->assertOk()->json('data.id');
     // a library item that is not approved cannot be approved into a campaign
     $d = ($this->draft)(['creative' => ['asset_ids' => [$id]]]);
-    $this->drafts->submit($d, SuggestionActor::admin($this->owner));
+    $this->drafts->submit($d, SuggestionActor::marketer($this->owner));
     expect(fn () => $this->drafts->approve($d->fresh(), $this->owner))->toThrow(MarketingActionException::class);
     $this->postJson("/marketer/media/$id/approve")->assertOk();
     $this->drafts->approve($d->fresh(), $this->owner);
@@ -267,11 +260,11 @@ it('enforces the permissions matrix in the panel', function () {
     ($this->fake)();
     $d = ($this->approved)();
     $pending = ($this->draft)(['name' => 'Pending']);
-    $this->drafts->submit($pending, SuggestionActor::admin($this->owner));
+    $this->drafts->submit($pending, SuggestionActor::marketer($this->owner));
     $valid = ($this->input)(['name' => 'From panel', 'placements' => ['automatic' => '1']]);
 
     $viewer = ($this->staff)(['meta_ads.view'], null, 'v@egy.test');
-    $this->actingAs($viewer, 'admin');
+    $this->actingAs($viewer, 'marketer');
     $this->get('/marketer/meta-ads')->assertOk();
     $this->get("/marketer/meta-ads/{$d->id}")->assertOk()->assertDontSee('data-action="publish"', false)->assertDontSee('data-action="edit"', false);
     $this->get('/marketer/meta-ads/create')->assertForbidden();
@@ -280,31 +273,33 @@ it('enforces the permissions matrix in the panel', function () {
     $this->postJson("/marketer/meta-ads/{$d->id}/publish")->assertForbidden();
 
     $drafter = ($this->staff)(['meta_ads.view', 'meta_ads.draft'], null, 'd@egy.test');
-    $this->actingAs($drafter, 'admin');
+    $this->actingAs($drafter, 'marketer');
     $this->postJson('/marketer/meta-ads/validate', ['name' => ''])->assertStatus(422)->assertJsonValidationErrors(['name', 'objective', 'product_ids']);
     $this->postJson('/marketer/meta-ads/validate', $valid)->assertOk();
     $this->postJson('/marketer/meta-ads', $valid)->assertOk();
     $this->postJson("/marketer/meta-ads/{$pending->id}/approve")->assertForbidden();
     $this->postJson("/marketer/meta-ads/{$pending->id}/reject")->assertForbidden();
 
-    // the preset marketer role approves but can never publish
+    // owner decision Q2: the preset marketer role drafts but never approves or publishes; marketer-owner approves
     $marketer = ($this->staff)([], 'marketer', 'm@egy.test');
-    $this->actingAs($marketer, 'admin');
-    expect($marketer->can('meta_ads.approve'))->toBeTrue()->and($marketer->can('meta_ads.publish'))->toBeFalse();
-    $this->postJson("/marketer/meta-ads/{$pending->id}/approve")->assertOk();
+    $this->actingAs($marketer, 'marketer');
+    expect($marketer->can('meta_ads.approve'))->toBeFalse()->and($marketer->can('meta_ads.publish'))->toBeFalse();
+    $this->postJson("/marketer/meta-ads/{$pending->id}/approve")->assertForbidden();
+    $this->actingAs($this->owner, 'marketer')->postJson("/marketer/meta-ads/{$pending->id}/approve")->assertOk();
+    $this->actingAs($marketer, 'marketer');
     $this->get("/marketer/meta-ads/{$d->id}")->assertOk()->assertDontSee('data-action="publish"', false);
     $this->postJson("/marketer/meta-ads/{$d->id}/publish")->assertForbidden();
     expect(fn () => app(MetaPublisher::class)->publish($d->fresh(), $marketer))->toThrow(MarketingActionException::class);   // service checks independently
     expect(($this->posts)()->count())->toBe(0);   // the index page reads (GET) only; nothing was created
 
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $this->get("/marketer/meta-ads/{$d->id}")->assertOk()->assertSee('data-action="publish"', false);
     $this->postJson("/marketer/meta-ads/{$d->id}/publish")->assertOk();
     expect($d->fresh()->status->value)->toBe('published');
 });
 
 it('validates business rules of a draft', function () {
-    $save = fn (array $o) => $this->actingAs($this->owner, 'admin')->postJson('/marketer/meta-ads', ($this->input)($o));
+    $save = fn (array $o) => $this->actingAs($this->owner, 'marketer')->postJson('/marketer/meta-ads', ($this->input)($o));
     $save(['budget_amount' => 1])->assertStatus(422)->assertJsonValidationErrors(['budget_amount']);
     $save(['budget_type' => 'lifetime', 'end_at' => null])->assertStatus(422)->assertJsonValidationErrors(['end_at']);
     $save(['product_ids' => [999999]])->assertStatus(422)->assertJsonValidationErrors(['product_ids']);
@@ -324,9 +319,9 @@ it('renders every panel page (ar + en) with and without a Meta connection', func
     ($this->fake)();
     $d = ($this->approved)();
     config(['meta.access_token' => null]);
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     foreach (['ar', 'en'] as $loc) {
-        $this->withSession(['admin_locale' => $loc]);
+        $this->withSession(['marketer_locale' => $loc]);
         $this->get('/marketer/meta-ads')->assertOk()->assertSee('data-panel="marketer"', false)->assertSee('data-safety-notice', false)->assertSee('data-not-configured', false)->assertSee('data-draft="'.$d->id.'"', false);
         $this->get('/marketer/meta-ads/insights')->assertOk()->assertSee('data-not-configured', false);
         $this->get('/marketer/meta-ads/create?product_id='.$this->product->id)->assertOk()->assertSee('data-draft-form', false);

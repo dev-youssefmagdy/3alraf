@@ -2,7 +2,7 @@
     @php $g = fn ($k) => __('gift_finder.'.$k); @endphp
     <div class="space-y-4">
         <p class="text-sm text-slate-600">{{ $g('admin_hint') }}</p>
-        @unless ($enabled)<p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">{{ $g('disabled_hint') }}@can('general_settings.view') <a href="{{ route('admin.general-settings.edit') }}" class="underline">{{ __('admin.settings_general') }}</a>@endcan</p>@endunless
+        @unless ($enabled)<p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">{{ $g('disabled_hint') }}</p>@endunless
         <a href="{{ $url }}" target="_blank" class="text-sm text-brand-700 underline" dir="ltr">{{ $g('link') }}: {{ $url }}</a>
         <p class="text-sm"><a href="{{ route('marketer.gift-finder.tags') }}" class="btn btn-secondary">{{ $g('tags_title') }}</a>
             <span class="ms-2 text-slate-600">{{ $g('tags_progress', ['n' => $tagged, 'total' => $total]) }}</span>
@@ -29,8 +29,7 @@
             @if ($untagged['bundles'])
                 <ul class="divide-y divide-slate-100 text-sm">
                     @foreach ($untagged['bundles'] as $b)
-                        <li class="flex items-center justify-between gap-2 py-2"><span>{{ $b['name'] }} <span class="text-slate-500">({{ $g('items_count') }}: {{ $b['items'] }})</span></span>
-                            @can('bundles.edit')<a href="{{ route('admin.bundles.edit', $b['id']) }}" class="text-brand-700 underline">{{ __('admin.edit') }}</a>@endcan</li>
+                        <li class="flex items-center justify-between gap-2 py-2"><span>{{ $b['name'] }} <span class="text-slate-500">({{ $g('items_count') }}: {{ $b['items'] }})</span></span></li>
                     @endforeach
                 </ul>
             @else

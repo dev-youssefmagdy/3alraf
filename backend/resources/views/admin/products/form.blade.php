@@ -9,16 +9,6 @@
     $usedValueIds = collect($variantRows)->pluck('values')->flatten()->unique()->values();
 @endphp
 <x-layouts.admin :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')">
-    @if ($editing && auth('admin')->user()->can('ai_media.view'))
-        @php($socialTab = ! empty($library))
-        <nav class="mb-4 flex flex-wrap gap-2 border-b border-slate-200" aria-label="{{ __('marketing.media.tab') }}" data-product-tabs>
-            <a href="{{ route('admin.products.edit', $product) }}" class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold {{ $socialTab ? 'border-transparent text-slate-500' : 'border-brand-600 text-brand-700' }}" @unless ($socialTab) aria-current="page" @endunless>{{ __('marketing.media.tab_details') }}</a>
-            <a href="{{ route('admin.products.edit', [$product, 'tab' => 'social']) }}" class="-mb-px border-b-2 px-3 py-2 text-sm font-semibold {{ $socialTab ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500' }}" @if ($socialTab) aria-current="page" @endif data-social-tab>{{ __('marketing.media.tab') }}</a>
-        </nav>
-    @endif
-    @if (! empty($library))
-        @include('marketer.media._library', $library + ['hidden' => ['tab' => 'social'], 'stay' => true])
-    @else
     <form data-ajax-form @if ($editing) data-method="PUT" @endif
         data-validate-url="{{ route('admin.products.validate', $editing ? [$product] : []) }}"
         action="{{ $editing ? route('admin.products.update', $product) : route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="grid gap-5 lg:grid-cols-3" novalidate>
@@ -182,6 +172,5 @@
                 @endforeach
             </div>
         </x-card>
-    @endif
     @endif
 </x-layouts.admin>

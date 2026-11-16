@@ -65,7 +65,7 @@ class MarketingSuggestionDataTable extends BaseDataTable
             ->addColumn('source_label', fn (MarketingSuggestion $s) => $s->source->label())
             ->editColumn('created_at', fn (MarketingSuggestion $s) => $s->created_at?->format('Y-m-d H:i'))
             ->addColumn('actions', fn (MarketingSuggestion $s) => '<a href="'.e(route('marketer.suggestions.show', $s->id)).'" class="btn-sm btn-secondary">'.e(__('marketing.suggestions.open')).'</a>'
-                .(in_array($s->status, SuggestionStatus::PANEL_EDITABLE, true) && auth('admin')->user()?->can('ai_suggestions.edit')
+                .(in_array($s->status, SuggestionStatus::PANEL_EDITABLE, true) && auth('marketer')->user()?->can('ai_suggestions.edit')
                     ? ' <a href="'.e(route('marketer.suggestions.edit', $s->id)).'" class="btn-sm btn-secondary" data-action="edit">'.e(__('marketing.suggestions.btn.edit')).'</a>' : ''));
     }
 }

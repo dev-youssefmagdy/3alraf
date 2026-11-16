@@ -451,20 +451,35 @@ if (A) {
     }, adminPage);
 }
 
+// the marketer panel is a separate app: own accounts (demo marketer-owner phone 01000000201), own login, no shared session with /admin
+const mkt = await open(views.desktop);
+const mktPage = mkt.page;
+await step('marketer login (separate from admin)', async () => {
+    await mktPage.goto(`${site}/marketer`, { waitUntil: 'networkidle' });
+    ok(/\/marketer\/login/.test(mktPage.url()), 'guest is sent to the marketer login');
+    await mktPage.fill('[name=phone]', process.env.M_PHONE || '01000000201');
+    await mktPage.fill('[name=password]', process.env.M_PASSWORD || 'password');
+    await Promise.all([mktPage.waitForURL(/\/marketer\/?$/, { timeout: 15000 }), mktPage.click('button[type=submit]')]);
+    ok(/\/marketer\/?$/.test(new URL(mktPage.url()).pathname), 'marketer signed in');
+    const r = await adminPage.goto(`${site}/marketer`, { waitUntil: 'networkidle' });
+    ok(/\/marketer\/login/.test(adminPage.url()), `an admin session does not open the marketer panel (${r.status()} ${adminPage.url()})`);
+    drain(mkt, 'marketer login');
+}, mktPage);
+
 await step('marketer panel crawl', async () => {
-    await adminPage.goto(`${site}/admin/locale/ar`, { waitUntil: 'networkidle' });
+    await mktPage.goto(`${site}/marketer/locale/ar`, { waitUntil: 'networkidle' });
     const seen = new Set(['/marketer']);
     const queue = ['/marketer'];
     const pages = [];
-    const skip = /\/(file|thumb|download|logout)(\?|$)|media-preview|\/datatable/;
+    const skip = /\/(file|thumb|download|logout|qr)(\?|$)|media-preview|\/datatable/;
     while (queue.length && pages.length < 120) {
         const url = queue.shift();
-        const r = await adminPage.goto(site + url, { waitUntil: 'networkidle' });
+        const r = await mktPage.goto(site + url, { waitUntil: 'networkidle' });
         pages.push(url);
         ok(r.status() === 200, `crawl ${url} -> ${r.status()}`);
-        ok(await adminPage.locator('[data-panel="marketer"]').count() === 1, `crawl ${url}: marketer shell`);
-        await keys(adminPage, `crawl ${url}`);
-        const links = await adminPage.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href));
+        ok(await mktPage.locator('[data-panel="marketer"]').count() === 1, `crawl ${url}: marketer shell`);
+        await keys(mktPage, `crawl ${url}`);
+        const links = await mktPage.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => a.href));
         for (const l of links) {
             let u; try { u = new URL(l); } catch { continue; }
             if (u.host !== `${DOMAIN}:${P}` || !u.pathname.startsWith('/marketer') || skip.test(u.pathname)) continue;
@@ -473,29 +488,29 @@ await step('marketer panel crawl', async () => {
         }
     }
     writeFileSync(`${OUT}/marketer-pages.json`, JSON.stringify(pages, null, 1));
-    drain(admin, 'marketer ar desktop');
-    const mkt = { list: pages };
-    await adminPage.screenshot({ path: `${OUT}/marketer-ar-desktop.png`, fullPage: true });
-    await adminPage.goto(`${site}/admin/locale/en`, { waitUntil: 'networkidle' });
-    for (const url of mkt.list) {
-        const r = await adminPage.goto(site + url, { waitUntil: 'networkidle' });
+    drain(mkt, 'marketer ar desktop');
+    const crawl = { list: pages };
+    await mktPage.screenshot({ path: `${OUT}/marketer-ar-desktop.png`, fullPage: true });
+    await mktPage.goto(`${site}/marketer/locale/en`, { waitUntil: 'networkidle' });
+    for (const url of crawl.list) {
+        const r = await mktPage.goto(site + url, { waitUntil: 'networkidle' });
         ok(r.status() === 200, `en desktop ${url} -> ${r.status()}`);
-        await keys(adminPage, `en desktop ${url}`);
+        await keys(mktPage, `en desktop ${url}`);
     }
-    drain(admin, 'marketer en desktop');
-    await adminPage.setViewportSize({ width: 390, height: 844 });
+    drain(mkt, 'marketer en desktop');
+    await mktPage.setViewportSize({ width: 390, height: 844 });
     for (const locale of ['ar', 'en']) {
-        await adminPage.goto(`${site}/admin/locale/${locale}`, { waitUntil: 'networkidle' });
-        for (const url of mkt.list) {
-            const r = await adminPage.goto(site + url, { waitUntil: 'networkidle' });
+        await mktPage.goto(`${site}/marketer/locale/${locale}`, { waitUntil: 'networkidle' });
+        for (const url of crawl.list) {
+            const r = await mktPage.goto(site + url, { waitUntil: 'networkidle' });
             ok(r.status() === 200, `${locale} 390px ${url} -> ${r.status()}`);
-            const overflow = await adminPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            const overflow = await mktPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
             ok(overflow <= 1, `${locale} 390px ${url}: no horizontal overflow (${overflow}px)`);
         }
-        await adminPage.screenshot({ path: `${OUT}/marketer-${locale}-mobile.png`, fullPage: true });
+        await mktPage.screenshot({ path: `${OUT}/marketer-${locale}-mobile.png`, fullPage: true });
     }
-    drain(admin, 'marketer 390px');
-}, adminPage);
+    drain(mkt, 'marketer 390px');
+}, mktPage);
 
 await browser.close();
 const checks = results.reduce((a, r) => a + r.checks, 0);

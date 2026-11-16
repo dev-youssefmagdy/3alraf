@@ -11,6 +11,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)->use(RefreshDatabase::class)->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
+pest()->extend(TestCase::class)->in('Migrations');   // each test starts with `migrate:fresh` itself (DDL commits; no RefreshDatabase transaction)
 
 /**
  * Explicit COD shipping-prepay mode (the real default, no setting, is UPFRONT = true).
@@ -81,4 +82,23 @@ function allSettings(): array
     Setting::flush();
 
     return Setting::map();
+}
+
+/** Demo marketer-owner seeded by FoundationSeeder (/marketer, guard `marketer`, role marketer-owner). */
+function marketerOwner(): \App\Models\Marketer
+{
+    return \App\Models\Marketer::query()->where('email', 'marketing@egy.test')->firstOrFail();
+}
+
+/** A marketer-panel account with the given direct permissions and/or role (guard `marketer`). */
+function makeMarketer(array $perms = [], ?string $role = null, string $email = 's@egy.test'): \App\Models\Marketer
+{
+    static $n = 0;
+    $n++;
+    $m = \App\Models\Marketer::create(['name' => 'S '.$email, 'email' => $email, 'phone' => '20155'.str_pad((string) ($n + random_int(0, 99999) * 100), 7, '0', STR_PAD_LEFT), 'password' => 'password', 'is_active' => true]);
+    $perms && $m->givePermissionTo($perms);
+    $role && $m->assignRole($role);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    return $m->fresh();
 }

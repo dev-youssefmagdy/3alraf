@@ -1,5 +1,8 @@
-<x-layouts.admin :title="__('growth.affiliates')">
+@php
+    $panel = request()->routeIs('marketer.*') ? 'marketer' : 'admin';
+@endphp
+<x-layouts.panel :title="__('growth.affiliates')">
     <x-card>
-        <x-datatable :table="$table" :url="route('admin.affiliates.datatable')" id="affiliates-table" />
+        <x-datatable :table="$table" :url="route($panel.'.affiliates.datatable')" id="affiliates-table" />
     </x-card>
-</x-layouts.admin>
+</x-layouts.panel>

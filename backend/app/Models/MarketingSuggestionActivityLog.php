@@ -25,7 +25,7 @@ class MarketingSuggestionActivityLog extends Model
     public static function actorName(?string $type, ?int $id): string
     {
         return match ($type) {
-            'admin' => (string) (Admin::query()->whereKey($id)->value('name') ?? '#'.$id),
+            'marketer' => (string) (Marketer::query()->whereKey($id)->value('name') ?? '#'.$id),
             'token' => 'API: '.(string) (MarketingApiToken::query()->whereKey($id)->value('name') ?? '#'.$id),
             default => __('marketing.suggestions.system'),
         };

@@ -16,6 +16,7 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @import './theme.css';
+@import './panel.css';   /* affiliate panel (data-panel="affiliate"); scoped, the shop is unaffected */
 
 /*
  * Storefront redesign tokens (docs/design/STOREFRONT_DESIGN.md §1). They live here, not in theme.css, so the admin and

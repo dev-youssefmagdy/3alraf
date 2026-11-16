@@ -4,28 +4,35 @@ namespace App\Services\Auth;
 
 use App\Models\AdminOtp;
 use App\Models\Admin;
+use App\Models\Marketer;
 use App\Services\Whatsapp\WhatsappService;
 use App\Services\Whatsapp\WhatsappUnavailable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/** Admin login OTPs delivered through the shop's WhatsApp session. All limits come from AuthSettings. */
+/**
+ * Panel login OTPs (admin + marketer) delivered through the shop's WhatsApp session. All limits come from AuthSettings.
+ * Rows in `admin_otps` are keyed by (guard, admin_id): admin_id is the account id within that guard's table.
+ */
 class OtpService
 {
-    private const GUARD = 'admin';
-
     public function __construct(private WhatsappService $wa) {}
 
-    private function active(int $adminId): ?AdminOtp
+    private static function guard(Admin|Marketer $a): string
     {
-        return AdminOtp::where(['guard' => self::GUARD, 'admin_id' => $adminId])->whereNull('consumed_at')
+        return $a instanceof Marketer ? Marketer::GUARD : 'admin';
+    }
+
+    private function active(Admin|Marketer $a): ?AdminOtp
+    {
+        return AdminOtp::where(['guard' => self::guard($a), 'admin_id' => $a->getKey()])->whereNull('consumed_at')
             ->where('expires_at', '>', now())->latest('id')->first();
     }
 
     /** Seconds until the next resend is allowed (0 = now). */
-    public function cooldown(Admin $a): int
+    public function cooldown(Admin|Marketer $a): int
     {
-        $otp = $this->active($a->getKey());
+        $otp = $this->active($a);
 
         if (! $otp) {
             return 0;
@@ -38,10 +45,10 @@ class OtpService
      * @throws OtpRefused when cooling down or out of resends
      * @throws WhatsappUnavailable when WhatsApp cannot deliver
      */
-    public function issue(Admin $admin, ?string $ip): void
+    public function issue(Admin|Marketer $admin, ?string $ip): void
     {
         $set = AuthSettings::for();
-        $otp = $this->active($admin->getKey());
+        $otp = $this->active($admin);
 
         if ($otp) {
             if (($wait = $this->cooldown($admin)) > 0) {
@@ -63,13 +70,13 @@ class OtpService
         $fields = ['code_hash' => Hash::make($code), 'expires_at' => now()->addSeconds($ttl), 'last_sent_at' => now(), 'ip' => $ip];
         $otp
             ? $otp->update($fields + ['resend_count' => $otp->resend_count + 1]) // attempts deliberately NOT reset: resending cannot buy more guesses
-            : AdminOtp::create($fields + ['guard' => self::GUARD, 'admin_id' => $admin->getKey()]);
+            : AdminOtp::create($fields + ['guard' => self::guard($admin), 'admin_id' => $admin->getKey()]);
     }
 
     /** @return 'ok'|'invalid'|'expired'|'locked' */
-    public function verify(Admin $admin, string $code): string
+    public function verify(Admin|Marketer $admin, string $code): string
     {
-        $otp = $this->active($admin->getKey());
+        $otp = $this->active($admin);
         if (! $otp) {
             return 'expired';
         }

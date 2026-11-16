@@ -11,6 +11,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- data migrations that run DDL (implicit commit on MySQL): each test runs migrate:fresh itself instead of RefreshDatabase -->
+        <testsuite name="Migrations">
+            <directory>tests/Migrations</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

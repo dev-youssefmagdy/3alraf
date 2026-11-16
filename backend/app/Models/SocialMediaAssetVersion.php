@@ -27,6 +27,6 @@ class SocialMediaAssetVersion extends Model
 
     public function uploader(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'uploaded_by');
+        return $this->belongsTo(Marketer::class, 'uploaded_by');
     }
 }

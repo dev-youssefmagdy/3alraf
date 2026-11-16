@@ -4,7 +4,7 @@ namespace App\Services\Marketing\Meta;
 
 use App\Enums\Marketing\MediaAssetStatus;
 use App\Enums\Marketing\MetaDraftStatus as S;
-use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\MetaCampaignApproval;
 use App\Models\MetaCampaignDraft;
 use App\Models\SocialMediaAsset;
@@ -32,9 +32,9 @@ class MetaPublisher
     public function __construct(private MetaGraphClient $client, private MetaCampaignDraftRepositoryInterface $repo, private MetaAudit $audit,
         private SocialMediaLibraryService $media) {}
 
-    public function publish(MetaCampaignDraft $d, Admin $admin, ?string $key = null): MetaCampaignApproval
+    public function publish(MetaCampaignDraft $d, Marketer $admin, ?string $key = null): MetaCampaignApproval
     {
-        $actor = SuggestionActor::admin($admin);
+        $actor = SuggestionActor::marketer($admin);
         $this->audit->actingAs($actor);
         if (! $admin->can('meta_ads.publish')) {
             throw E::make('meta', 'forbidden', 403, ['permission' => 'meta_ads.publish']);

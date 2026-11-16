@@ -55,10 +55,16 @@ abstract class BaseDataTable
             : '<span class="badge badge-muted">'.e($no ?? __('admin.inactive')).'</span>';
     }
 
-    /** Edit/delete buttons for admin resource routes ({route}.edit / {route}.destroy, param = id) honoring the permissions. */
+    /** Route-name base of a module in the panel serving this request: `admin.{uri}` or `marketer.{uri}` (shared marketing modules). */
+    protected function base(string $uri): string
+    {
+        return (request()->routeIs('marketer.*') ? 'marketer.' : 'admin.').$uri;
+    }
+
+    /** Edit/delete buttons for resource routes ({route}.edit / {route}.destroy, param = id) honoring the permissions of the current panel user. */
     protected function rowActions(\Illuminate\Database\Eloquent\Model $m, string $route, string $perm): string
     {
-        $u = auth('admin')->user();
+        $u = request()->user();
 
         return $this->actionButtons(route("$route.edit", $m->getKey()), route("$route.destroy", $m->getKey()), (bool) $u?->can("$perm.edit"), (bool) $u?->can("$perm.delete"));
     }

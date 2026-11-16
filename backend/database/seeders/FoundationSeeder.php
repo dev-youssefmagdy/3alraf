@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\Setting;
 use App\Services\Auth\SuperAdminProvisioner;
 use Illuminate\Database\Seeder;
@@ -25,6 +26,11 @@ class FoundationSeeder extends Seeder
         $owner = Admin::query()->firstOrNew(['phone' => '201000000101']);
         $owner->fill(['name' => 'Owner', 'email' => 'owner@egy.test', 'password' => 'password', 'is_active' => true])->save();
         $owner->assignRole(Role::findByName('owner', PermissionSeeder::GUARD));
+
+        // demo marketer panel accounts (/marketer, guard `marketer`); real ones: `php artisan marketer:create --owner`
+        $mOwner = Marketer::query()->firstOrNew(['phone' => '201000000201']);
+        $mOwner->fill(['name' => 'Marketing Owner', 'email' => 'marketing@egy.test', 'password' => 'password', 'is_active' => true, 'otp_exempt' => true])->save();
+        $mOwner->assignRole(Role::findByName(\App\Support\Marketing\MarketingPermissions::OWNER_ROLE, \App\Support\Marketing\MarketingPermissions::GUARD));
 
         $this->call([OperationsSeeder::class, OrdersSeeder::class, MarketingDemoSeeder::class]);
         $this->demo();

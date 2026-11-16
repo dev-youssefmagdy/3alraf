@@ -228,6 +228,6 @@ it('search runs a fixed number of queries whatever the catalog size (no N+1)', f
 it('admin page shows bundle stats and the bundles whose items lack tags', function () {
     $a = ($this->product)('a', '40');
     ($this->bundle)('untagged-pack', '70', [[$a, 1]]);
-    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin')
+    $this->actingAs(marketerOwner(), 'marketer')
         ->get('/marketer/gift-finder')->assertOk()->assertSee(__('gift_finder.bundle_carts', [], 'ar'))->assertSee(__('gift_finder.untagged_bundles', [], 'ar'))->assertSee('untagged-pack');
 });

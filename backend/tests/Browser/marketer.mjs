@@ -1,4 +1,4 @@
-// Marketer panel browser check (P4): signs in on /admin/login, opens every /marketer page in ar + en, mobile + desktop, checks direction,
+// Marketer panel browser check (P4): signs in on /marketer/login (own accounts, guard marketer), opens every /marketer page in ar + en, mobile + desktop, checks direction,
 // JS errors, horizontal overflow, the mobile nav toggle, creates + revokes an API token, and saves screenshots of the dashboard.
 // Same setup as smoke.mjs (throw-away DB + `php artisan serve --port=8000`):
 //   PORT=8000 OUT=/path/to/screens node tests/Browser/marketer.mjs     (SITE=host, CHROME=/path/to/chrome, PHONE / PASSWORD of an admin)
@@ -26,15 +26,15 @@ for (const [vname, opts] of Object.entries(views)) {
     page.on('response', (r) => { if (r.status() >= 400 && !r.url().includes('/validate')) errs.push(`HTTP ${r.status()} ${r.url()}`); });
 
     await page.goto(`${site}/marketer`, { waitUntil: 'networkidle' });
-    ok(page.url().includes('/admin/login'), `${vname}: guest is sent to the admin login`);
-    await page.fill('[name=phone]', process.env.PHONE || '01000000001');
-    await page.fill('[name=password]', process.env.PASSWORD || 'password');
+    ok(page.url().includes('/marketer/login'), `${vname}: guest is sent to the marketer login`);
+    await page.fill('[name=phone]', process.env.M_PHONE || '01000000201');
+    await page.fill('[name=password]', process.env.M_PASSWORD || 'password');
     await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}), page.click('button[type=submit]')]);
-    ok(page.url().includes('/admin/welcome'), `${vname}: admins land on /admin/welcome after login (${page.url()})`);
-    ok(await page.locator(`a[href$="/marketer"]`).count() > 0, `${vname}: admin shell links to the marketing panel`);
+    ok(/\/marketer\/?$/.test(new URL(page.url()).pathname), `${vname}: marketers land on /marketer after login (${page.url()})`);
+    ok(await page.locator('a[href*="/admin"]').count() === 0, `${vname}: no link into the admin panel`);
 
     for (const locale of ['ar', 'en']) {
-        await page.goto(`${site}/admin/locale/${locale}`, { waitUntil: 'networkidle' });
+        await page.goto(`${site}/marketer/locale/${locale}`, { waitUntil: 'networkidle' });
         for (const url of pages) {
             await page.goto(`${site}${url}`, { waitUntil: 'networkidle' });
             const tag = `${locale}-${vname} ${url}`;

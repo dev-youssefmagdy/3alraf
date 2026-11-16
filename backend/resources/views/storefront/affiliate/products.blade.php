@@ -1,9 +1,7 @@
-<x-layouts.storefront :title="__('growth.my_links')" :noindex="true">
+<x-layouts.affiliate :title="__('growth.my_links')">
     {{-- Affiliate products & links (design 30:12437 / 30:12728): nav → intro → link cards 1 / 2 / 3 columns (thumb, name, price, QR + download (no barcode),
          readonly URL + pop Copy, variant links accordion with their own QR + copy). --}}
-    @include('storefront.affiliate._nav')
-    <h1 class="sr-only">{{ __('growth.my_links') }}</h1>
-    <p class="mb-5 max-w-3xl text-base/[26px] text-slate-600">{{ __('growth.links_intro') }}</p>
+    <x-slot:header><x-ui.page-header :title="__('growth.my_links')" :count="count($items)" :subtitle="__('growth.links_intro')" /></x-slot:header>
     @php
         $copyIcon = '<svg class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></svg>';
         $qrIcon = '<svg class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>';
@@ -21,13 +19,13 @@
                     </div>
                 </div>
                 {{-- the affiliate's QR only (no product barcode): it carries their tracked link --}}
-                <a href="{{ $qr }}" download="qr-{{ $p->slug }}.png" class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-brand-600 transition hover:border-brand-500 hover:bg-white">
+                <a href="{{ $qr }}" download="qr-{{ $p->slug }}.png" class="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-panel-text transition hover:border-panel hover:bg-white">
                     <img src="{{ $qr }}" alt="QR: {{ $p->name }}" width="160" height="160" class="size-40 rounded-xl bg-white p-1.5" loading="lazy">
                     <span class="inline-flex items-center gap-1.5">{!! $qrIcon !!}{{ __('store.qr_download') }}</span>
                 </a>
                 <div class="flex gap-2">
                     <input readonly value="{{ $tp->affiliate_url }}" dir="ltr" aria-label="{{ __('growth.my_links') }}: {{ $p->name }}" class="form-control min-w-0 flex-1 bg-slate-50 text-xs" onclick="this.select()">
-                    <button type="button" class="btn btn-pop inline-flex shrink-0 items-center gap-1.5 !px-4" data-copy="{{ $tp->affiliate_url }}" data-copied="{{ __('growth.copied') }}">{!! $copyIcon !!}{{ __('growth.copy') }}</button>
+                    <button type="button" class="btn btn-primary inline-flex shrink-0 items-center gap-1.5 !px-4" data-copy="{{ $tp->affiliate_url }}" data-copied="{{ __('growth.copied') }}">{!! $copyIcon !!}{{ __('growth.copy') }}</button>
                 </div>
                 @if (! empty($tp->variant_links))
                     <details class="group rounded-2xl border border-slate-200 text-sm">
@@ -55,4 +53,4 @@
             <x-empty-state type="search" :title="__('admin.no_data')" />
         @endforelse
     </div>
-</x-layouts.storefront>
+</x-layouts.affiliate>

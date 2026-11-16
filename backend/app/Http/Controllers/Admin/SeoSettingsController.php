@@ -32,7 +32,7 @@ class SeoSettingsController extends Controller implements HasMiddleware
     {
         $this->service->update($request->validated());
 
-        return $this->ok(__('admin.saved'), route('admin.seo.edit'));
+        return $this->ok(__('admin.saved'), route((request()->routeIs('marketer.*') ? 'marketer' : 'admin').'.seo.edit'));
     }
 
     public function validateForm(SeoSettingsRequest $request): JsonResponse

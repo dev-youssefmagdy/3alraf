@@ -21,7 +21,7 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
     config(['app.url' => 'http://3alraf.test', 'app.host' => '3alraf.test']);
-    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->owner = marketerOwner();
     $this->mkToken = fn (?array $scopes = null) => app(MarketingTokenService::class)->create(new MarketingTokenData('mcp', $scopes ?? ['marketing:read', ...SuggestionScopes::all()], null, null))[1];
     $this->tok = ($this->mkToken)();
     $this->product = function (string $slug, string $price = '100', string $cost = '60') {

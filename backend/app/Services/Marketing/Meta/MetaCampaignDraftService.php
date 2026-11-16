@@ -5,7 +5,7 @@ namespace App\Services\Marketing\Meta;
 use App\DTOs\Marketing\MetaCampaignDraftData;
 use App\Enums\Marketing\MediaAssetStatus;
 use App\Enums\Marketing\MetaDraftStatus as S;
-use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\MetaCampaignApproval;
 use App\Models\MetaCampaignDraft;
 use App\Models\Product;
@@ -71,7 +71,7 @@ class MetaCampaignDraftService
 
         return DB::transaction(function () use ($cols, $actor, $submit, $check) {
             $d = $this->repo->create($cols + ['status' => S::DRAFT, 'version' => 1, 'content_hash' => self::hash($cols),
-                'created_by_admin_id' => $actor->isAdmin() ? $actor->id : null, 'created_by_token_id' => $actor->isToken() ? $actor->id : null]);
+                'created_by_marketer_id' => $actor->isMarketer() ? $actor->id : null, 'created_by_token_id' => $actor->isToken() ? $actor->id : null]);
             $this->audit->log($d->id, 'draft_created', $actor, ['version' => 1, 'content_hash' => $d->content_hash, 'warnings' => $check['warnings'] ?: null]);
             if ($submit) {
                 $d = $this->submit($d, $actor);
@@ -128,7 +128,7 @@ class MetaCampaignDraftService
         return DB::transaction(function () use ($d, $actor) {
             $this->invalidate($d, 'resubmitted');
             MetaCampaignApproval::create(['draft_id' => $d->id, 'draft_version' => $d->version, 'content_hash' => $d->content_hash, 'approval_status' => 'pending',
-                'requested_by' => $actor->isAdmin() ? $actor->id : null, 'requested_by_token_id' => $actor->isToken() ? $actor->id : null]);
+                'requested_by' => $actor->isMarketer() ? $actor->id : null, 'requested_by_token_id' => $actor->isToken() ? $actor->id : null]);
             $this->repo->update($d, ['status' => S::PENDING_APPROVAL, 'submitted_at' => now()]);
             $this->audit->log($d->id, 'approval_requested', $actor, ['version' => $d->version, 'content_hash' => $d->content_hash]);
 
@@ -138,7 +138,7 @@ class MetaCampaignDraftService
 
     // ------------------------------------------------------------------ approval (panel only)
 
-    public function approve(MetaCampaignDraft $d, Admin $admin, ?string $note = null): MetaCampaignApproval
+    public function approve(MetaCampaignDraft $d, Marketer $admin, ?string $note = null): MetaCampaignApproval
     {
         if (! $admin->can('meta_ads.approve')) {
             throw E::make('meta', 'forbidden', 403, ['permission' => 'meta_ads.approve']);
@@ -150,7 +150,7 @@ class MetaCampaignDraftService
                 throw E::make('meta', 'illegal_transition', 409, ['status' => $d->status->value]);
             }
             if (self::hash($d) !== $d->content_hash) {
-                $this->audit->log($d->id, 'hash_mismatch', SuggestionActor::admin($admin), ['stored' => $d->content_hash]);
+                $this->audit->log($d->id, 'hash_mismatch', SuggestionActor::marketer($admin), ['stored' => $d->content_hash]);
                 throw E::make('meta', 'hash_mismatch', 409);
             }
             $check = $this->check(self::columnsOf($d), $d, true);
@@ -163,14 +163,14 @@ class MetaCampaignDraftService
                 'expires_at' => now()->addHours(max(1, (int) config('meta.approval_valid_hours', 72)))];
             $a = $req ? tap($req)->update($fill) : MetaCampaignApproval::create($fill + ['draft_id' => $d->id, 'draft_version' => $d->version, 'content_hash' => $d->content_hash]);
             $this->repo->update($d, ['status' => S::APPROVED, 'approved_by' => $admin->id, 'approved_at' => now()]);
-            $this->audit->log($d->id, 'approved', SuggestionActor::admin($admin), ['approval_id' => $a->id, 'version' => $d->version, 'content_hash' => $d->content_hash,
+            $this->audit->log($d->id, 'approved', SuggestionActor::marketer($admin), ['approval_id' => $a->id, 'version' => $d->version, 'content_hash' => $d->content_hash,
                 'expires_at' => $a->expires_at?->toIso8601String(), 'note' => $note, 'warnings' => $check['warnings'] ?: null]);
 
             return $a;
         });
     }
 
-    public function reject(MetaCampaignDraft $d, Admin $admin, ?string $note = null): MetaCampaignDraft
+    public function reject(MetaCampaignDraft $d, Marketer $admin, ?string $note = null): MetaCampaignDraft
     {
         if (! $admin->can('meta_ads.approve')) {
             throw E::make('meta', 'forbidden', 403, ['permission' => 'meta_ads.approve']);
@@ -184,20 +184,20 @@ class MetaCampaignDraftService
             MetaCampaignApproval::create(['draft_id' => $d->id, 'draft_version' => $d->version, 'content_hash' => $d->content_hash, 'approval_status' => 'rejected',
                 'approved_by' => $admin->id, 'note' => $note ? mb_substr(trim($note), 0, 1000) : null]);
             $this->repo->update($d, ['status' => S::REJECTED, 'approved_by' => null, 'approved_at' => null]);
-            $this->audit->log($d->id, 'rejected', SuggestionActor::admin($admin), ['version' => $d->version, 'note' => $note]);
+            $this->audit->log($d->id, 'rejected', SuggestionActor::marketer($admin), ['version' => $d->version, 'note' => $note]);
 
             return $d;
         });
     }
 
-    public function archive(MetaCampaignDraft $d, Admin $admin): MetaCampaignDraft
+    public function archive(MetaCampaignDraft $d, Marketer $admin): MetaCampaignDraft
     {
         if (in_array($d->status, [S::PUBLISHING, S::ARCHIVED], true)) {
             throw E::make('meta', 'illegal_transition', 409, ['status' => $d->status->value]);
         }
         $this->invalidate($d, 'archived');
         $this->repo->update($d, ['status' => S::ARCHIVED]);
-        $this->audit->log($d->id, 'archived', SuggestionActor::admin($admin));
+        $this->audit->log($d->id, 'archived', SuggestionActor::marketer($admin));
 
         return $d;
     }

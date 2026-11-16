@@ -1,9 +1,14 @@
+{{-- KPI tile (Figma Stat card: soft tinted tones). tone: brand | mint | sun | violet | emerald | slate | panel (follows the panel accent). --}}
 @props(['label', 'value', 'hint' => null, 'tone' => 'brand'])
 @php
-    $toneCls = ['brand' => 'text-brand-600', 'emerald' => 'text-emerald-600', 'slate' => 'text-slate-700'][$tone] ?? 'text-brand-600';
+    [$bg, $fg] = [
+        'brand' => ['bg-brand-50', 'text-brand-700'], 'mint' => ['bg-mint-100', 'text-mint-700'], 'emerald' => ['bg-mint-100', 'text-mint-700'],
+        'sun' => ['bg-sun-100', 'text-slate-950'], 'violet' => ['bg-violet-100', 'text-violet-700'], 'slate' => ['bg-slate-100', 'text-slate-900'],
+        'panel' => ['bg-panel-soft', 'text-panel-text'],
+    ][$tone] ?? ['bg-brand-50', 'text-brand-700'];
 @endphp
-<div {{ $attributes->merge(['class' => 'rounded-xl border border-slate-200 bg-white p-5 shadow-sm']) }}>
-    <p class="text-sm text-slate-500">{{ $label }}</p>
-    <p class="mt-1 text-3xl font-bold {{ $toneCls }}">{{ $value }}</p>
-    @if ($hint)<p class="mt-1 text-xs text-slate-400">{{ $hint }}</p>@endif
+<div {{ $attributes->merge(['class' => "min-w-0 rounded-3xl p-5 $bg"]) }}>
+    <p class="text-sm font-bold {{ $fg }}">{{ $label }}</p>
+    <p class="mt-1 font-display text-[28px]/9 font-extrabold tabular-nums [overflow-wrap:anywhere] {{ $fg }}">{{ $value }}</p>
+    @if ($hint)<p class="mt-1 text-xs text-slate-600">{{ $hint }}</p>@endif
 </div>

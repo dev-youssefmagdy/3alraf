@@ -1,0 +1,110 @@
+/*
+ * Staff / partner panels design system (Figma "3alraf — Storefront redesign", pages 7–10; ADMIN_REDESIGN_MARKETER_SPLIT_PLAN.md B4).
+ * One component set, three looks: <html data-panel="admin|marketer|affiliate">. Everything here is scoped to [data-panel], so the
+ * storefront (no data-panel) never changes. Imported by app.css (admin + marketer) and storefront.css (affiliate pages).
+ */
+
+/* storefront palette, also available to the panels (same values as storefront.css) */
+@theme {
+    --font-display: 'Baloo Bhaijaan 2', 'Cairo', ui-sans-serif, system-ui, sans-serif;
+    --color-brand-950: #3f1828;
+    --color-pop-50: #ffe8f2;
+    --color-pop-100: #ffc9e0;
+    --color-pop-500: #e5177a;
+    --color-pop-600: #c80f66;
+    --color-pop-700: #a10b52;
+    --color-sun-100: #fff3c4;
+    --color-sun-300: #ffd95a;
+    --color-sun-400: #ffc940;
+    --color-mint-100: #d5f5ec;
+    --color-mint-400: #3ccfae;
+    --color-mint-700: #0b7560;
+    --color-violet-100: #ece7ff;
+    --color-violet-400: #8b6cff;
+    --color-violet-500: #6c4bf4;
+    --color-violet-700: #4b2bc9;
+}
+
+/* Figma variable collection "Panel" → utilities bg-panel, text-panel-text, bg-panel-sidebar, ... (resolved per data-panel at runtime) */
+@theme inline {
+    --color-panel: var(--p-accent);
+    --color-panel-hover: var(--p-accent-hover);
+    --color-panel-deep: var(--p-accent-deep);
+    --color-panel-soft: var(--p-accent-soft);
+    --color-panel-text: var(--p-accent-text);
+    --color-panel-sidebar: var(--p-sidebar);
+    --color-panel-sidebar-text: var(--p-sidebar-text);
+    --color-panel-sidebar-muted: var(--p-sidebar-muted);
+    --color-panel-active: var(--p-active);
+    --color-panel-stripe: var(--p-stripe);
+}
+
+/* Admin (default): plum sidebar, rose accent, gold label */
+:root, [data-panel='admin'] {
+    --p-sidebar: var(--color-slate-950);
+    --p-sidebar-text: var(--color-slate-300);
+    --p-sidebar-muted: var(--color-slate-400);
+    --p-active: var(--color-brand-600);
+    --p-accent: var(--color-brand-600);
+    --p-accent-hover: var(--color-brand-700);
+    --p-accent-deep: var(--color-brand-800);
+    --p-accent-soft: var(--color-brand-50);
+    --p-accent-text: var(--color-brand-700);
+    --p-stripe: var(--color-accent);
+}
+/* Marketer: violet */
+[data-panel='marketer'] {
+    --p-sidebar: var(--color-violet-700);
+    --p-sidebar-text: var(--color-violet-100);
+    --p-sidebar-muted: var(--color-violet-400);
+    --p-active: var(--color-violet-500);
+    --p-accent: var(--color-violet-500);
+    --p-accent-hover: var(--color-violet-700);
+    --p-accent-deep: var(--color-violet-700);
+    --p-accent-soft: var(--color-violet-100);
+    --p-accent-text: var(--color-violet-700);
+    --p-stripe: var(--color-violet-100);
+}
+/* Affiliate: mint, dark active pill, sun label */
+[data-panel='affiliate'] {
+    --p-sidebar: var(--color-mint-700);
+    --p-sidebar-text: var(--color-mint-100);
+    --p-sidebar-muted: var(--color-mint-100);
+    --p-active: var(--color-slate-950);
+    --p-accent: var(--color-mint-700);
+    --p-accent-hover: var(--color-emerald-700);
+    --p-accent-deep: var(--color-emerald-700);
+    --p-accent-soft: var(--color-mint-100);
+    --p-accent-text: var(--color-mint-700);
+    --p-stripe: var(--color-sun-300);
+}
+
+@layer components {
+    /* buttons: pill, 3D primary in the panel accent (Figma Button → panel/accent, panel/accent-deep) */
+    [data-panel] .btn { @apply rounded-full px-5 py-2.5 font-bold focus:ring-panel/30; }
+    [data-panel] .btn-primary { @apply bg-panel text-white shadow-[0_3px_0_var(--color-panel-deep)] hover:bg-panel-hover active:translate-y-px active:shadow-[0_2px_0_var(--color-panel-deep)]; }
+    [data-panel] .btn-secondary { @apply border-slate-300 bg-white text-slate-900 hover:border-panel hover:text-panel-text; }
+    [data-panel] .btn-danger { @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100; }
+    [data-panel] .btn-sm { @apply rounded-full px-3 py-1.5 font-semibold; }
+    [data-panel] .btn-sun { @apply inline-flex items-center justify-center gap-2 rounded-full bg-sun-400 px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_3px_0_#d9a100] hover:bg-sun-300; }
+    [data-panel] .form-control { @apply rounded-xl border-slate-300 px-3.5 py-2.5 focus:border-panel focus:ring-panel/20; }
+    [data-panel] .badge { @apply px-2.5 font-semibold; }
+
+    /* sidebar links (Figma Panel/Nav item, Panel/Nav group) */
+    [data-panel] .side-link { @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-panel-sidebar-text transition hover:bg-white/10 hover:text-white; }
+    [data-panel] .side-link.active { @apply bg-panel-active font-bold text-white hover:bg-panel-active; }
+    [data-panel] .side-count { @apply ms-auto min-w-5 rounded-full bg-pop-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white; }
+
+    /* surfaces (Figma Panel/Card) */
+    [data-panel] .ui-card { @apply rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgb(69_49_59/0.06)]; }
+    [data-panel] .ui-card-head { @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4; }
+    [data-panel] .ui-title { @apply text-base font-bold text-slate-900; }
+    [data-panel] .ui-sub { @apply text-xs text-slate-500; }
+
+    /* DataTables inside a panel card */
+    [data-panel] table.dataTable thead th { @apply bg-slate-100 text-xs font-bold text-slate-600; }
+    [data-panel] table.dataTable tbody tr:hover { @apply bg-slate-50; }
+}
+
+/* ⌘K command palette */
+[data-panel] [data-cmdk-results] a[aria-selected='true'] { background: var(--p-accent-soft); color: var(--p-accent-text); }

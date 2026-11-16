@@ -28,7 +28,13 @@ return [
     'attributes' => 'Attributes',
     'categories' => 'Categories',
     'products' => 'Products',
-    'nav' => ['sales' => 'Sales', 'catalog_inventory' => 'Catalog & Inventory', 'marketing' => 'Marketing & Growth', 'content' => 'Content', 'finance' => 'Finance', 'logistics' => 'Shipping & Locations', 'team_access' => 'Team & Access', 'insights_settings' => 'Reports & Settings'],
+    'nav' => ['sales' => 'Sales & customers', 'catalog' => 'Catalog', 'inventory' => 'Stock & purchasing', 'offers' => 'Offers & marketing', 'affiliates' => 'Affiliates', 'content' => 'Content', 'finance' => 'Finance', 'logistics' => 'Shipping & branches', 'team_access' => 'Team & access', 'settings' => 'Settings', 'catalog_inventory' => 'Catalog & Inventory', 'marketing' => 'Marketing & Growth', 'insights_settings' => 'Reports & Settings'],
+    'menu' => 'Menu', 'cmdk_placeholder' => 'Go to a page… (⌘K)', 'cmdk_empty' => 'No results',
+    'auth_side' => [
+        'admin' => ['headline' => 'Every store operation in one place.', 'points' => ['Orders, POS and returns', 'Stock, purchasing and suppliers', 'Finance, reports and access'], 'note' => 'Staff only. Marketers sign in on the marketing panel.'],
+        'marketer' => ['headline' => 'Plan, review and launch campaigns with confidence.', 'points' => ['Claude suggestions waiting for your approval', 'Offers, coupons, banners and bundles', 'Social library and Meta ads'], 'note' => 'Separate from the admin panel. Ask your marketing owner for an account.'],
+    ],
+    'step_of' => 'Step :step of :total',
     'values' => 'Values',
     'variants' => 'Variants',
     'variant' => 'Variant',
@@ -137,6 +143,20 @@ return [
         'panel_link' => 'Marketing panel',
         'admin_panel' => 'Admin panel',
         'welcome_hint' => 'Marketing panel: KPIs, Gift Finder, API tokens and links to the marketing tools.',
+        'accounts' => [
+            'title' => 'Marketer accounts',
+            'add' => 'Add marketer',
+            'last_login' => 'Last login',
+            'hint' => 'Marketing panel accounts are completely separate from admin panel accounts. Sign-in is phone + password + WhatsApp code.',
+            'roles' => ['marketer' => 'Marketer', 'marketer-owner' => 'Marketing owner'],
+            'role_hints' => [
+                'marketer' => 'Creates and edits suggestions, content and drafts; cannot approve, apply or publish.',
+                'marketer-owner' => 'Everything: approve, apply, publish, API keys and account management.',
+            ],
+            'cannot_demote_self' => 'You cannot deactivate your own account or remove its marketing owner role.',
+            'cannot_delete_self' => 'You cannot delete your own account.',
+            'last_owner' => 'At least one active marketing owner must remain.',
+        ],
         'groups' => [
             'overview' => 'Overview',
             'suggestions' => 'Suggestions',
@@ -166,6 +186,7 @@ return [
             'api_tokens' => 'Marketing API tokens (MCP)',
             'api_log' => 'API request log',
             'integration_clients' => 'Integration clients (n8n)',
+            'accounts' => 'Marketer accounts',
         ],
         'tools' => [
             'banners' => 'Banners & slider',

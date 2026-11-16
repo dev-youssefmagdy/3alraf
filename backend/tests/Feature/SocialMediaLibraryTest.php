@@ -24,15 +24,8 @@ beforeEach(function () {
     Storage::fake(config('media.private_disk'));
     Storage::fake(config('media.disk'));
     config(['app.url' => 'http://3alraf.test', 'app.host' => '3alraf.test']);
-    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
-    $this->staff = function (array $perms = [], ?string $role = null, string $email = 's@egy.test') {
-        $a = Admin::create(['name' => 'S '.$email, 'email' => $email, 'password' => 'password', 'is_active' => true]);
-        $perms && $a->givePermissionTo($perms);
-        $role && $a->assignRole($role);
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        return $a->fresh();
-    };
+    $this->owner = marketerOwner();
+    $this->staff = fn (array $perms = [], ?string $role = null, string $email = 's@egy.test') => makeMarketer($perms, $role, $email);
     $this->product = listProduct(Product::create(['type' => 'simple', 'name' => ['en' => 'Lib item', 'ar' => 'صنف'], 'description' => ['en' => 'x'], 'slug' => 'lib-item', 'sku' => 'LIB-1',
         'barcode' => app(BarcodeService::class)->generateUnique()]), ['price' => '100', 'cost' => '60', 'is_active' => true]);
     $this->upload = fn (array $extra = [], ?UploadedFile $f = null) => $this->post('/marketer/media', array_merge(['product_id' => $this->product->id, 'title' => 'SECRET-ASSET-TITLE', 'file' => $f ?? UploadedFile::fake()->image('hero.jpg', 800, 800)], $extra), ['Accept' => 'application/json']);
@@ -46,7 +39,7 @@ beforeEach(function () {
 });
 
 it('stores uploads on the private disk only, with versions and no public URL', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = ($this->upload)()->assertOk()->json('data.id');
     $a = SocialMediaAsset::findOrFail($id);
     expect($a->status->value)->toBe('pending_review')->and($a->kind->value)->toBe('image')->and($a->version)->toBe(1)->and($a->width)->toBe(800)
@@ -72,7 +65,7 @@ it('stores uploads on the private disk only, with versions and no public URL', f
 });
 
 it('refuses malicious or unsupported uploads', function (callable $make, string $field) {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     ($this->upload)([], $make())->assertStatus(422)->assertJsonValidationErrors([$field]);
     expect(SocialMediaAsset::count())->toBe(0);
 })->with([
@@ -83,7 +76,7 @@ it('refuses malicious or unsupported uploads', function (callable $make, string 
 ]);
 
 it('validates kinds, size limits, dimensions and Canva links', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     ($this->upload)(['canva_url' => 'https://evil.com/design/1'])->assertStatus(422)->assertJsonValidationErrors(['canva_url']);
     ($this->upload)(['canva_url' => 'javascript:alert(1)'])->assertStatus(422)->assertJsonValidationErrors(['canva_url']);
     ($this->upload)(['kind' => 'video'])->assertStatus(422)->assertJsonValidationErrors(['file']);          // image file, video kind
@@ -106,10 +99,10 @@ it('validates kinds, size limits, dimensions and Canva links', function () {
 });
 
 it('is never publicly reachable', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = ($this->upload)()->assertOk()->json('data.id');
     $a = SocialMediaAsset::findOrFail($id);
-    auth('admin')->logout();
+    auth('marketer')->logout();
     $this->flushSession();
     foreach (['file', 'thumb', 'download'] as $r) {
         $this->get("/marketer/media/$id/$r")->assertRedirect();                 // guest → login
@@ -126,11 +119,11 @@ it('is never publicly reachable', function () {
 });
 
 it('never appears in the storefront, public API or sitemap', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = ($this->upload)()->assertOk()->json('data.id');
     $a = SocialMediaAsset::findOrFail($id);
     $this->post("/marketer/media/$id/approve", [], ['Accept' => 'application/json'])->assertOk();
-    auth('admin')->logout();
+    auth('marketer')->logout();
     $this->flushSession();
     $s = rtrim(config('app.url'), '/');
     foreach (["$s/ar/product/lib-item", "$s/en/product/lib-item", "$s/sitemap.xml"] as $u) {
@@ -144,12 +137,12 @@ it('never appears in the storefront, public API or sitemap', function () {
 });
 
 it('enforces the permission matrix', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = ($this->upload)()->assertOk()->json('data.id');
-    auth('admin')->logout();
+    auth('marketer')->logout();
 
     $viewer = ($this->staff)(['ai_media.view'], null, 'v@egy.test');
-    $this->actingAs($viewer, 'admin');
+    $this->actingAs($viewer, 'marketer');
     $this->get('/marketer/media')->assertOk();
     $this->get("/marketer/media/$id")->assertOk()->assertDontSee('data-action="approve"', false)->assertDontSee('data-upload-form', false);
     $this->get("/marketer/media/$id/file")->assertOk();
@@ -160,17 +153,19 @@ it('enforces the permission matrix', function () {
     $this->deleteJson("/marketer/media/$id")->assertForbidden();
 
     $editor = ($this->staff)(['ai_media.view', 'ai_media.edit'], null, 'e@egy.test');
-    $this->actingAs($editor, 'admin');
+    $this->actingAs($editor, 'marketer');
     $this->putJson("/marketer/media/$id", ['title' => 'Edited'])->assertOk();
     $this->postJson("/marketer/media/$id/approve")->assertForbidden();
 
     $none = ($this->staff)(['gift_finder.view'], null, 'n@egy.test');
-    $this->actingAs($none, 'admin');
+    $this->actingAs($none, 'marketer');
     $this->get('/marketer/media')->assertForbidden();
     $this->get("/marketer/media/$id/file")->assertForbidden();
 
     $marketer = ($this->staff)([], 'marketer', 'm@egy.test');
-    $this->actingAs($marketer, 'admin');
+    $this->actingAs($marketer, 'marketer');
+    $this->postJson("/marketer/media/$id/approve")->assertForbidden();   // owner decision Q2
+    $this->actingAs($this->owner, 'marketer');
     $this->postJson("/marketer/media/$id/approve")->assertOk();
     expect(SocialMediaAsset::find($id)->status->value)->toBe('approved');
     // a caption change on an approved item goes back to review; a campaign change does not
@@ -185,31 +180,28 @@ it('enforces the permission matrix', function () {
     $this->get("/marketer/media/$id/file")->assertNotFound();
 });
 
-it('shows the library page and the admin product tab (ar + en), filters, grid and list', function () {
-    $this->actingAs($this->owner, 'admin');
+it('shows the library page (ar + en), filters, grid and list; the admin product editor has no social tab', function () {
+    $this->actingAs($this->owner, 'marketer');
     ($this->upload)(['campaign' => 'Eid', 'platforms' => ['tiktok'], 'tags' => 'gift'])->assertOk();
     foreach (['ar', 'en'] as $loc) {
-        $this->withSession(['admin_locale' => $loc]);
+        $this->withSession(['marketer_locale' => $loc]);
         $this->get('/marketer/media')->assertOk()->assertSee('data-panel="marketer"', false)->assertSee('data-library-grid', false)->assertSee('data-internal-notice', false)->assertSee('SECRET-ASSET-TITLE');
         $this->get('/marketer/media?view=list')->assertOk()->assertSee('data-library-list', false);
         $this->get('/marketer/media?platform=facebook')->assertOk()->assertSee('data-library-empty', false);
         $this->get('/marketer/media?platform=tiktok&campaign=Eid&tag=gift')->assertOk()->assertSee('SECRET-ASSET-TITLE');
-        $this->get("/admin/products/{$this->product->id}/edit")->assertOk()->assertSee('data-social-tab', false)->assertSee(__('marketing.media.tab', [], $loc))->assertDontSee('data-media-library', false);
-        $this->get("/admin/products/{$this->product->id}/edit?tab=social")->assertOk()->assertSee('data-media-library', false)->assertSee('SECRET-ASSET-TITLE')->assertDontSee('name="sku"', false);
     }
     expect(__('marketing.media.tab', [], 'ar'))->toBe('محتوى السوشيال ميديا')->and(__('marketing.media.tab', [], 'en'))->toBe('Social media content');
-    // product editor without library permission: no tab, ?tab=social is ignored
-    $ed = ($this->staff)(['products.edit'], null, 'pe@egy.test');
-    $this->actingAs($ed, 'admin');
+    // the library is marketer-only: even the admin owner's product editor shows no tab and ignores ?tab=social
+    $this->actingAs(\App\Models\Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
     $this->get("/admin/products/{$this->product->id}/edit?tab=social")->assertOk()->assertDontSee('data-social-tab', false)->assertDontSee('data-media-library', false)->assertDontSee('SECRET-ASSET-TITLE');
     // the nav placeholder is live
-    $this->actingAs($this->owner, 'admin')->get('/marketer')->assertSee(route('marketer.media.index'), false);
+    $this->actingAs($this->owner, 'marketer')->get('/marketer')->assertSee(route('marketer.media.index'), false);
 });
 
 it('exposes metadata and signed previews on the internal API, never paths or bytes', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $id = ($this->upload)()->assertOk()->json('data.id');
-    auth('admin')->logout();
+    auth('marketer')->logout();
     [, $plain] = app(MarketingTokenService::class)->create(new MarketingTokenData('mcp', ['marketing:read'], 30, null));
     $h = ['Authorization' => 'Bearer '.$plain];
     $this->getJson('/api/internal/marketing/media')->assertUnauthorized();
@@ -247,7 +239,7 @@ it('applies social_content and media_asset suggestions as private drafts and rol
     // idempotent: a second apply creates nothing
     $engine->apply($s->fresh(), $this->owner);
     expect(SocialMediaAsset::count())->toBe(1);
-    $this->actingAs($this->owner, 'admin')->get('/marketer/suggestions/'.$s->id)->assertOk()->assertSee(route('marketer.media.show', $a->id), false);
+    $this->actingAs($this->owner, 'marketer')->get('/marketer/suggestions/'.$s->id)->assertOk()->assertSee(route('marketer.media.show', $a->id), false);
 
     $engine->rollback($s->fresh(), $this->owner);
     expect($a->fresh()->status->value)->toBe('archived')->and($s->fresh()->rolled_back_at)->not->toBeNull();
@@ -258,7 +250,7 @@ it('applies social_content and media_asset suggestions as private drafts and rol
     $b = SocialMediaAsset::findOrFail($m->fresh()->result_entity_id);
     expect($b->title)->toBe('Clip')->and($b->kind->value)->toBe('post')->and($b->aspect_ratio)->toBe('9:16')->and($b->platforms)->toBe(['tiktok'])->and($b->tags)->toBe(['gift'])->and($b->brief)->toContain('Flat lay');
     // a file uploaded later turns the brief into a real video item, version 1
-    $this->actingAs($this->owner, 'admin')->post("/marketer/media/{$b->id}/version", ['file' => ($this->mp4)()], ['Accept' => 'application/json'])->assertOk();
+    $this->actingAs($this->owner, 'marketer')->post("/marketer/media/{$b->id}/version", ['file' => ($this->mp4)()], ['Accept' => 'application/json'])->assertOk();
     expect($b->fresh()->kind->value)->toBe('video')->and($b->fresh()->version)->toBe(1)->and($b->fresh()->status->value)->toBe('pending_review');
     // deleted product: apply refused
     $g = $make('media_asset', ['asset_kind' => 'image', 'brief' => 'Other']);

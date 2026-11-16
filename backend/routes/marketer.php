@@ -1,20 +1,43 @@
 <?php
 
+use App\Http\Controllers\Auth\MarketerLoginController;
 use App\Http\Controllers\Marketer\AnalyticsController;
 use App\Http\Controllers\Marketer\ApiLogController;
 use App\Http\Controllers\Marketer\DashboardController;
 use App\Http\Controllers\Marketer\GiftFinderController;
 use App\Http\Controllers\Marketer\IntegrationClientController;
+use App\Http\Controllers\Marketer\MarketerAccountController;
 use App\Http\Controllers\Marketer\MarketingTokenController;
 use App\Http\Controllers\Marketer\MediaLibraryController;
 use App\Http\Controllers\Marketer\MetaAdsController;
 use App\Http\Controllers\Marketer\SuggestionController;
+use App\Http\Controllers\Marketer\Tools;
 use App\Enums\Marketing\SuggestionTypeKey;
 use Illuminate\Support\Facades\Route;
 
-// Marketer panel /marketer (MARKETER_PLAN.md P4): guard `admin` (same login as /admin), session locale like the admin, names marketer.*.
-// Panel gate `marketing.panel` (any marketing permission) + one `can:` per route. Nav: App\Support\Marketing\MarketerNav (P5/P6/P7 add items there).
-Route::prefix('marketer')->middleware(['admin.locale', 'auth:admin', 'can:marketing.panel'])->name('marketer.')->group(function () {
+// Marketer panel /marketer: standalone app with its own accounts (table `marketers`, guard `marketer`), login, locale and roles.
+// No route here links to /admin and no admin session opens it (ADMIN_REDESIGN_MARKETER_SPLIT_PLAN.md B1–B3). Names marketer.*.
+Route::prefix('marketer')->middleware('admin.locale:marketer')->name('marketer.')->group(function () {
+    Route::middleware('guest:marketer')->controller(MarketerLoginController::class)->group(function () {
+        Route::get('login', 'show')->name('login');
+        Route::post('login/validate', 'validateForm')->middleware('throttle:login-validate')->name('login.validate');
+        Route::post('login', 'login')->middleware('throttle:auth')->name('login.submit');
+        Route::get('login/otp', 'otpForm')->name('login.otp');
+        Route::post('login/otp', 'verifyOtp')->middleware('throttle:auth')->name('login.otp.verify');
+        Route::post('login/otp/resend', 'resendOtp')->middleware('throttle:auth-strict')->name('login.otp.resend');
+    });
+    Route::middleware('auth:marketer')->group(function () {
+        Route::post('logout', [MarketerLoginController::class, 'logout'])->name('logout');
+        Route::get('locale/{code}', function (string $code) {
+            session()->put('marketer_locale', $code);
+
+            return back();
+        })->name('locale');
+    });
+});
+
+// Panel gate `marketing.panel` (any marketing permission on guard `marketer`) + one `can:` per route. Nav: App\Support\Marketing\MarketerNav.
+Route::prefix('marketer')->middleware(['admin.locale:marketer', 'auth:marketer', 'can:marketing.panel'])->name('marketer.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('analytics', [AnalyticsController::class, 'index'])->middleware('can:marketing.analytics')->name('analytics.index');
 
@@ -104,6 +127,50 @@ Route::prefix('marketer')->middleware(['admin.locale', 'auth:admin', 'can:market
         Route::put('{id}', 'update')->whereNumber('id')->middleware('can:integration_clients.manage')->name('update');
         Route::post('{id}/rotate', 'rotate')->whereNumber('id')->middleware('can:integration_clients.manage')->name('rotate');
         Route::post('{id}/revoke', 'revoke')->whereNumber('id')->middleware('can:integration_clients.manage')->name('revoke');
+    });
+
+    // Marketing tools (owner decision Q1: in both panels). Same controllers / services / views as /admin through thin subclasses
+    // (App\Http\Controllers\Marketer\Tools\*), own route names marketer.{uri}.*, gated by the marketer guard's own permissions.
+    foreach ([
+        'banners' => Tools\BannerController::class, 'discount-codes' => Tools\DiscountCodeController::class, 'flash-sales' => Tools\FlashSaleController::class,
+        'bundles' => Tools\BundleController::class, 'blog-posts' => Tools\BlogPostController::class, 'static-pages' => Tools\StaticPageController::class,
+        'custom-pages' => Tools\CustomPageController::class,
+    ] as $uri => $ctl) {
+        Route::get("$uri/datatable", [$ctl, 'datatable'])->name("$uri.datatable");
+        Route::post("$uri/validate/{id?}", [$ctl, 'validateForm'])->name("$uri.validate");
+        Route::resource($uri, $ctl)->except('show')->parameters([$uri => 'id']);
+    }
+    Route::get('bundles/{id}/qr', [Tools\BundleController::class, 'qr'])->whereNumber('id')->middleware('can:bundles.view')->name('bundles.qr');
+    Route::post('bundles/{id}/qr/regenerate', [Tools\BundleController::class, 'regenerateQr'])->whereNumber('id')->middleware('can:bundles.edit')->name('bundles.qr.regenerate');
+
+    Route::get('seo', [Tools\SeoSettingsController::class, 'edit'])->name('seo.edit');
+    Route::put('seo', [Tools\SeoSettingsController::class, 'update'])->name('seo.update');
+    Route::post('seo/validate', [Tools\SeoSettingsController::class, 'validateForm'])->name('seo.validate');
+    Route::get('affiliates/datatable', [Tools\AffiliateController::class, 'datatable'])->name('affiliates.datatable');
+    Route::get('affiliates', [Tools\AffiliateController::class, 'index'])->name('affiliates.index');
+    Route::post('affiliates/{id}/approve', [Tools\AffiliateController::class, 'approve'])->whereNumber('id')->name('affiliates.approve');
+    Route::post('affiliates/{id}/suspend', [Tools\AffiliateController::class, 'suspend'])->whereNumber('id')->name('affiliates.suspend');
+    Route::delete('affiliates/{id}', [Tools\AffiliateController::class, 'destroy'])->whereNumber('id')->name('affiliates.destroy');
+    Route::get('product-lists', [Tools\ProductListController::class, 'index'])->name('product-lists.index');
+    Route::post('product-lists/{type}/validate', [Tools\ProductListController::class, 'validateForm'])->name('product-lists.validate');
+    Route::put('product-lists/{type}', [Tools\ProductListController::class, 'update'])->name('product-lists.update');
+    Route::get('reviews/datatable', [Tools\ReviewController::class, 'datatable'])->name('reviews.datatable');
+    Route::get('reviews', [Tools\ReviewController::class, 'index'])->name('reviews.index');
+    Route::post('reviews/{id}/approve', [Tools\ReviewController::class, 'approve'])->whereNumber('id')->name('reviews.approve');
+    Route::post('reviews/{id}/reject', [Tools\ReviewController::class, 'reject'])->whereNumber('id')->name('reviews.reject');
+    Route::delete('reviews/{id}', [Tools\ReviewController::class, 'destroy'])->whereNumber('id')->name('reviews.destroy');
+
+    // Marketer accounts (own table `marketers`, roles marketer / marketer-owner); the admin panel never manages them
+    Route::prefix('accounts')->name('accounts.')->controller(MarketerAccountController::class)->group(function () {
+        Route::get('/', 'index')->middleware('can:marketers.view')->name('index');
+        Route::middleware('can:marketers.manage')->group(function () {
+            Route::get('create', 'create')->name('create');
+            Route::post('validate/{id?}', 'validateForm')->whereNumber('id')->name('validate');
+            Route::post('/', 'store')->name('store');
+            Route::get('{id}/edit', 'edit')->whereNumber('id')->name('edit');
+            Route::put('{id}', 'update')->whereNumber('id')->name('update');
+            Route::delete('{id}', 'destroy')->whereNumber('id')->name('destroy');
+        });
     });
 
     // Marketing internal API service tokens (MCP server) + their request log

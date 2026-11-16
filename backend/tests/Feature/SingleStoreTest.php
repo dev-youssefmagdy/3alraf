@@ -77,7 +77,7 @@ it('a role without the permissions gets 403 on each added page, and exactly its 
         $other = collect(addedPages())->keys()->first(fn ($u) => $u !== $url && addedPages()[$u] !== $perm);
         $this->get($other)->assertForbidden();
     }
-    expect(\Spatie\Permission\Models\Permission::query()->where('guard_name', '!=', 'admin')->count())->toBe(0);
+    expect(\Spatie\Permission\Models\Permission::query()->whereNotIn('guard_name', ['admin', 'marketer'])->count())->toBe(0);   // marketer = /marketer panel
 });
 
 it('Settings → General saves the store profile into settings (validated, audited) and the storefront follows it', function () {

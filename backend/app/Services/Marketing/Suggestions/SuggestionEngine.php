@@ -6,7 +6,7 @@ use App\DTOs\Marketing\SuggestionEditData;
 use App\DTOs\Marketing\SuggestionInput;
 use App\Enums\Marketing\SuggestionExecutionStatus as X;
 use App\Enums\Marketing\SuggestionStatus as S;
-use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\MarketingSuggestion;
 use App\Models\MarketingSuggestionActivityLog;
 use App\Models\MarketingSuggestionApproval;
@@ -77,7 +77,7 @@ class SuggestionEngine
                 'target_entity_type' => $in->targetType, 'target_entity_id' => $targetId, 'payload' => $payload, 'source_data_snapshot' => $in->sourceData,
                 'target_snapshot' => $snapshot, 'target_snapshot_hash' => $snapshot !== null ? SuggestionHasher::hash($snapshot) : null,
                 'status' => S::PENDING, 'source' => $in->source, 'source_meta' => $meta ?: null,
-                'created_by_token_id' => $actor->isToken() ? $actor->id : null, 'created_by_admin_id' => $actor->isAdmin() ? $actor->id : null,
+                'created_by_token_id' => $actor->isToken() ? $actor->id : null, 'created_by_marketer_id' => $actor->isMarketer() ? $actor->id : null,
                 'version' => 1, 'content_hash' => $hash, 'submitted_at' => $in->draft ? null : now(),
                 'expires_at' => $in->expiresAt ?: now()->addDays((int) config('marketing.suggestions.default_expiry_days', 60)),
             ]);
@@ -177,11 +177,11 @@ class SuggestionEngine
 
     // ------------------------------------------------------------------ review
 
-    public function startReview(MarketingSuggestion $s, Admin $admin): MarketingSuggestion
+    public function startReview(MarketingSuggestion $s, Marketer $admin): MarketingSuggestion
     {
         SuggestionStateMachine::assert($s->status, S::UNDER_REVIEW);
         $this->repo->update($s, ['status' => S::UNDER_REVIEW, 'reviewed_by' => $admin->id, 'reviewed_at' => now()]);
-        $this->log($s, 'review_started', SuggestionActor::admin($admin));
+        $this->log($s, 'review_started', SuggestionActor::marketer($admin));
 
         return $s;
     }
@@ -192,7 +192,7 @@ class SuggestionEngine
         return array_values(array_filter([$base, $this->types->get($s->type)->approvePermission()]));
     }
 
-    private function authorize(MarketingSuggestion $s, Admin $admin, string $base): void
+    private function authorize(MarketingSuggestion $s, Marketer $admin, string $base): void
     {
         foreach ($this->permissionsFor($s, $base) as $p) {
             if (! $admin->can($p)) {
@@ -201,7 +201,7 @@ class SuggestionEngine
         }
     }
 
-    public function approve(MarketingSuggestion $s, Admin $admin, ?string $note = null): MarketingSuggestionApproval
+    public function approve(MarketingSuggestion $s, Marketer $admin, ?string $note = null): MarketingSuggestionApproval
     {
         $this->authorize($s, $admin, 'ai_suggestions.approve');
 
@@ -225,13 +225,13 @@ class SuggestionEngine
                 'expires_at' => now()->addHours((int) config('marketing.suggestions.approval_valid_hours', 168))]);
             $this->repo->update($s, ['status' => S::APPROVED, 'approved_by' => $admin->id, 'approved_at' => now(), 'reviewed_by' => $s->reviewed_by ?? $admin->id,
                 'reviewed_at' => $s->reviewed_at ?? now()]);
-            $this->log($s, 'approved', SuggestionActor::admin($admin), ['version' => $s->version, 'content_hash' => $s->content_hash, 'note' => $note, 'warnings' => $check['warnings'] ?: null]);
+            $this->log($s, 'approved', SuggestionActor::marketer($admin), ['version' => $s->version, 'content_hash' => $s->content_hash, 'note' => $note, 'warnings' => $check['warnings'] ?: null]);
 
             return $a;
         });
     }
 
-    public function reject(MarketingSuggestion $s, Admin $admin, ?string $note = null): MarketingSuggestion
+    public function reject(MarketingSuggestion $s, Marketer $admin, ?string $note = null): MarketingSuggestion
     {
         return DB::transaction(function () use ($s, $admin, $note) {
             $s = $this->repo->lockForUpdate($s->id);
@@ -240,24 +240,24 @@ class SuggestionEngine
             MarketingSuggestionApproval::create(['suggestion_id' => $s->id, 'version' => $s->version, 'content_hash' => $s->content_hash, 'approved_by' => $admin->id,
                 'decision' => 'rejected', 'note' => $note ? mb_substr($note, 0, 1000) : null]);
             $this->repo->update($s, ['status' => S::REJECTED, 'rejected_at' => now(), 'reviewed_by' => $s->reviewed_by ?? $admin->id, 'reviewed_at' => $s->reviewed_at ?? now()]);
-            $this->log($s, 'rejected', SuggestionActor::admin($admin), ['note' => $note]);
+            $this->log($s, 'rejected', SuggestionActor::marketer($admin), ['note' => $note]);
 
             return $s;
         });
     }
 
-    public function archive(MarketingSuggestion $s, Admin $admin): MarketingSuggestion
+    public function archive(MarketingSuggestion $s, Marketer $admin): MarketingSuggestion
     {
         SuggestionStateMachine::assert($s->status, S::ARCHIVED);
         $this->invalidateApprovals($s, 'archived');
         $this->repo->update($s, ['status' => S::ARCHIVED]);
-        $this->log($s, 'archived', SuggestionActor::admin($admin));
+        $this->log($s, 'archived', SuggestionActor::marketer($admin));
 
         return $s;
     }
 
     /** Take a fresh snapshot of the target after a stale conflict: new version, approvals invalidated, back to `edited` (re-approval needed). */
-    public function resnapshot(MarketingSuggestion $s, Admin $admin): MarketingSuggestion
+    public function resnapshot(MarketingSuggestion $s, Marketer $admin): MarketingSuggestion
     {
         return DB::transaction(function () use ($s, $admin) {
             $s = $this->repo->lockForUpdate($s->id);
@@ -271,8 +271,8 @@ class SuggestionEngine
             $this->invalidateApprovals($s, 'resnapshot');
             $this->repo->update($s, ['target_snapshot' => $snap, 'target_snapshot_hash' => $snap !== null ? SuggestionHasher::hash($snap) : null,
                 'version' => $s->version + 1, 'status' => S::EDITED, 'approved_at' => null, 'approved_by' => null]);
-            $this->revision($s, SuggestionActor::admin($admin), [['field' => 'target_snapshot', 'from' => null, 'to' => $snap]], 'resnapshot');
-            $this->log($s, 'resnapshotted', SuggestionActor::admin($admin), ['version' => $s->version]);
+            $this->revision($s, SuggestionActor::marketer($admin), [['field' => 'target_snapshot', 'from' => null, 'to' => $snap]], 'resnapshot');
+            $this->log($s, 'resnapshotted', SuggestionActor::marketer($admin), ['version' => $s->version]);
 
             return $s;
         });
@@ -297,7 +297,7 @@ class SuggestionEngine
      * Apply the approved version. Same idempotency key ⇒ the same execution is returned (never re-run); an applied suggestion is never applied again.
      * Throws SuggestionException for refusals (no execution row); a failure inside the handler is recorded (execution `failed`, suggestion `failed`).
      */
-    public function apply(MarketingSuggestion $s, Admin $admin, ?string $key = null, array $options = []): MarketingSuggestionExecution
+    public function apply(MarketingSuggestion $s, Marketer $admin, ?string $key = null, array $options = []): MarketingSuggestionExecution
     {
         $this->authorize($s, $admin, 'ai_suggestions.apply');
         $h = $this->types->get($s->type);
@@ -350,7 +350,7 @@ class SuggestionEngine
             throw $e;
         } catch (SuggestionException $e) {
             if ($e->errorCode === 'stale_target') {
-                $this->log($s, 'conflict', SuggestionActor::admin($admin), ['reason' => 'stale_target']);
+                $this->log($s, 'conflict', SuggestionActor::marketer($admin), ['reason' => 'stale_target']);
             }
             throw $e;
         }
@@ -366,7 +366,7 @@ class SuggestionEngine
             DB::transaction(function () use ($s, $exec, $admin, $msg, $e) {
                 $exec->update(['status' => X::FAILED, 'error' => mb_substr($msg, 0, 5000), 'finished_at' => now()]);
                 $this->repo->update($s, ['status' => S::FAILED, 'last_error' => mb_substr($msg, 0, 2000)]);
-                $this->log($s, 'failed', SuggestionActor::admin($admin), ['execution_id' => $exec->id, 'error' => mb_substr($msg, 0, 500), 'exception' => $e instanceof SuggestionException ? $e->errorCode : class_basename($e)]);
+                $this->log($s, 'failed', SuggestionActor::marketer($admin), ['execution_id' => $exec->id, 'error' => mb_substr($msg, 0, 500), 'exception' => $e instanceof SuggestionException ? $e->errorCode : class_basename($e)]);
             });
 
             return $exec->refresh();
@@ -375,13 +375,13 @@ class SuggestionEngine
             $exec->update(['status' => X::SUCCEEDED, 'before' => $result->before, 'after' => $result->after, 'warnings' => $result->warnings ?: null, 'finished_at' => now()]);
             $this->repo->update($s, ['status' => S::APPLIED, 'applied_by' => $admin->id, 'applied_at' => now(), 'last_error' => null,
                 'result_entity_type' => $result->resultType, 'result_entity_id' => $result->resultId]);
-            $this->log($s, 'applied', SuggestionActor::admin($admin), ['execution_id' => $exec->id, 'result' => $result->resultType ? $result->resultType.'#'.$result->resultId : null]);
+            $this->log($s, 'applied', SuggestionActor::marketer($admin), ['execution_id' => $exec->id, 'result' => $result->resultType ? $result->resultType.'#'.$result->resultId : null]);
         });
 
         return $exec->refresh();
     }
 
-    public function rollback(MarketingSuggestion $s, Admin $admin): MarketingSuggestionExecution
+    public function rollback(MarketingSuggestion $s, Marketer $admin): MarketingSuggestionExecution
     {
         $this->authorize($s, $admin, 'ai_suggestions.apply');
         $h = $this->types->get($s->type);
@@ -404,14 +404,14 @@ class SuggestionEngine
                 'rollback_of' => $applied->id, 'started_at' => now(), 'finished_at' => now()]);
             SuggestionStateMachine::assert($s->status, S::ARCHIVED);
             $this->repo->update($s, ['status' => S::ARCHIVED, 'rolled_back_at' => now()]);
-            $this->log($s, 'rolled_back', SuggestionActor::admin($admin), ['execution_id' => $exec->id, 'of' => $applied->id]);
+            $this->log($s, 'rolled_back', SuggestionActor::marketer($admin), ['execution_id' => $exec->id, 'of' => $applied->id]);
 
             return $exec;
         });
     }
 
     /** Blog: publish now ($at null) or schedule ($at future) the draft created by apply. Needs ai_blog.approve (checked by the caller + here). */
-    public function publishBlog(MarketingSuggestion $s, Admin $admin, ?\DateTimeInterface $at, ?string $key = null): MarketingSuggestionExecution
+    public function publishBlog(MarketingSuggestion $s, Marketer $admin, ?\DateTimeInterface $at, ?string $key = null): MarketingSuggestionExecution
     {
         $this->authorize($s, $admin, 'ai_suggestions.apply');
         $h = $this->types->get($s->type);
@@ -431,7 +431,7 @@ class SuggestionEngine
             $r = $h->publish($s, $at);
             $exec = MarketingSuggestionExecution::create(['suggestion_id' => $s->id, 'kind' => $kind, 'idempotency_key' => $key, 'status' => X::SUCCEEDED, 'version' => $s->version,
                 'content_hash' => $s->content_hash, 'before' => $r['before'], 'after' => $r['after'], 'executed_by' => $admin->id, 'started_at' => now(), 'finished_at' => now()]);
-            $this->log($s, $kind === 'publish' ? 'published' : 'scheduled', SuggestionActor::admin($admin), ['execution_id' => $exec->id, 'published_at' => $r['after']['published_at']]);
+            $this->log($s, $kind === 'publish' ? 'published' : 'scheduled', SuggestionActor::marketer($admin), ['execution_id' => $exec->id, 'published_at' => $r['after']['published_at']]);
 
             return $exec;
         });

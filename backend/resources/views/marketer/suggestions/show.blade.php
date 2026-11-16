@@ -8,7 +8,6 @@
     $isBlog = $s->type === \App\Enums\Marketing\SuggestionTypeKey::BLOG;
     $isTheme = $s->type === \App\Enums\Marketing\SuggestionTypeKey::SEASONAL_THEME;
     $loc = fn ($arr) => is_array($arr) ? (($arr[app()->getLocale()] ?? null) ?: collect($arr)->filter()->first()) : $arr;
-    $resultRoutes = ['blog_post' => 'admin.blog-posts.edit', 'bundle' => 'admin.bundles.edit', 'banner' => 'admin.banners.edit', 'flash_sale' => 'admin.flash-sales.edit', 'discount_code' => 'admin.discount-codes.edit', 'product' => 'admin.products.edit', 'social_media_asset' => 'marketer.media.show'];
 @endphp
 <x-layouts.marketer :title="$s->title">
     <div class="space-y-4" data-suggestion="{{ $s->id }}" data-status="{{ $st->value }}">
@@ -83,7 +82,7 @@
             </x-card>
         @endif
 
-        @if ($isBlog && $st === $S::APPLIED && $s->result_entity_id && $can['apply'] && auth('admin')->user()->can('ai_blog.approve'))
+        @if ($isBlog && $st === $S::APPLIED && $s->result_entity_id && $can['apply'] && auth('marketer')->user()->can('ai_blog.approve'))
             @php $post = \App\Models\BlogPost::query()->find($s->result_entity_id); @endphp
             @if ($post)
                 <x-card :title="$t('blog.post')">
@@ -98,9 +97,13 @@
         @endif
 
         @if ($s->result_entity_type)
+            {{-- result opens inside this panel only (marketing tools live here too); product edit stays an admin task, so no link --}}
+            @php
+                $resultRoutes = ['blog_post' => 'marketer.blog-posts.edit', 'bundle' => 'marketer.bundles.edit', 'banner' => 'marketer.banners.edit', 'flash_sale' => 'marketer.flash-sales.edit', 'discount_code' => 'marketer.discount-codes.edit', 'social_media_asset' => 'marketer.media.show'];
+            @endphp
             <p class="text-sm" data-result>{{ $t('result_link') }}: {{ $t('targets.'.$s->result_entity_type) }} #{{ $s->result_entity_id }}
                 @if (isset($resultRoutes[$s->result_entity_type]) && Route::has($resultRoutes[$s->result_entity_type]))
-                    · <a class="text-brand-700 hover:underline" href="{{ route($resultRoutes[$s->result_entity_type], $s->result_entity_id) }}" data-admin-link>{{ $t('open') }}</a>
+                    · <a class="text-panel-text hover:underline" href="{{ route($resultRoutes[$s->result_entity_type], $s->result_entity_id) }}">{{ $t('open') }}</a>
                 @endif
             </p>
         @endif

@@ -7,12 +7,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Per request: a deactivated admin/customer or a non-approved affiliate still holding a session (or remember cookie) on any of the
+ * Per request: a deactivated admin/marketer/customer or a non-approved affiliate still holding a session (or remember cookie) on any of the
  * session guards is logged out of that guard before route auth runs (priority-listed ahead of Authenticate in bootstrap/app.php).
  */
 class EnsureAccountActive
 {
-    public const GUARDS = ['web', 'affiliate', 'admin'];
+    public const GUARDS = ['web', 'affiliate', 'admin', 'marketer'];
 
     public function handle(Request $request, Closure $next): Response
     {

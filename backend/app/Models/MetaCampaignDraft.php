@@ -15,7 +15,7 @@ class MetaCampaignDraft extends Model
 {
     protected $fillable = ['name', 'objective', 'status', 'product_ids', 'product_urls', 'audience', 'locations', 'placements', 'budget_type', 'budget_amount',
         'currency', 'start_at', 'end_at', 'creative', 'copy', 'cta', 'landing_url', 'optimization_goal', 'expected_kpis', 'risks', 'assumptions', 'version',
-        'content_hash', 'created_by_admin_id', 'created_by_token_id', 'submitted_at', 'approved_by', 'approved_at', 'ad_account_id', 'meta_campaign_id',
+        'content_hash', 'created_by_marketer_id', 'created_by_token_id', 'submitted_at', 'approved_by', 'approved_at', 'ad_account_id', 'meta_campaign_id',
         'meta_adset_id', 'meta_creative_id', 'meta_ad_id', 'meta_image_hash', 'meta_statuses', 'published_by', 'published_at', 'last_error'];
 
     protected function casts(): array
@@ -37,7 +37,7 @@ class MetaCampaignDraft extends Model
 
     public function creatorAdmin(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'created_by_admin_id');
+        return $this->belongsTo(Marketer::class, 'created_by_marketer_id');
     }
 
     public function token(): BelongsTo

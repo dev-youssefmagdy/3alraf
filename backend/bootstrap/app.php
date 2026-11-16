@@ -59,8 +59,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 return null; // JSON 401 (ApiExceptionRenderer), never a redirect
             }
-            if ($request->is('admin') || $request->is('admin/*') || $request->is('marketer') || $request->is('marketer/*')) {
+            if ($request->is('admin') || $request->is('admin/*')) {
                 return route('admin.login');
+            }
+            if ($request->is('marketer') || $request->is('marketer/*')) {
+                return route('marketer.login');
             }
             $locale = $request->segment(1) ?: (string) setting('default_locale', app()->getLocale());
             if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {
@@ -72,6 +75,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(function (Request $request) {
             if ($request->is('admin') || $request->is('admin/*')) {
                 return route('admin.welcome');
+            }
+            if ($request->is('marketer') || $request->is('marketer/*')) {
+                return route('marketer.dashboard');
             }
             $locale = $request->segment(1) ?: (string) setting('default_locale', app()->getLocale());
             if ($request->is('*/affiliate/*') || $request->is('*/affiliate')) {

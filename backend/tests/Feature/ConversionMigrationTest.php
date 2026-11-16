@@ -127,7 +127,7 @@ it('converts a one-tenant fixture: tenant_id gone, unique keys rebuilt, listing 
         ->and($mhr->pluck('guard_name')->unique()->values()->all())->toBe(['admin'])
         ->and($mhr->map(fn ($r) => $r->name.'@'.$r->model_id)->sort()->values()->all())->toBe(collect(['super-admin@'.$tenantAdmin, 'owner@'.$tenantAdmin, 'Packers@'.$ops->id])->sort()->values()->all());
     expect($db->table('roles')->whereIn('guard_name', ['central', 'tenant'])->count())->toBe(0)
-        ->and($db->table('permissions')->where('guard_name', '!=', 'admin')->count())->toBe(0)->and($db->table('permissions')->count())->toBeGreaterThan(150);
+        ->and($db->table('permissions')->whereNotIn('guard_name', ['admin', 'marketer'])->count())->toBe(0)->and($db->table('permissions')->count())->toBeGreaterThan(150);
     $qr = $db->table('qr_codes')->first();
     expect($qr->owner_type)->toBe('App\\Models\\Product')->and((int) $qr->owner_id)->toBe($p1);
     $log = $db->table('activity_log')->where('description', 'updated')->first();

@@ -3,7 +3,7 @@
     $t = fn ($k, $r = []) => __('marketing.media.'.$k, $r);
     $hidden = $hidden ?? [];
     $stay = $stay ?? false;
-    $me = auth('admin')->user();
+    $me = auth('marketer')->user();
     $platforms = \App\DTOs\Marketing\SocialMediaAssetData::PLATFORMS;
     $formats = \App\DTOs\Marketing\SocialMediaAssetData::FORMATS;
     $ratios = \App\DTOs\Marketing\SocialMediaAssetData::RATIOS;

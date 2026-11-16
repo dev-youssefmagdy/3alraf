@@ -54,20 +54,20 @@ for (const a of ['approve', 'publish', 'activate']) {
 }
 
 // ---------------------------------------------------------------- 2. sign in, upload from the product tab
-await page.goto(`${site}/admin/login`, { waitUntil: 'networkidle' });
-await page.fill('[name=phone]', process.env.PHONE || '01000000001');
-await page.fill('[name=password]', process.env.PASSWORD || 'password');
+await page.goto(`${site}/marketer/login`, { waitUntil: 'networkidle' });
+await page.fill('[name=phone]', process.env.M_PHONE || '01000000201');      // demo marketer-owner (FoundationSeeder, otp_exempt)
+await page.fill('[name=password]', process.env.M_PASSWORD || 'password');
 await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}), page.click('button[type=submit]')]);
-ok(page.url().includes('/admin/welcome'), `signed in (${page.url()})`);
-await page.goto(`${site}/admin/locale/ar`, { waitUntil: 'networkidle' });
-await page.goto(`${site}/admin/products/${FIX.p1}/edit`, { waitUntil: 'networkidle' });
-ok((await page.locator('[data-social-tab]').innerText()).includes('محتوى السوشيال ميديا'), 'product edit shows the Arabic tab');
-await page.locator('[data-social-tab]').click();
+ok(/\/marketer\/?$/.test(new URL(page.url()).pathname), `marketer signed in on its own login (${page.url()})`);
+await page.goto(`${site}/marketer/locale/ar`, { waitUntil: 'networkidle' });
+// the admin product editor has no social tab any more (library is marketer-only)
+await page.goto(`${site}/marketer/media?product_id=${FIX.p1}`, { waitUntil: 'networkidle' });
 await page.waitForSelector('[data-media-library]');
 ok(await page.locator('[data-internal-notice]').count() === 1, 'internal-only notice shown');
-ok(await page.locator('[data-library-empty]').count() === 1, 'tab starts empty');
+ok(await page.locator('[data-library-empty]').count() === 1, 'library starts empty for the product');
 const upload = async (file, title) => {
     if (!(await page.locator('[data-upload-form]').isVisible())) await page.locator('[data-upload-panel] summary').click();
+    await page.evaluate((id) => { const sel = document.querySelector('[data-upload-form] [name=product_id]'); if (sel) { sel.tomselect ? sel.tomselect.setValue(String(id)) : (sel.value = String(id)); sel.dispatchEvent(new Event('change', { bubbles: true })); } }, FIX.p1);
     await page.selectOption('[data-upload-form] [name=kind]', file === process.env.MP4 ? 'video' : 'image');
     await page.setInputFiles('[data-upload-form] [name=file]', file);
     await page.fill('[data-upload-form] [name=title]', title);
@@ -76,9 +76,11 @@ const upload = async (file, title) => {
     await Promise.all([page.waitForResponse((r) => r.url().endsWith('/marketer/media') && r.request().method() === 'POST', { timeout: 20000 }).catch(() => {}), page.locator('[data-upload-form] [type=submit]').click()]);
     await page.waitForTimeout(1500);
     await page.waitForLoadState('networkidle');
+    // the library opens the new item after an upload; come back to this product's list
+    await page.goto(`${site}/marketer/media?product_id=${FIX.p1}`, { waitUntil: 'networkidle' });
 };
 await upload(process.env.IMG, 'صورة البرنامج');
-ok(await page.locator('[data-asset]').count() === 1, 'image uploaded and listed in the product tab');
+ok(await page.locator('[data-asset]').count() === 1, 'image uploaded and listed in the library');
 ok(await page.locator('[data-asset] img').evaluate((i) => i.complete && i.naturalWidth > 0).catch(() => false), 'protected thumbnail renders');
 await upload(process.env.MP4, 'فيديو البرنامج');
 ok(await page.locator('[data-asset]').count() === 2, 'video uploaded and listed');
@@ -94,8 +96,8 @@ for (const [vname, opts] of Object.entries(views)) {
     const p2 = await c2.newPage();
     watch(p2);
     for (const locale of ['ar', 'en']) {
-        await p2.goto(`${site}/admin/locale/${locale}`, { waitUntil: 'domcontentloaded' });
-        for (const url of [...pages(apiDraft), `/admin/products/${FIX.p1}/edit?tab=social`]) {
+        await p2.goto(`${site}/marketer/locale/${locale}`, { waitUntil: 'domcontentloaded' });
+        for (const url of pages(apiDraft)) {
             const res = await p2.goto(`${site}${url}`, { waitUntil: 'networkidle' });
             const tag = `${locale}-${vname} ${url}`;
             ok(res.status() === 200, `${tag}: 200 (${res.status()})`);
@@ -110,7 +112,7 @@ for (const [vname, opts] of Object.entries(views)) {
 }
 
 // ---------------------------------------------------------------- 4. library: approve, access control
-await page.goto(`${site}/admin/locale/ar`, { waitUntil: 'domcontentloaded' });
+await page.goto(`${site}/marketer/locale/ar`, { waitUntil: 'domcontentloaded' });
 await page.goto(`${site}/marketer/media/${imageId}`, { waitUntil: 'networkidle' });
 ok(await page.locator('img[data-preview]').evaluate((i) => i.complete && i.naturalWidth > 0), 'protected preview loads for an authorised admin');
 await Promise.all([page.waitForResponse((r) => r.url().endsWith('/approve'), { timeout: 15000 }), page.locator('[data-action="approve"]').click()]);
@@ -120,14 +122,14 @@ ok(await page.locator('[data-media-asset]').getAttribute('data-status') === 'app
 const guest = await browser.newContext(views.desktop);
 const g = await guest.newPage();
 const r1 = await g.goto(`${site}/marketer/media/${imageId}/file`, { waitUntil: 'domcontentloaded' });
-ok(g.url().includes('/admin/login') || r1.status() === 403, `guest cannot open the file (${r1.status()} ${g.url()})`);
+ok(g.url().includes('/marketer/login') || r1.status() === 403, `guest cannot open the file (${r1.status()} ${g.url()})`);
 const [stM, med] = await api('GET', `media/${imageId}`);
 ok(stM === 200 && !!med.data.preview_url && !JSON.stringify(med).includes('social-media/'), 'API returns metadata + signed URL, no storage path');
 const r2 = await g.goto(med.data.preview_url);
 ok(r2.status() === 200 && r2.headers()['x-robots-tag']?.includes('noindex'), `signed preview works without a session (${r2.status()})`);
 const r3 = await g.goto(med.data.preview_url.replace(/signature=[^&]+/, 'signature=bad'));
 ok(r3.status() === 403, `tampered signature refused (${r3.status()})`);
-const pub = await g.goto(`${site}/ar/product/smoke-one`, { waitUntil: 'domcontentloaded' });
+const pub = await g.goto(`${site}/ar/product/${FIX.slug || 'smoke-one'}`, { waitUntil: 'domcontentloaded' });
 ok(pub.status() === 200 && !(await g.content()).includes('صورة البرنامج'), 'library item absent from the public product page');
 await guest.close();
 

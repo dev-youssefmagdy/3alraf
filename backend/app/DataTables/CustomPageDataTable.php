@@ -30,7 +30,7 @@ class CustomPageDataTable extends BaseDataTable
             ->filterColumn('title_label', fn ($q, $k) => $q->where('title', 'like', "%$k%"))
             ->addColumn('url', fn (CustomPage $m) => '<a class="text-brand-600" target="_blank" href="'.e(url('/'.$m->slug)).'">/'.e($m->slug).'</a>')
             ->addColumn('status', fn (CustomPage $m) => $this->badge($m->is_active))
-            ->addColumn('actions', fn (CustomPage $m) => $this->rowActions($m, 'admin.custom-pages', 'custom_pages'));
+            ->addColumn('actions', fn (CustomPage $m) => $this->rowActions($m, $this->base('custom-pages'), 'custom_pages'));
     }
 
     protected function rawColumns(): array

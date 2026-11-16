@@ -23,6 +23,6 @@ class MetaCampaignApproval extends Model
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'approved_by');
+        return $this->belongsTo(Marketer::class, 'approved_by');
     }
 }

@@ -45,12 +45,12 @@ class SocialMediaAsset extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'created_by');
+        return $this->belongsTo(Marketer::class, 'created_by');
     }
 
     public function reviewer(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'reviewed_by');
+        return $this->belongsTo(Marketer::class, 'reviewed_by');
     }
 
     public function suggestion(): BelongsTo

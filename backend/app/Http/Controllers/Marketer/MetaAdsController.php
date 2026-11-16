@@ -36,7 +36,7 @@ class MetaAdsController extends Controller
         $drafts = $this->drafts->repo()->filtered(['status' => $status, 'search' => is_string($r->query('q')) ? $r->query('q') : null])->paginate(20)->withQueryString();
         $meta = ['status' => $this->reads->status(), 'account' => null, 'campaigns' => null, 'insights' => null, 'error' => null];
         if ($meta['status']['configured'] && $r->boolean('live', true)) {
-            $this->audit->actingAs(SuggestionActor::admin($r->user('admin')));
+            $this->audit->actingAs(SuggestionActor::marketer($r->user('marketer')));
             try {
                 $meta['account'] = $this->reads->account();
                 $meta['campaigns'] = $this->reads->campaigns(10)['items'];
@@ -94,7 +94,7 @@ class MetaAdsController extends Controller
     public function store(MetaDraftRequest $r): JsonResponse
     {
         return $this->run(function () use ($r) {
-            [$d] = $this->drafts->create(MetaCampaignDraftData::fromArray($r->draftInput()), SuggestionActor::admin($r->user('admin')), $r->boolean('submit'));
+            [$d] = $this->drafts->create(MetaCampaignDraftData::fromArray($r->draftInput()), SuggestionActor::marketer($r->user('marketer')), $r->boolean('submit'));
 
             return $this->ok(__('marketing.meta.done.created'), route('marketer.meta-ads.show', $d->id));
         });
@@ -103,7 +103,7 @@ class MetaAdsController extends Controller
     public function update(MetaDraftRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
-            $actor = SuggestionActor::admin($r->user('admin'));
+            $actor = SuggestionActor::marketer($r->user('marketer'));
             [$d] = $this->drafts->update($this->find($id), $r->draftInput(), $actor);
             if ($r->boolean('submit')) {
                 $this->drafts->submit($d, $actor);
@@ -115,28 +115,28 @@ class MetaAdsController extends Controller
 
     public function submit(Request $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->drafts->submit($this->find($id), SuggestionActor::admin($r->user('admin'))) ? $this->ok(__('marketing.meta.done.submitted')) : null);
+        return $this->run(fn () => $this->drafts->submit($this->find($id), SuggestionActor::marketer($r->user('marketer'))) ? $this->ok(__('marketing.meta.done.submitted')) : null);
     }
 
     public function approve(MediaDecisionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->drafts->approve($this->find($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.meta.done.approved')) : null);
+        return $this->run(fn () => $this->drafts->approve($this->find($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.meta.done.approved')) : null);
     }
 
     public function reject(MediaDecisionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->drafts->reject($this->find($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.meta.done.rejected'), route('marketer.meta-ads.show', $id)) : null);
+        return $this->run(fn () => $this->drafts->reject($this->find($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.meta.done.rejected'), route('marketer.meta-ads.show', $id)) : null);
     }
 
     public function archive(Request $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->drafts->archive($this->find($id), $r->user('admin')) ? $this->ok(__('marketing.meta.done.archived')) : null);
+        return $this->run(fn () => $this->drafts->archive($this->find($id), $r->user('marketer')) ? $this->ok(__('marketing.meta.done.archived')) : null);
     }
 
     public function publish(MediaDecisionRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
-            $a = $this->publisher->publish($this->find($id), $r->user('admin'), $r->input('idempotency_key'));
+            $a = $this->publisher->publish($this->find($id), $r->user('marketer'), $r->input('idempotency_key'));
             if ($a->execution_status !== 'succeeded') {
                 return response()->json(['success' => false, 'error' => 'publish_failed', 'message' => __('marketing.meta.errors.publish_failed', ['error' => (string) $a->execution_error])], 422);
             }
@@ -153,7 +153,7 @@ class MetaAdsController extends Controller
         $error = null;
         $status = $this->reads->status();
         if ($status['configured']) {
-            $this->audit->actingAs(SuggestionActor::admin($r->user('admin')));
+            $this->audit->actingAs(SuggestionActor::marketer($r->user('marketer')));
             try {
                 $rows = $this->reads->insights(null, $level, $preset);
             } catch (MetaException $e) {

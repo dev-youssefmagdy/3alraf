@@ -81,7 +81,7 @@ it('rejects every endpoint without a token, with a revoked / expired / forged to
             ->assertJsonStructure(['success', 'data', 'meta' => ['generated_at', 'currency', 'timezone', 'page', 'per_page', 'total'], 'warnings']);
     }
     // never a session: an admin cookie does not authenticate the API
-    $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');
+    $this->actingAs(marketerOwner(), 'marketer');
     ($this->api)('overview', null)->assertUnauthorized();
     // unknown path under the prefix: envelope 404 (authenticated) / 401 (anonymous)
     ($this->api)('nope', $good)->assertNotFound()->assertJsonPath('error', 'not_found');

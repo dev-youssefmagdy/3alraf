@@ -37,16 +37,9 @@ beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
     config(['app.url' => 'http://3alraf.test', 'app.host' => '3alraf.test']);
-    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->owner = marketerOwner();
     $this->engine = app(SuggestionEngine::class);
-    $this->staff = function (array $perms = [], ?string $role = null, string $email = 's@egy.test') {
-        $a = Admin::create(['name' => 'S '.$email, 'email' => $email, 'password' => 'password', 'is_active' => true]);
-        $perms && $a->givePermissionTo($perms);
-        $role && $a->assignRole($role);
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        return $a->fresh();
-    };
+    $this->staff = fn (array $perms = [], ?string $role = null, string $email = 's@egy.test') => makeMarketer($perms, $role, $email);
     $this->product = function (string $slug, string $price = '100', string $cost = '60') {
         $p = Product::create(['type' => 'simple', 'name' => ['en' => 'Item '.$slug, 'ar' => 'صنف '.$slug], 'description' => ['en' => 'x'], 'slug' => $slug, 'sku' => strtoupper($slug),
             'barcode' => app(BarcodeService::class)->generateUnique()]);
@@ -59,7 +52,7 @@ beforeEach(function () {
 
         return $s;
     };
-    $this->approveApply = function (MarketingSuggestion $s, array $options = [], ?Admin $by = null) {
+    $this->approveApply = function (MarketingSuggestion $s, array $options = [], ?\App\Models\Marketer $by = null) {
         $by ??= $this->owner;
         $this->engine->approve($s->fresh(), $by);
 
@@ -76,7 +69,7 @@ it('enforces the lifecycle state machine, approval binding to the version and ed
     $a = $this->engine->approve($s->fresh(), $this->owner, 'ok');
     expect($a->version)->toBe(1)->and($s->fresh()->status->value)->toBe('approved')->and($s->fresh()->validApproval()?->id)->toBe($a->id);
     // edit after approval: approval invalidated, back to edited, version 2
-    $this->engine->update($s->fresh(), new SuggestionEditData(null, null, null, null, ['name' => ['ar' => 'اسم 2']], null, false, 'tweak'), SuggestionActor::admin($this->owner));
+    $this->engine->update($s->fresh(), new SuggestionEditData(null, null, null, null, ['name' => ['ar' => 'اسم 2']], null, false, 'tweak'), SuggestionActor::marketer($this->owner));
     $s->refresh();
     expect($s->status->value)->toBe('edited')->and($s->version)->toBe(2)->and($a->fresh()->invalidated_at)->not->toBeNull()->and($s->validApproval())->toBeNull();
     expect(fn () => $this->engine->apply($s->fresh(), $this->owner))->toThrow(SuggestionException::class, __('marketing.suggestions.errors.approval_required'));
@@ -94,32 +87,36 @@ it('enforces the lifecycle state machine, approval binding to the version and ed
         ->and(Product::find($p->id)->content)->toBeNull();   // nothing was applied
 });
 
-it('applies the permission matrix: owner and the marketer role approve, others are refused (typed approvals included)', function () {
+it('applies the permission matrix: only marketer-owner approves / applies / rejects, others are refused (typed approvals included)', function () {
     $p = ($this->product)('alpha');
     $seo = ($this->make)('seo', ['meta_title' => ['ar' => 'عنوان']], 'product', $p->id);
     $prod = ($this->make)('product', ['name' => ['ar' => 'اسم']], 'product', $p->id);
     $marketer = ($this->staff)([], 'marketer', 'm@egy.test');
     $baseOnly = ($this->staff)(['ai_suggestions.view', 'ai_suggestions.approve'], null, 'b@egy.test');
     $viewer = ($this->staff)(['ai_suggestions.view'], null, 'v@egy.test');
-    $nobody = ($this->staff)(['orders.view'], null, 'n@egy.test');
+    $nobody = ($this->staff)([], null, 'n@egy.test');
 
     // routes
-    $this->actingAs($viewer, 'admin')->postJson(route('marketer.suggestions.approve', $prod->id))->assertForbidden();
-    $this->actingAs($viewer, 'admin')->postJson(route('marketer.suggestions.apply', $prod->id))->assertForbidden();
-    $this->actingAs($viewer, 'admin')->get(route('marketer.suggestions.show', $prod->id))->assertOk()->assertDontSee('data-action="approve"', false);
-    $this->actingAs($nobody, 'admin')->get(route('marketer.suggestions.index'))->assertForbidden();
+    $this->actingAs($viewer, 'marketer')->postJson(route('marketer.suggestions.approve', $prod->id))->assertForbidden();
+    $this->actingAs($viewer, 'marketer')->postJson(route('marketer.suggestions.apply', $prod->id))->assertForbidden();
+    $this->actingAs($viewer, 'marketer')->get(route('marketer.suggestions.show', $prod->id))->assertOk()->assertDontSee('data-action="approve"', false);
+    $this->actingAs($nobody, 'marketer')->get(route('marketer.suggestions.index'))->assertForbidden();
     // base approve permission is not enough for SEO (needs ai_seo.approve)
-    $this->actingAs($baseOnly, 'admin')->postJson(route('marketer.suggestions.approve', $seo->id))->assertForbidden()->assertJsonPath('error', 'forbidden');
-    $this->actingAs($baseOnly, 'admin')->postJson(route('marketer.suggestions.approve', $prod->id), ['note' => 'fine'])->assertOk();
-    // the marketer role approves SEO, the owner applies
-    $this->actingAs($marketer, 'admin')->get(route('marketer.suggestions.show', $seo->id))->assertOk()->assertSee('data-action="approve"', false);
-    $this->actingAs($marketer, 'admin')->postJson(route('marketer.suggestions.approve', $seo->id))->assertOk();
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.apply', $seo->id), ['idempotency_key' => 'abc-1'])->assertOk();
-    expect($seo->fresh()->status->value)->toBe('applied')->and($seo->fresh()->approved_by)->toBe($marketer->id)->and($seo->fresh()->applied_by)->toBe($this->owner->id);
-    // reject needs ai_suggestions.reject
+    $this->actingAs($baseOnly, 'marketer')->postJson(route('marketer.suggestions.approve', $seo->id))->assertForbidden()->assertJsonPath('error', 'forbidden');
+    $this->actingAs($baseOnly, 'marketer')->postJson(route('marketer.suggestions.approve', $prod->id), ['note' => 'fine'])->assertOk();
+    // owner decision Q2: the preset marketer role never approves / applies / rejects; marketer-owner does
+    $this->actingAs($marketer, 'marketer')->get(route('marketer.suggestions.show', $seo->id))->assertOk()->assertDontSee('data-action="approve"', false);
+    $this->actingAs($marketer, 'marketer')->postJson(route('marketer.suggestions.approve', $seo->id))->assertForbidden();
+    $this->actingAs($marketer, 'marketer')->postJson(route('marketer.suggestions.apply', $seo->id), ['idempotency_key' => 'abc-0'])->assertForbidden();
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.show', $seo->id))->assertOk()->assertSee('data-action="approve"', false);
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.approve', $seo->id))->assertOk();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.apply', $seo->id), ['idempotency_key' => 'abc-1'])->assertOk();
+    expect($seo->fresh()->status->value)->toBe('applied')->and($seo->fresh()->approved_by)->toBe($this->owner->id)->and($seo->fresh()->applied_by)->toBe($this->owner->id);
+    // reject needs ai_suggestions.reject (not in the preset role)
     $other = ($this->make)('product', ['name' => ['ar' => 'آخر']], 'product', $p->id);
-    $this->actingAs($baseOnly, 'admin')->postJson(route('marketer.suggestions.reject', $other->id))->assertForbidden();
-    $this->actingAs($marketer, 'admin')->postJson(route('marketer.suggestions.reject', $other->id), ['note' => 'not now'])->assertOk();
+    $this->actingAs($baseOnly, 'marketer')->postJson(route('marketer.suggestions.reject', $other->id))->assertForbidden();
+    $this->actingAs($marketer, 'marketer')->postJson(route('marketer.suggestions.reject', $other->id))->assertForbidden();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.reject', $other->id), ['note' => 'not now'])->assertOk();
     expect($other->fresh()->status->value)->toBe('rejected')->and($other->approvals()->first()->note)->toBe('not now');
 });
 
@@ -163,7 +160,7 @@ it('detects stale targets: apply is blocked with a conflict until re-snapshotted
         expect($e->errorCode)->toBe('stale_target')->and($e->status)->toBe(409)->and($e->data['current'])->toBe(['meta_title' => ['ar' => 'تغيير يدوي']]);
     }
     expect($s->fresh()->status->value)->toBe('approved')->and(MarketingSuggestionExecution::count())->toBe(0)->and($s->activity()->first()->action)->toBe('conflict');
-    $this->actingAs($this->owner, 'admin')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-stale', false)->assertSee('data-action="resnapshot"', false);
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-stale', false)->assertSee('data-action="resnapshot"', false);
     $this->engine->resnapshot($s->fresh(), $this->owner);
     expect($s->fresh()->status->value)->toBe('edited')->and($s->fresh()->version)->toBe(2)->and($s->fresh()->validApproval())->toBeNull();
     $exec = ($this->approveApply)($s);
@@ -177,7 +174,7 @@ it('is idempotent: the same key returns the same execution and an applied sugges
     $e1 = $this->engine->apply($s->fresh(), $this->owner, 'key-1');
     $e2 = $this->engine->apply($s->fresh(), $this->owner, 'key-1');
     $e3 = $this->engine->apply($s->fresh(), $this->owner, 'key-2');   // other key: already applied ⇒ previous result, no second coupon
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.apply', $s->id), ['idempotency_key' => 'key-3'])->assertOk();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.apply', $s->id), ['idempotency_key' => 'key-3'])->assertOk();
     expect($e2->id)->toBe($e1->id)->and($e3->id)->toBe($e1->id)->and(DiscountCode::where('code', 'ONCE10')->count())->toBe(1)
         ->and(MarketingSuggestionExecution::where('kind', 'apply')->count())->toBe(1)->and(DiscountCode::where('code', 'ONCE10')->first()->is_active)->toBeFalse();
 });
@@ -191,10 +188,10 @@ it('records a failed apply as failed (never applied) and allows a retry', functi
     expect($exec->status->value)->toBe('failed')->and($exec->error)->toContain(__('marketing.suggestions.errors.code_taken'))
         ->and($s->fresh()->status->value)->toBe('failed')->and($s->fresh()->applied_at)->toBeNull()->and($s->fresh()->last_error)->not->toBeNull()
         ->and(DiscountCode::where('code', 'RACE5')->count())->toBe(1);
-    $this->actingAs($this->owner, 'admin')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-last-error', false);
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-last-error', false);
     // fix the payload (edit ⇒ re-approval) and retry
     $this->engine->update($s->fresh(), new SuggestionEditData(null, null, null, null, ['code' => 'RACE6', 'type' => 'percent', 'value' => 5, 'scope' => 'products', 'product_ids' => [$p->id],
-        'ends_at' => now()->addMonth()->toDateTimeString()], null, false, null), SuggestionActor::admin($this->owner));
+        'ends_at' => now()->addMonth()->toDateTimeString()], null, false, null), SuggestionActor::marketer($this->owner));
     $exec2 = ($this->approveApply)($s);
     expect($exec2->status->value)->toBe('succeeded')->and($s->fresh()->status->value)->toBe('applied')->and(DiscountCode::where('code', 'RACE6')->exists())->toBeTrue();
 });
@@ -252,7 +249,7 @@ it('creates the blog post as a draft on apply and publishes / schedules only thr
         'content' => ['ar' => '<h2>مقدمة</h2><p onclick="x()">نص <a href="/ar/category/gifts">هدايا</a> <a href="https://evil.com">شر</a></p><script>steal()</script><iframe src="x"></iframe>'],
         'outline' => ['مقدمة', 'أفكار'], 'internal_links' => [['url' => '/ar/category/gifts', 'anchor' => 'هدايا']]]);
     expect($s->payload['content']['ar'])->toBe('<h2>مقدمة</h2><p>نص <a href="/ar/category/gifts">هدايا</a> شر</p>');
-    $this->actingAs($this->owner, 'admin')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-article="ar"', false)->assertDontSee('steal()', false);
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-article="ar"', false)->assertDontSee('steal()', false);
 
     $exec = ($this->approveApply)($s);
     $post = BlogPost::find($s->fresh()->result_entity_id);
@@ -262,12 +259,12 @@ it('creates the blog post as a draft on apply and publishes / schedules only thr
 
     // publish needs ai_blog.approve as well
     $noBlog = ($this->staff)(['ai_suggestions.view', 'ai_suggestions.apply'], null, 'nb@egy.test');
-    $this->actingAs($noBlog, 'admin')->postJson(route('marketer.suggestions.publish', $s->id))->assertForbidden();
+    $this->actingAs($noBlog, 'marketer')->postJson(route('marketer.suggestions.publish', $s->id))->assertForbidden();
     // schedule, then publish now
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.publish', $s->id), ['publish_at' => now()->addDays(2)->format('Y-m-d H:i')])->assertOk();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.publish', $s->id), ['publish_at' => now()->addDays(2)->format('Y-m-d H:i')])->assertOk();
     expect($post->fresh()->is_active)->toBeTrue()->and($post->fresh()->published_at->isFuture())->toBeTrue();
     $this->get('/ar/blog/ramadan-gifts')->assertNotFound();
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.publish', $s->id))->assertOk();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.publish', $s->id))->assertOk();
     $this->get('/ar/blog/ramadan-gifts')->assertOk()->assertSee('href="/ar/category/gifts"', false)->assertDontSee('evil.com', false)->assertSee('<title>هدايا رمضان 2027', false);
     expect(MarketingSuggestionExecution::where('suggestion_id', $s->id)->pluck('kind')->sort()->values()->all())->toBe(['apply', 'publish', 'schedule']);
     // a published post is not deleted by a rollback
@@ -281,32 +278,32 @@ it('previews seasonal themes only for authorised admins, warns on contrast, appl
     $url = app(ThemeService::class)->previewUrl($s, 'ar');
     // guests and unsigned / unauthorised requests never see the preview
     $this->get($url)->assertOk()->assertDontSee('id="seasonal-theme"', false);
-    $viewer = ($this->staff)(['orders.view'], null, 'o@egy.test');
-    $this->actingAs($viewer, 'admin')->get($url)->assertOk()->assertDontSee('#1e5b4f', false);
-    $this->actingAs($this->owner, 'admin')->get('/ar?theme_preview='.$s->id)->assertOk()->assertDontSee('#1e5b4f', false);
-    $this->actingAs($this->owner, 'admin')->get($url)->assertOk()->assertSee('--color-brand-600:#1e5b4f;', false)->assertSee('data-theme-preview-bar', false)->assertSee('noindex,nofollow', false);
-    $this->actingAs($this->owner, 'admin')->get('/ar?theme_preview=off')->assertOk()->assertDontSee('#1e5b4f', false);
-    $this->actingAs($this->owner, 'admin')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-pair="muted_text" data-ok="0"', false)->assertSee('data-swatches', false);
-    $this->actingAs($this->owner, 'admin')->get(route('marketer.suggestions.preview', $s->id))->assertRedirect();
+    $viewer = ($this->staff)([], null, 'o@egy.test');
+    $this->actingAs($viewer, 'marketer')->get($url)->assertOk()->assertDontSee('#1e5b4f', false);
+    $this->actingAs($this->owner, 'marketer')->get('/ar?theme_preview='.$s->id)->assertOk()->assertDontSee('#1e5b4f', false);
+    $this->actingAs($this->owner, 'marketer')->get($url)->assertOk()->assertSee('--color-brand-600:#1e5b4f;', false)->assertSee('data-theme-preview-bar', false)->assertSee('noindex,nofollow', false);
+    $this->actingAs($this->owner, 'marketer')->get('/ar?theme_preview=off')->assertOk()->assertDontSee('#1e5b4f', false);
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.show', $s->id))->assertOk()->assertSee('data-pair="muted_text" data-ok="0"', false)->assertSee('data-swatches', false);
+    $this->actingAs($this->owner, 'marketer')->get(route('marketer.suggestions.preview', $s->id))->assertRedirect();
 
     // theme approval needs ai_theme.approve
     $noTheme = ($this->staff)(['ai_suggestions.view', 'ai_suggestions.approve'], null, 'nt@egy.test');
-    $this->actingAs($noTheme, 'admin')->postJson(route('marketer.suggestions.approve', $s->id))->assertForbidden();
+    $this->actingAs($noTheme, 'marketer')->postJson(route('marketer.suggestions.approve', $s->id))->assertForbidden();
 
     ($this->approveApply)($s);
     $v1 = MarketingTheme::where('is_active', true)->first();
     expect($v1->key)->toBe('ramadan')->and($v1->version)->toBe(1)->and($v1->suggestion_id)->toBe($s->id);
-    auth('admin')->logout();
+    auth('marketer')->logout();
     $this->get('/ar')->assertOk()->assertSee('<style id="seasonal-theme"', false)->assertSee('--color-brand-600:#1e5b4f;', false)->assertSee('content="#1e5b4f"', false);
 
     // second version, revert to the first, then defaults
     $s2 = ($this->make)('seasonal_theme', ['key' => 'ramadan', 'name' => ['ar' => 'رمضان 2'], 'tokens' => ['color-brand-600' => '#22553a']]);
     ($this->approveApply)($s2);
     expect(MarketingTheme::where('is_active', true)->first()->version)->toBe(2);
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.themes.revert'))->assertOk();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.themes.revert'))->assertOk();
     expect(MarketingTheme::where('is_active', true)->value('id'))->toBe($v1->id);
-    $this->actingAs($this->owner, 'admin')->postJson(route('marketer.suggestions.themes.off'))->assertOk();
-    auth('admin')->logout();
+    $this->actingAs($this->owner, 'marketer')->postJson(route('marketer.suggestions.themes.off'))->assertOk();
+    auth('marketer')->logout();
     $this->get('/ar')->assertOk()->assertDontSee('id="seasonal-theme"', false);
     // rollback of s2 restores what was active before it (v1)
     $this->engine->rollback($s2->fresh(), $this->owner);
@@ -378,9 +375,9 @@ it('renders every Suggestions Center page for the owner (ar + en) and lights the
         ($this->make)('blog', ['title' => ['ar' => 'مقال'], 'slug' => 'maqal', 'content' => ['ar' => '<p>x</p>']])->id,
     ];
     $pages = ['/marketer/suggestions', '/marketer/suggestions/log', ...array_map(fn ($pg) => '/marketer/suggestions/'.$pg, \App\Enums\Marketing\SuggestionTypeKey::pages())];
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     foreach (['ar', 'en'] as $loc) {
-        $this->withSession(['admin_locale' => $loc]);
+        $this->withSession(['marketer_locale' => $loc]);
         foreach ($pages as $u) {
             $this->get($u)->assertOk()->assertSee('data-panel="marketer"', false);
         }
@@ -402,7 +399,7 @@ it('edits through the panel form (json / list / locale fields), validating befor
     $p = ($this->product)('alpha');
     $b2 = ($this->product)('beta', '50', '20');
     $s = ($this->make)('bundle', ['name' => ['ar' => 'باقة'], 'price' => '140', 'items' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $b2->id, 'quantity' => 1]]]);
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $form = ['title' => 'Better pack', 'priority' => 'high', 'payload' => ['name' => ['ar' => 'باقة رمضان', 'en' => ''], 'price' => '159', 'items' => 'not json']];
     $this->postJson(route('marketer.suggestions.validate', $s->id), $form)->assertStatus(422)->assertJsonValidationErrors(['payload.items']);
     $form['payload']['items'] = json_encode([['product_id' => $p->id, 'quantity' => 2], ['product_id' => $b2->id, 'quantity' => 1]]);
@@ -412,14 +409,14 @@ it('edits through the panel form (json / list / locale fields), validating befor
     expect($s->status->value)->toBe('edited')->and($s->version)->toBe(2)->and($s->title)->toBe('Better pack')->and($s->payload['price'])->toBe('159.00')
         ->and($s->payload['name'])->toBe(['ar' => 'باقة رمضان'])->and(collect($s->payload['items'])->firstWhere('product_id', $p->id)['quantity'])->toBe(2);
     $viewer = ($this->staff)(['ai_suggestions.view'], null, 'v2@egy.test');
-    $this->actingAs($viewer, 'admin')->get(route('marketer.suggestions.edit', $s->id))->assertForbidden();
+    $this->actingAs($viewer, 'marketer')->get(route('marketer.suggestions.edit', $s->id))->assertForbidden();
 });
 
 it('shows an edit button in the suggestions table only where a person can still edit', function () {
     $p = ($this->product)('alpha');
     $b2 = ($this->product)('beta', '50', '20');
     $s = ($this->make)('bundle', ['name' => ['ar' => 'باقة'], 'price' => '140', 'items' => [['product_id' => $p->id, 'quantity' => 1], ['product_id' => $b2->id, 'quantity' => 1]]]);
-    $actions = fn ($who) => $this->actingAs($who, 'admin')->get('/marketer/suggestions/datatable')->assertOk()->json('data.0.actions');
+    $actions = fn ($who) => $this->actingAs($who, 'marketer')->get('/marketer/suggestions/datatable')->assertOk()->json('data.0.actions');
     $edit = route('marketer.suggestions.edit', $s->id);
 
     expect($actions($this->owner))->toContain($edit);

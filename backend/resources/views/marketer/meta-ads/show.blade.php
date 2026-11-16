@@ -3,7 +3,7 @@
     $f = fn ($k) => __('marketing.meta.fields.'.$k);
     $S = \App\Enums\Marketing\MetaDraftStatus::class;
     $st = $d->status;
-    $me = auth('admin')->user();
+    $me = auth('marketer')->user();
     $aud = (array) $d->audience; $loc = (array) $d->locations; $pl = (array) $d->placements; $cr = (array) $d->creative; $cp = (array) $d->copy;
     $editable = $st->editable() && ! $d->hasMetaObjects();
     $canPublish = $me->can('meta_ads.publish') && $approval && (in_array($st, [$S::APPROVED, $S::FAILED], true) || \App\Services\Marketing\Meta\MetaPublisher::interrupted($d)) && $hashOk && $status['configured'] && $status['page_configured'];

@@ -1,7 +1,7 @@
-<x-layouts.base :title="__('whatsapp.otp_title')">
-    <div class="grid min-h-screen place-items-center px-4">
-        <div class="w-full max-w-sm">
-            <x-card :title="__('whatsapp.otp_title')">
+<x-panel.auth :panel="$guard" :title="__('whatsapp.otp_title')">
+            <span class="inline-flex rounded-full bg-panel-soft px-3 py-1 text-xs font-bold text-panel-text">{{ $panelLabel ?? __('admin.admin_panel') }}</span>
+            <h1 class="mt-3 text-2xl font-extrabold text-slate-950">{{ __('whatsapp.otp_title') }}</h1>
+            <p class="mb-1 mt-1 text-sm text-slate-500">{{ __('admin.step_of', ['step' => 2, 'total' => 2]) }}</p>
                 <p class="mb-4 text-sm text-slate-600">{{ __('whatsapp.otp_help', ['phone' => '']) }}<bdi dir="ltr" class="font-semibold">{{ $masked }}</bdi></p>
                 <form data-ajax-form action="{{ $action }}" method="POST" class="space-y-4" novalidate>
                     @csrf
@@ -13,9 +13,6 @@
                         data-label="{{ __('whatsapp.resend') }}" data-wait="{{ __('whatsapp.resend_in') }}" disabled>{{ __('whatsapp.resend') }}</button>
                     <a href="{{ $back }}" class="text-slate-500">{{ __('whatsapp.back') }}</a>
                 </div>
-            </x-card>
-        </div>
-    </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var b = document.getElementById('otp-resend'), left = parseInt(b.dataset.left, 10) || 0, t;
@@ -31,4 +28,4 @@
             });
         });
     </script>
-</x-layouts.base>
+</x-panel.auth>

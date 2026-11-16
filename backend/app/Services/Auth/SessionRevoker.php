@@ -19,6 +19,7 @@ class SessionRevoker
         \App\Models\Customer::class => 'web',
         \App\Models\Affiliate::class => 'affiliate',
         \App\Models\Admin::class => 'admin',
+        \App\Models\Marketer::class => 'marketer',
     ];
 
     public static function guardFor(Model $user): ?string

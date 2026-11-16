@@ -105,7 +105,7 @@ return [
         'status_changed' => 'الطلب :number أصبح :status',
         'proof_uploaded' => 'تم رفع إثبات دفع للطلب :number',
     ],
-    'fields' => [
+    'fields' => ['qty' => 'الكمية', 
         'code' => 'الكود',
         'discount' => 'الخصم',
         'value' => 'القيمة',

@@ -42,7 +42,7 @@ trait GuardsLogins
     {
         Auth::guard($guard)->logout();
 
-        $others = collect(['web', 'admin', 'affiliate'])->reject(fn ($g) => $g === $guard)->contains(fn ($g) => Auth::guard($g)->check());
+        $others = collect(['web', 'admin', 'marketer', 'affiliate'])->reject(fn ($g) => $g === $guard)->contains(fn ($g) => Auth::guard($g)->check());
         if ($others) {
             $request->session()->regenerateToken();
         } else {

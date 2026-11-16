@@ -38,7 +38,7 @@ class MediaLibraryController extends Controller
     public function store(SocialMediaAssetRequest $r): JsonResponse
     {
         return $this->run(function () use ($r) {
-            $a = $this->media->create(Product::query()->findOrFail($r->integer('product_id')), $r->assetData(), $r->file('file'), $r->user('admin'));
+            $a = $this->media->create(Product::query()->findOrFail($r->integer('product_id')), $r->assetData(), $r->file('file'), $r->user('marketer'));
 
             return $this->ok(__('marketing.media.done.created'), $r->boolean('stay') ? url()->previous() : route('marketer.media.show', $a->id), ['id' => $a->id]);
         });
@@ -56,7 +56,7 @@ class MediaLibraryController extends Controller
     public function version(SocialMediaAssetRequest $r, int $id): JsonResponse
     {
         return $this->run(function () use ($r, $id) {
-            $a = $this->media->addVersion($this->find($id), $r->file('file'), $r->assetData(), $r->user('admin'));
+            $a = $this->media->addVersion($this->find($id), $r->file('file'), $r->assetData(), $r->user('marketer'));
 
             return $this->ok(__('marketing.media.done.version', ['v' => $a->version]), route('marketer.media.show', $id));
         });
@@ -69,12 +69,12 @@ class MediaLibraryController extends Controller
 
     public function approve(MediaDecisionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->media->approve($this->find($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.media.done.approved')) : null);
+        return $this->run(fn () => $this->media->approve($this->find($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.media.done.approved')) : null);
     }
 
     public function reject(MediaDecisionRequest $r, int $id): JsonResponse
     {
-        return $this->run(fn () => $this->media->reject($this->find($id), $r->user('admin'), $r->input('note')) ? $this->ok(__('marketing.media.done.rejected'), url()->previous()) : null);
+        return $this->run(fn () => $this->media->reject($this->find($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.media.done.rejected'), url()->previous()) : null);
     }
 
     public function archive(int $id): JsonResponse

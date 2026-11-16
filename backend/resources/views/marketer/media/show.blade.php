@@ -4,7 +4,7 @@
     $st = $a->status;
     $formats = \App\DTOs\Marketing\SocialMediaAssetData::FORMATS;
     $ratios = \App\DTOs\Marketing\SocialMediaAssetData::RATIOS;
-    $me = auth('admin')->user();
+    $me = auth('marketer')->user();
     $canEdit = $me->can('ai_media.edit') && $st !== $S::ARCHIVED;
     $canApprove = $me->can('ai_media.approve');
     $size = fn ($b) => $b === null ? '—' : ($b >= 1048576 ? round($b / 1048576, 1).' MB' : round($b / 1024).' KB');

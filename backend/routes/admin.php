@@ -235,10 +235,6 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
 
-        // Gift Finder admin + n8n integration clients moved to the marketer panel (P4): old bookmarks 301 to /marketer/... (GET only).
-        foreach (['gift-finder', 'integration-clients'] as $moved) {
-            Route::get("$moved/{path?}", fn (Request $r, ?string $path = null) => redirect()->to("/marketer/$moved".($path ? '/'.$path : '').($r->getQueryString() ? '?'.$r->getQueryString() : ''), 301))->where('path', '.*')->name("moved.$moved");
-        }
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 

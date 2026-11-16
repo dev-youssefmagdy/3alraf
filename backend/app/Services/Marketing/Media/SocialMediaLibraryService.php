@@ -5,7 +5,7 @@ namespace App\Services\Marketing\Media;
 use App\DTOs\Marketing\SocialMediaAssetData;
 use App\Enums\Marketing\MediaAssetKind as K;
 use App\Enums\Marketing\MediaAssetStatus as S;
-use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\Product;
 use App\Models\SocialMediaAsset;
 use App\Models\SocialMediaAssetVersion;
@@ -76,7 +76,7 @@ class SocialMediaLibraryService
     // ------------------------------------------------------------------ create / update
 
     /** New item: a file (image / video) or a text-only post draft (kind=post, file optional). */
-    public function create(Product $product, SocialMediaAssetData $d, ?UploadedFile $file, ?Admin $by, string $source = 'upload', ?int $suggestionId = null): SocialMediaAsset
+    public function create(Product $product, SocialMediaAssetData $d, ?UploadedFile $file, ?Marketer $by, string $source = 'upload', ?int $suggestionId = null): SocialMediaAsset
     {
         $info = $file ? $this->inspect($file) : null;
         $kind = $info['kind'] ?? ($d->kind ?: K::POST->value);
@@ -108,7 +108,7 @@ class SocialMediaLibraryService
     }
 
     /** Upload a new file for an existing item: version + 1, back to review. */
-    public function addVersion(SocialMediaAsset $a, UploadedFile $file, SocialMediaAssetData $d, ?Admin $by): SocialMediaAsset
+    public function addVersion(SocialMediaAsset $a, UploadedFile $file, SocialMediaAssetData $d, ?Marketer $by): SocialMediaAsset
     {
         $this->ensureNotArchived($a);
         $info = $this->inspect($file);
@@ -172,17 +172,17 @@ class SocialMediaLibraryService
         return $this->repo->update($a, ['status' => S::PENDING_REVIEW]);
     }
 
-    public function approve(SocialMediaAsset $a, Admin $by, ?string $note = null): SocialMediaAsset
+    public function approve(SocialMediaAsset $a, Marketer $by, ?string $note = null): SocialMediaAsset
     {
         return $this->decide($a, $by, S::APPROVED, $note);
     }
 
-    public function reject(SocialMediaAsset $a, Admin $by, ?string $note = null): SocialMediaAsset
+    public function reject(SocialMediaAsset $a, Marketer $by, ?string $note = null): SocialMediaAsset
     {
         return $this->decide($a, $by, S::REJECTED, $note);
     }
 
-    private function decide(SocialMediaAsset $a, Admin $by, S $to, ?string $note): SocialMediaAsset
+    private function decide(SocialMediaAsset $a, Marketer $by, S $to, ?string $note): SocialMediaAsset
     {
         if (! $by->can('ai_media.approve')) {
             throw E::make('media', 'forbidden', 403);
@@ -217,7 +217,7 @@ class SocialMediaLibraryService
     /** Called inside the engine's apply transaction: a private draft item, never published anywhere. */
     public function createFromSuggestion(Product $product, array $fields, int $suggestionId, ?int $adminId): SocialMediaAsset
     {
-        $by = $adminId ? Admin::query()->find($adminId) : null;
+        $by = $adminId ? Marketer::query()->find($adminId) : null;
 
         return $this->create($product, SocialMediaAssetData::fromArray($fields + ['kind' => K::POST->value]), null, $by, 'suggestion', $suggestionId);
     }
@@ -303,7 +303,7 @@ class SocialMediaLibraryService
             'duration_seconds' => $s['kind'] === 'video' ? $d->durationSeconds : null];
     }
 
-    private function version(SocialMediaAsset $a, array $s, SocialMediaAssetData $d, ?Admin $by, int $v): void
+    private function version(SocialMediaAsset $a, array $s, SocialMediaAssetData $d, ?Marketer $by, int $v): void
     {
         SocialMediaAssetVersion::create(['asset_id' => $a->id, 'version' => $v, 'disk' => $s['disk'], 'path' => $s['path'], 'thumb_path' => $s['thumb_path'],
             'original_name' => $s['original_name'], 'mime' => $s['mime'], 'size_bytes' => $s['size'], 'width' => $s['width'], 'height' => $s['height'],

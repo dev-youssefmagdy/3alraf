@@ -1,10 +1,13 @@
-<x-layouts.admin :title="__('growth.product_lists')">
+@php
+    $panel = request()->routeIs('marketer.*') ? 'marketer' : 'admin';
+@endphp
+<x-layouts.panel :title="__('growth.product_lists')">
     <div class="space-y-6">
         <p class="text-sm text-slate-500">{{ __('growth.lists_intro') }}</p>
         @foreach (\App\Enums\ProductListType::cases() as $type)
             @php($data = $lists[$type->value])
             <x-card :title="$type->label()">
-                <form data-ajax-form data-method="PUT" data-validate-url="{{ route('admin.product-lists.validate', $type->value) }}" action="{{ route('admin.product-lists.update', $type->value) }}" method="POST" class="space-y-3" novalidate>
+                <form data-ajax-form data-method="PUT" data-validate-url="{{ route($panel.'.product-lists.validate', $type->value) }}" action="{{ route($panel.'.product-lists.update', $type->value) }}" method="POST" class="space-y-3" novalidate>
                     @csrf
                     <div data-pin-list class="space-y-2">
                         <div class="flex flex-wrap gap-2">
@@ -29,4 +32,4 @@
             </x-card>
         @endforeach
     </div>
-</x-layouts.admin>
+</x-layouts.panel>

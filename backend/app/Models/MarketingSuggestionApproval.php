@@ -22,6 +22,6 @@ class MarketingSuggestionApproval extends Model
 
     public function admin(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'approved_by');
+        return $this->belongsTo(Marketer::class, 'approved_by');
     }
 }

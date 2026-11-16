@@ -26,7 +26,7 @@ class IntegrationClientDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $can = (bool) auth('admin')->user()?->can('integration_clients.manage');
+        $can = (bool) auth('marketer')->user()?->can('integration_clients.manage');
         $dt->addColumn('scopes_label', fn (IntegrationClient $c) => e(implode(', ', $c->scopes ?? [])))
             ->editColumn('last_used_at', fn (IntegrationClient $c) => $c->last_used_at?->format('Y-m-d H:i') ?? '—')
             ->addColumn('state', fn (IntegrationClient $c) => $this->badge(! $c->isRevoked(), __('admin.integration.active'), __('admin.integration.revoked')))

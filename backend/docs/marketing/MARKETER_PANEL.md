@@ -1,5 +1,21 @@
 # Marketer panel (`/marketer`) — P4 (+ P5 Suggestions Center, P6 social library + Meta drafts)
 
+> **2026-11-15 — standalone panel (ADMIN_REDESIGN_MARKETER_SPLIT_PLAN.md B1–B3). This section overrides anything below that says otherwise.**
+> - Own accounts in `marketers` (model `App\Models\Marketer`), guard + provider `marketer`, login `/marketer/login` (phone + password +
+>   WhatsApp OTP, `MarketerLoginController` on the shared `PanelLoginController`), logout `marketer.logout`, locale `marketer.locale`
+>   (session `marketer_locale`). Guests → `/marketer/login`. An admin session never opens `/marketer`; a marketer session never opens `/admin`.
+> - Permissions live on guard `marketer` (config/permissions.php `marketer`). Roles: `marketer-owner` (everything, Gate::before) and the
+>   preset `marketer` (no approve / reject / apply / publish / tokens / accounts — owner decision Q2). Admins hold no marketing-only permission.
+> - Accounts: `/marketer/accounts` (`marketers.view` / `marketers.manage`; self-lockout and last-owner guards) and `php artisan marketer:create [--owner]`.
+> - Marketing tools run **inside** this panel (Q1), same controllers / services / views as /admin through `App\Http\Controllers\Marketer\Tools\*`:
+>   banners, discount codes, flash sales, bundles, blog posts, static + custom pages, SEO (`seo.view` / `seo.edit`), affiliates, product lists,
+>   reviews. Shared views use `<x-layouts.panel>`; DataTables build links with `BaseDataTable::base()`. No link crosses panels.
+> - The admin product editor no longer has the social-media tab; the library is `/marketer/media` only.
+> - Data migration `2027_01_12_000100_move_marketing_to_marketers`: admins who used the panel became marketers (same phone / password hash),
+>   all marketing "who" columns now reference `marketers` (`created_by_admin_id` → `created_by_marketer_id`, actor type `marketer`).
+> - Demo seed: marketer-owner `marketing@egy.test`, phone `01000000201`, password `password` (otp_exempt).
+
+
 Same login as the admin (`/admin/login`, guard `admin`; after login admins land on `/admin/welcome`, which shows a "لوحة التسويق / Marketing
 panel" card when allowed). Routes `routes/marketer.php` (names `marketer.*`, middleware `web`, `auth.active`, `admin.locale`, `auth:admin`,
 gate `marketing.panel` = holds any marketing permission, then one `can:` per route). Guests are redirected to the admin login.

@@ -148,7 +148,7 @@ class ThemeService
 
     private function previewSuggestion(Request $request): ?MarketingSuggestion
     {
-        $admin = auth('admin')->user();
+        $admin = auth('marketer')->user();
         if (! $admin || ! $admin->can('ai_suggestions.view') || ! $request->hasSession()) {
             return null;
         }

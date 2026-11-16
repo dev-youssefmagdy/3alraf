@@ -64,11 +64,11 @@ const [stList, list] = await api('GET', 'suggestions?per_page=50');
 ok(stList === 200 && list.meta.total >= 10, `API list (${list.meta?.total})`);
 
 // ---------------------------------------------------------------- 2. sign in, pages ar/en × mobile/desktop
-await page.goto(`${site}/admin/login`, { waitUntil: 'networkidle' });
-await page.fill('[name=phone]', process.env.PHONE || '01000000001');
-await page.fill('[name=password]', process.env.PASSWORD || 'password');
+await page.goto(`${site}/marketer/login`, { waitUntil: 'networkidle' });
+await page.fill('[name=phone]', process.env.M_PHONE || '01000000201');      // demo marketer-owner (FoundationSeeder, otp_exempt)
+await page.fill('[name=password]', process.env.M_PASSWORD || 'password');
 await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle' }).catch(() => {}), page.click('button[type=submit]')]);
-ok(page.url().includes('/admin/welcome'), `signed in (${page.url()})`);
+ok(/\/marketer\/?$/.test(new URL(page.url()).pathname), `marketer signed in on its own login (${page.url()})`);
 const cookies = await ctx.cookies();
 
 for (const [vname, opts] of Object.entries(views)) {
@@ -77,7 +77,7 @@ for (const [vname, opts] of Object.entries(views)) {
     const p2 = await c2.newPage();
     watch(p2);
     for (const locale of ['ar', 'en']) {
-        await p2.goto(`${site}/admin/locale/${locale}`, { waitUntil: 'networkidle' });
+        await p2.goto(`${site}/marketer/locale/${locale}`, { waitUntil: 'networkidle' });
         for (const url of [...pages, `/marketer/suggestions/${ids.seasonal_theme}`, `/marketer/suggestions/${ids.blog}`, `/marketer/suggestions/${ids.product}/edit`]) {
             await p2.goto(`${site}${url}`, { waitUntil: 'networkidle' });
             const tag = `${locale}-${vname} ${url}`;
@@ -109,7 +109,7 @@ for (const [vname, opts] of Object.entries(views)) {
 }
 
 // ---------------------------------------------------------------- 3. edit, approve, apply in the UI (desktop, Arabic)
-await page.goto(`${site}/admin/locale/ar`, { waitUntil: 'networkidle' });
+await page.goto(`${site}/marketer/locale/ar`, { waitUntil: 'networkidle' });
 page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'موافقة من المتصفح' : undefined));
 const act = async (id, action, form) => {
     await page.goto(`${site}/marketer/suggestions/${id}`, { waitUntil: 'networkidle' });

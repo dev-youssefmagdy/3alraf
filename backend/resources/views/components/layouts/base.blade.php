@@ -1,4 +1,4 @@
-@props(['title' => config('app.name'), 'bodyClass' => 'bg-slate-50', 'siteName' => null, 'fullTitle' => null, 'lite' => false])
+@props(['title' => config('app.name'), 'bodyClass' => 'bg-slate-50', 'siteName' => null, 'fullTitle' => null, 'lite' => false, 'panel' => null])
 @php
     $jsStrings = [
         'confirm_delete' => __('admin.confirm_delete'),
@@ -6,6 +6,7 @@
         'error' => __('admin.error'),
         'pick_values' => __('admin.pick_values'),
         'nothing_new' => __('admin.nothing_new'),
+        'cmdk_empty' => __('admin.cmdk_empty'),
         'datatable' => [
             'search' => __('admin.search').':',
             'processing' => __('admin.processing'),
@@ -15,7 +16,7 @@
     ];
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ ($isRtl ?? false) ? 'rtl' : 'ltr' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ ($isRtl ?? false) ? 'rtl' : 'ltr' }}" @if ($panel) data-panel="{{ $panel }}" @endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,7 +29,7 @@
     <meta name="description" content="{{ $fullTitle ?: $title.' | '.($siteName ?: config('app.name')) }}">
     @endunless
     {{ $head ?? '' }}
-    @if ($lite && ! isset($head))
+    @if (($lite && ! isset($head)) || $panel)
     {{-- lite storefront pages (customer login / register): same font pair as the storefront layout, loaded in the head --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

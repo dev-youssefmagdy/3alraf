@@ -17,7 +17,7 @@ use Spatie\Permission\PermissionRegistrar;
 beforeEach(function () {
     $this->seed(FoundationSeeder::class);
     Cache::flush();
-    $this->owner = Admin::query()->where('email', 'owner@egy.test')->first();
+    $this->owner = marketerOwner();
     $p = Product::create(['type' => 'simple', 'name' => ['en' => 'Rose Set', 'ar' => 'طقم ورد'], 'description' => ['en' => 'x'], 'slug' => 'rose', 'sku' => 'ROSE',
         'barcode' => app(BarcodeService::class)->generateUnique()]);
     listProduct($p, ['price' => '100', 'cost' => '60', 'is_active' => true]);
@@ -41,7 +41,7 @@ it('shows real sales, profit and order figures and leaves cancelled orders out o
     ($this->order)(1, 'delivered', '2026-10-07 12:00:00');
     ($this->order)(4, 'cancelled', '2026-10-07 13:00:00');
 
-    $r = $this->actingAs($this->owner, 'admin')->get('/marketer/analytics?from=2026-10-05&to=2026-10-08')->assertOk();
+    $r = $this->actingAs($this->owner, 'marketer')->get('/marketer/analytics?from=2026-10-05&to=2026-10-08')->assertOk();
     $r->assertViewHas('o', fn ($o) => (float) $o['sales']['gross_sales'] === 300.0 && $o['sales']['orders'] === 2 && (float) $o['profit']['gross_profit'] === 120.0 && (float) $o['profit']['gross_margin_percent'] === 40.0);
     $r->assertViewHas('orders', fn ($o) => $o['cancellations']['total'] === 1 && (float) $o['cancellations']['rate_percent'] === 33.33);
     $r->assertViewHas('statuses', fn ($s) => count($s) === 2);
@@ -55,7 +55,7 @@ it('fills days without orders with zero so the trend is not misleading', functio
     ($this->order)(1, 'delivered', '2026-10-05 12:00:00');
     ($this->order)(2, 'delivered', '2026-10-08 12:00:00');
 
-    $this->actingAs($this->owner, 'admin')->get('/marketer/analytics?from=2026-10-05&to=2026-10-08&group_by=day')->assertOk()
+    $this->actingAs($this->owner, 'marketer')->get('/marketer/analytics?from=2026-10-05&to=2026-10-08&group_by=day')->assertOk()
         ->assertViewHas('salesChart', fn ($c) => $c['labels'] === ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08'] && $c['datasets'][0]['data'] === [100.0, 0.0, 0.0, 200.0])
         ->assertViewHas('ordersChart', fn ($c) => $c['datasets'][0]['data'] === [1, 0, 0, 1]);
 });
@@ -63,7 +63,7 @@ it('fills days without orders with zero so the trend is not misleading', functio
 it('groups by month on request, ignores an unknown grouping, and picks a sensible grouping by range length', function () {
     ($this->order)(1, 'delivered', '2026-09-30 12:00:00');
     ($this->order)(3, 'delivered', '2026-10-01 12:00:00');
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
 
     $this->get('/marketer/analytics?from=2026-09-01&to=2026-10-31&group_by=month')->assertOk()
         ->assertViewHas('salesChart', fn ($c) => $c['labels'] === ['2026-09', '2026-10'] && $c['datasets'][0]['data'] === [100.0, 300.0]);
@@ -73,14 +73,14 @@ it('groups by month on request, ignores an unknown grouping, and picks a sensibl
 });
 
 it('renders the empty state in Arabic and English without errors', function () {
-    $this->actingAs($this->owner, 'admin');
+    $this->actingAs($this->owner, 'marketer');
     $this->get('/marketer/analytics')->assertOk()->assertSee('التحليلات')->assertDontSee('marketing.an.');
-    $this->withSession(['admin_locale' => 'en'])->get('/marketer/analytics')->assertOk()->assertSee('Sales over time')->assertDontSee('marketing.an.');
+    $this->withSession(['marketer_locale' => 'en'])->get('/marketer/analytics')->assertOk()->assertSee('Sales over time')->assertDontSee('marketing.an.');
 });
 
 it('requires marketing.analytics and shows the menu item only to those who hold it', function () {
     $make = function (array $perms, string $email) {
-        $a = Admin::create(['name' => 'S', 'email' => $email, 'password' => 'password', 'is_active' => true]);
+        $a = makeMarketer([], null, $email);
         $a->givePermissionTo($perms);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -89,10 +89,10 @@ it('requires marketing.analytics and shows the menu item only to those who hold 
     $this->get('/marketer/analytics')->assertRedirect();
 
     $viewer = $make(['marketing.view'], 'v@egy.test');
-    $this->actingAs($viewer, 'admin')->get('/marketer/analytics')->assertForbidden();
+    $this->actingAs($viewer, 'marketer')->get('/marketer/analytics')->assertForbidden();
     $this->get('/marketer')->assertOk()->assertDontSee(route('marketer.analytics.index'), false);
 
     $analyst = $make(['marketing.view', 'marketing.analytics'], 'a@egy.test');
-    $this->actingAs($analyst, 'admin')->get('/marketer/analytics')->assertOk();
+    $this->actingAs($analyst, 'marketer')->get('/marketer/analytics')->assertOk();
     $this->get('/marketer')->assertSee(route('marketer.analytics.index'), false);
 });

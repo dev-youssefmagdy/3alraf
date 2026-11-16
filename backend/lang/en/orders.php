@@ -105,7 +105,7 @@ return [
         'status_changed' => 'Order :number is now :status',
         'proof_uploaded' => 'Payment proof uploaded for order :number',
     ],
-    'fields' => [
+    'fields' => ['qty' => 'Quantity', 
         'code' => 'Code',
         'discount' => 'Discount',
         'value' => 'Value',

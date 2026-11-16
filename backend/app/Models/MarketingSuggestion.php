@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MarketingSuggestion extends Model
 {
     protected $fillable = ['type', 'title', 'description', 'target_entity_type', 'target_entity_id', 'payload', 'source_data_snapshot', 'target_snapshot',
-        'target_snapshot_hash', 'reasoning', 'priority', 'status', 'source', 'source_meta', 'created_by_token_id', 'created_by_admin_id', 'reviewed_by',
+        'target_snapshot_hash', 'reasoning', 'priority', 'status', 'source', 'source_meta', 'created_by_token_id', 'created_by_marketer_id', 'reviewed_by',
         'approved_by', 'applied_by', 'version', 'content_hash', 'result_entity_type', 'result_entity_id', 'last_error', 'submitted_at', 'reviewed_at',
         'expires_at', 'approved_at', 'applied_at', 'rejected_at', 'rolled_back_at'];
 
@@ -58,17 +58,17 @@ class MarketingSuggestion extends Model
 
     public function creatorAdmin(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'created_by_admin_id');
+        return $this->belongsTo(Marketer::class, 'created_by_marketer_id');
     }
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'approved_by');
+        return $this->belongsTo(Marketer::class, 'approved_by');
     }
 
     public function applier(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'applied_by');
+        return $this->belongsTo(Marketer::class, 'applied_by');
     }
 
     /** The approval that currently authorises an apply: approved decision, not invalidated, bound to this version + hash, not expired. */

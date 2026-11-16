@@ -50,9 +50,9 @@ class AppServiceProvider extends ServiceProvider
         // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
         Gate::define('erp.access', fn ($user) => method_exists($user, 'getAllPermissions')
             && $user->getAllPermissions()->contains(fn ($p) => str_starts_with($p->name, 'erp.') && $p->guard_name === 'admin'));
-        // Marketer panel (/marketer, P4): open for any marketing permission (MarketingPermissions::PANEL); each page has its own `can:`.
-        Gate::define('marketing.panel', fn ($user) => method_exists($user, 'getAllPermissions')
-            && $user->getAllPermissions()->contains(fn ($p) => $p->guard_name === 'admin' && in_array($p->name, \App\Support\Marketing\MarketingPermissions::PANEL, true)));
+        // Marketer panel (/marketer): marketer accounts only, open for any marketing permission (MarketingPermissions::PANEL); each page has its own `can:`.
+        Gate::define('marketing.panel', fn ($user) => $user instanceof \App\Models\Marketer
+            && ($user->isOwner() || $user->getAllPermissions()->contains(fn ($p) => in_array($p->name, \App\Support\Marketing\MarketingPermissions::PANEL, true))));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per client IP (one shop, so no per-shop part).
         foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'devices' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.$r->ip()));
@@ -87,8 +87,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('integration-ip', fn (Request $r) => Limit::perMinute(300)->by('integration-ip|'.$r->ip()));
         require base_path('routes/channels.php');
 
-        // Super admins (guard `admin`) bypass every permission check.
-        Gate::before(fn ($user) => method_exists($user, 'hasRole') && $user->hasRole('super-admin') ? true : null);
+        // Super admins (guard `admin`) bypass every admin permission check; `marketer-owner` (guard `marketer`) every marketer check.
+        // Each role only exists on its own guard, so neither can reach the other panel.
+        Gate::before(fn ($user) => match (true) {
+            $user instanceof \App\Models\Admin => $user->hasRole('super-admin') ? true : null,
+            $user instanceof \App\Models\Marketer => $user->isOwner() ? true : null,
+            default => null,
+        });
     }
 
     /**

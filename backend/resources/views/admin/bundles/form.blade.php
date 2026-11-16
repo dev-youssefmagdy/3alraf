@@ -40,10 +40,10 @@
         <h3 class="mb-1 font-semibold">{{ __('admin.qr_code') }}</h3>
         <p class="mb-3 text-xs text-slate-500">{{ __('admin.qr_bundle_hint') }}</p>
         <div class="text-center" style="width:10rem">
-            <img src="{{ $qr?->file_url ?? route('admin.bundles.qr', $model->id) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
+            <img src="{{ $qr?->file_url ?? route($route.'.qr', $model->id) }}" alt="QR" class="size-40 rounded border border-slate-200" loading="lazy">
             <div class="mt-1 text-xs text-slate-500">{{ __('admin.qr_bundle') }}</div>
-            <a href="{{ route('admin.bundles.qr', $model->id) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
-            @can('bundles.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route('admin.bundles.qr.regenerate', $model->id) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
+            <a href="{{ route($route.'.qr', $model->id) }}" class="btn-sm btn-secondary mt-2" download>{{ __('admin.qr_download') }}</a>
+            @can('bundles.edit')<button type="button" class="btn-sm btn-secondary mt-2" data-post-action="{{ route($route.'.qr.regenerate', $model->id) }}" data-confirm="{{ __('admin.qr_regenerate_confirm') }}">{{ __('admin.qr_regenerate') }}</button>@endcan
         </div>
     </x-card>
     </x-slot:after>

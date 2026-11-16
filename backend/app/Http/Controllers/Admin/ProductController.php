@@ -16,7 +16,6 @@ use App\Models\Product;
 use App\Repositories\Contracts\AttributeRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Services\CatalogService;
-use App\Services\Marketing\Media\SocialMediaLibraryService;
 use App\Services\ProductService;
 use App\Services\Qr\QrCodeManager;
 use App\Services\Storefront\ProductGallery;
@@ -33,7 +32,6 @@ class ProductController extends Controller implements HasMiddleware
         private AttributeRepositoryInterface $attributes,
         private CatalogService $catalog,
         private QrCodeManager $qr,
-        private SocialMediaLibraryService $library,
         private ProductGallery $gallery,
     ) {}
 
@@ -73,10 +71,8 @@ class ProductController extends Controller implements HasMiddleware
     {
         $product->load(['images', 'videos', 'categories', 'tags', 'variants.values', 'variants.images']);
 
-        // Private social-media library tab (P6, MCP.md §21): separate permission, never part of the product form or any public output.
-        $library = $request->query('tab') === 'social' && $request->user('admin')->can('ai_media.view') ? $this->library->libraryData($request->query(), $product) : null;
-
-        return view('admin.products.form', $this->formData($product) + ['qrCodes' => $this->qr->listingCodes($product), 'library' => $library, 'media' => $this->gallery->items($product)]);
+        // The private social-media library lives only in the marketer panel (/marketer/media); the admin has no view of it.
+        return view('admin.products.form', $this->formData($product) + ['qrCodes' => $this->qr->listingCodes($product), 'media' => $this->gallery->items($product)]);
     }
 
     public function update(ProductRequest $request, Product $product): JsonResponse

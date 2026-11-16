@@ -2,7 +2,8 @@
 
 /**
  * Permission matrix seeded by PermissionSeeder: guard => module => actions. Names are "{module}.{action}".
- * One guard (`admin`). Append modules here and re-run `php artisan db:seed --class=PermissionSeeder`.
+ * Two guards: `admin` (/admin) and `marketer` (/marketer, own accounts in `marketers`). Append modules here and re-run
+ * `php artisan db:seed --class=PermissionSeeder`.
  */
 $crud = ['view', 'create', 'edit', 'delete'];
 
@@ -60,16 +61,6 @@ return [
         'custom_pages' => $crud,
         'static_pages' => $crud,
         'blog_posts' => $crud,
-        // Marketer panel (/marketer, MARKETER_PLAN.md P4): Gift Finder admin + n8n integration clients live there now.
-        'gift_finder' => ['view', 'manage'],
-        'integration_clients' => ['view', 'manage'],
-        'marketing' => ['view', 'analytics', 'tokens.manage', 'audit.view'],          // panel dashboard, analytics, API tokens, API request log
-        'ai_suggestions' => ['view', 'create', 'edit', 'approve', 'reject', 'apply', 'archive'], // P5 Suggestions Center (approve/apply = dashboard only)
-        'ai_media' => ['view', 'upload', 'edit', 'delete', 'approve'],                 // P6 private social-media library (approve = library item review)
-        'ai_seo' => ['approve'],
-        'ai_blog' => ['approve'],
-        'ai_theme' => ['approve'],
-        'meta_ads' => ['view', 'draft', 'approve', 'publish'],                         // P6 Meta campaign drafts (publish = always PAUSED)
         // master catalog: products, categories, brands, tags, attributes
         'products' => $crud, // products + selling fields + activate-many + QR (merged former catalog.*)
         'categories' => $crud,
@@ -79,5 +70,30 @@ return [
         // settings: Settings → General (name, country, currency, locales, timezone, Gift Finder / customer-cancel switches) + languages
         'general_settings' => ['view', 'edit'],
         'languages' => $crud,
+    ],
+    // Marketer panel (/marketer): guard `marketer` only — admins hold none of these (ADMIN_REDESIGN_MARKETER_SPLIT_PLAN.md B2).
+    'marketer' => [
+        'marketers' => ['view', 'manage'],                                             // marketer accounts + their roles (marketer-owner)
+        // marketing tools shared with /admin (owner decision Q1): same module names on this guard
+        'banners' => $crud,
+        'discount_codes' => $crud,
+        'flash_sales' => $crud,
+        'bundles' => $crud,
+        'blog_posts' => $crud,
+        'static_pages' => $crud,
+        'custom_pages' => $crud,
+        'seo' => ['view', 'edit'],                                                     // SEO settings (admin gates these with settings.*)
+        'affiliates' => ['view', 'edit', 'delete'],
+        'product_lists' => ['view', 'edit'],
+        'reviews' => ['view', 'edit', 'delete'],
+        'gift_finder' => ['view', 'manage'],
+        'integration_clients' => ['view', 'manage'],
+        'marketing' => ['view', 'analytics', 'tokens.manage', 'audit.view'],          // panel dashboard, analytics, API tokens, API request log
+        'ai_suggestions' => ['view', 'create', 'edit', 'approve', 'reject', 'apply', 'archive'], // Suggestions Center (approve/apply = dashboard only)
+        'ai_media' => ['view', 'upload', 'edit', 'delete', 'approve'],                 // private social-media library (approve = library item review)
+        'ai_seo' => ['approve'],
+        'ai_blog' => ['approve'],
+        'ai_theme' => ['approve'],
+        'meta_ads' => ['view', 'draft', 'approve', 'publish'],                         // Meta campaign drafts (publish = always PAUSED)
     ],
 ];

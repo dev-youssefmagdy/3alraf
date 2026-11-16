@@ -51,6 +51,11 @@ return [
             'driver' => 'session',
             'provider' => 'admins',
         ],
+        // Marketer panel (/marketer): separate accounts (table `marketers`), never shares a login with /admin
+        'marketer' => [
+            'driver' => 'session',
+            'provider' => 'marketers',
+        ],
         // Mobile API (Sanctum bearer tokens); the token type is the provider + ability
         'customer_api' => ['driver' => 'sanctum', 'provider' => 'customers'],
         'affiliate_api' => ['driver' => 'sanctum', 'provider' => 'affiliates'],
@@ -89,6 +94,10 @@ return [
         'admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
+        ],
+        'marketers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Marketer::class,
         ],
 
         // 'users' => [

@@ -2,17 +2,17 @@
 
 namespace App\Services\Marketing\Suggestions;
 
-use App\Models\Admin;
+use App\Models\Marketer;
 use App\Models\MarketingApiToken;
 
-/** Who acts on a suggestion: a panel admin, an API token (MCP / scheduler) or the system (scheduled expiry). */
+/** Who acts on a suggestion / Meta draft: a marketer-panel account, an API token (MCP / scheduler) or the system (scheduled expiry). */
 final readonly class SuggestionActor
 {
-    public function __construct(public string $type, public ?int $id, public ?Admin $admin = null, public ?MarketingApiToken $token = null) {}
+    public function __construct(public string $type, public ?int $id, public ?Marketer $marketer = null, public ?MarketingApiToken $token = null) {}
 
-    public static function admin(Admin $a): self
+    public static function marketer(Marketer $m): self
     {
-        return new self('admin', $a->id, $a);
+        return new self('marketer', $m->id, $m);
     }
 
     public static function token(MarketingApiToken $t): self
@@ -25,9 +25,9 @@ final readonly class SuggestionActor
         return new self('system', null);
     }
 
-    public function isAdmin(): bool
+    public function isMarketer(): bool
     {
-        return $this->type === 'admin';
+        return $this->type === 'marketer';
     }
 
     public function isToken(): bool
@@ -37,6 +37,6 @@ final readonly class SuggestionActor
 
     public function can(string $permission): bool
     {
-        return $this->admin !== null && $this->admin->can($permission);
+        return $this->marketer !== null && $this->marketer->can($permission);
     }
 }

@@ -1,4 +1,7 @@
 @php
+    $panel = request()->routeIs('marketer.*') ? 'marketer' : 'admin';
+@endphp
+@php
     $checks = [
         'indexable' => $seo['indexable'],
         'sitemap' => true,
@@ -20,7 +23,7 @@
     $first = $languages->first()?->code;
     $copyBtn = fn ($v) => '<button type="button" class="btn btn-secondary btn-sm" data-copy="'.e($v).'" data-done="'.e(__('seo.general.copied')).'">'.e(__('seo.general.copy')).'</button>';
 @endphp
-<x-layouts.admin :title="__('seo.title')">
+<x-layouts.panel :title="__('seo.title')">
     <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-900">{{ __('seo.title') }}</h1>
         <p class="mt-1 text-sm text-slate-500">{{ __('seo.subtitle') }}</p>
@@ -54,7 +57,7 @@
             </nav>
         </aside>
 
-        <form data-ajax-form data-method="PUT" data-validate-url="{{ route('admin.seo.validate') }}" action="{{ route('admin.seo.update') }}" method="POST" class="min-w-0 space-y-6" novalidate>
+        <form data-ajax-form data-method="PUT" data-validate-url="{{ route($panel.'.seo.validate') }}" action="{{ route($panel.'.seo.update') }}" method="POST" class="min-w-0 space-y-6" novalidate>
             @csrf
 
             {{-- 1. search appearance --}}
@@ -164,7 +167,7 @@
                         <p class="mb-3 text-xs text-slate-500">{{ __('seo.business.social_hint') }}</p>
                         <div class="grid gap-4 sm:grid-cols-2">
                             @foreach (\App\Services\SeoSettingsService::SOCIALS as $s)
-                                <x-input name="social[{{ $s }}]" type="url" dir="ltr" placeholder="https://" :label="__('seo.fields.social.'.$s)" :value="$seo['social'][$s]" />
+                                <x-input name="social[{{ $s }}]" type="url" dir="ltr" placeholder="https://" :label="$s === 'x' ? 'X' : ucfirst($s)" :value="$seo['social'][$s]" />
                             @endforeach
                         </div>
                     </div>
@@ -182,7 +185,7 @@
             <div class="sticky bottom-0 z-10 -mx-1 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
                 <div class="flex items-center gap-2">
                     <button type="submit" class="btn btn-primary">{{ __('admin.save') }}</button>
-                    <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">{{ __('admin.cancel') }}</a>
+                    <a href="{{ route($panel === 'marketer' ? 'marketer.dashboard' : 'admin.dashboard') }}" class="btn btn-secondary">{{ __('admin.cancel') }}</a>
                 </div>
             </div>
         </form>
@@ -219,4 +222,4 @@
             [t, d].forEach(function (el) { if (el) el.addEventListener('input', sync); }); sync();
         })();
     </script>
-</x-layouts.admin>
+</x-layouts.panel>

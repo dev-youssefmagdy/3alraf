@@ -121,7 +121,7 @@ it('the removed integration endpoints are gone (404)', function () {
 });
 
 it('admin manages clients under marketer.integration-clients.* (create shows secrets once, rotate, revoke, scopes validated)', function () {
-    $as = fn () => $this->actingAs(Admin::query()->where('email', 'owner@egy.test')->first(), 'admin');   // IntegrationAuth forgets guards on each API call
+    $as = fn () => $this->actingAs(marketerOwner(), 'marketer');   // IntegrationAuth forgets guards on each API call
     $as();
     $this->get('/marketer/integration-clients')->assertOk()->assertSee('/api/integration/v1');
     $r = $this->postJson('/marketer/integration-clients', ['name' => 'n8n', 'scopes' => ['gift_finder:read']])->assertCreated()->json('data');

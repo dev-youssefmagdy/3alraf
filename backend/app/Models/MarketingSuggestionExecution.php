@@ -25,6 +25,6 @@ class MarketingSuggestionExecution extends Model
 
     public function executor(): BelongsTo
     {
-        return $this->belongsTo(Admin::class, 'executed_by');
+        return $this->belongsTo(Marketer::class, 'executed_by');
     }
 }

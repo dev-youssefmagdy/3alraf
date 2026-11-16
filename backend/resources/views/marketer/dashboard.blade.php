@@ -5,6 +5,11 @@
         $s = $o['sales']; $p = $o['profit']; $mc = $o['merchandising']; $gf = $o['gift_finder'];
         $name = fn ($n) => is_array($n) ? ($n[app()->getLocale()] ?? null) ?: collect($n)->filter()->first() ?: '—' : '—';
     @endphp
+    <x-slot:header>
+        <x-ui.page-header :title="__('admin.welcome').'، '.auth('marketer')->user()->name" :subtitle="$m('dash.title')">
+            @can('ai_suggestions.view')<x-button :href="route('marketer.suggestions.index')">{{ $m('groups.suggestions') }}</x-button>@endcan
+        </x-ui.page-header>
+    </x-slot:header>
 
     @include('reports._filter', ['f' => $f, 'branches' => []])
     <p class="mb-3 text-sm text-slate-500">{{ __('reports.amounts_in', ['c' => setting('currency_symbol') ?: setting('currency_code')]) }} · {{ $m('dash.sales_basis') }}</p>
@@ -15,11 +20,11 @@
     @endforeach
 
     <div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-kpis>
-        <x-stat-card :label="$m('dash.gross_sales')" :value="$money($s['gross_sales'])" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="gross_sales" />
-        <x-stat-card :label="$m('dash.orders')" :value="number_format($s['orders'])" tone="slate" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="orders" />
-        <x-stat-card :label="$m('dash.aov')" :value="$money($s['aov'])" tone="slate" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="aov" />
+        <x-stat-card :label="$m('dash.gross_sales')" :value="$money($s['gross_sales'])" tone="violet" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="gross_sales" />
+        <x-stat-card :label="$m('dash.orders')" :value="number_format($s['orders'])" tone="mint" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="orders" />
+        <x-stat-card :label="$m('dash.aov')" :value="$money($s['aov'])" tone="sun" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="aov" />
         @if ($withProfit)
-            <x-stat-card :label="$m('dash.gross_profit')" :value="$money($p['gross_profit'])" tone="emerald" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="gross_profit"
+            <x-stat-card :label="$m('dash.gross_profit')" :value="$money($p['gross_profit'])" tone="brand" class="[&_p:nth-child(2)]:!text-2xl" data-kpi="gross_profit"
                 :hint="$p['cost_coverage_percent'] === null ? $m('dash.no_sales') : $m('dash.coverage', ['p' => $p['cost_coverage_percent']])" />
         @else
             <x-stat-card :label="$m('dash.units_sold')" :value="number_format($s['units_sold'])" tone="slate" class="[&_p:nth-child(2)]:!text-2xl" />
@@ -27,12 +32,12 @@
     </div>
 
     <div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5" data-merch>
-        @foreach (['active_coupons' => 'admin.discount-codes.index', 'running_flash_sales' => 'admin.flash-sales.index', 'live_banners' => 'admin.banners.index', 'live_bundles' => 'admin.bundles.index', 'low_stock_items' => null] as $k => $route)
-            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        @foreach (['active_coupons' => 'discount-codes', 'running_flash_sales' => 'flash-sales', 'live_banners' => 'banners', 'live_bundles' => 'bundles', 'low_stock_items' => null] as $k => $uri)
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
                 <p class="text-sm text-slate-500">{{ $m('dash.'.$k) }}</p>
                 <p class="mt-1 text-2xl font-bold text-slate-700">{{ number_format($mc[$k]) }}</p>
-                @if ($route && Route::has($route) && auth('admin')->user()->can(['admin.discount-codes.index' => 'discount_codes.view', 'admin.flash-sales.index' => 'flash_sales.view', 'admin.banners.index' => 'banners.view', 'admin.bundles.index' => 'bundles.view'][$route]))
-                    <a href="{{ route($route) }}" class="mt-1 inline-block text-xs text-brand-600 hover:underline">{{ $m('dash.manage') }}</a>
+                @if ($uri && auth('marketer')->user()->can(str_replace('-', '_', $uri).'.view'))
+                    <a href="{{ route('marketer.'.$uri.'.index') }}" class="mt-1 inline-block text-xs font-bold text-panel-text hover:underline">{{ $m('dash.manage') }}</a>
                 @endif
             </div>
         @endforeach
@@ -89,7 +94,6 @@
                 <ul class="divide-y divide-slate-100 text-sm" data-table="low">
                     @foreach ($low as $r)<li class="flex justify-between gap-2 py-2"><span>{{ $name($r['name']) }}@if ($r['variant']) <span class="text-xs text-slate-400">{{ $r['variant'] }}</span>@endif</span><span class="font-semibold {{ $r['available'] === 0 ? 'text-red-600' : 'text-amber-700' }}">{{ $r['available'] }}</span></li>@endforeach
                 </ul>
-                @can('stock.view')<a href="{{ route('admin.stock.low') }}" class="mt-2 inline-block text-sm text-brand-600 hover:underline">{{ $m('dash.manage') }}</a>@endcan
             @else
                 <p class="py-6 text-center text-sm text-slate-400">{{ __('admin.no_data') }}</p>
             @endif

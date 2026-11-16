@@ -38,7 +38,7 @@ class AffiliateDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $u = auth('admin')->user();
+        $u = request()->user();
         $dt->editColumn('pending_sum', fn (Affiliate $m) => $this->money($m->pending_sum ?? 0))
             ->editColumn('approved_sum', fn (Affiliate $m) => $this->money($m->approved_sum ?? 0))
             ->editColumn('paid_sum', fn (Affiliate $m) => $this->money($m->paid_sum ?? 0))
@@ -48,14 +48,14 @@ class AffiliateDataTable extends BaseDataTable
                 $h = '<div class="flex items-center gap-2">';
                 if ($u?->can('affiliates.edit')) {
                     if ($m->status !== AffiliateStatus::APPROVED) {
-                        $h .= '<button type="button" data-post-action="'.e(route('admin.affiliates.approve', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.approve')).'</button>';
+                        $h .= '<button type="button" data-post-action="'.e(route($this->base('affiliates').'.approve', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.approve')).'</button>';
                     }
                     if ($m->status === AffiliateStatus::APPROVED) {
-                        $h .= '<button type="button" data-post-action="'.e(route('admin.affiliates.suspend', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.suspend')).'</button>';
+                        $h .= '<button type="button" data-post-action="'.e(route($this->base('affiliates').'.suspend', $m->id)).'" class="btn-sm btn-secondary">'.e(__('growth.suspend')).'</button>';
                     }
                 }
                 if ($u?->can('affiliates.delete')) {
-                    $h .= '<button type="button" data-delete="'.e(route('admin.affiliates.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
+                    $h .= '<button type="button" data-delete="'.e(route($this->base('affiliates').'.destroy', $m->id)).'" class="btn-sm btn-danger">'.e(__('admin.delete')).'</button>';
                 }
 
                 return $h.'</div>';

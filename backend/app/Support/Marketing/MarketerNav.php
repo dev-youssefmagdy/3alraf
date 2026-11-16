@@ -46,21 +46,22 @@ final class MarketerNav
                 ['marketer.gift-finder.index', 'nav.gift_finder', 'gift_finder.view', null, 'marketer.gift-finder.index'],
                 ['marketer.gift-finder.tags', 'nav.gift_tags', 'gift_finder.view', null, 'marketer.gift-finder.tags*'],
             ]],
-            // Existing admin marketing modules: links only, gated by their own permissions (they open in the admin panel)
-            ['key' => 'tools', 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.8-3.8a6 6 0 01-7.9 7.9l-6.9 6.9a2.1 2.1 0 01-3-3l6.9-6.9a6 6 0 017.9-7.9z', 'external' => true, 'items' => [
-                ['admin.banners.index', 'tools.banners', 'banners.view', null, null],
-                ['admin.discount-codes.index', 'tools.discount_codes', 'discount_codes.view', null, null],
-                ['admin.flash-sales.index', 'tools.flash_sales', 'flash_sales.view', null, null],
-                ['admin.bundles.index', 'tools.bundles', 'bundles.view', null, null],
-                ['admin.blog-posts.index', 'tools.blog_posts', 'blog_posts.view', null, null],
-                ['admin.static-pages.index', 'tools.static_pages', 'static_pages.view', null, null],
-                ['admin.custom-pages.index', 'tools.custom_pages', 'custom_pages.view', null, null],
-                ['admin.seo.edit', 'tools.seo', 'settings.view', null, null],
-                ['admin.affiliates.index', 'tools.affiliates', 'affiliates.view', null, null],
-                ['admin.product-lists.index', 'tools.product_lists', 'product_lists.view', null, null],
-                ['admin.reviews.index', 'tools.reviews', 'reviews.view', null, null],
+            // Marketing tools, served inside this panel (same modules as /admin, marketer guard)
+            ['key' => 'tools', 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.8-3.8a6 6 0 01-7.9 7.9l-6.9 6.9a2.1 2.1 0 01-3-3l6.9-6.9a6 6 0 017.9-7.9z', 'items' => [
+                ['marketer.banners.index', 'tools.banners', 'banners.view', null, 'marketer.banners.*'],
+                ['marketer.discount-codes.index', 'tools.discount_codes', 'discount_codes.view', null, 'marketer.discount-codes.*'],
+                ['marketer.flash-sales.index', 'tools.flash_sales', 'flash_sales.view', null, 'marketer.flash-sales.*'],
+                ['marketer.bundles.index', 'tools.bundles', 'bundles.view', null, 'marketer.bundles.*'],
+                ['marketer.blog-posts.index', 'tools.blog_posts', 'blog_posts.view', null, 'marketer.blog-posts.*'],
+                ['marketer.static-pages.index', 'tools.static_pages', 'static_pages.view', null, 'marketer.static-pages.*'],
+                ['marketer.custom-pages.index', 'tools.custom_pages', 'custom_pages.view', null, 'marketer.custom-pages.*'],
+                ['marketer.seo.edit', 'tools.seo', 'seo.view', null, 'marketer.seo.*'],
+                ['marketer.affiliates.index', 'tools.affiliates', 'affiliates.view', null, 'marketer.affiliates.*'],
+                ['marketer.product-lists.index', 'tools.product_lists', 'product_lists.view', null, 'marketer.product-lists.*'],
+                ['marketer.reviews.index', 'tools.reviews', 'reviews.view', null, 'marketer.reviews.*'],
             ]],
             ['key' => 'access', 'icon' => 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.7 5.7L11 17H9v2H7v2H3v-4l5.3-5.3A6 6 0 1121 9z', 'items' => [
+                ['marketer.accounts.index', 'nav.accounts', 'marketers.view', null, 'marketer.accounts.*'],
                 ['marketer.tokens.index', 'nav.api_tokens', 'marketing.tokens.manage', null, 'marketer.tokens.*'],
                 ['marketer.api-log.index', 'nav.api_log', 'marketing.audit.view', null, 'marketer.api-log.*'],
                 ['marketer.integration-clients.index', 'nav.integration_clients', 'integration_clients.view', null, 'marketer.integration-clients.*'],
@@ -82,7 +83,7 @@ final class MarketerNav
         return $out;
     }
 
-    /** First panel page (not an admin-panel tool link) the admin may open; null when none. */
+    /** First panel page the marketer may open; null when none. */
     public static function firstRoute(?Authenticatable $user): ?string
     {
         foreach (self::visible($user) as $g) {
@@ -92,18 +93,5 @@ final class MarketerNav
         }
 
         return null;
-    }
-
-    /** Show the "Admin panel" link when the admin holds any permission outside the marketer panel (or is super-admin). */
-    public static function hasAdminAccess(?Authenticatable $user): bool
-    {
-        if (! $user || ! method_exists($user, 'getAllPermissions')) {
-            return false;
-        }
-        if (method_exists($user, 'hasRole') && $user->hasRole('super-admin')) {
-            return true;
-        }
-
-        return $user->getAllPermissions()->pluck('name')->diff(MarketingPermissions::PANEL)->isNotEmpty();
     }
 }
