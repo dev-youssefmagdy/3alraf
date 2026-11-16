@@ -6,10 +6,13 @@ use App\DTOs\AttributeData;
 use App\Models\Attribute;
 use App\Repositories\Contracts\AttributeRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AttributeService
 {
+    public const DRAFT_CODE_PREFIX = 'draft-';
+
     public function __construct(private AttributeRepositoryInterface $attributes) {}
 
     public function create(AttributeData $dto): Attribute
@@ -25,7 +28,7 @@ class AttributeService
     public function update(Attribute $attribute, AttributeData $dto): Attribute
     {
         return DB::transaction(function () use ($attribute, $dto) {
-            $attr = $this->attributes->update($attribute, $this->payload($dto));
+            $attr = $this->attributes->update($attribute, $this->payload($dto, $attribute));
             $this->syncValues($attr, $dto->values);
 
             return $attr;
@@ -40,9 +43,13 @@ class AttributeService
         $this->attributes->delete($attribute);
     }
 
-    private function payload(AttributeData $dto): array
+    private function payload(AttributeData $dto, ?Attribute $attr = null): array
     {
-        return ['name' => $dto->name, 'code' => $dto->code, 'type' => $dto->type, 'sort_order' => $dto->sortOrder];
+        // only a draft may leave the code blank: a placeholder is stored, shown blank in the form, and publishing requires a real one
+        $code = $dto->code ?? $attr?->code ?? self::DRAFT_CODE_PREFIX.Str::lower(Str::random(10));
+
+        return ['name' => $dto->name, 'code' => $code, 'type' => $dto->type, 'sort_order' => $dto->sortOrder,
+            'is_draft' => $dto->isDraft ?? (bool) $attr?->is_draft];
     }
 
     private function syncValues(Attribute $attr, array $rows): void

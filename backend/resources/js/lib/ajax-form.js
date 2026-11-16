@@ -60,8 +60,10 @@ function handleFail($form, xhr) {
     }
 }
 
-function payload($form) {
+function payload($form, submitter) {
     const fd = new FormData($form[0]);
+    // the clicked button's name/value (e.g. save_as_draft=1): FormData leaves it out
+    if (submitter?.name) fd.set(submitter.name, submitter.value);
     const method = ($form.data('method') || '').toString().toUpperCase();
     if (method && method !== 'POST') fd.set('_method', method);
     // unchecked checkboxes -> explicit 0 for boolean fields marked data-bool
@@ -73,6 +75,7 @@ $(document).on('submit', 'form[data-ajax-form]', function (e) {
     e.preventDefault();
     const $form = $(this);
     if ($form.data('busy')) return;
+    const submitter = e.originalEvent?.submitter;
     const ajax = (url, fd) => $.ajax({ url, method: 'POST', data: fd, processData: false, contentType: false });
 
     clearErrors($form);
@@ -80,7 +83,7 @@ $(document).on('submit', 'form[data-ajax-form]', function (e) {
     setBusy($form, true);
     const done = () => { $form.data('busy', false); setBusy($form, false); };
 
-    const submit = () => ajax($form.attr('action'), payload($form)).done((res) => {
+    const submit = () => ajax($form.attr('action'), payload($form, submitter)).done((res) => {
         if (res.message) toastr.success(res.message);
         if (res.redirect) setTimeout(() => (location.href = res.redirect), res.message ? 600 : 0);
         else done();
@@ -92,7 +95,7 @@ $(document).on('submit', 'form[data-ajax-form]', function (e) {
     pendingCompression().then(() => {
         if (!vUrl) return submit();
         // validate routes are POST-only: drop the method spoof used for the real PUT/PATCH submit
-        const vfd = payload($form);
+        const vfd = payload($form, submitter);
         vfd.delete('_method');
         ajax(vUrl, vfd).done(submit).fail((xhr) => { handleFail($form, xhr); done(); });
     });

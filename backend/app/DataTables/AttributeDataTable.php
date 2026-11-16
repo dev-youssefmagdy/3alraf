@@ -27,8 +27,9 @@ class AttributeDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $u = auth('admin')->user();
-        $dt->addColumn('name_label', fn (Attribute $a) => e($a->name))
+        $dt->addColumn('name_label', fn (Attribute $a) => e($a->name).($a->is_draft ? ' '.$this->draftBadge() : ''))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
+            ->editColumn('code', fn (Attribute $a) => $a->is_draft && str_starts_with($a->code, \App\Services\AttributeService::DRAFT_CODE_PREFIX) ? '—' : e($a->code))
             ->addColumn('type_label', fn (Attribute $a) => e($a->type->label()))
             ->addColumn('actions', fn (Attribute $a) => $this->actionButtons(route('admin.attributes.edit', $a), route('admin.attributes.destroy', $a), $u?->can('attributes.edit'), $u?->can('attributes.delete')))
             ->rawColumns($this->rawColumns());

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /** Unlimited-depth tree: parent_id + materialized `path` ("1/5/9", ids incl. self) + `depth`. */
 class Category extends Model
 {
-    use HasTranslations, SoftDeletes;
+    use HasDraftState, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'description'];
 

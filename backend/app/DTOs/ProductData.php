@@ -20,7 +20,7 @@ final readonly class ProductData
         public array $metaTitle,
         public array $metaDescription,
         public ?string $slug,
-        public string $sku,
+        public ?string $sku,
         public ?string $barcode,
         public ?string $weight,
         public ?int $brandId,
@@ -37,6 +37,7 @@ final readonly class ProductData
         public bool $giftSuitable = false,
         public array $giftRecipients = [],
         public array $giftOccasions = [],
+        public ?bool $isDraft = null, // null = keep the record's current draft state
     ) {}
 
     public static function fromRequest(ProductRequest $r): self
@@ -50,7 +51,7 @@ final readonly class ProductData
                 $variants[] = new ProductVariantData(
                     ! empty($row['id']) ? (int) $row['id'] : null,
                     array_map('intval', $row['values'] ?? []),
-                    $row['sku'],
+                    ($row['sku'] ?? '') === '' ? null : (string) $row['sku'],
                     isset($row['weight']) && $row['weight'] !== '' ? (string) $row['weight'] : null,
                     filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOL),
                     $r->file("variants.$key.image"),
@@ -62,13 +63,14 @@ final readonly class ProductData
 
         return new self($v['type'], $r->cleanTranslations($v['name']), $r->cleanTranslations($v['description'] ?? []),
             $r->cleanTranslations($v['meta_title'] ?? []), $r->cleanTranslations($v['meta_description'] ?? []),
-            $v['slug'] ?? null, $v['sku'], $variable ? null : ($v['barcode'] ?? null),
+            $v['slug'] ?? null, ($v['sku'] ?? '') === '' ? null : $v['sku'], $variable ? null : ($v['barcode'] ?? null),
             isset($v['weight']) ? (string) $v['weight'] : null, ! empty($v['brand_id']) ? (int) $v['brand_id'] : null,
-            array_map('intval', $v['category_ids']), $r->boolean('is_active'),
+            array_map('intval', $v['category_ids'] ?? []), $r->boolean('is_active'),
             $r->file('images', []), array_map('intval', $r->input('remove_images', [])), $variants,
             array_map('intval', $v['tag_ids'] ?? []),
             $n($v['price'] ?? null), $n($v['sale_price'] ?? null), $n($v['cost'] ?? null),
             ($v['min_stock_alert_qty'] ?? '') === '' || ! isset($v['min_stock_alert_qty']) ? null : (int) $v['min_stock_alert_qty'],
-            $r->boolean('gift_suitable'), array_values($v['gift_recipients'] ?? []), array_values($v['gift_occasions'] ?? []));
+            $r->boolean('gift_suitable'), array_values($v['gift_recipients'] ?? []), array_values($v['gift_occasions'] ?? []),
+            $r->isDraft());
     }
 }

@@ -15,7 +15,7 @@ class CatalogService
     /** Products that have no price yet (never activated): the "activate products" picker. */
     public function inactiveQuery()
     {
-        return Product::query()->with('images')->whereNull('price');
+        return Product::query()->published()->with('images')->whereNull('price'); // drafts are finished in the product form, not here
     }
 
     /** Give products a price and put them on sale. Products that already have a price are skipped. @return int number activated */
@@ -25,8 +25,8 @@ class CatalogService
             $n = 0;
             foreach ($dto->rows as $row) {
                 $p = Product::query()->find($row['product_id']);
-                if (! $p || $p->price !== null) {
-                    continue; // unknown / already activated
+                if (! $p || $p->price !== null || $p->is_draft) {
+                    continue; // unknown / already activated / draft (finished in the product form)
                 }
                 $p->update(['price' => $row['price'], 'sale_price' => $row['sale_price'], 'cost' => $row['cost'], 'is_active' => $row['is_active']]);
                 $this->qr->listingSaved($p);

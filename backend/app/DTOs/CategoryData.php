@@ -17,6 +17,7 @@ final readonly class CategoryData
         public bool $isActive,
         public ?UploadedFile $image,
         public bool $removeImage,
+        public ?bool $isDraft = null, // null = keep the record's current draft state
     ) {}
 
     public static function fromRequest(CategoryRequest $r): self
@@ -25,6 +26,6 @@ final readonly class CategoryData
 
         return new self($r->cleanTranslations($v['name']), $r->cleanTranslations($v['description'] ?? []),
             ! empty($v['parent_id']) ? (int) $v['parent_id'] : null, $v['slug'] ?? null, $v['icon'] ?? null,
-            (int) ($v['sort_order'] ?? 0), $r->boolean('is_active'), $r->file('image'), $r->boolean('remove_image'));
+            (int) ($v['sort_order'] ?? 0), $r->boolean('is_active'), $r->file('image'), $r->boolean('remove_image'), $r->isDraft());
     }
 }

@@ -48,6 +48,12 @@ abstract class BaseDataTable
         return $h.'</div>';
     }
 
+    /** Catalog drafts (HasDraftState) show "Draft" instead of active / inactive. */
+    protected function draftBadge(): string
+    {
+        return '<span class="badge badge-warn">'.e(__('admin.drafts.badge')).'</span>';
+    }
+
     protected function badge(bool $on, ?string $yes = null, ?string $no = null): string
     {
         return $on

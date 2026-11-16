@@ -37,6 +37,7 @@ class BrandService
         $data = [
             'name' => $dto->name,
             'slug' => Slug::unique(Brand::class, $dto->slug ?: ($brand?->slug), $dto->name, $brand?->id),
+            'is_draft' => $dto->isDraft ?? (bool) $brand?->is_draft,
             'is_active' => $dto->isActive,
             'sort_order' => $dto->sortOrder,
         ];

@@ -717,4 +717,9 @@ return [
             'meta_cache_minutes' => 'Cache (minutes)', 'meta_approval_valid_hours' => 'Approval validity (hours)', 'meta_min_daily_budget' => 'Min daily budget', 'meta_max_daily_budget' => 'Max daily budget', 'meta_max_lifetime_budget' => 'Max lifetime budget',
         ],
     ],
+    'drafts' => [
+        'save' => 'Save as draft', 'publish' => 'Save & publish', 'badge' => 'Draft', 'title' => 'Drafts', 'all' => 'All',
+        'hint' => 'A draft needs only a name. It stays hidden from the store until you save it with all required fields.',
+        'notice' => 'hidden from the store. Fill in the remaining fields and click "Save & publish".',
+    ],
 ];

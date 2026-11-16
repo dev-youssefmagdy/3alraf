@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\AttributeType;
+use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Attribute extends Model
 {
-    use HasTranslations;
+    use HasDraftState, HasTranslations;
 
     protected array $translatable = ['name'];
 

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Brand extends Model
 {
-    use HasTranslations, SoftDeletes;
+    use HasDraftState, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name'];
 

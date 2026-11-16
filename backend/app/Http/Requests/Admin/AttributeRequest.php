@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\AttributeType;
+use App\Http\Requests\Concerns\DraftRules;
 use App\Http\Requests\Concerns\TranslatableRules;
 use App\Models\Language;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,7 +11,12 @@ use Illuminate\Validation\Rule;
 
 class AttributeRequest extends FormRequest
 {
-    use TranslatableRules;
+    use DraftRules, TranslatableRules;
+
+    protected function draftModel(): ?\Illuminate\Database\Eloquent\Model
+    {
+        return $this->route('attribute');
+    }
 
     public function authorize(): bool
     {
@@ -34,7 +40,7 @@ class AttributeRequest extends FormRequest
             $rules["values.*.value.{$l->code}"] = [$l->code === $default ? 'required' : 'nullable', 'string', 'max:255'];
         }
 
-        return $rules;
+        return $this->relaxForDraft($rules, ['code', 'values']); // draft: a placeholder code is stored, values can come later
     }
 
     public function attributes(): array

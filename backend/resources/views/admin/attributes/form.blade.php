@@ -8,9 +8,10 @@
             data-validate-url="{{ route('admin.attributes.validate', $editing ? [$attribute] : []) }}"
             action="{{ $editing ? route('admin.attributes.update', $attribute) : route('admin.attributes.store') }}" method="POST" class="space-y-5" novalidate>
             @csrf
+            <x-draft-notice :model="$attribute" />
             <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$attribute->getTranslations('name')" />
             <div class="grid gap-4 sm:grid-cols-3">
-                <x-input name="code" :label="__('admin.fields.code')" :value="$attribute->code" required />
+                <x-input name="code" :label="__('admin.fields.code')" :value="str_starts_with((string) $attribute->code, \App\Services\AttributeService::DRAFT_CODE_PREFIX) && $attribute->is_draft ? '' : $attribute->code" required />
                 <x-select name="type" :label="__('admin.fields.type')" :options="$types" :value="$attribute->type?->value" required data-attr-type />
                 <x-input name="sort_order" type="number" min="0" :label="__('admin.fields.sort_order')" :value="$attribute->sort_order ?? 0" />
             </div>
@@ -30,7 +31,7 @@
                 </template>
                 <p data-field-values class="field-error empty:hidden"></p>
             </div>
-            <x-form-actions :cancel="route('admin.attributes.index')" />
+            <x-form-actions :cancel="route('admin.attributes.index')" :draftable="$attribute" />
         </form>
     </x-card>
 </x-layouts.admin>

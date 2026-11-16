@@ -14,12 +14,13 @@ final readonly class BrandData
         public int $sortOrder,
         public ?UploadedFile $logo,
         public bool $removeLogo,
+        public ?bool $isDraft = null, // null = keep the record's current draft state
     ) {}
 
     public static function fromRequest(BrandRequest $r): self
     {
         $v = $r->validated();
 
-        return new self($r->cleanName(), $v['slug'] ?? null, $r->boolean('is_active'), (int) ($v['sort_order'] ?? 0), $r->file('logo'), $r->boolean('remove_logo'));
+        return new self($r->cleanName(), $v['slug'] ?? null, $r->boolean('is_active'), (int) ($v['sort_order'] ?? 0), $r->file('logo'), $r->boolean('remove_logo'), $r->isDraft());
     }
 }

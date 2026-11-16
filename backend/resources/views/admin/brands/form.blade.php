@@ -5,6 +5,7 @@
             data-validate-url="{{ route('admin.brands.validate', $editing ? [$brand] : []) }}"
             action="{{ $editing ? route('admin.brands.update', $brand) : route('admin.brands.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
             @csrf
+            <x-draft-notice :model="$brand" />
             <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$brand->getTranslations('name')" />
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-input name="slug" :label="__('admin.fields.slug_short')" :value="$brand->slug" :hint="__('admin.slug_hint')" />
@@ -19,7 +20,7 @@
                 <input id="f-logo" type="file" name="logo" accept="image/*" class="form-control">
             </div>
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$brand->is_active" />
-            <x-form-actions :cancel="route('admin.brands.index')" />
+            <x-form-actions :cancel="route('admin.brands.index')" :draftable="$brand" />
         </form>
     </x-card>
 </x-layouts.admin>

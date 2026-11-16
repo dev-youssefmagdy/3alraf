@@ -77,6 +77,7 @@ class CategoryService
             'slug' => Slug::unique(Category::class, $dto->slug ?: $cat?->slug, $dto->name, $cat?->id),
             'icon' => $dto->icon,
             'sort_order' => $dto->sortOrder,
+            'is_draft' => $dto->isDraft ?? (bool) $cat?->is_draft,
             'is_active' => $dto->isActive,
         ];
         if ($dto->image) {

@@ -6,12 +6,12 @@ use App\Http\Requests\Admin\TagRequest;
 
 final readonly class TagData
 {
-    public function __construct(public array $name, public ?string $slug, public bool $isActive, public int $sortOrder) {}
+    public function __construct(public array $name, public ?string $slug, public bool $isActive, public int $sortOrder, public ?bool $isDraft = null) {}
 
     public static function fromRequest(TagRequest $r): self
     {
         $v = $r->validated();
 
-        return new self($r->cleanTranslations($r->input('name')), $v['slug'] ?? null, $r->boolean('is_active'), (int) ($v['sort_order'] ?? 0));
+        return new self($r->cleanTranslations($r->input('name')), $v['slug'] ?? null, $r->boolean('is_active'), (int) ($v['sort_order'] ?? 0), $r->isDraft());
     }
 }

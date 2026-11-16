@@ -5,6 +5,7 @@
             data-validate-url="{{ route('admin.categories.validate', $editing ? [$category] : []) }}"
             action="{{ $editing ? route('admin.categories.update', $category) : route('admin.categories.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4" novalidate>
             @csrf
+            <x-draft-notice :model="$category" />
             <x-translatable-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$category->getTranslations('name')" />
             <x-translatable-tabs name="description" type="textarea" :label="__('admin.fields.description')" :languages="$languages" :values="$category->getTranslations('description')" />
             <div class="grid gap-4 sm:grid-cols-2">
@@ -22,7 +23,7 @@
                 <input id="f-image" type="file" name="image" accept="image/*" class="form-control">
             </div>
             <x-checkbox name="is_active" :label="__('admin.fields.is_active')" :checked="$category->is_active" />
-            <x-form-actions :cancel="route('admin.categories.index')" />
+            <x-form-actions :cancel="route('admin.categories.index')" :draftable="$category" />
         </form>
     </x-card>
 </x-layouts.admin>

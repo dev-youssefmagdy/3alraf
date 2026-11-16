@@ -12,6 +12,7 @@
                     <span class="text-slate-300">{{ $c->depth ? '└' : '▪' }}</span>
                     @if ($c->image_url)<img src="{{ $c->image_url }}" class="size-8 rounded object-cover" alt="">@endif
                     <span class="font-medium {{ $c->is_active ? '' : 'text-slate-400 line-through' }}">{{ $c->name }}</span>
+                    @if ($c->is_draft)<span class="badge badge-warn">{{ __('admin.drafts.badge') }}</span>@endif
                     <span class="badge badge-muted">{{ $c->products_count }}</span>
                     <span class="ms-auto flex items-center gap-2">
                         @can('categories.create')<a href="{{ route('admin.categories.create', ['parent' => $c->id]) }}" class="btn-sm btn-secondary">+ {{ __('admin.subcategory') }}</a>@endcan

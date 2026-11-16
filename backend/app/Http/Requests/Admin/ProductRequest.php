@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\ProductType;
+use App\Http\Requests\Concerns\DraftRules;
 use App\Http\Requests\Concerns\TranslatableRules;
 use App\Models\Language;
 use App\Models\ProductVariant;
@@ -14,7 +15,12 @@ use Illuminate\Validation\Validator;
 
 class ProductRequest extends FormRequest
 {
-    use TranslatableRules;
+    use DraftRules, TranslatableRules;
+
+    protected function draftModel(): ?\Illuminate\Database\Eloquent\Model
+    {
+        return $this->route('product');
+    }
 
     public function authorize(): bool
     {
@@ -73,7 +79,10 @@ class ProductRequest extends FormRequest
             }
         }
 
-        return $rules;
+        // a draft needs only its name: SKUs (a placeholder is stored), categories, variants and price can come later
+        $variantSkus = array_map(fn ($k) => "variants.$k.sku", array_keys((array) $this->input('variants', [])));
+
+        return $this->relaxForDraft($rules, ['sku', 'category_ids', 'variants', 'price', ...$variantSkus]);
     }
 
     public function after(): array

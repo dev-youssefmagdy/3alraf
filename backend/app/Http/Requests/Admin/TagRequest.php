@@ -2,13 +2,19 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\DraftRules;
 use App\Http\Requests\Concerns\TranslatableRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class TagRequest extends FormRequest
 {
-    use TranslatableRules;
+    use DraftRules, TranslatableRules;
+
+    protected function draftModel(): ?\Illuminate\Database\Eloquent\Model
+    {
+        return $this->route('tag');
+    }
 
     public function authorize(): bool
     {

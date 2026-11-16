@@ -33,6 +33,7 @@ class TagService
         return [
             'name' => $dto->name,
             'slug' => Slug::unique(Tag::class, $dto->slug ?: $tag?->slug, $dto->name, $tag?->id),
+            'is_draft' => $dto->isDraft ?? (bool) $tag?->is_draft,
             'is_active' => $dto->isActive,
             'sort_order' => $dto->sortOrder,
         ];

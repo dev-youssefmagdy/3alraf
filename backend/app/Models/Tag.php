@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /** Master catalog product tag, e.g. "new", "eco"; storefront shows it on active products only. */
 class Tag extends Model
 {
-    use HasTranslations, SoftDeletes;
+    use HasDraftState, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name'];
 

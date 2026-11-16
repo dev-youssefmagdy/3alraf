@@ -9,10 +9,11 @@ final readonly class AttributeData
     /** @param array<int,array{id:?int,value:array,color_hex:?string,sort_order:int}> $values */
     public function __construct(
         public array $name,
-        public string $code,
+        public ?string $code,
         public string $type,
         public int $sortOrder,
         public array $values,
+        public ?bool $isDraft = null, // null = keep the record's current draft state
     ) {}
 
     public static function fromRequest(AttributeRequest $r): self
@@ -26,6 +27,6 @@ final readonly class AttributeData
             'sort_order' => $i,
         ])->all();
 
-        return new self($r->cleanTranslations($v['name']), strtolower($v['code']), $v['type'], (int) ($v['sort_order'] ?? 0), $values);
+        return new self($r->cleanTranslations($v['name']), ($v['code'] ?? '') === '' ? null : strtolower($v['code']), $v['type'], (int) ($v['sort_order'] ?? 0), $values, $r->isDraft());
     }
 }

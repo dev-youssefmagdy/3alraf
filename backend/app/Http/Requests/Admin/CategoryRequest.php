@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\DraftRules;
 use App\Http\Requests\Concerns\TranslatableRules;
 use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,7 +10,12 @@ use Illuminate\Validation\Rule;
 
 class CategoryRequest extends FormRequest
 {
-    use TranslatableRules;
+    use DraftRules, TranslatableRules;
+
+    protected function draftModel(): ?\Illuminate\Database\Eloquent\Model
+    {
+        return $this->route('category');
+    }
 
     public function authorize(): bool
     {

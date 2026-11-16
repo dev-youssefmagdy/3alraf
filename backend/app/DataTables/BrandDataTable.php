@@ -31,7 +31,7 @@ class BrandDataTable extends BaseDataTable
         $dt->addColumn('logo_html', fn (Brand $b) => $b->logo_url ? '<img src="'.e($b->logo_url).'" class="size-10 rounded object-contain" alt="">' : '')
             ->addColumn('name_label', fn (Brand $b) => e($b->name))
             ->filterColumn('name_label', fn ($q, $k) => $q->where('name', 'like', "%$k%"))
-            ->addColumn('status', fn (Brand $b) => $this->badge($b->is_active))
+            ->addColumn('status', fn (Brand $b) => $b->is_draft ? $this->draftBadge() : $this->badge($b->is_active))
             ->addColumn('actions', fn (Brand $b) => $this->actionButtons(route('admin.brands.edit', $b), route('admin.brands.destroy', $b), $u?->can('brands.edit'), $u?->can('brands.delete')))
             ->rawColumns($this->rawColumns());
     }

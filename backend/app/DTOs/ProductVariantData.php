@@ -10,7 +10,7 @@ final readonly class ProductVariantData
     public function __construct(
         public ?int $id,
         public array $valueIds,
-        public string $sku,
+        public ?string $sku,
         public ?string $weight,
         public bool $isActive,
         public ?UploadedFile $image,

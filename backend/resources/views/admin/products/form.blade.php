@@ -2,7 +2,7 @@
     $editing = $product->exists;
     $selectedCats = collect(old('category_ids', $editing ? $product->categories->pluck('id')->all() : []))->map(fn ($x) => (int) $x)->all();
     $variantRows = $editing ? $product->variants->map(fn ($pv) => [
-        'id' => $pv->id, 'values' => $pv->values->pluck('id')->all(), 'label' => $pv->label(), 'sku' => $pv->sku, 'weight' => $pv->weight,
+        'id' => $pv->id, 'values' => $pv->values->pluck('id')->all(), 'label' => $pv->label(), 'sku' => \App\Services\ProductService::isDraftSku($pv->sku) ? '' : $pv->sku, 'weight' => $pv->weight,
         'is_active' => $pv->is_active, 'price' => $pv->price, 'sale_price' => $pv->sale_price, 'cost' => $pv->cost, 'min_stock_alert_qty' => $pv->min_stock_alert_qty, 'barcode' => $pv->barcode, 'hash' => $pv->combination_hash, 'image' => $pv->primaryImageUrl(),
     ])->all() : [];
     $attrJson = $attributes->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'values' => $a->values->map(fn ($v) => ['id' => $v->id, 'name' => $v->value, 'color' => $v->color_hex])->all()])->values();
@@ -13,6 +13,7 @@
         data-validate-url="{{ route('admin.products.validate', $editing ? [$product] : []) }}"
         action="{{ $editing ? route('admin.products.update', $product) : route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="grid gap-5 lg:grid-cols-3" novalidate>
         @csrf
+        <x-draft-notice :model="$product" class="lg:col-span-3" />
         <div class="space-y-5 lg:col-span-2">
             <x-card :title="__('admin.general')" class="space-y-4">
                 <div class="space-y-4">
@@ -131,7 +132,7 @@
 
             <x-card :title="__('admin.identification')">
                 <div class="space-y-4">
-                    <x-input name="sku" :label="__('admin.fields.sku')" :value="$product->sku" required />
+                    <x-input name="sku" :label="__('admin.fields.sku')" :value="\App\Services\ProductService::isDraftSku($product->sku) ? '' : $product->sku" required />
                     <div data-simple-section>
                         <x-input name="barcode" :label="__('admin.fields.barcode')" :value="$product->barcode" maxlength="13" :hint="__('admin.barcode_hint')" />
                         @if ($product->barcode)
@@ -142,7 +143,7 @@
                 </div>
             </x-card>
 
-            <x-form-actions :cancel="route('admin.products.index')" />
+            <x-form-actions :cancel="route('admin.products.index')" :draftable="$product" />
         </div>
     </form>
     @if ($editing)

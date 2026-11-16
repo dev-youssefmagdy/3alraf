@@ -10,10 +10,13 @@ use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Repositories\Contracts\ProductVideoRepositoryInterface;
 use App\Services\Qr\QrCodeManager;
 use App\Support\Slug;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
+    public const DRAFT_SKU_PREFIX = 'DRAFT-';
+
     public function __construct(
         private ProductRepositoryInterface $products,
         private ImageUploadService $images,
@@ -36,7 +39,9 @@ class ProductService
         return DB::transaction(function () use ($product, $dto) {
             $product = $this->products->update($product, $this->payload($dto, $product));
             $product = $this->finish($product, $dto);
-            $this->qr->queueCatalogProduct($product->id); // slug / variants / status / price may have changed: refresh the QR codes
+            if (! $product->is_draft) {
+                $this->qr->queueCatalogProduct($product->id); // slug / variants / status / price may have changed: refresh the QR codes
+            }
 
             return $product;
         });
@@ -90,6 +95,7 @@ class ProductService
 
     private function payload(ProductData $dto, ?Product $product = null): array
     {
+        $draft = $dto->isDraft ?? (bool) $product?->is_draft;
         $barcode = $dto->type === 'variable' ? null : ($dto->barcode ?: $product?->barcode ?: $this->barcodes->generateUnique());
 
         return [
@@ -100,10 +106,11 @@ class ProductService
             'meta_title' => $dto->metaTitle,
             'meta_description' => $dto->metaDescription,
             'slug' => Slug::unique(Product::class, $dto->slug ?: $product?->slug, $dto->name, $product?->id),
-            'sku' => $dto->sku,
+            'sku' => $dto->sku ?? $product?->sku ?? self::draftSku(), // only a draft may leave it blank (placeholder until published)
+            'is_draft' => $draft,
             'barcode' => $barcode,
             'weight' => $dto->weight,
-            'is_active' => $dto->isActive,
+            'is_active' => ! $draft && $dto->isActive,
             'price' => $dto->price,
             'sale_price' => $dto->price === null ? null : $dto->salePrice,
             'cost' => $dto->cost ?? $product?->cost ?? '0', // products.cost is NOT NULL (default 0): a blank field keeps the current cost
@@ -124,7 +131,7 @@ class ProductService
         foreach ($dto->variants as $row) {
             $hash = ProductVariant::hashFor($row->valueIds);
             $variant = ($row->id ? $existing->get($row->id) : null) ?? $byHash->get($hash);
-            $data = ['combination_hash' => $hash, 'sku' => $row->sku, 'weight' => $row->weight, 'is_active' => $row->isActive,
+            $data = ['combination_hash' => $hash, 'sku' => $row->sku ?? $variant?->sku ?? self::draftSku(), 'weight' => $row->weight, 'is_active' => $row->isActive,
                 'price' => $row->price, 'sale_price' => $row->salePrice, 'cost' => $row->cost, 'min_stock_alert_qty' => $row->minStockAlert];
 
             if ($variant) {
@@ -139,6 +146,17 @@ class ProductService
         }
 
         $existing->reject(fn ($v) => in_array($v->id, $keep) || $v->trashed())->each->delete();
+    }
+
+    /** Placeholder SKU for a draft saved without one; the product form shows it blank and publishing requires a real one. */
+    public static function draftSku(): string
+    {
+        return self::DRAFT_SKU_PREFIX.Str::upper(Str::random(10));
+    }
+
+    public static function isDraftSku(?string $sku): bool
+    {
+        return $sku !== null && str_starts_with($sku, self::DRAFT_SKU_PREFIX);
     }
 
     private function attachVariantImage(ProductVariant $variant, ProductVariantData $row): void

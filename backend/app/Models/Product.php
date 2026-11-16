@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProductType;
 use App\Models\Concerns\Audited;
 use App\Models\Concerns\HasImages;
+use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Product extends Model
 {
-    use Audited, HasImages, HasTranslations, SoftDeletes;
+    use Audited, HasDraftState, HasImages, HasTranslations, SoftDeletes;
 
     protected array $translatable = ['name', 'description', 'meta_title', 'meta_description'];
 

@@ -144,7 +144,7 @@ class ProductController extends Controller implements HasMiddleware
             'brands' => Brand::orderBy('sort_order')->get()->pluck('name', 'id')->all(),
             'tags' => \App\Models\Tag::orderBy('sort_order')->get()->pluck('name', 'id')->all(),
             'categoryTree' => $this->categories->flatTree(),
-            'attributes' => $this->attributes->withValues(),
+            'attributes' => $this->attributes->withValues()->reject->is_draft->values(), // draft attributes are not usable until published
         ];
     }
 }

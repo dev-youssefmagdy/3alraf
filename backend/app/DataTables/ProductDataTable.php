@@ -14,6 +14,7 @@ class ProductDataTable extends BaseDataTable
     {
         return Product::query()->with(['brand', 'images', 'categories'])
             ->addSelect(['stock_on_hand' => StockLevel::query()->selectRaw('COALESCE(SUM(on_hand), 0)')->whereColumn('stock_levels.product_id', 'products.id')])
+            ->when(request()->boolean('drafts'), fn ($q) => $q->drafts())
             ->latest('id');
     }
 
@@ -41,7 +42,7 @@ class ProductDataTable extends BaseDataTable
         $dt->addColumn('thumb', fn (Product $p) => ($url = $p->primaryImageUrl()) ? '<img src="'.e($url).'" class="size-10 rounded object-cover" alt="">' : '')
             ->addColumn('name_label', fn (Product $p) => e($p->name).($p->isVariable() ? ' <span class="badge badge-muted">'.e(__('admin.variants')).'</span>' : ''))
             ->filterColumn('name_label', fn ($q, $k) => $q->where(fn ($w) => $w->where('name', 'like', "%$k%")->orWhere('sku', 'like', "%$k%")->orWhere('barcode', 'like', "%$k%")))
-            ->editColumn('sku', fn (Product $p) => e($p->sku))
+            ->editColumn('sku', fn (Product $p) => \App\Services\ProductService::isDraftSku($p->sku) ? '—' : e($p->sku))
             ->editColumn('barcode', fn (Product $p) => e($p->barcode ?? '—'))
             ->addColumn('brand_label', fn (Product $p) => e($p->brand?->name ?? '—'))
             ->addColumn('category_label', fn (Product $p) => e($p->categories->pluck('name')->implode(', ') ?: '—'))
@@ -49,11 +50,11 @@ class ProductDataTable extends BaseDataTable
             ->editColumn('sale_price', fn (Product $p) => $this->money($p->sale_price))
             ->editColumn('cost', fn (Product $p) => $this->money($p->cost))
             ->editColumn('stock_on_hand', fn (Product $p) => (int) $p->stock_on_hand)
-            ->addColumn('status', fn (Product $p) => $p->price === null
+            ->addColumn('status', fn (Product $p) => $p->is_draft ? $this->draftBadge() : ($p->price === null
                 ? '<span class="badge badge-muted">'.e(__('admin.not_priced')).'</span>'
-                : $this->badge($p->is_active))
+                : $this->badge($p->is_active)))
             ->addColumn('actions', function (Product $p) use ($u) {
-                $qr = $p->price !== null && $u?->can('products.view')
+                $qr = $p->price !== null && ! $p->is_draft && $u?->can('products.view')
                     ? '<a href="'.e(route('admin.products.qr', $p)).'" class="btn-sm btn-secondary me-1" download>'.e(__('admin.qr_code')).'</a>'
                     : '';
 
