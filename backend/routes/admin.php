@@ -100,6 +100,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::put('settings/general', [GeneralSettingsController::class, 'update'])->name('general-settings.update');
 
         // Settings → System (former .env keys: URLs, media, Google, WhatsApp, Reverb, Meta)
+        Route::get('health', [\App\Http\Controllers\Admin\HealthController::class, 'index'])->middleware('can:settings.view')->name('health.index');
+        Route::get('health/{key}', [\App\Http\Controllers\Admin\HealthController::class, 'run'])->middleware(['can:settings.view', 'throttle:60,1'])->where('key', '[a-z0-9]+')->name('health.run');
         Route::get('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'edit'])->name('system-settings.edit');
         Route::post('settings/system/validate', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
         Route::put('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('system-settings.update');

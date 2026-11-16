@@ -44,6 +44,8 @@ php artisan test --testsuite=Migrations        # if the parallel run mixes it ba
 - [x] Marketers accounts page: `MarketerPanelTest` "manages marketer accounts inside the panel" (owner only, one role, last-owner and self-lockout guards).
 - [x] Marketing tools in the marketer panel: `MarketerPanelTest` "serves the shared marketing tools…" (banners, discount codes, flash sales, bundles, blog, static + custom pages, SEO, affiliates, product lists, reviews render under `/marketer` with no `/admin/` link; datatables answer; admin copies unchanged; permission gate).
 
+- [x] System health page (`tests/Feature/HealthPageTest.php`, 4 tests): page + 11 checks, JSON per check, off / warn / fail states, permission gate. Manual: open /admin/health with WhatsApp connected and disconnected.
+
 ## 2. Browser scripts (one run each, throw-away DB)
 
 ```bash
