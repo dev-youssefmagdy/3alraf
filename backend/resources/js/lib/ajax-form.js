@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import toastr from 'toastr';
+import { pendingCompression } from './image-compress';
 
 /**
  * <form data-ajax-form data-validate-url="..." [data-method=PUT] action="..."> :
@@ -87,11 +88,14 @@ $(document).on('submit', 'form[data-ajax-form]', function (e) {
     }).fail((xhr) => { handleFail($form, xhr); done(); });
 
     const vUrl = $form.data('validate-url');
-    if (!vUrl) return submit();
-    // validate routes are POST-only: drop the method spoof used for the real PUT/PATCH submit
-    const vfd = payload($form);
-    vfd.delete('_method');
-    ajax(vUrl, vfd).done(submit).fail((xhr) => { handleFail($form, xhr); done(); });
+    // wait for picked images to finish shrinking so both requests carry the small files
+    pendingCompression().then(() => {
+        if (!vUrl) return submit();
+        // validate routes are POST-only: drop the method spoof used for the real PUT/PATCH submit
+        const vfd = payload($form);
+        vfd.delete('_method');
+        ajax(vUrl, vfd).done(submit).fail((xhr) => { handleFail($form, xhr); done(); });
+    });
 });
 
 // clear single-field error on edit

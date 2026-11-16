@@ -14,7 +14,7 @@ class BannerRequest extends BaseRequest
         return $this->translatable('title', false) + [
             'placement' => ['required', Rule::enum(BannerPlacement::class)],
             'images' => ['nullable', 'array'],
-            'images.*' => ['nullable', 'image', 'max:4096'],
+            'images.*' => ['nullable', 'image', 'max:15360'],
             'remove_images' => ['nullable', 'array'],
             'link_url' => ['nullable', 'string', 'max:500', fn ($attr, $value, $fail) => SafeUrl::isSafe($value) ? null : $fail(__('ops.link_url_invalid'))],
             'starts_at' => ['nullable', 'date'],

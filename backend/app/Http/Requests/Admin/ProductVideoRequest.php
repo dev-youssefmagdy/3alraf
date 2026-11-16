@@ -18,7 +18,7 @@ class ProductVideoRequest extends FormRequest
     {
         return [
             'video' => ['required', 'file', 'extensions:mp4,webm', 'mimetypes:'.implode(',', array_keys(config('media.product_video.mimes'))), 'max:'.ProductVideoService::maxKb()],
-            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:15360'],
         ];
     }
 

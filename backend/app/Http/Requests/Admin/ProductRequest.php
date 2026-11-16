@@ -48,7 +48,7 @@ class ProductRequest extends FormRequest
             'gift_recipients' => ['nullable', 'array'], 'gift_recipients.*' => [Rule::in(GiftFinderService::RECIPIENTS)],
             'gift_occasions' => ['nullable', 'array'], 'gift_occasions.*' => [Rule::in(GiftFinderService::OCCASIONS)],
             'images' => ['nullable', 'array', 'max:12'],
-            'images.*' => ['image', 'max:4096'],
+            'images.*' => ['image', 'max:15360'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['integer'],
         ];
@@ -65,7 +65,7 @@ class ProductRequest extends FormRequest
                 'variants.*.sale_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
                 'variants.*.cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
                 'variants.*.min_stock_alert_qty' => ['nullable', 'integer', 'min:0', 'max:1000000'],
-                'variants.*.image' => ['nullable', 'image', 'max:4096'],
+                'variants.*.image' => ['nullable', 'image', 'max:15360'],
             ];
             foreach (array_keys($this->input('variants', [])) as $key) {
                 $id = $this->input("variants.$key.id");

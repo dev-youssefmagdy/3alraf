@@ -11,7 +11,7 @@ class BundleRequest extends BaseRequest
     {
         return $this->translatable('name') + $this->translatable('description', false, 5000) + [
             'price' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
-            'image' => ['nullable', 'image', 'max:4096'],
+            'image' => ['nullable', 'image', 'max:15360'],
             'remove_image' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],

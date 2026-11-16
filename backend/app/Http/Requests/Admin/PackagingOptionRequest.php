@@ -10,7 +10,7 @@ class PackagingOptionRequest extends BaseRequest
             'price' => ['required', 'numeric', 'min:0', 'max:999999999999'],
             'cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             // an uploaded picture is mandatory: on create, and on edit unless the option already has one that is kept
-            'image' => [$this->hasKeptImage() ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'image' => [$this->hasKeptImage() ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:15360'],
             'remove_image' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'is_active' => ['nullable', 'boolean'],
