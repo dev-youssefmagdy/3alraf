@@ -149,7 +149,7 @@
                         {!! $giftIcon !!}<span class="hidden sm:inline">{{ __('gift_finder.nav') }}</span>
                     </a>
                 @endif
-                <div class="relative">
+                <div class="relative max-lg:hidden">
                     <button type="button" data-dropdown-toggle="lang-menu" class="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 font-bold text-slate-950 hover:bg-slate-100" aria-label="{{ __('store.language') }}">{!! $svg('globe') !!}<span>{{ strtoupper($locale) }}</span></button>
                     <div id="lang-menu" data-dropdown class="absolute end-0 z-50 mt-2 hidden min-w-36 rounded-2xl border border-slate-200 bg-white py-2 shadow-overlay">
                         @foreach ($langs as $l)<a href="{{ $switchUrl($l->code) }}" hreflang="{{ $l->code }}" class="block px-4 py-2.5 hover:bg-slate-100 {{ $l->code === $locale ? 'font-bold text-brand-600' : 'text-slate-950' }}">{{ $l->native_name }}</a>@endforeach
@@ -172,7 +172,7 @@
                     </div>
                 </div>
                 <a href="{{ auth('web')->check() ? route('storefront.wishlist.index') : route('storefront.login') }}" class="icon-btn icon-btn-plain max-lg:hidden" aria-label="{{ __('store.wishlist') }}">{!! $svg('heart', 'size-6') !!}</a>
-                <div class="relative">
+                <div class="relative max-lg:hidden">
                     <button type="button" data-dropdown-toggle="mini-cart" class="icon-btn icon-btn-plain relative">
                         {!! $svg('cart', 'size-6') !!}
                         <span class="sr-only">{{ __('store.cart') }}</span>
@@ -218,9 +218,14 @@
                                                 </div>
                                             @endforeach
                                         </div>
-                                        <a href="{{ route('storefront.category.show', $root['slug']) }}" class="relative flex min-h-48 flex-col justify-end overflow-hidden rounded-3xl bg-pop-600 p-5 text-white">
-                                            <span class="absolute -end-8 -top-8 size-32 rounded-full bg-pop-500" aria-hidden="true"></span>
-                                            <span class="absolute -start-5 top-6 size-14 rounded-full border-[6px] border-sun-400" aria-hidden="true"></span>
+                                        <a href="{{ route('storefront.category.show', $root['slug']) }}" class="group relative flex min-h-48 flex-col justify-end overflow-hidden rounded-3xl bg-pop-600 p-5 text-white">
+                                            @if ($root['image'])
+                                                <img src="{{ $root['image'] }}" alt="" loading="lazy" decoding="async" class="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105" aria-hidden="true">
+                                                <span class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" aria-hidden="true"></span>
+                                            @else
+                                                <span class="absolute -end-8 -top-8 size-32 rounded-full bg-pop-500" aria-hidden="true"></span>
+                                                <span class="absolute -start-5 top-6 size-14 rounded-full border-[6px] border-sun-400" aria-hidden="true"></span>
+                                            @endif
                                             <span class="relative font-display text-2xl font-extrabold">{{ $root['name'] }}</span>
                                             <span class="relative mt-2 inline-flex items-center gap-1 text-sm font-bold text-sun-300">{{ __('store.shop_now') }}{!! $chev() !!}</span>
                                         </a>
