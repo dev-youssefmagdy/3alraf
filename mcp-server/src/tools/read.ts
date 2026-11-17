@@ -33,6 +33,8 @@ export const readTools: AnyTool[] = [
   byProduct('get_product_images', 'Product images', 'Public gallery images of a product and its variants.', '/images'),
   simple('get_categories', 'Categories', 'Category tree with active product counts.', 'categories', paging),
   simple('get_brands', 'Brands', 'Brands with active product counts.', 'brands', paging),
+  simple('get_attributes', 'Attributes', 'ALL variant attributes (color, size, strap...) with ALL their value ids, in one call. Use these ids in create_new_product_suggestion; propose new_attributes / new_values only for what is missing.', 'attributes'),
+  simple('get_tags', 'Tags', 'Product tags with ids.', 'tags', paging),
   simple('get_inventory', 'Inventory', 'On hand, reserved and available stock per product/variant, with stock value at average cost.', 'inventory', paging),
   simple('get_low_stock_products', 'Low stock', 'Items at or below their alert quantity.', 'low-stock', paging),
   simple('get_best_sellers', 'Best sellers', 'Products ranked by units sold in a date range.', 'best-sellers', { ...range, ...paging }),

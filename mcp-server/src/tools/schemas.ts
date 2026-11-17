@@ -43,6 +43,69 @@ export const productPayload = z
   })
   .describe('At least one field is required.');
 
+const imageUrl = z.string().max(2048).regex(/^https?:\/\//i, 'http(s) URL').describe('Public image URL (JPG, PNG, WebP, AVIF). The store downloads it once; internal addresses are refused.');
+
+const ref = z.string().regex(/^[a-z][a-z0-9_-]{0,49}$/i, 'starts with a letter: a-z, 0-9, _ or -').describe('Your own short name for a proposed value, e.g. "teal" or "s42".');
+const hex = z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('#rrggbb, required for colour attributes.');
+const proposedValue = z.strictObject({ ref, value: localized(255).describe('{"ar": "...", "en": "..."}'), color_hex: hex.optional() });
+
+const variant = z.strictObject({
+  values: z
+    .array(z.union([id, ref]))
+    .min(1)
+    .max(10)
+    .describe('One value per attribute: an existing value id from get_attributes, or the ref of a value proposed in new_attributes / new_values. Every variant uses the same attributes.'),
+  sku: z.string().max(100).optional().describe('Unique across products and variants.'),
+  price: money.optional().describe('Overrides the product price for this variant.'),
+  sale_price: money.optional().describe('At most the price.'),
+  cost: money.optional(),
+  weight: z.number().int().min(0).max(1000000).optional().describe('Grams.'),
+  min_stock_alert_qty: z.number().int().min(0).max(1000000).optional(),
+  image: z.number().int().min(0).max(9).optional().describe('Index into `images` (0 = first) shown for this variant.'),
+  is_active: z.boolean().optional(),
+});
+
+export const newProductPayload = z
+  .strictObject({
+    name: localized(200).describe('Required, e.g. {"ar": "...", "en": "..."}.'),
+    description: localized(20000).optional().describe('HTML allowlist, sanitised by the store.'),
+    meta_title: localized(255).optional(),
+    meta_description: localized(500).optional(),
+    slug: z.string().max(190).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional().describe('Default: from the name.'),
+    sku: z.string().max(100).optional().describe('Unique. Without it a placeholder is stored and must be replaced before publishing.'),
+    barcode: z.string().regex(/^\d{13}$/).optional().describe('Valid EAN-13, simple products only. Default: generated.'),
+    brand_id: id.optional().describe('See get_brands.'),
+    category_ids: z.array(id).max(20).optional().describe('See get_categories.'),
+    tag_ids: z.array(id).max(30).optional().describe('See get_tags.'),
+    price: money.optional().describe('Selling price (EGP). Selling below cost is refused.'),
+    sale_price: money.optional().describe('At most the price; equal = no discount shown.'),
+    cost: money.optional().describe('Unit cost, for the margin check.'),
+    weight: z.number().int().min(0).max(1000000).optional().describe('Grams.'),
+    min_stock_alert_qty: z.number().int().min(0).max(1000000).optional(),
+    gift: z.strictObject({ suitable: z.boolean(), recipients: z.array(recipients).optional(), occasions: z.array(occasions).optional() }).optional(),
+    images: z.array(z.strictObject({ url: imageUrl })).max(10).optional().describe('Up to 10; the first is the main image.'),
+    new_attributes: z
+      .array(
+        z.strictObject({
+          ref: ref.describe('Short name of this attribute in the suggestion.'),
+          name: localized(255),
+          code: z.string().max(50).regex(/^[a-zA-Z0-9_-]+$/).optional().describe('Unique; default from the English name.'),
+          type: z.enum(['select', 'color', 'text']).optional().describe('Default select.'),
+          values: z.array(proposedValue).min(1).max(100),
+        }),
+      )
+      .max(10)
+      .optional()
+      .describe('Only when no existing attribute fits (check get_attributes first). Created when the product is approved and applied.'),
+    new_values: z
+      .array(z.strictObject({ attribute_id: id.describe('Existing attribute, see get_attributes.'), ...proposedValue.shape }))
+      .max(100)
+      .optional()
+      .describe('Values missing from an existing attribute. A value that already exists is refused: use its id.'),
+    variants: z.array(variant).max(100).optional().describe('Omit for a simple product.'),
+  })
+  .describe('A whole new product. Applied as a hidden DRAFT that a person completes and publishes.');
+
 export const bundlePayload = z.strictObject({
   name: localized(200).optional().describe('Required when creating a new bundle.'),
   description: localized(5000).optional(),

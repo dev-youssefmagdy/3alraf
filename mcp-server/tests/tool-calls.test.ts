@@ -66,6 +66,35 @@ describe('tool execution against a mocked Laravel', () => {
     expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/77');
   });
 
+  it('creates a new product suggestion with variants and image URLs', async () => {
+    s.laravelMock.reply({ status: 201, json: { success: true, data: { id: 88, status: 'pending' }, meta: {}, warnings: [] } });
+    const payload = {
+      name: { ar: 'ساعة', en: 'Watch' },
+      sku: 'W-1',
+      price: 1500,
+      cost: 900,
+      weight: 140,
+      category_ids: [3],
+      images: [{ url: 'https://cdn.example/w.jpg' }],
+      new_values: [{ attribute_id: 4, ref: 'teal', value: { ar: 'تيل', en: 'Teal' }, color_hex: '#008080' }],
+      new_attributes: [{ ref: 'case_size', name: { ar: 'قطر الهيكل', en: 'Case size' }, values: [{ ref: 's42', value: { en: '42 mm' } }] }],
+      variants: [{ values: [12, 30, 's42'], sku: 'W-1-BK', image: 0 }, { values: ['teal', 30, 's42'], sku: 'W-1-BL', price: '1600' }],
+    };
+    const result = await call('create_new_product_suggestion', { title: 'New watch', payload });
+    const { url, body } = s.laravelMock.last;
+    expect(url.pathname).toBe('/api/internal/marketing/suggestions/new_product');
+    expect(body).toMatchObject({ source: 'mcp', source_meta: { tool: 'create_new_product_suggestion' }, payload });
+    expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/88');
+  });
+
+  it('reads attributes and tags', async () => {
+    s.laravelMock.reply({ status: 200, json: { success: true, data: [], meta: {}, warnings: [] } });
+    await call('get_attributes');
+    expect(s.laravelMock.last.url.pathname).toBe('/api/internal/marketing/attributes');
+    await call('get_tags');
+    expect(s.laravelMock.last.url.pathname).toBe('/api/internal/marketing/tags');
+  });
+
   it('submit returns the suggestion review_url', async () => {
     s.laravelMock.reply(ok({ id: 9, status: 'pending', submitted: true }));
     const result = await call('submit_suggestion_for_review', { suggestion_id: 9 });
@@ -105,6 +134,12 @@ describe('tool execution against a mocked Laravel', () => {
       ['unknown payload key', 'create_coupon_suggestion', { title: 'abc', payload: { code: 'ABC', sql: 'DROP TABLE' } }],
       ['missing required target', 'create_product_suggestion', { title: 'abc', payload: { tags_add: [1] } }],
       ['wrong target type', 'create_product_suggestion', { title: 'abc', target_entity_type: 'brand', target_entity_id: 1, payload: {} }],
+      ['new product without a name', 'create_new_product_suggestion', { title: 'abc', payload: { price: 10 } }],
+      ['new product image that is not http(s)', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, images: [{ url: 'file:///etc/passwd' }] } }],
+      ['new product with a target', 'create_new_product_suggestion', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { name: { en: 'x' } } }],
+      ['new product value ref starting with a digit', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, variants: [{ values: ['9teal'] }] } }],
+      ['new attribute without values', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, new_attributes: [{ ref: 'a', name: { en: 'A' }, values: [] }] } }],
+      ['new product variant without values', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, variants: [{ sku: 'A' }] } }],
       ['client-set source', 'create_blog_suggestion', { title: 'abc', source: 'scheduled', payload: { title: { ar: 'x' }, slug: 'x' } }],
       ['bad meta objective', 'create_campaign_draft', { name: 'abc', objective: 'ACTIVATE', product_ids: [1], budget_type: 'daily', budget_amount: 1, start_at: 'x-y-z', copy: { primary_text: 'a' }, cta: 'SHOP_NOW' }],
       ['status field on a meta draft', 'update_campaign_draft', { draft_id: 1, status: 'ACTIVE' }],

@@ -9,6 +9,7 @@ namespace App\Enums\Marketing;
 enum SuggestionTypeKey: string
 {
     case PRODUCT = 'product';
+    case NEW_PRODUCT = 'new_product';   // a whole new product (variants + images by URL), applied as a DRAFT
     case BUNDLE = 'bundle';
     case SLIDER = 'slider';
     case OFFER = 'offer';
@@ -28,7 +29,7 @@ enum SuggestionTypeKey: string
     public function page(): string
     {
         return match ($this) {
-            self::PRODUCT => 'products', self::BUNDLE => 'bundles', self::SLIDER => 'banners', self::OFFER => 'offers', self::COUPON => 'coupons',
+            self::PRODUCT, self::NEW_PRODUCT => 'products', self::BUNDLE => 'bundles', self::SLIDER => 'banners', self::OFFER => 'offers', self::COUPON => 'coupons',
             self::SEO => 'seo', self::BLOG => 'blog', self::SEASONAL_THEME => 'themes', self::SOCIAL_CONTENT, self::MEDIA_ASSET => 'social',
         };
     }

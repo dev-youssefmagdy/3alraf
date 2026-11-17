@@ -11,6 +11,7 @@ return [
         'marketing:read' => ['enabled' => true],
         // One per suggestion type: create / edit own pending suggestions of that type, submit for review (never approve / apply)
         'suggestions:write:product' => ['enabled' => true],
+        'suggestions:write:new_product' => ['enabled' => true],   // new products (always applied as a draft)
         'suggestions:write:bundle' => ['enabled' => true],
         'suggestions:write:slider' => ['enabled' => true],
         'suggestions:write:offer' => ['enabled' => true],

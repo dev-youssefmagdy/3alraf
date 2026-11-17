@@ -24,7 +24,7 @@ final class MarketingPermissions
         'marketing.view', 'marketing.analytics', 'marketing.tokens.manage', 'marketing.audit.view',
         'ai_suggestions.view', 'ai_suggestions.create', 'ai_suggestions.edit', 'ai_suggestions.approve', 'ai_suggestions.reject', 'ai_suggestions.apply', 'ai_suggestions.archive',
         'ai_media.view', 'ai_media.upload', 'ai_media.edit', 'ai_media.delete', 'ai_media.approve',
-        'ai_seo.approve', 'ai_blog.approve', 'ai_theme.approve',
+        'ai_products.approve', 'ai_seo.approve', 'ai_blog.approve', 'ai_theme.approve',
         'meta_ads.view', 'meta_ads.draft', 'meta_ads.approve', 'meta_ads.publish',
         'gift_finder.view', 'gift_finder.manage',
         'integration_clients.view', 'integration_clients.manage',

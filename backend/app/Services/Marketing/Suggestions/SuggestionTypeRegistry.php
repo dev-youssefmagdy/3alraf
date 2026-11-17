@@ -12,6 +12,7 @@ class SuggestionTypeRegistry
 {
     public const HANDLERS = [
         'product' => Types\ProductSuggestionType::class,
+        'new_product' => Types\NewProductSuggestionType::class,
         'bundle' => Types\BundleSuggestionType::class,
         'slider' => Types\SliderSuggestionType::class,
         'offer' => Types\OfferSuggestionType::class,

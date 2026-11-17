@@ -57,6 +57,8 @@ Route::middleware('marketing.token:marketing:read')->group(function () {
     Route::get('products/{id}/images', [C::class, 'images'])->whereNumber('id')->name('products.images');
     Route::get('categories', [C::class, 'categories'])->name('categories');
     Route::get('brands', [C::class, 'brands'])->name('brands');
+    Route::get('attributes', [C::class, 'attributes'])->name('attributes');   // variant axes + values (new_product suggestions)
+    Route::get('tags', [C::class, 'tags'])->name('tags');
     Route::get('inventory', [C::class, 'inventory'])->name('inventory');
 
     Route::get('bundles', [M::class, 'bundles'])->name('bundles');

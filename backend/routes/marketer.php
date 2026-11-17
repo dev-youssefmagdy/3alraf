@@ -52,6 +52,8 @@ Route::prefix('marketer')->middleware(['admin.locale:marketer', 'auth:marketer',
         foreach (SuggestionTypeKey::pages() as $page) {
             Route::get($page, 'page')->defaults('page', $page)->middleware('can:ai_suggestions.view')->name($page);
         }
+        // images downloaded for a new_product suggestion (private disk, by content hash): reviewers only, never public
+        Route::get('image/{sha}', 'image')->where('sha', '[a-f0-9]{64}')->middleware('can:ai_suggestions.view')->name('image');
         Route::post('themes/revert', 'themeRevert')->middleware('can:ai_theme.approve')->name('themes.revert');
         Route::post('themes/off', 'themeOff')->middleware('can:ai_theme.approve')->name('themes.off');
         Route::post('themes/{id}/activate', 'themeActivate')->whereNumber('id')->middleware('can:ai_theme.approve')->name('themes.activate');

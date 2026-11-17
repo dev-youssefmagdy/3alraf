@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\DTOs\AttributeData;
 use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Repositories\Contracts\AttributeRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -33,6 +34,23 @@ class AttributeService
 
             return $attr;
         });
+    }
+
+    /** Add one value at the end of an existing attribute (new_product suggestions propose values the store lacks). */
+    public function addValue(Attribute $attribute, array $value, ?string $colorHex = null): AttributeValue
+    {
+        return $attribute->values()->create(['value' => $value, 'color_hex' => $colorHex, 'sort_order' => (int) $attribute->values()->max('sort_order') + 1]);
+    }
+
+    /** Soft-delete a value unless a live variant uses it (rollback of a new_product suggestion). */
+    public function removeValueIfUnused(AttributeValue $value): bool
+    {
+        if ($this->usedValueIds([$value->id])) {
+            return false;
+        }
+        $value->delete();
+
+        return true;
     }
 
     public function delete(Attribute $attribute): void

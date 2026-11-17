@@ -66,6 +66,17 @@ class SuggestionController extends Controller
         return $table->ajax();
     }
 
+    /** A staged new_product image (private disk, addressed by its sha256) for the review page. */
+    public function image(string $sha)
+    {
+        $disk = \App\Services\Marketing\Suggestions\SuggestionImages::disk();
+        $file = collect($disk->files(\App\Services\Marketing\Suggestions\SuggestionImages::DIR))->first(fn ($f) => pathinfo($f, PATHINFO_FILENAME) === $sha);
+        abort_unless($file, 404);
+
+        return response($disk->get($file), 200, ['Content-Type' => $disk->mimeType($file) ?: 'application/octet-stream', 'Cache-Control' => 'private, max-age=600',
+            'X-Content-Type-Options' => 'nosniff', 'Content-Security-Policy' => "default-src 'none'"]);
+    }
+
     public function show(int $id)
     {
         $s = $this->repo->findOrFail($id);

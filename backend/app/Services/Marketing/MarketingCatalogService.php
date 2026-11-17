@@ -223,6 +223,27 @@ class MarketingCatalogService
         return $page;
     }
 
+    /**
+     * EVERY usable attribute with ALL its values, in one response (no paging: Claude must see the full list before proposing new ones).
+     * Draft and deleted attributes / values are left out: they cannot be used.
+     */
+    public function attributes(): array
+    {
+        return \App\Models\Attribute::query()->where('is_draft', false)->with('values')->orderBy('sort_order')->orderBy('id')->get()
+            ->map(fn (\App\Models\Attribute $a) => [
+                'id' => $a->id, 'code' => $a->code, 'name' => StoreText::names($a), 'type' => $a->type->value, 'values_count' => $a->values->count(),
+                'values' => $a->values->map(fn (\App\Models\AttributeValue $v) => ['id' => $v->id, 'value' => StoreText::names($v, 'value'), 'color_hex' => $v->color_hex])->values()->all(),
+            ])->all();
+    }
+
+    public function tags(MarketingQuery $q): LengthAwarePaginator
+    {
+        $page = \App\Models\Tag::query()->orderBy('sort_order')->orderBy('id')->paginate($q->perPage, ['*'], 'page', $q->page);
+        $page->setCollection($page->getCollection()->map(fn (\App\Models\Tag $t) => ['id' => $t->id, 'slug' => $t->slug, 'name' => StoreText::names($t), 'active' => (bool) $t->is_active]));
+
+        return $page;
+    }
+
     // ---------------------------------------------------------------- inventory
 
     /** Per product (+ variant) stock over active branches with the alert quantity and the valuation at the ledger average cost. */

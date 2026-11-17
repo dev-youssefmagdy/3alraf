@@ -127,11 +127,11 @@
                         @forelse ($compare as $row)
                             <tr class="border-t border-slate-100 align-top" data-field="{{ $row['field'] }}">
                                 <th class="py-2 pe-2 text-start font-medium text-slate-600">{{ $row['label'] }}</th>
-                                <td class="py-2 pe-2">@include('marketer.suggestions._value', ['value' => $row['current'], 'html' => $row['html'] ?? false, 'color' => $row['color'] ?? false])</td>
+                                <td class="py-2 pe-2">@include('marketer.suggestions._value', ['value' => $row['current'], 'html' => $row['html'] ?? false, 'color' => $row['color'] ?? false, 'images' => $row['images'] ?? false])</td>
                                 @if ($row['proposed'] === null && $row['current'] !== null)
                                     <td class="py-2 text-xs text-slate-400">{{ $t('unchanged') }}</td>
                                 @else
-                                    <td class="py-2 {{ ($row['current'] ?? null) != ($row['proposed'] ?? null) ? 'bg-emerald-50/60' : '' }}" data-changed="{{ ($row['current'] ?? null) != ($row['proposed'] ?? null) ? 1 : 0 }}">@include('marketer.suggestions._value', ['value' => $row['proposed'], 'html' => $row['html'] ?? false, 'color' => $row['color'] ?? false])</td>
+                                    <td class="py-2 {{ ($row['current'] ?? null) != ($row['proposed'] ?? null) ? 'bg-emerald-50/60' : '' }}" data-changed="{{ ($row['current'] ?? null) != ($row['proposed'] ?? null) ? 1 : 0 }}">@include('marketer.suggestions._value', ['value' => $row['proposed'], 'html' => $row['html'] ?? false, 'color' => $row['color'] ?? false, 'images' => $row['images'] ?? false])</td>
                                 @endif
                             </tr>
                         @empty

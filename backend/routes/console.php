@@ -29,6 +29,7 @@ Schedule::command('integration:prune')->dailyAt('03:10')->onOneServer();
 // Marketing internal API (MCP): request-log retention (config marketing.request_log_days).
 Schedule::command('marketing:prune-requests')->dailyAt('03:15')->onOneServer();
 Schedule::command('marketing:expire-suggestions')->dailyAt('03:25')->onOneServer();
+Schedule::command('marketing:prune-suggestion-images')->dailyAt('03:35')->onOneServer();
 
 // WhatsApp chat retention (config whatsapp_chat.retention_days, 0 = keep forever).
 Schedule::command('whatsapp:chat-prune')->dailyAt('04:20')->withoutOverlapping()->onOneServer();

@@ -11,6 +11,8 @@ Envelope, auth, scopes, throttling: API_DOCUMENTATION.md §1–2, §8. Store dat
 | `get_suggestion_status` | `GET /suggestions/{id}/status` | marketing:read |
 | `get_suggestion_application_result` | `GET /suggestions/{id}/result` | marketing:read |
 | `create_product_suggestion` | `POST /suggestions/product` | suggestions:write:product |
+| `create_new_product_suggestion` | `POST /suggestions/new_product` | suggestions:write:new_product |
+| `get_attributes` / `get_tags` | `GET /attributes`, `GET /tags` | marketing:read |
 | `create_bundle_suggestion` | `POST /suggestions/bundle` | suggestions:write:bundle |
 | `create_slider_suggestion` | `POST /suggestions/slider` | suggestions:write:slider |
 | `create_offer_suggestion` | `POST /suggestions/offer` | suggestions:write:offer |
@@ -69,6 +71,37 @@ At least one field. Not supported (no column): short description, badges.
 ```json
 {"title":"Better name + feature on home","target_entity_type":"product","target_entity_id":42,
  "payload":{"name":{"ar":"كريم مرطب 50 مل – ترطيب 24 ساعة"},"pin":{"list":"recommended","position":1},"tags_add":[7]}}
+```
+
+### new_product (no target) — a whole new product, applied as a hidden **draft**
+`name` {locale ≤200} (required), `description` {locale ≤20000, HTML allowlist}, `meta_title` {≤255}, `meta_description` {≤500}, `slug`, `sku` (unique across
+products + variants; omitted ⇒ placeholder `DRAFT-…` + warning), `barcode` (EAN-13, simple only, unique), `brand_id`, `category_ids` [≤20], `tag_ids` [≤30]
+(ids must exist), `price` (> 0), `sale_price` (≤ price), `cost`, `weight` (grams), `min_stock_alert_qty`, `gift` {suitable, recipients[], occasions[]},
+`images` [{url}] ≤10 (first = main), `variants` [{values: [attribute value ids, one per attribute, same attributes for every variant], sku, price,
+sale_price, cost, weight, min_stock_alert_qty, image (index into images), is_active}] ≤100 (omit ⇒ simple product).
+- **Missing attributes / values**: `get_attributes` returns EVERY usable attribute with ALL its values in one call (no paging). When none fits, propose
+  `new_attributes` [{ref, name{locale}, code (default from the English name, unique), type select|color|text, values [{ref, value{locale}, color_hex}] ≥1}] ≤10
+  and/or `new_values` [{attribute_id, ref, value{locale}, color_hex}] ≤100; variants use either value ids or those refs (`"values": [41, "s42"]`).
+  Refs start with a letter, are lowercased and must be unique. Refused: a code already used, a value the attribute already has (the error names its id),
+  a value repeated in one new attribute, a colour value without `color_hex`, an unknown ref. Same-name attribute ⇒ warning. Nothing is created before
+  approval; apply creates the attributes / values first, then the product, in ONE transaction. Rollback also removes them unless another live product
+  uses them meanwhile (`after.kept_in_use`).
+- **Images**: each URL is downloaded ONCE at create / edit (`SafeImageFetcher`: http(s) on default ports, public IPs only with the DNS answer pinned,
+  redirects re-checked, ≤ `images.max_source_bytes`, real image content via `ImageOptimizer::inspect`) and stored on the PRIVATE disk under its sha256
+  (`suggestion-images/`); the payload keeps url + sha256 + mime + size, so the approval covers the exact pictures. A URL that cannot be used ⇒ 422 on
+  `payload.images.N.url`. Reviewers see thumbnails via `GET /marketer/suggestions/image/{sha}` (ai_suggestions.view). `marketing:prune-suggestion-images`
+  (daily) deletes files no open suggestion references after 7 days.
+- **Checks**: sale ≤ price (product and per variant), selling below cost ⇒ 422, margin < 10 % or no cost ⇒ warning; existing brand / categories / tags /
+  non-draft attribute values; distinct variant combinations; same-name product ⇒ warning; no price / sku / category / image ⇒ warning.
+- **Apply** = `ProductService::create` with `is_draft = true`, inactive (images + variant images through `ImageUploadService`). The owner finishes it in
+  the admin product form ("Save & publish"). **Rollback** soft-deletes the product only while it is still a draft.
+```json
+{"title":"Add Casio Edifice EFR-100","payload":{"name":{"ar":"كاسيو إديفيس EFR-100","en":"Casio Edifice EFR-100"},"sku":"CAS-EFR100",
+ "brand_id":3,"category_ids":[12],"price":2500,"sale_price":2300,"cost":1600,"weight":140,
+ "images":[{"url":"https://supplier.example/efr100-front.jpg"},{"url":"https://supplier.example/efr100-blue.jpg"}],
+ "new_attributes":[{"ref":"case_size","name":{"ar":"قطر الهيكل","en":"Case size"},"values":[{"ref":"s44","value":{"ar":"44 مم","en":"44 mm"}}]}],
+ "new_values":[{"attribute_id":5,"ref":"teal","value":{"ar":"تيل","en":"Teal"},"color_hex":"#008080"}],
+ "variants":[{"values":[41,"s44"],"sku":"CAS-EFR100-BK","image":0},{"values":["teal","s44"],"sku":"CAS-EFR100-TL","price":2600,"image":1}]}}
 ```
 
 ### bundle (no target = new bundle, created **inactive**; target `bundle` = update)

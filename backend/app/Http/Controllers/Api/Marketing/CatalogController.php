@@ -52,6 +52,18 @@ class CatalogController extends Controller
         return R::page($this->svc->brands($r->toQuery()), fn ($x) => $x, [MarketingCatalogService::originWarning()]);
     }
 
+    public function attributes(): JsonResponse
+    {
+        $rows = $this->svc->attributes();
+
+        return R::ok($rows, [], ['total' => count($rows), 'values_total' => array_sum(array_column($rows, 'values_count'))]);
+    }
+
+    public function tags(MarketingQueryRequest $r): JsonResponse
+    {
+        return R::page($this->svc->tags($r->toQuery()), fn ($x) => $x);
+    }
+
     public function inventory(MarketingQueryRequest $r): JsonResponse
     {
         return R::page($this->svc->inventory($r->toQuery()), fn ($x) => $x);
