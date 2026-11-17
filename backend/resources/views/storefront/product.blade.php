@@ -3,7 +3,7 @@
     $first = collect($picker['variants'])->firstWhere('in_stock', true) ?? ($picker['variants'][0] ?? null);
     $img = $product->images->first()?->url;
     $preload = ($media->first()['type'] ?? null) === 'video' ? $media->first()['poster'] : $img;   // the first slide is what must paint first
-    $desc = \Illuminate\Support\Str::limit(strip_tags((string) ($product->meta_description ?: $product->description)), 160, '');
+    $desc = \Illuminate\Support\Str::limit(\App\Support\SafeHtml::text(str_replace('<', ' <', (string) ($product->meta_description ?: $product->description))), 160, '');
     $ld = ['@context' => 'https://schema.org', '@type' => 'Product', 'name' => $product->name, 'description' => $desc, 'sku' => $product->sku,
         'image' => $product->images->map->url->values()->all(), 'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
         'url' => url()->current(), 'mpn' => $product->sku,
@@ -85,7 +85,7 @@
         @if ($product->description)
             <section id="description" class="panel mt-6 scroll-mt-40 lg:p-6">
                 <h2 class="mb-2 font-display text-[22px]/[30px] font-bold text-slate-950">{{ __('store.description') }}</h2>
-                <div class="text-base/[26px] text-slate-600">{!! nl2br(e($product->description)) !!}</div>
+                <div class="sf-prose text-slate-600">{!! \App\Support\Marketing\RichText::render($product->description) !!}</div>
             </section>
         @endif
 
