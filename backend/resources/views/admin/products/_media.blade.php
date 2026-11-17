@@ -12,8 +12,8 @@
                             @if ($m['type'] === 'video')<span class="absolute inset-0 grid place-items-center"><span class="grid size-8 place-items-center rounded-full bg-black/60 text-white"><svg viewBox="0 0 24 24" class="size-4 fill-current" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></span>@endif
                         </div>
                         <div class="mt-1 flex items-center justify-center gap-1">
-                            <button type="button" class="btn-sm btn-secondary" data-media-move="-1" aria-label="{{ __('admin.product_media.move_earlier') }}" @disabled($loop->first)><span class="inline-block rtl:-scale-x-100">&#8249;</span></button>
-                            <button type="button" class="btn-sm btn-secondary" data-media-move="1" aria-label="{{ __('admin.product_media.move_later') }}" @disabled($loop->last)><span class="inline-block rtl:-scale-x-100">&#8250;</span></button>
+                            <button type="button" class="btn-sm btn-secondary" data-media-move="-1" aria-label="{{ __('admin.product_media.move_earlier') }}" @disabled($loop->first)><svg viewBox="0 0 24 24" class="size-4 rtl:-scale-x-100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                            <button type="button" class="btn-sm btn-secondary" data-media-move="1" aria-label="{{ __('admin.product_media.move_later') }}" @disabled($loop->last)><svg viewBox="0 0 24 24" class="size-4 rtl:-scale-x-100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
                         </div>
                         @if ($m['type'] === 'video')<button type="button" class="btn-sm btn-danger mt-1" data-media-delete="{{ route('admin.products.videos.destroy', [$product, $m['id']]) }}">{{ __('admin.remove') }}</button>@endif
                     </li>
