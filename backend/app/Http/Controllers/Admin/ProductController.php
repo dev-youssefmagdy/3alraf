@@ -17,6 +17,7 @@ use App\Repositories\Contracts\AttributeRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Services\CatalogService;
 use App\Services\ProductService;
+use App\Services\PurchaseService;
 use App\Services\Qr\QrCodeManager;
 use App\Services\Storefront\ProductGallery;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,7 @@ class ProductController extends Controller implements HasMiddleware
         private CatalogService $catalog,
         private QrCodeManager $qr,
         private ProductGallery $gallery,
+        private PurchaseService $purchases,
     ) {}
 
     public static function middleware(): array
@@ -72,7 +74,8 @@ class ProductController extends Controller implements HasMiddleware
         $product->load(['images', 'videos', 'categories', 'tags', 'variants.values', 'variants.images']);
 
         // The private social-media library lives only in the marketer panel (/marketer/media); the admin has no view of it.
-        return view('admin.products.form', $this->formData($product) + ['qrCodes' => $this->qr->listingCodes($product), 'media' => $this->gallery->items($product)]);
+        return view('admin.products.form', $this->formData($product) + ['qrCodes' => $this->qr->listingCodes($product), 'media' => $this->gallery->items($product),
+            'costHistory' => $request->user('admin')?->can('purchases.view') ? $this->purchases->costHistory($product->id) : null]);
     }
 
     public function update(ProductRequest $request, Product $product): JsonResponse

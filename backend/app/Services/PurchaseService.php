@@ -22,6 +22,32 @@ class PurchaseService
         return $this->orders->query()->with(['items.product', 'items.variant.values', 'supplier', 'branch'])->findOrFail($id);
     }
 
+    /**
+     * Purchase cost history of a product (received POs only, line unit cost as entered on the PO).
+     * Average = quantity-weighted: Σ(qty × unit_cost) / Σ qty, overall and per variant (key 0 = simple product).
+     *
+     * @return array{items: \Illuminate\Support\Collection, quantity: int, total: string, average: ?string, variants: array<int, array{label: string, quantity: int, total: string, average: string}>}
+     */
+    public function costHistory(int $productId): array
+    {
+        $items = $this->orders->receivedItemsForProduct($productId);
+        $variants = [];
+        foreach ($items as $i) {
+            $v = (int) $i->product_variant_id;
+            $variants[$v] ??= ['label' => $v ? (string) $i->variant?->label() : '', 'quantity' => 0, 'total' => '0'];
+            $variants[$v]['quantity'] += $i->quantity;
+            $variants[$v]['total'] = Money::add($variants[$v]['total'], Money::mul((string) $i->unit_cost, $i->quantity));
+        }
+        foreach ($variants as &$row) {
+            $row['average'] = Money::div($row['total'], $row['quantity']);
+        }
+        unset($row);
+        $qty = array_sum(array_column($variants, 'quantity'));
+        $total = Money::add('0', ...array_column($variants, 'total'));
+
+        return ['items' => $items, 'quantity' => $qty, 'total' => $total, 'average' => $qty > 0 ? Money::div($total, $qty) : null, 'variants' => $variants];
+    }
+
     public function create(PurchaseOrderData $dto): PurchaseOrder
     {
         return DB::transaction(function () use ($dto) {

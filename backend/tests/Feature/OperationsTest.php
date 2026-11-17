@@ -221,3 +221,19 @@ it('stores payment gateway credentials encrypted and routes webhooks through the
     $this->get("{$this->t}/payment-methods/create")->assertOk();
     $this->deleteJson("{$this->t}/payment-methods/{$pm->id}")->assertOk();
 });
+
+it('lists received purchase costs and their quantity-weighted average on the product edit page', function () {
+    actAsEgy();
+    $supplier = Supplier::first();
+    $item = $this->product->id.'-0';
+    $po = fn (int $qty, float $cost, bool $receive) => $this->postJson("{$this->t}/purchases", ['supplier_id' => $supplier->id, 'branch_id' => $this->branch->id, 'ordered_at' => '2026-10-01', 'receive' => $receive ? 1 : 0, 'items' => [['item' => $item, 'quantity' => $qty, 'unit_cost' => $cost]]])->assertOk();
+    $po(10, 10, true);
+    $po(30, 20, true);
+    $po(5, 99, false); // draft: not a real purchase yet
+
+    $h = app(\App\Services\PurchaseService::class)->costHistory($this->product->id);
+    expect($h['items'])->toHaveCount(2)->and($h['quantity'])->toBe(40)->and($h['total'])->toBe('700.00')->and($h['average'])->toBe('17.50');
+
+    $this->get("{$this->t}/products/{$this->product->id}/edit")->assertOk()
+        ->assertSee(__('admin.cost_history.title'))->assertSee('17.50')->assertDontSee('99.00');
+});

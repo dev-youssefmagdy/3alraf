@@ -15,6 +15,11 @@ class PurchaseOrderItem extends Model
         return ['unit_cost' => 'decimal:2', 'line_total' => 'decimal:2'];
     }
 
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class);
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class)->withTrashed();

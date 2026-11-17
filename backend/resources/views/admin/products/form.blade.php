@@ -32,6 +32,45 @@
                 </div>
             </x-card>
 
+            @if ($editing && ! empty($costHistory))
+                <x-card :title="__('admin.cost_history.title')">
+                    <p class="mb-3 text-xs text-slate-500">{{ __('admin.cost_history.hint') }}</p>
+                    @if ($costHistory['items']->isEmpty())
+                        <p class="text-sm text-slate-500">{{ __('admin.cost_history.empty') }}</p>
+                    @else
+                        @php($hasVariants = $costHistory['items']->contains(fn ($i) => $i->product_variant_id))
+                        <div class="max-h-96 overflow-auto">
+                            <table class="w-full text-sm">
+                                <thead class="text-slate-500"><tr>
+                                    <th class="py-2 text-start">{{ __('ops.fields.number') }}</th><th class="text-start">{{ __('ops.fields.date') }}</th><th class="text-start">{{ __('ops.fields.supplier') }}</th>
+                                    @if ($hasVariants)<th class="text-start">{{ __('admin.variants') }}</th>@endif
+                                    <th class="text-start">{{ __('ops.fields.quantity') }}</th><th class="text-start">{{ __('ops.fields.unit_cost') }}</th><th class="text-start">{{ __('ops.fields.total') }}</th>
+                                </tr></thead>
+                                <tbody>
+                                    @foreach ($costHistory['items'] as $ci)
+                                        <tr class="border-t border-slate-100">
+                                            <td class="py-2"><a href="{{ route('admin.purchases.show', $ci->purchase_order_id) }}" class="text-brand-600 underline" target="_blank">{{ $ci->purchaseOrder?->number }}</a></td>
+                                            <td>{{ ($ci->purchaseOrder?->received_at ?? $ci->purchaseOrder?->ordered_at)?->toDateString() }}</td>
+                                            <td>{{ $ci->purchaseOrder?->supplier?->name }}</td>
+                                            @if ($hasVariants)<td>{{ $ci->product_variant_id ? $ci->variant?->label() : '—' }}</td>@endif
+                                            <td>{{ $ci->quantity }}</td><td>{{ number_format($ci->unit_cost, 2) }}</td><td>{{ number_format($ci->line_total, 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="border-t border-slate-200">
+                                    @if ($hasVariants)
+                                        @foreach ($costHistory['variants'] as $vr)
+                                            <tr class="text-slate-600"><td colspan="4" class="py-1 text-end">{{ __('admin.cost_history.variant_avg', ['variant' => $vr['label'] ?: '—']) }}</td><td>{{ $vr['quantity'] }}</td><td>{{ number_format($vr['average'], 2) }}</td><td>{{ number_format($vr['total'], 2) }}</td></tr>
+                                        @endforeach
+                                    @endif
+                                    <tr class="font-semibold"><td colspan="{{ $hasVariants ? 4 : 3 }}" class="py-2 text-end">{{ __('admin.cost_history.average') }}</td><td>{{ $costHistory['quantity'] }}</td><td>{{ number_format($costHistory['average'], 2) }}</td><td>{{ number_format($costHistory['total'], 2) }}</td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @endif
+                </x-card>
+            @endif
+
             <x-card :title="__('admin.gift')">
                 @php($giftR = (array) old('gift_recipients', $product->gift_recipients ?? []))
                 @php($giftO = (array) old('gift_occasions', $product->gift_occasions ?? []))

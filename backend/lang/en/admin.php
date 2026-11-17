@@ -22,6 +22,7 @@ return [
     'tags' => 'Tags',
     'erp_anomalies' => 'ERP anomalies', 
     'activate_products' => 'Activate products', 'activate_selected' => 'Activate selected', 'activate_products_hint' => 'Products that have no price yet. Enter a price and cost, tick the rows and activate them to put them on sale.',
+    'cost_history' => ['title' => 'Purchase cost history', 'hint' => 'Every received purchase order line for this product. The average is weighted by quantity: total cost ÷ total quantity.', 'empty' => 'No received purchases for this product yet.', 'average' => 'Average cost (real cost)', 'variant_avg' => 'Average: :variant'],
     'pricing' => 'Pricing & selling', 'pricing_hint' => 'Selling price, sale price, cost and minimum stock alert. Variants can override each one below.', 'gift' => 'Gift finder',
     'tag' => 'Tag',
     'brands' => 'Brands',
