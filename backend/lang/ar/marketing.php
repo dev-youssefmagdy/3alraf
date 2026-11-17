@@ -148,6 +148,7 @@ return [
             'suggestions_write_seasonal_theme' => 'اقتراح ثيمات موسمية (بدون اعتماد أو تطبيق)',
             'suggestions_write_social_content' => 'اقتراح محتوى سوشيال ميديا (بدون اعتماد أو تطبيق)',
             'suggestions_write_media_asset' => 'اقتراح صور وفيديوهات (بدون اعتماد أو تطبيق)',
+            'suggestions_write_category' => 'اقتراح تعديل الأقسام: الاسم والوصف والصورة (بدون اعتماد أو تطبيق)',
             'meta_read' => 'قراءة بيانات ميتا (الحسابات، الحملات، النتائج) والمسودات',
             'meta_draft' => 'إنشاء وتعديل مسودات حملات ميتا وإرسالها للاعتماد (بدون اعتماد أو نشر)',
         ],
@@ -196,7 +197,7 @@ return [
         'rolled_back' => 'تم التراجع',
         'types' => [
             'product' => 'منتج', 'bundle' => 'باندل', 'slider' => 'سلايدر / بنر', 'offer' => 'عرض', 'coupon' => 'كوبون', 'seo' => 'SEO',
-            'blog' => 'مقال مدونة', 'seasonal_theme' => 'ثيم موسمي', 'social_content' => 'محتوى سوشيال', 'media_asset' => 'ملف وسائط', 'new_product' => 'منتج جديد',
+            'blog' => 'مقال مدونة', 'seasonal_theme' => 'ثيم موسمي', 'social_content' => 'محتوى سوشيال', 'media_asset' => 'ملف وسائط', 'new_product' => 'منتج جديد', 'category' => 'تعديل قسم',
         ],
         'statuses' => [
             'pending' => 'بانتظار المراجعة', 'under_review' => 'قيد المراجعة', 'edited' => 'معدّل', 'approved' => 'معتمد', 'rejected' => 'مرفوض',
@@ -275,6 +276,7 @@ return [
             'tag_ids' => 'أرقام الوسوم مفصولة بفاصلة',
             'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
             'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (أول صورة هي الرئيسية)',
+            'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (تستبدل صورة القسم الحالية)',
             'variants_hint' => '[{"values": [12, 30], "sku": "W-1-BLK", "price": 1500, "image": 0}]',
             'new_attributes_hint' => '[{"ref": "case_size", "name": {"ar": "قطر الهيكل", "en": "Case size"}, "type": "select", "values": [{"ref": "s42", "value": {"ar": "42 مم", "en": "42 mm"}}]}]',
             'new_values_hint' => '[{"attribute_id": 3, "ref": "teal", "value": {"ar": "تيل", "en": "Teal"}, "color_hex": "#008080"}]',
@@ -361,6 +363,7 @@ return [
             'bad_json' => 'صيغة JSON غير صالحة.',
         ],
         'warnings' => [
+            'category_inactive' => 'القسم مخفي من المتجر حاليًا.',
             'product_not_listed' => 'المنتج غير معروض حاليًا (غير مفعل أو بدون سعر).',
             'long_title' => 'عنوان (:locale) طويل (:n حرف، الأفضل ≤ 60).',
             'long_description' => 'وصف (:locale) طويل (:n حرف، الأفضل ≤ 160).',

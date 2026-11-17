@@ -21,6 +21,7 @@ return [
         'suggestions:write:seasonal_theme' => ['enabled' => true],
         'suggestions:write:social_content' => ['enabled' => true],
         'suggestions:write:media_asset' => ['enabled' => true],
+        'suggestions:write:category' => ['enabled' => true],      // category name / description / image (opt-in on existing tokens)
         'meta:read' => ['enabled' => true],         // P6: Meta ad accounts / campaigns / ad sets / ads / insights (cached reads) + campaign drafts (read)
         'meta:draft' => ['enabled' => true],        // P6: create / edit own Meta campaign drafts, submit for approval (never approve / publish)
     ],

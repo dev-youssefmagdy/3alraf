@@ -19,6 +19,7 @@ enum SuggestionTypeKey: string
     case SEASONAL_THEME = 'seasonal_theme';
     case SOCIAL_CONTENT = 'social_content';
     case MEDIA_ASSET = 'media_asset';
+    case CATEGORY = 'category';         // edit an existing category: name, description, image (by URL)
 
     public function label(): string
     {
@@ -29,7 +30,7 @@ enum SuggestionTypeKey: string
     public function page(): string
     {
         return match ($this) {
-            self::PRODUCT, self::NEW_PRODUCT => 'products', self::BUNDLE => 'bundles', self::SLIDER => 'banners', self::OFFER => 'offers', self::COUPON => 'coupons',
+            self::PRODUCT, self::NEW_PRODUCT, self::CATEGORY => 'products', self::BUNDLE => 'bundles', self::SLIDER => 'banners', self::OFFER => 'offers', self::COUPON => 'coupons',
             self::SEO => 'seo', self::BLOG => 'blog', self::SEASONAL_THEME => 'themes', self::SOCIAL_CONTENT, self::MEDIA_ASSET => 'social',
         };
     }

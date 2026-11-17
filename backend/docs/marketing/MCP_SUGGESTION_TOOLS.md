@@ -12,6 +12,7 @@ Envelope, auth, scopes, throttling: API_DOCUMENTATION.md §1–2, §8. Store dat
 | `get_suggestion_application_result` | `GET /suggestions/{id}/result` | marketing:read |
 | `create_product_suggestion` | `POST /suggestions/product` | suggestions:write:product |
 | `create_new_product_suggestion` | `POST /suggestions/new_product` | suggestions:write:new_product |
+| `create_category_suggestion` | `POST /suggestions/category` | suggestions:write:category |
 | `get_attributes` / `get_tags` | `GET /attributes`, `GET /tags` | marketing:read |
 | `create_bundle_suggestion` | `POST /suggestions/bundle` | suggestions:write:bundle |
 | `create_slider_suggestion` | `POST /suggestions/slider` | suggestions:write:slider |
@@ -103,6 +104,16 @@ sale_price, cost, weight, min_stock_alert_qty, image (index into images), is_act
  "new_values":[{"attribute_id":5,"ref":"teal","value":{"ar":"تيل","en":"Teal"},"color_hex":"#008080"}],
  "variants":[{"values":[41,"s44"],"sku":"CAS-EFR100-BK","image":0},{"values":["teal","s44"],"sku":"CAS-EFR100-TL","price":2600,"image":1}]}}
 ```
+
+### category (target required: `category`) — name / description / image of an existing category
+
+```json
+{ "target_entity_type": "category", "target_entity_id": 3,
+  "payload": { "name": {"ar": "ساعات نسائية"}, "description": {"ar": "..."}, "image": {"url": "https://cdn.example/cat.jpg"} } }
+```
+- At least one field. Locales left out keep their current text; description is plain text.
+- `image.url` is downloaded once at create / edit (SSRF-safe, same rules as new_product images) and pinned by sha256; the reviewer sees current vs proposed image. A URL that cannot be fetched or is not an image → 422 on `payload.image.url`.
+- Apply: CategoryService (name/description) + `CategoryService::replaceImage` (the previous image file is kept). Rollback restores name, description and the old image, and deletes the added image while it is still the current one. Approval: `ai_suggestions.approve` / `.apply`.
 
 ### bundle (no target = new bundle, created **inactive**; target `bundle` = update)
 `name` {locale ≤200} (required on create), `description` {locale ≤5000}, `price` (> 0, required on create), `items` [{product_id, variant_id

@@ -22,6 +22,7 @@ class SuggestionTypeRegistry
         'seasonal_theme' => Types\SeasonalThemeSuggestionType::class,
         'social_content' => Types\SocialContentSuggestionType::class,
         'media_asset' => Types\MediaAssetSuggestionType::class,
+        'category' => Types\CategorySuggestionType::class,
     ];
 
     private array $resolved = [];

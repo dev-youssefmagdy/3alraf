@@ -87,6 +87,16 @@ describe('tool execution against a mocked Laravel', () => {
     expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/88');
   });
 
+  it('creates a category suggestion with a new image and returns the review link', async () => {
+    s.laravelMock.reply({ status: 201, json: { success: true, data: { id: 91, review_url: 'https://panel.test/marketer/suggestions/91' }, meta: {}, warnings: [] } });
+    const payload = { name: { ar: 'ساعات نسائية', en: 'Women watches' }, image: { url: 'https://cdn.example/cat.jpg' } };
+    const result = await call('create_category_suggestion', { title: 'New category image', target_entity_type: 'category', target_entity_id: 3, payload });
+    const { url, body } = s.laravelMock.last;
+    expect(url.pathname).toBe('/api/internal/marketing/suggestions/category');
+    expect(body).toMatchObject({ source: 'mcp', target_entity_type: 'category', target_entity_id: 3, payload });
+    expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/91');
+  });
+
   it('reads attributes and tags', async () => {
     s.laravelMock.reply({ status: 200, json: { success: true, data: [], meta: {}, warnings: [] } });
     await call('get_attributes');
@@ -134,6 +144,8 @@ describe('tool execution against a mocked Laravel', () => {
       ['unknown payload key', 'create_coupon_suggestion', { title: 'abc', payload: { code: 'ABC', sql: 'DROP TABLE' } }],
       ['missing required target', 'create_product_suggestion', { title: 'abc', payload: { tags_add: [1] } }],
       ['wrong target type', 'create_product_suggestion', { title: 'abc', target_entity_type: 'brand', target_entity_id: 1, payload: {} }],
+      ['category without a target', 'create_category_suggestion', { title: 'abc', payload: { image: { url: 'https://cdn.example/c.jpg' } } }],
+      ['category image that is not http(s)', 'create_category_suggestion', { title: 'abc', target_entity_type: 'category', target_entity_id: 1, payload: { image: { url: 'file:///etc/passwd' } } }],
       ['new product without a name', 'create_new_product_suggestion', { title: 'abc', payload: { price: 10 } }],
       ['new product image that is not http(s)', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, images: [{ url: 'file:///etc/passwd' }] } }],
       ['new product with a target', 'create_new_product_suggestion', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { name: { en: 'x' } } }],

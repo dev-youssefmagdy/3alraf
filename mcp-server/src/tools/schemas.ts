@@ -45,6 +45,14 @@ export const productPayload = z
 
 const imageUrl = z.string().max(2048).regex(/^https?:\/\//i, 'http(s) URL').describe('Public image URL (JPG, PNG, WebP, AVIF). The store downloads it once; internal addresses are refused.');
 
+export const categoryPayload = z
+  .strictObject({
+    name: localized(150).optional().describe('New category name per locale; locales you leave out keep their current text.'),
+    description: localized(2000).optional().describe('Plain text per locale.'),
+    image: z.strictObject({ url: imageUrl }).optional().describe('Replaces the current category image (see get_categories `image`). Square-ish images look best.'),
+  })
+  .describe('At least one field is required.');
+
 const ref = z.string().regex(/^[a-z][a-z0-9_-]{0,49}$/i, 'starts with a letter: a-z, 0-9, _ or -').describe('Your own short name for a proposed value, e.g. "teal" or "s42".');
 const hex = z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('#rrggbb, required for colour attributes.');
 const proposedValue = z.strictObject({ ref, value: localized(255).describe('{"ar": "...", "en": "..."}'), color_hex: hex.optional() });

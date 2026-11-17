@@ -30,7 +30,7 @@ describe('tool registry', () => {
     const tools = await list();
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_TOOLS.map((t) => t.name).sort());
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
-    expect(tools.length).toBe(63);
+    expect(tools.length).toBe(64);
     for (const t of tools) expect(t.inputSchema.type).toBe('object');
   });
 

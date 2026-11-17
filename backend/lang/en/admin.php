@@ -300,6 +300,7 @@ return [
                 'suggestions_write_seasonal_theme' => 'Suggest seasonal themes (never approve or apply)',
                 'suggestions_write_social_content' => 'Suggest social media content (never approve or apply)',
                 'suggestions_write_media_asset' => 'Suggest images and videos (never approve or apply)',
+                'suggestions_write_category' => 'Suggest category changes: name, description, image (never approve or apply)',
                 'meta_read' => 'Read Meta data (accounts, campaigns, insights) and drafts',
                 'meta_draft' => 'Create / edit Meta campaign drafts and submit them for approval (never approve or publish)',
             ],
@@ -348,7 +349,7 @@ return [
             'rolled_back' => 'Rolled back',
             'types' => [
                 'product' => 'Product', 'bundle' => 'Bundle', 'slider' => 'Slider / banner', 'offer' => 'Offer', 'coupon' => 'Coupon', 'seo' => 'SEO',
-                'blog' => 'Blog article', 'seasonal_theme' => 'Seasonal theme', 'social_content' => 'Social content', 'media_asset' => 'Media asset', 'new_product' => 'New product',
+                'blog' => 'Blog article', 'seasonal_theme' => 'Seasonal theme', 'social_content' => 'Social content', 'media_asset' => 'Media asset', 'new_product' => 'New product', 'category' => 'Category update',
             ],
             'statuses' => [
                 'pending' => 'Pending review', 'under_review' => 'Under review', 'edited' => 'Edited', 'approved' => 'Approved', 'rejected' => 'Rejected',
@@ -427,6 +428,7 @@ return [
                 'tag_ids' => 'Tag IDs separated by commas',
                 'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
                 'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (the first image is the main one)',
+                'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (replaces the current category image)',
                 'variants_hint' => '[{"values": [12, 30], "sku": "W-1-BLK", "price": 1500, "image": 0}]',
                 'new_attributes_hint' => '[{"ref": "case_size", "name": {"ar": "قطر الهيكل", "en": "Case size"}, "type": "select", "values": [{"ref": "s42", "value": {"ar": "42 مم", "en": "42 mm"}}]}]',
                 'new_values_hint' => '[{"attribute_id": 3, "ref": "teal", "value": {"ar": "تيل", "en": "Teal"}, "color_hex": "#008080"}]',
@@ -513,6 +515,7 @@ return [
                 'bad_json' => 'Invalid JSON.',
             ],
             'warnings' => [
+                'category_inactive' => 'The category is hidden from the store right now.',
                 'product_not_listed' => 'The product is not on sale right now (inactive or no price).',
                 'long_title' => 'Title (:locale) is long (:n chars, best ≤ 60).',
                 'long_description' => 'Description (:locale) is long (:n chars, best ≤ 160).',

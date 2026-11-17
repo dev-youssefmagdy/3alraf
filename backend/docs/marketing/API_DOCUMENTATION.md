@@ -21,7 +21,7 @@ database. Routes: `routes/api_marketing.php` (names `marketing-api.*`), register
 | Scope | Status | Grants |
 |---|---|---|
 | `marketing:read` | enabled | every endpoint below |
-| `suggestions:write:{type}` (one per type: product, new_product, bundle, slider, offer, coupon, seo, blog, seasonal_theme, social_content, media_asset) | enabled | `POST suggestions/{type}`, `PATCH suggestions/{id}` (own pending/edited draft), `POST suggestions/{id}/submit`. Never approve / reject / apply / rollback (no such route exists). Reading suggestions needs `marketing:read`. |
+| `suggestions:write:{type}` (one per type: product, new_product, bundle, slider, offer, coupon, seo, blog, seasonal_theme, social_content, media_asset, category) | enabled | `POST suggestions/{type}`, `PATCH suggestions/{id}` (own pending/edited draft), `POST suggestions/{id}/submit`. Never approve / reject / apply / rollback (no such route exists). Reading suggestions needs `marketing:read`. |
 
 ## 2. Envelope (`App\Support\Marketing\MarketingResponse`)
 
@@ -162,7 +162,7 @@ SUGGESTION_LIFECYCLE.md, APPROVAL_AND_EXECUTION_ENGINE.md.
 | `GET suggestions/{id}` | marketing:read | detail: payload, compare (current vs proposed), validation {errors, warnings}, revisions, result entity, `own` |
 | `GET suggestions/{id}/status` | marketing:read | status, version, content_hash, submitted, approved (valid approval for the current version), approval expiry, last decision, applied / rolled back, last_error |
 | `GET suggestions/{id}/result` | marketing:read | executions (apply / rollback / publish / schedule: status, before, after, warnings, error) + result entity |
-| `POST suggestions/{type}` | suggestions:write:{type} of that suggestion | create (`type` = product\|new_product\|bundle\|slider\|offer\|coupon\|seo\|blog\|seasonal_theme\|social_content\|media_asset) → 201 |
+| `POST suggestions/{type}` | suggestions:write:{type} of that suggestion | create (`type` = product\|new_product\|bundle\|slider\|offer\|coupon\|seo\|blog\|seasonal_theme\|social_content\|media_asset\|category) → 201 |
 | `PATCH suggestions/{id}` | suggestions:write:{type} of that suggestion | edit own suggestion while `pending` / `edited` (→ new version + revision; `payload`, when sent, replaces the whole payload) |
 | `POST suggestions/{id}/submit` | suggestions:write:{type} of that suggestion | mark a draft (`draft: true` on create) ready for review; idempotent |
 

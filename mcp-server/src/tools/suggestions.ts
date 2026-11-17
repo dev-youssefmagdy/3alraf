@@ -3,7 +3,7 @@ import { dataField, defineTool, reviewUrl, type AnyTool, type ToolContext, type 
 import * as s from './schemas.js';
 import type { LaravelSuccess, Query } from '../laravel-client.js';
 
-const suggestionTypes = z.enum(['product', 'new_product', 'bundle', 'slider', 'offer', 'coupon', 'seo', 'blog', 'seasonal_theme', 'social_content', 'media_asset']);
+const suggestionTypes = z.enum(['product', 'new_product', 'bundle', 'slider', 'offer', 'coupon', 'seo', 'blog', 'seasonal_theme', 'social_content', 'media_asset', 'category']);
 const statuses = z.enum(['pending', 'under_review', 'edited', 'approved', 'rejected', 'applying', 'applied', 'failed', 'expired', 'archived']);
 
 const reviewNote = (url: string): string =>
@@ -36,6 +36,14 @@ const CREATE_SPECS: CreateSpec[] = [
     title: 'Suggest a new product',
     description: `Suggest a NEW product with variants and images (by URL). Use real ids from get_brands, get_categories, get_tags and get_attributes, and check get_products first to avoid duplicates. If no attribute or value fits, propose it in new_attributes / new_values and use its ref in the variants: it is created together with the product when a person approves and applies the suggestion. The product is created as a hidden draft to review and publish. ${REVIEW_LINE}`,
     payload: s.newProductPayload,
+  },
+  {
+    type: 'category',
+    name: 'create_category_suggestion',
+    title: 'Suggest category changes',
+    description: `Suggest a new name, description and/or image for an existing category. Use the id from get_categories (it also shows the current image). The image is given by public URL; the store downloads and checks it, and the reviewer sees current vs proposed. ${REVIEW_LINE}`,
+    payload: s.categoryPayload,
+    target: required('category'),
   },
   { type: 'bundle', name: 'create_bundle_suggestion', title: 'Suggest a bundle', description: `Suggest a new bundle (no target) or changes to one (target bundle). ${REVIEW_LINE}`, payload: s.bundlePayload, target: optional('bundle') },
   { type: 'slider', name: 'create_slider_suggestion', title: 'Suggest a slider or banner', description: `Suggest a new banner (no target) or changes to one (target banner). Images are uploaded by the owner. ${REVIEW_LINE}`, payload: s.sliderPayload, target: optional('banner') },

@@ -47,6 +47,29 @@ class CategoryService
         $this->categories->delete($category);
     }
 
+    /**
+     * Store a new image for the category WITHOUT deleting the previous file (marketing suggestions keep it for rollback). Returns the old path.
+     */
+    public function replaceImage(Category $category, \Illuminate\Http\UploadedFile $file): ?string
+    {
+        $old = $category->image;
+        $this->categories->update($category, ['image' => $this->images->store($file, 'categories')['path']]);
+
+        return $old;
+    }
+
+    /** Rollback of replaceImage(): put $previous back; the $added file is deleted only while it is still the current image. */
+    public function restoreImage(Category $category, ?string $previous, ?string $added): void
+    {
+        if ($category->image !== $added) {
+            return;   // changed again since: leave the newer image alone
+        }
+        $this->categories->update($category, ['image' => $previous]);
+        if ($added && $added !== $previous) {
+            $this->images->deletePath($added);
+        }
+    }
+
     /** Sets parent_id/path/depth from the parent. */
     private function place(Category $cat, ?int $parentId): void
     {
