@@ -168,7 +168,8 @@ $(() => {
 });
 
 /*
- * Profit % (never submitted): typing it sets price and sale price from the cost; editing the price recalculates it.
+ * Profit % (never submitted) is based on the selling price: the sale price, or the price while no sale price is set.
+ * Typing it sets the sale price from the cost; the price only moves when it is empty or would fall below the sale price (sale_price ≤ price rule).
  * A typed profit is kept when the cost changes (prices follow). A variant without its own cost uses the product's.
  */
 const priceField = ($group, name) => $group.find('[name="' + name + '"],[name$="[' + name + ']"]');
@@ -176,14 +177,17 @@ const productGroup = () => $('[data-price-group="product"]');
 const costOf = ($group) => priceField($group, 'cost').val() || priceField(productGroup(), 'cost').val();
 
 function showProfit($group) {
-    $group.data('profitTyped', false).find('[data-profit]').val(profitFromPrice(costOf($group), priceField($group, 'price').val()) ?? '');
+    const selling = priceField($group, 'sale_price').val() || priceField($group, 'price').val();
+    $group.data('profitTyped', false).find('[data-profit]').val(profitFromPrice(costOf($group), selling) ?? '');
 }
 
 function applyProfit($group) {
-    const price = priceFromProfit(costOf($group), $group.find('[data-profit]').val());
-    if (price === null) return;
+    const sale = priceFromProfit(costOf($group), $group.find('[data-profit]').val());
+    if (sale === null) return;
+    const $price = priceField($group, 'price');
     // the extra argument marks this as our own update; the event still clears a stale inline error
-    ['price', 'sale_price'].forEach((name) => priceField($group, name).val(price).trigger('input', [true]));
+    priceField($group, 'sale_price').val(sale).trigger('input', [true]);
+    if ($price.val() === '' || Number($price.val()) < Number(sale)) $price.val(sale).trigger('input', [true]);
 }
 
 const syncProfit = ($group) => ($group.data('profitTyped') ? applyProfit($group) : showProfit($group));
@@ -193,8 +197,12 @@ $(document).on('input', '[data-price-group] [data-profit]', function () {
     $group.data('profitTyped', this.value !== '');
     applyProfit($group);
 });
-$(document).on('input', '[data-price-group] [name="price"],[data-price-group] [name$="[price]"]', function (e, own) {
+$(document).on('input', '[data-price-group] [name="sale_price"],[data-price-group] [name$="[sale_price]"]', function (e, own) {
     if (!own) showProfit($(this).closest('[data-price-group]'));
+});
+$(document).on('input', '[data-price-group] [name="price"],[data-price-group] [name$="[price]"]', function (e, own) {
+    const $group = $(this).closest('[data-price-group]');
+    if (!own && !priceField($group, 'sale_price').val()) showProfit($group);
 });
 $(document).on('input', '[data-price-group] [name="cost"],[data-price-group] [name$="[cost]"]', function () {
     const $group = $(this).closest('[data-price-group]');
