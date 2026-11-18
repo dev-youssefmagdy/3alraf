@@ -14,6 +14,15 @@ class AffiliatePayoutDataTable extends BaseDataTable
         return AffiliatePayout::query()->with('affiliate')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            Filter::text('affiliate', $this->filterLabel('affiliate'), fn (Builder $q, string $v) => $q->whereHas('affiliate', fn (Builder $r) => $r->where('name', 'like', $this->likeValue($v))->orWhere('email', 'like', $this->likeValue($v)))),
+            $this->enumFilter(\App\Enums\PayoutStatus::class, 'status'),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

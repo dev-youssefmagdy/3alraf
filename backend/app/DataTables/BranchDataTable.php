@@ -13,6 +13,16 @@ class BranchDataTable extends BaseDataTable
         return Branch::query()->with('city')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->selectFilter('city_id', $this->nameOptions(\App\Models\City::class), label: $this->filterLabel('city'), searchable: true),
+            $this->textFilter('phone', ['phone']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

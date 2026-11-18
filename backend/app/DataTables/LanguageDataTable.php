@@ -15,6 +15,14 @@ class LanguageDataTable extends BaseDataTable
         return Language::query()->orderBy('sort_order')->orderBy('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name', 'native_name', 'code']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

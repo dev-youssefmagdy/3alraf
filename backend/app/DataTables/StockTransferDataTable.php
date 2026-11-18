@@ -14,6 +14,16 @@ class StockTransferDataTable extends BaseDataTable
         return StockTransfer::query()->with(['from', 'to'])->withSum('items', 'quantity')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('number', ['number']),
+            Filter::select('branch_id', $this->filterLabel('branch'), $this->nameOptions(\App\Models\Branch::class), fn (Builder $q, string $v) => $q->where(fn (Builder $w) => $w->where('from_branch_id', $v)->orWhere('to_branch_id', $v)), true),
+            $this->enumFilter(\App\Enums\TransferStatus::class, 'status'),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

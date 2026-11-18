@@ -13,6 +13,15 @@ class StaticPageDataTable extends BaseDataTable
         return StaticPage::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter('title'),
+            $this->textFilter('slug', ['slug']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

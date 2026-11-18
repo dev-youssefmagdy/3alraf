@@ -13,6 +13,14 @@ class BundleDataTable extends BaseDataTable
         return Bundle::query()->withCount('items')->orderBy('sort_order')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

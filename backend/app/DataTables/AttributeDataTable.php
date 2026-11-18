@@ -13,6 +13,15 @@ class AttributeDataTable extends BaseDataTable
         return Attribute::query()->withCount('values')->orderBy('sort_order')->orderByDesc('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->textFilter('code', ['code']),
+            $this->selectFilter('type', fn () => \App\Enums\AttributeType::options()),
+        ];
+    }
+
     public function columns(): array
     {
         return [

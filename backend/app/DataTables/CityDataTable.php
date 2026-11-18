@@ -13,6 +13,14 @@ class CityDataTable extends BaseDataTable
         return City::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

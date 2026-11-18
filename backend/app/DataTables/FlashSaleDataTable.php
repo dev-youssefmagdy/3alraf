@@ -13,6 +13,14 @@ class FlashSaleDataTable extends BaseDataTable
         return FlashSale::query()->withCount('items')->withSum('items as sold_sum', 'sold')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

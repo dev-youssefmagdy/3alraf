@@ -14,6 +14,14 @@ class MarketingSuggestionExecutionDataTable extends BaseDataTable
         return MarketingSuggestionExecution::query()->with(['suggestion:id,title,type', 'executor:id,name'])->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->selectFilter('status', ['succeeded' => $this->filterLabel('succeeded'), 'failed' => $this->filterLabel('failed'), 'running' => $this->filterLabel('running')]),
+            ...$this->dateFilters('started_at'),
+        ];
+    }
+
     public function columns(): array
     {
         $c = fn ($k) => __('marketing.suggestions.cols.'.$k);

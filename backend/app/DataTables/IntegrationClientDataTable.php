@@ -13,6 +13,14 @@ class IntegrationClientDataTable extends BaseDataTable
         return IntegrationClient::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name']),
+            Filter::select('status', $this->filterLabel('status'), ['active' => __('admin.active'), 'revoked' => $this->filterLabel('revoked')], fn (Builder $q, string $v) => $v === 'revoked' ? $q->whereNotNull('revoked_at') : $q->whereNull('revoked_at')),
+        ];
+    }
+
     public function columns(): array
     {
         return [

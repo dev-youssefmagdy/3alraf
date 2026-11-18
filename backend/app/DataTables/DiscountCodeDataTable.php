@@ -13,6 +13,15 @@ class DiscountCodeDataTable extends BaseDataTable
         return DiscountCode::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('code', ['code']),
+            $this->selectFilter('type', fn () => \App\Enums\DiscountType::options()),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

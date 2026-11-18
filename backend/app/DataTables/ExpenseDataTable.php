@@ -13,6 +13,15 @@ class ExpenseDataTable extends BaseDataTable
         return Expense::query()->with(['category', 'branch'])->latest('expense_date')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->selectFilter('expense_category_id', $this->nameOptions(\App\Models\ExpenseCategory::class), label: $this->filterLabel('category'), searchable: true),
+            $this->selectFilter('branch_id', $this->nameOptions(\App\Models\Branch::class), label: $this->filterLabel('branch')),
+            ...$this->dateFilters('expense_date'),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -33,11 +33,26 @@ $(document).on('click', '[data-post-action]', function () {
         .fail((xhr) => { const e = xhr.responseJSON?.errors; toastr.error(e ? Object.values(e)[0][0] : xhr.responseJSON?.message || 'Error'); $b.prop('disabled', false); });
 });
 
-// stock/movement filters reload the datatable
-$(document).on('change', '[data-dt-filter]', function () {
-    const $t = $($(this).data('dt-filter')).DataTable();
+// table filters reload the datatable; the table's data-url keeps its fixed parameters (e.g. drafts=1)
+const dtFilterFields = (table) => $('[data-dt-filter="' + table + '"]');
+const reloadDtFilters = (table) => {
     const params = {};
-    $('[data-dt-filter="' + $(this).data('dt-filter') + '"]').each(function () { if (this.value) params[this.name] = this.value; });
-    const base = $t.ajax.url().split('?')[0];
-    $t.ajax.url(base + '?' + $.param(params)).load();
+    dtFilterFields(table).each(function () { if (this.value.trim()) params[this.name] = this.value.trim(); });
+    const base = String($(table).data('url')), query = $.param(params);
+    const url = query ? base + (base.includes('?') ? '&' : '?') + query : base;
+    const dt = $(table).DataTable();
+    if (dt.ajax.url() !== url) dt.ajax.url(url).load();
+};
+let dtFilterTimer;
+$(document).on('change', '[data-dt-filter]', function () { clearTimeout(dtFilterTimer); reloadDtFilters($(this).data('dt-filter')); });
+$(document).on('input', 'input[data-dt-filter]:not([type=date])', function () {
+    const table = $(this).data('dt-filter');
+    clearTimeout(dtFilterTimer);
+    dtFilterTimer = setTimeout(() => reloadDtFilters(table), 300);
+});
+$(document).on('click', '[data-dt-filter-reset]', function () {
+    const table = $(this).data('dt-filter-reset');
+    clearTimeout(dtFilterTimer);
+    dtFilterFields(table).each(function () { if (this.tomselect) this.tomselect.clear(true); else this.value = ''; });
+    reloadDtFilters(table);
 });

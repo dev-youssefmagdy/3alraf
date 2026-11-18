@@ -13,6 +13,15 @@ class BannerDataTable extends BaseDataTable
         return Banner::query()->orderBy('placement')->orderBy('sort_order')->orderBy('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter('title'),
+            $this->selectFilter('placement', fn () => \App\Enums\BannerPlacement::options()),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

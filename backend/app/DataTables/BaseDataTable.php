@@ -2,6 +2,8 @@
 
 namespace App\DataTables;
 
+use App\Models\Language;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\Facades\DataTables;
@@ -26,12 +28,98 @@ abstract class BaseDataTable
         return ['actions'];
     }
 
+    /**
+     * Filter bar of this table (rendered by <x-datatable>). Names travel as query parameters, so never use
+     * DataTables' own: draw, start, length, search, order, columns.
+     *
+     * @return array<int,Filter>
+     */
+    public function filters(): array
+    {
+        return [];
+    }
+
+    /** columns() for the browser: the row buttons column gets the class that pins it on screen (app.css). */
+    public function clientColumns(): array
+    {
+        return array_map(fn (array $c) => $c['data'] === 'actions' ? ['className' => trim(($c['className'] ?? '').' dt-actions')] + $c : $c, $this->columns());
+    }
+
     public function ajax(): JsonResponse
     {
-        $dt = DataTables::eloquent($this->query());
+        $query = $this->query();
+        foreach ($this->filters() as $filter) {
+            $filter->apply($query, request()->query($filter->name));
+        }
+        $dt = DataTables::eloquent($query);
         $this->tweak($dt);
 
         return $dt->rawColumns($this->rawColumns())->toJson();
+    }
+
+    protected function filterLabel(string $key): string
+    {
+        return __('admin.table_filters.'.$key);
+    }
+
+    protected function likeValue(string $value): string
+    {
+        return '%'.addcslashes($value, '\\%_').'%';
+    }
+
+    /** Contains-search over plain columns. */
+    protected function textFilter(string $name, array $columns, ?string $label = null): Filter
+    {
+        return Filter::text($name, $label ?? $this->filterLabel($name), fn (Builder $q, string $v) => $q->where(function (Builder $w) use ($columns, $v) {
+            foreach ($columns as $column) {
+                $w->orWhere($w->qualifyColumn($column), 'like', $this->likeValue($v));
+            }
+        }));
+    }
+
+    /** Contains-search over a translated JSON column, in every language, ignoring case. */
+    protected function translatedFilter(string $name = 'name', ?string $column = null): Filter
+    {
+        return Filter::text($name, $this->filterLabel($name), function (Builder $q, string $v) use ($name, $column) {
+            $sql = $q->getGrammar()->wrap($q->qualifyColumn($column ?? $name));
+            $q->where(function (Builder $w) use ($sql, $v) {
+                foreach (Language::query()->pluck('code') as $code) {
+                    $w->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT($sql, ?)) COLLATE utf8mb4_unicode_ci LIKE ?", ['$."'.$code.'"', $this->likeValue($v)]);
+                }
+            });
+        });
+    }
+
+    /** Exact match on a column, choosing from $options. */
+    protected function selectFilter(string $name, array|Closure $options, ?string $column = null, ?string $label = null, bool $searchable = false): Filter
+    {
+        return Filter::select($name, $label ?? $this->filterLabel($name), $options, fn (Builder $q, string $v) => $q->where($q->qualifyColumn($column ?? $name), $v), $searchable);
+    }
+
+    /** @param class-string $enum backed enum with options() */
+    protected function enumFilter(string $enum, string $name = 'status', ?string $column = null): Filter
+    {
+        return $this->selectFilter($name, fn () => $enum::options(), $column);
+    }
+
+    protected function activeFilter(string $column = 'is_active'): Filter
+    {
+        return Filter::select('status', $this->filterLabel('status'), ['1' => __('admin.active'), '0' => __('admin.inactive')], fn (Builder $q, string $v) => $q->where($q->qualifyColumn($column), $v === '1'));
+    }
+
+    /** @return array{Filter,Filter} from / to, inclusive */
+    protected function dateFilters(string $column = 'created_at'): array
+    {
+        return [
+            Filter::date('from', $this->filterLabel('from'), fn (Builder $q, string $v) => $q->whereDate($q->qualifyColumn($column), '>=', $v)),
+            Filter::date('to', $this->filterLabel('to'), fn (Builder $q, string $v) => $q->whereDate($q->qualifyColumn($column), '<=', $v)),
+        ];
+    }
+
+    /** id => translated name of a model, for select filters. @param class-string<\Illuminate\Database\Eloquent\Model> $model */
+    protected function nameOptions(string $model): Closure
+    {
+        return fn () => $model::query()->get()->pluck('name', 'id')->sort()->all();
     }
 
     /** Standard edit/delete buttons html. $base = route prefix (e.g. admin.languages). */

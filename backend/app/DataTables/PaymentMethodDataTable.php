@@ -13,6 +13,15 @@ class PaymentMethodDataTable extends BaseDataTable
         return PaymentMethod::query()->orderBy('sort_order')->orderBy('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->selectFilter('type', fn () => \App\Enums\PaymentMethodType::options()),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

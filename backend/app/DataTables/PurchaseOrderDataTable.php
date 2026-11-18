@@ -13,6 +13,17 @@ class PurchaseOrderDataTable extends BaseDataTable
         return PurchaseOrder::query()->with(['supplier', 'branch'])->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('number', ['number']),
+            $this->selectFilter('supplier_id', $this->nameOptions(\App\Models\Supplier::class), label: $this->filterLabel('supplier'), searchable: true),
+            $this->selectFilter('branch_id', $this->nameOptions(\App\Models\Branch::class), label: $this->filterLabel('branch')),
+            $this->enumFilter(\App\Enums\PurchaseStatus::class, 'status'),
+            ...$this->dateFilters('ordered_at'),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -13,6 +13,16 @@ class CustomerDataTable extends BaseDataTable
         return Customer::query()->withCount('orders')->withSum('orders as spent', 'total')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name']),
+            $this->textFilter('email', ['email']),
+            $this->textFilter('phone', ['phone']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

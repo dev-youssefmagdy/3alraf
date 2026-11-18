@@ -15,6 +15,7 @@ return [
     'viewing' => 'Viewing',
     'direction_ltr' => 'Left to right', 'direction_rtl' => 'Right to left',
     'search' => 'Search', 'processing' => 'Processing...', 'no_data' => 'No data available', 'select' => 'Select...',
+    'table_filters' => ['all' => 'All', 'reset' => 'Clear filters', 'name' => 'Name', 'title' => 'Title', 'code' => 'Code', 'slug' => 'Slug', 'email' => 'Email', 'phone' => 'Phone', 'status' => 'Status', 'type' => 'Type', 'placement' => 'Placement', 'from' => 'From', 'to' => 'To', 'number' => 'Number', 'barcode' => 'Barcode', 'sku' => 'SKU', 'category' => 'Category', 'brand' => 'Brand', 'city' => 'City', 'branch' => 'Branch', 'supplier' => 'Supplier', 'affiliate' => 'Affiliate', 'description' => 'Description', 'area' => 'Area', 'route' => 'Route', 'http_status' => 'HTTP status', 'decision' => 'Decision', 'approved' => 'Approved', 'rejected' => 'Rejected', 'succeeded' => 'Succeeded', 'failed' => 'Failed', 'running' => 'Running', 'revoked' => 'Revoked', 'expired' => 'Expired'],
     'total_languages' => 'Languages',
     'languages_need_default' => 'There must always be a default language. Set another language as default instead.',
     'languages_cannot_delete_default' => 'The default language cannot be deleted.',

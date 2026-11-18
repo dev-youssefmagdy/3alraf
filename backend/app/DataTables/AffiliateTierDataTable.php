@@ -13,6 +13,13 @@ class AffiliateTierDataTable extends BaseDataTable
         return AffiliateTier::query()->orderBy('min_sales');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name']),
+        ];
+    }
+
     public function columns(): array
     {
         return [

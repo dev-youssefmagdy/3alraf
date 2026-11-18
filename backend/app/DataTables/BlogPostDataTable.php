@@ -13,6 +13,15 @@ class BlogPostDataTable extends BaseDataTable
         return BlogPost::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter('title'),
+            $this->textFilter('slug', ['slug']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

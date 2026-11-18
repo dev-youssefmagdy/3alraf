@@ -15,6 +15,7 @@ return [
     'viewing' => 'العرض',
     'direction_ltr' => 'من اليسار إلى اليمين', 'direction_rtl' => 'من اليمين إلى اليسار',
     'search' => 'بحث', 'processing' => 'جارٍ المعالجة...', 'no_data' => 'لا توجد بيانات', 'select' => 'اختر...',
+    'table_filters' => ['all' => 'الكل', 'reset' => 'مسح الفلاتر', 'name' => 'الاسم', 'title' => 'العنوان', 'code' => 'الكود', 'slug' => 'الرابط', 'email' => 'البريد الإلكتروني', 'phone' => 'الهاتف', 'status' => 'الحالة', 'type' => 'النوع', 'placement' => 'الموضع', 'from' => 'من', 'to' => 'إلى', 'number' => 'الرقم', 'barcode' => 'الباركود', 'sku' => 'رمز المنتج', 'category' => 'القسم', 'brand' => 'العلامة التجارية', 'city' => 'المدينة', 'branch' => 'الفرع', 'supplier' => 'المورد', 'affiliate' => 'المسوّق', 'description' => 'الوصف', 'area' => 'القسم', 'route' => 'المسار', 'http_status' => 'حالة HTTP', 'decision' => 'القرار', 'approved' => 'مقبول', 'rejected' => 'مرفوض', 'succeeded' => 'نجح', 'failed' => 'فشل', 'running' => 'قيد التنفيذ', 'revoked' => 'ملغى', 'expired' => 'منتهي'],
     'total_languages' => 'اللغات',
     'languages_need_default' => 'يجب أن توجد لغة افتراضية دائماً. اجعل لغة أخرى افتراضية بدلاً من ذلك.',
     'languages_cannot_delete_default' => 'لا يمكن حذف اللغة الافتراضية.',

@@ -13,6 +13,14 @@ class PackagingOptionDataTable extends BaseDataTable
         return PackagingOption::query()->orderBy('sort_order')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

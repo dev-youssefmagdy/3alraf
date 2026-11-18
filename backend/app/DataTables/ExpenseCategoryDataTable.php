@@ -13,6 +13,14 @@ class ExpenseCategoryDataTable extends BaseDataTable
         return ExpenseCategory::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

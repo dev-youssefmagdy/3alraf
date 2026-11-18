@@ -13,6 +13,14 @@ class ShippingCompanyDataTable extends BaseDataTable
         return ShippingCompany::query()->withCount('rates')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

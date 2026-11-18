@@ -13,6 +13,16 @@ class StockAdjustmentDataTable extends BaseDataTable
         return StockAdjustment::query()->with('branch')->withSum('items', 'quantity')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('number', ['number']),
+            $this->selectFilter('branch_id', $this->nameOptions(\App\Models\Branch::class), label: $this->filterLabel('branch')),
+            $this->selectFilter('type', fn () => \App\Enums\AdjustmentType::options()),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

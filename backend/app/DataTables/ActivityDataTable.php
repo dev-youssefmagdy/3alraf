@@ -14,6 +14,15 @@ class ActivityDataTable extends BaseDataTable
         return Activity::query()->with('causer')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('description', ['description']),
+            $this->textFilter('area', ['log_name']),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -101,9 +101,7 @@
     [data-panel] .ui-title { @apply text-base font-bold text-slate-900; }
     [data-panel] .ui-sub { @apply text-xs text-slate-500; }
 
-    /* DataTables inside a panel card */
-    [data-panel] table.dataTable thead th { @apply bg-slate-100 text-xs font-bold text-slate-600; }
-    [data-panel] table.dataTable tbody tr:hover { @apply bg-slate-50; }
+    /* DataTables: see resources/css/app.css (must stay unlayered to override the DataTables stylesheet) */
 }
 
 /* ⌘K command palette */

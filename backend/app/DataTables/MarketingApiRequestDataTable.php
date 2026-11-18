@@ -13,6 +13,15 @@ class MarketingApiRequestDataTable extends BaseDataTable
         return MarketingApiRequest::query()->with('token:id,name,token_prefix')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('route', ['route']),
+            Filter::text('http_status', $this->filterLabel('http_status'), fn (Builder $q, string $v) => $q->where('status', (int) $v)),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -13,6 +13,14 @@ class BrandDataTable extends BaseDataTable
         return Brand::query()->withCount('products')->orderBy('sort_order')->orderByDesc('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->translatedFilter(),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -10,10 +10,45 @@
 @import './panel.css';
 @source '../views/components/panel';
 
-/* DataTables light touch-ups (RTL-safe) */
-.dt-container { @apply text-sm; }
-table.dataTable thead th { @apply text-start; }
-table.dataTable td { @apply align-middle; }
+/* Admin tables (logical properties, so Arabic and English mirror). Unlayered on purpose: the DataTables stylesheet is unlayered too. */
+div.dt-container { font-size: 0.875rem; color: var(--color-slate-700); }
+div.dt-container div.dt-layout-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; margin: 0.875rem 0; }
+div.dt-container div.dt-layout-cell { display: block; width: auto; padding: 0; margin: 0; text-align: start; }
+div.dt-container div.dt-layout-row > div.dt-layout-start { margin-inline-end: auto; }
+div.dt-container div.dt-layout-row > div.dt-layout-end { margin-inline-start: auto; }
+div.dt-container .dt-length, div.dt-container .dt-search { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--color-slate-500); }
+div.dt-container .dt-length label, div.dt-container .dt-search label { margin: 0; }
+div.dt-container .dt-input { height: 2.5rem; margin: 0; border: 1px solid var(--color-slate-300); border-radius: 0.75rem; background-color: #fff; padding-inline: 0.75rem; color: var(--color-slate-900); }
+div.dt-container .dt-input:focus { border-color: var(--p-accent, var(--color-brand-500)); outline: 2px solid var(--p-accent-soft, var(--color-brand-100)); }
+div.dt-container .dt-info { padding: 0; color: var(--color-slate-500); }
+
+/* only the table scrolls sideways; toolbar and paging stay put */
+div.dt-container div.dt-layout-table > div.dt-layout-cell { position: relative; flex: 1 1 100%; width: 100%; min-width: 0; overflow-x: auto; border: 1px solid var(--color-slate-200); border-radius: 1rem; background: #fff; }
+div.dt-container table.dataTable { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; border: 0; }
+div.dt-container table.dataTable > thead > tr > th { padding: 0.75rem 1rem; border: 0; border-bottom: 1px solid var(--color-slate-200); background: var(--color-slate-50); color: var(--color-slate-500); font-size: 0.75rem; font-weight: 600; line-height: 1rem; letter-spacing: 0.01em; text-align: start; vertical-align: middle; white-space: nowrap; outline: 0; }
+div.dt-container table.dataTable > thead > tr > th.dt-orderable-asc:hover, div.dt-container table.dataTable > thead > tr > th.dt-orderable-desc:hover { color: var(--color-slate-900); outline: 0; }
+div.dt-container table.dataTable > thead > tr > th.dt-ordering-asc, div.dt-container table.dataTable > thead > tr > th.dt-ordering-desc { color: var(--p-accent-text, var(--color-brand-700)); }
+div.dt-container table.dataTable > thead > tr > th .dt-column-header { display: inline-flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 0.375rem; }
+div.dt-container table.dataTable.display > tbody > tr > * { padding: 0.75rem 1rem; border: 0; border-bottom: 1px solid var(--color-slate-100); box-shadow: none; color: var(--color-slate-700); text-align: start; vertical-align: middle; }
+div.dt-container table.dataTable.display > tbody > tr:last-child > * { border-bottom: 0; }
+div.dt-container table.dataTable.display > tbody > tr:hover > * { background: var(--color-slate-50); box-shadow: none; }
+div.dt-container table.dataTable td.dt-wide { min-width: 14rem; }
+div.dt-container table.dataTable td img { max-width: none; flex-shrink: 0; } /* a thumbnail keeps its size when the column is tight */
+
+/* row buttons: from tablet width the last column stays on screen however wide the table is (on phones it would cover the row, so it scrolls) */
+div.dt-container table.dataTable > thead > tr > th.dt-actions, div.dt-container table.dataTable.display > tbody > tr > td.dt-actions { width: 1%; white-space: nowrap; }
+@media (min-width: 640px) {
+    div.dt-container table.dataTable > thead > tr > th.dt-actions, div.dt-container table.dataTable.display > tbody > tr > td.dt-actions { position: sticky; inset-inline-end: 0; z-index: 1; border-inline-start: 1px solid var(--color-slate-200); }
+}
+div.dt-container table.dataTable.display > tbody > tr > td.dt-actions { background: #fff; }
+div.dt-container table.dataTable.display > tbody > tr:hover > td.dt-actions { background: var(--color-slate-50); }
+.dt-actions .btn-sm { white-space: nowrap; }
+
+div.dt-container .dt-paging nav { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+div.dt-container .dt-paging .dt-paging-button { min-width: 2.25rem; height: 2.25rem; margin: 0; padding: 0 0.5rem; border: 1px solid transparent; border-radius: 0.625rem; background: none; color: var(--color-slate-700) !important; }
+div.dt-container .dt-paging .dt-paging-button:hover { border-color: transparent; background: var(--color-slate-100); color: var(--color-slate-900) !important; }
+div.dt-container .dt-paging .dt-paging-button.current, div.dt-container .dt-paging .dt-paging-button.current:hover { border-color: transparent; background: var(--p-accent, var(--color-brand-600)); color: #fff !important; font-weight: 600; }
+div.dt-container .dt-paging .dt-paging-button.disabled, div.dt-container .dt-paging .dt-paging-button.disabled:hover { background: none; color: var(--color-slate-300) !important; }
 
 /* searchable selects (Tom Select) styled like .form-control */
 .ts-wrapper { min-width: 12rem; }
@@ -23,6 +58,11 @@ table.dataTable td { @apply align-middle; }
 .ts-dropdown .active { background: var(--color-brand-50); color: var(--color-brand-900); }
 [dir='rtl'] .ts-wrapper.single .ts-control { padding-inline-end: 2rem; }
 [dir='rtl'] .ts-wrapper.single .ts-control::after { right: auto; left: 15px; }
+/* table filter bar: one box per searchable select, same fixed height as the other fields, so focusing one never shifts the row */
+[data-dt-filters] .ts-wrapper { min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+[data-dt-filters] .ts-wrapper.single .ts-control { height: 2.625rem; flex-wrap: nowrap; align-items: center; overflow: hidden; border-radius: 0.75rem; }
+[data-dt-filters] .ts-control .item { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+[data-dt-filters] .ts-control > input { flex: 1 1 1rem; min-width: 1rem !important; }
 
 
 .iti{width:100%}

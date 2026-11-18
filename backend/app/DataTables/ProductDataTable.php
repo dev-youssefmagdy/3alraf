@@ -2,8 +2,11 @@
 
 namespace App\DataTables;
 
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockLevel;
+use App\Repositories\Contracts\CategoryRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -18,11 +21,37 @@ class ProductDataTable extends BaseDataTable
             ->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name_ar', 'name_en']),
+            Filter::text('barcode', $this->filterLabel('barcode'), fn (Builder $q, string $v) => $this->whereProductOrVariant($q, 'barcode', $v)),
+            Filter::text('sku', $this->filterLabel('sku'), fn (Builder $q, string $v) => $this->whereProductOrVariant($q, 'sku', $v)),
+            Filter::select('category_id', $this->filterLabel('category'), fn () => app(CategoryRepositoryInterface::class)->flatTree()
+                ->mapWithKeys(fn (Category $c) => [$c->id => str_repeat('— ', (int) $c->depth).$c->name])->all(), $this->whereInCategory(...), true),
+            $this->selectFilter('brand_id', $this->nameOptions(Brand::class), label: $this->filterLabel('brand'), searchable: true),
+            $this->activeFilter(),
+        ];
+    }
+
+    private function whereProductOrVariant(Builder $q, string $column, string $value): void
+    {
+        $like = $this->likeValue($value);
+        $q->where(fn (Builder $w) => $w->where("products.$column", 'like', $like)->orWhereHas('variants', fn (Builder $v) => $v->where($column, 'like', $like)));
+    }
+
+    /** The chosen category or anything below it in the tree. */
+    private function whereInCategory(Builder $q, string $id): void
+    {
+        $path = Category::query()->whereKey($id)->value('path');
+        $q->whereHas('categories', fn (Builder $c) => $c->whereKey($id)->orWhere('categories.path', 'like', addcslashes((string) $path, '\\%_').'/%'));
+    }
+
     public function columns(): array
     {
         return [
             ['data' => 'thumb', 'title' => '', 'orderable' => false, 'searchable' => false],
-            ['data' => 'name_label', 'title' => __('admin.fields.name'), 'orderable' => false],
+            ['data' => 'name_label', 'title' => __('admin.fields.name'), 'orderable' => false, 'className' => 'dt-wide'],
             ['data' => 'sku', 'title' => __('admin.fields.sku')],
             ['data' => 'barcode', 'title' => __('admin.fields.barcode')],
             ['data' => 'brand_label', 'title' => __('admin.brand'), 'orderable' => false, 'searchable' => false],

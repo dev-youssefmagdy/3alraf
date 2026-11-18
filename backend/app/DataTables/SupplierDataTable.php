@@ -13,6 +13,16 @@ class SupplierDataTable extends BaseDataTable
         return Supplier::query()->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name', 'contact_name']),
+            $this->textFilter('phone', ['phone']),
+            $this->textFilter('email', ['email']),
+            $this->activeFilter(),
+        ];
+    }
+
     public function columns(): array
     {
         return [

@@ -20,6 +20,15 @@ class AffiliateDataTable extends BaseDataTable
             ->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name']),
+            $this->textFilter('email', ['email']),
+            $this->enumFilter(\App\Enums\AffiliateStatus::class, 'status'),
+        ];
+    }
+
     public function columns(): array
     {
         return [

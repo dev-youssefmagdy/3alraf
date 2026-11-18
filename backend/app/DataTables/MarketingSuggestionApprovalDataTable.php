@@ -14,6 +14,14 @@ class MarketingSuggestionApprovalDataTable extends BaseDataTable
         return MarketingSuggestionApproval::query()->with(['suggestion:id,title,type', 'admin:id,name'])->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->selectFilter('decision', ['approved' => $this->filterLabel('approved'), 'rejected' => $this->filterLabel('rejected')]),
+            ...$this->dateFilters(),
+        ];
+    }
+
     public function columns(): array
     {
         $c = fn ($k) => __('marketing.suggestions.cols.'.$k);

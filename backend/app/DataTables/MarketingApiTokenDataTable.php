@@ -13,6 +13,18 @@ class MarketingApiTokenDataTable extends BaseDataTable
         return MarketingApiToken::query()->with('creator:id,name')->latest('id');
     }
 
+    public function filters(): array
+    {
+        return [
+            $this->textFilter('name', ['name']),
+            Filter::select('status', $this->filterLabel('status'), ['active' => __('admin.active'), 'expired' => $this->filterLabel('expired'), 'revoked' => $this->filterLabel('revoked')], fn (Builder $q, string $v) => match ($v) {
+                'revoked' => $q->whereNotNull('revoked_at'),
+                'expired' => $q->whereNull('revoked_at')->whereNotNull('expires_at')->where('expires_at', '<=', now()),
+                default => $q->whereNull('revoked_at')->where(fn (Builder $w) => $w->whereNull('expires_at')->orWhere('expires_at', '>', now())),
+            }),
+        ];
+    }
+
     public function columns(): array
     {
         return [
