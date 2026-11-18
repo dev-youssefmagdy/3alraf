@@ -128,6 +128,7 @@ class RepositoryServiceProvider extends ServiceProvider
         \App\Repositories\Contracts\IntegrationClientRepositoryInterface::class => \App\Repositories\Eloquent\IntegrationClientRepository::class,
         \App\Repositories\Contracts\QrCodeRepositoryInterface::class => \App\Repositories\Eloquent\QrCodeRepository::class,
         \App\Repositories\Contracts\RetentionRepositoryInterface::class => \App\Repositories\Eloquent\RetentionRepository::class,
+        \App\Repositories\Contracts\ImageEmbeddingRepositoryInterface::class => \App\Repositories\Eloquent\ImageEmbeddingRepository::class,
         \App\Repositories\Contracts\MarketingApiTokenRepositoryInterface::class => \App\Repositories\Eloquent\MarketingApiTokenRepository::class,
         \App\Repositories\Contracts\MarketingRepositoryInterface::class => \App\Repositories\Eloquent\MarketingRepository::class,
         \App\Repositories\Contracts\MarketingSuggestionRepositoryInterface::class => \App\Repositories\Eloquent\MarketingSuggestionRepository::class,

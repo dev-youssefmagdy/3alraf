@@ -1,0 +1,8 @@
+# Runtime of the embedder service (no torch). Pillow >= 11.2 is required: it decodes AVIF, the format of every catalog image.
+fastapi==0.163.2
+starlette==1.10.0
+uvicorn==0.54.0
+python-multipart==0.0.34
+onnxruntime==1.32.0
+numpy==2.5.4
+pillow==13.0.0

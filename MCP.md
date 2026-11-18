@@ -34,6 +34,14 @@ Follow these approved decisions:
 
 Do not replace the existing Laravel architecture or introduce unnecessary infrastructure.
 
+## 1.1 Decision (2026-11-18): Image embeddings, the first non-suggestion MCP write
+
+- Tools: `get_image_embedding_status` (read, scope `marketing:read`) and `fill_missing_image_embeddings` (write, new scope `embeddings:write`). API: `GET image-embeddings/status`, `POST image-embeddings/fill-missing`.
+- This is the only MCP write that is not a suggestion or a draft. It is accepted because it writes **only the internal image-search index** (`image_embeddings`, used by the admin "search by image"): no product, bundle, price, stock, content or customer-visible data changes, and nothing needs a person's approval.
+- Limits: it queues embeddings only for images that have none for the current model or whose file changed. It never recomputes or overwrites up-to-date embeddings and is idempotent (a second call while jobs are pending queues 0). Optional `limit` (1–5000).
+- `embeddings:write` is a separate opt-in scope. A migration granted it to existing non-revoked tokens that already had `suggestions:write:product` (the MCP token). Removing the scope from the token in the marketer panel switches the tool off.
+- Details: `IMAGE_SEARCH_PLAN.md` §3.4, `backend/docs/marketing/API_DOCUMENTATION.md` §10.
+
 # 2. Mandatory Phase 0: Inspect Before Implementing
 
 Before changing any files or server configuration, inspect the existing project and deployment environment.

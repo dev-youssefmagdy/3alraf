@@ -55,8 +55,17 @@ async function compressInput(input) {
 /** Resolves once every in-flight compression has finished. */
 export const pendingCompression = () => Promise.all(Array.from(pending));
 
+/** The smaller version of one image, or the original when it can't be improved. */
+export const shrinkImage = (file) => shrink(file).catch(() => file);
+
+/** Makes ajax-form wait for this work before it builds its FormData. */
+export function trackCompression(work) {
+    const p = work.catch(() => {}).finally(() => pending.delete(p));
+    pending.add(p);
+    return p;
+}
+
 $(document).on('change', 'form[data-ajax-form] input[type=file]', function () {
     if (this.dataset.noCompress !== undefined || !(this.accept || '').includes('image')) return;
-    const p = compressInput(this).catch(() => {}).finally(() => pending.delete(p));
-    pending.add(p);
+    trackCompression(compressInput(this));
 });

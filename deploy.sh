@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deploy 3alraf: pull, install, migrate, build, clear caches, reload services.
-# Usage: sudo ./deploy.sh [--no-pull] [--no-build] [--mcp] [--whatsapp]
+# Usage: sudo ./deploy.sh [--no-pull] [--no-build] [--mcp] [--whatsapp] [--embedder]
+#   --embedder  image-search embedder (image-embedder/): install/update its venv, export the model if missing, refresh the systemd unit, restart it
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,13 +9,14 @@ APP="$ROOT/backend"
 WEB_USER="www-data"
 PHP_FPM="php8.5-fpm"
 
-PULL=1; BUILD=1; MCP=0; WA=0
+PULL=1; BUILD=1; MCP=0; WA=0; EMB=0
 for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=0 ;;
     --no-build) BUILD=0 ;;
     --mcp) MCP=1 ;;
     --whatsapp) WA=1 ;;
+    --embedder) EMB=1 ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -69,7 +71,7 @@ step "Reloading PHP-FPM (opcache has timestamp validation off)"
 systemctl reload "$PHP_FPM"
 
 step "Restarting queue, scheduler and reverb"
-artisan queue:restart
+artisan queue:restart   # every worker exits gracefully, incl. 3alraf-queue-embeddings; supervisor starts fresh ones
 supervisorctl restart 3alraf-scheduler 3alraf-reverb || true
 
 if [ "$MCP" -eq 1 ]; then
@@ -82,6 +84,22 @@ if [ "$WA" -eq 1 ]; then
   step "Updating and restarting WhatsApp service"
   (cd "$ROOT/whatsapp-service" && npm ci --omit=dev --no-audit --no-fund)
   supervisorctl restart 3alraf-whatsapp
+fi
+
+if [ "$EMB" -eq 1 ]; then
+  step "Updating and restarting the image embedder"
+  "$ROOT/image-embedder/scripts/setup.sh"   # idempotent: venv from requirements.txt; exports the ONNX model only if it is missing
+  UNIT=/etc/systemd/system/3alraf-embedder.service
+  if ! cmp -s "$ROOT/image-embedder/deploy/3alraf-embedder.service" "$UNIT"; then
+    install -m 0644 "$ROOT/image-embedder/deploy/3alraf-embedder.service" "$UNIT"
+    systemctl daemon-reload
+    systemctl enable 3alraf-embedder
+  fi
+  systemctl restart 3alraf-embedder
+  EMB_URL="$(grep -E '^IMAGE_EMBEDDER_URL=' "$APP/.env" | tail -n1 | cut -d= -f2- | tr -d '"' || true)"
+  EMB_URL="${EMB_URL:-http://127.0.0.1:8090}"
+  for _ in $(seq 1 20); do curl -fsS "$EMB_URL/health" >/dev/null 2>&1 && break; sleep 1; done
+  curl -fsS "$EMB_URL/health" && echo || echo "WARNING: embedder health check failed (journalctl -u 3alraf-embedder)"
 fi
 
 step "Deploy finished at $(date)"

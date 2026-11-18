@@ -24,6 +24,8 @@ export interface ToolDefinition<Shape extends z.ZodRawShape = z.ZodRawShape> {
   title: string;
   description: string;
   kind: ToolKind;
+  /** A write that is safe to repeat (same result, no extra effect). Reads are always idempotent. */
+  idempotent?: boolean;
   input: Shape;
   run: (args: z.infer<z.ZodObject<Shape>>, ctx: ToolContext) => Promise<LaravelSuccess | ToolOutcome>;
 }
@@ -34,6 +36,7 @@ export interface AnyTool {
   title: string;
   description: string;
   kind: ToolKind;
+  idempotent?: boolean;
   input: z.ZodRawShape;
   run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<LaravelSuccess | ToolOutcome>;
 }

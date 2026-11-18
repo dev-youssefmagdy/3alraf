@@ -22,6 +22,7 @@ database. Routes: `routes/api_marketing.php` (names `marketing-api.*`), register
 |---|---|---|
 | `marketing:read` | enabled | every endpoint below |
 | `suggestions:write:{type}` (one per type: product, new_product, bundle, slider, offer, coupon, seo, blog, seasonal_theme, social_content, media_asset, category) | enabled | `POST suggestions/{type}`, `PATCH suggestions/{id}` (own pending/edited draft), `POST suggestions/{id}/submit`. Never approve / reject / apply / rollback (no such route exists). Reading suggestions needs `marketing:read`. |
+| `embeddings:write` | enabled | `POST image-embeddings/fill-missing` only: queue MISSING image-search embeddings (internal index; never recomputes, changes no store content). Granted by migration to non-revoked tokens with `suggestions:write:product`. |
 
 ## 2. Envelope (`App\Support\Marketing\MarketingResponse`)
 
@@ -216,3 +217,15 @@ Body (`App\Support\Marketing\MetaDraftRules`; unknown fields 422): `name`, `obje
 Refusals: `not_owner` 403, `not_editable` / `frozen` / `illegal_transition` 409, `validation_failed` 422. **There is no approve, reject, publish or activate endpoint.**
 
 Tests: `tests/Feature/SocialMediaLibraryTest.php`, `tests/Feature/MetaAdsTest.php`.
+
+## 10. Image-search index (MCP `get_image_embedding_status`, `fill_missing_image_embeddings`)
+
+Index of the admin "search by image" (`IMAGE_SEARCH_PLAN.md`): one SigLIP vector per product / variant image and per bundle image, in `image_embeddings`. The only write here touches that internal index, never store content (MCP.md §1.1).
+
+| Endpoint | Scope | Notes |
+|---|---|---|
+| `GET image-embeddings/status` | marketing:read | `model`, `total` (live product + variant images and bundle images), `indexed`, `pending`, `failed`, `missing`, `percent`, `complete`, `images{total, indexed}`, `bundles{total, indexed}`, `embedder_reachable` |
+| `POST image-embeddings/fill-missing` | embeddings:write | body `{limit?: 1..5000}` (unknown fields 422). Queues jobs (queue `embeddings`) only for sources with no row for the current model, a changed path or file hash, a failed row older than 24 h, or a pending row older than 6 h (lost job). Never recomputes up-to-date rows; also prunes rows of deleted images. → `{queued, remaining, pruned_orphans, status}`; warning `embedder_unreachable` when the service is down (jobs wait and retry). Idempotent: a second call while jobs are pending returns `queued: 0`. |
+
+Tests: `tests/Feature/MarketingImageEmbeddingsApiTest.php`, `tests/Feature/ImageSearchTest.php`.
+

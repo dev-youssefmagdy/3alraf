@@ -117,6 +117,9 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('products/{product}/qr', [ProductController::class, 'qr'])->whereNumber('product')->name('products.qr');
         Route::post('products/{product}/qr/regenerate', [ProductController::class, 'regenerateQr'])->whereNumber('product')->name('products.qr.regenerate');
         Route::post('products/{product}/unlist', [ProductController::class, 'unlist'])->whereNumber('product')->name('products.unlist');
+        // Search by image (IMAGE_SEARCH_PLAN.md): the photo is embedded by the local embedder and never stored
+        Route::post('products/image-search', [\App\Http\Controllers\Admin\ImageSearchController::class, 'search'])->middleware(['can:products.view', 'throttle:image-search'])->name('image-search');
+        Route::get('products/image-search/coverage', [\App\Http\Controllers\Admin\ImageSearchController::class, 'coverage'])->middleware(['can:products.view', 'throttle:60,1'])->name('image-search.coverage');
         // Public gallery videos + shared image/video order (P8)
         Route::post('products/{product}/videos', [ProductVideoController::class, 'store'])->whereNumber('product')->name('products.videos.store');
         Route::delete('products/{product}/videos/{video}', [ProductVideoController::class, 'destroy'])->whereNumber(['product', 'video'])->scopeBindings()->name('products.videos.destroy');

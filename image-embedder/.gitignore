@@ -1,0 +1,6 @@
+# Local virtualenv, exported model files and caches (scripts/setup.sh recreates them)
+/.venv/
+/models/*
+!/models/.gitkeep
+__pycache__/
+.pytest_cache/

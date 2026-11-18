@@ -39,3 +39,6 @@ Schedule::command('erp:depreciate')->monthlyOn(1, '03:20')->withoutOverlapping()
 
 // ERP: weekly ledger integrity audit (non-zero exit is reported by the scheduler; wire an alert on failure).
 Schedule::command('erp:verify')->weeklyOn(1, '04:10')->withoutOverlapping()->onOneServer();
+
+// Image search (IMAGE_SEARCH_PLAN.md): nightly safety net, queues only missing / replaced image embeddings (queue `embeddings`).
+Schedule::command('embeddings:fill-missing')->dailyAt('03:45')->withoutOverlapping()->onOneServer();

@@ -1,0 +1,43 @@
+# /etc/systemd/system/3alraf-embedder.service
+# Image embedder for the admin "search by image" (IMAGE_SEARCH_PLAN.md). Loopback only, no auth: never expose it through nginx.
+# Optional overrides (port, threads, ...) in /etc/3alraf-embedder.env, e.g. EMBEDDER_PORT=8090. The app refuses a non-loopback host.
+[Unit]
+Description=3alraf image embedder (SigLIP, ONNX Runtime CPU)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/3alraf/image-embedder
+EnvironmentFile=-/etc/3alraf-embedder.env
+Environment=EMBEDDER_HOST=127.0.0.1
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=4
+ExecStart=/var/www/3alraf/image-embedder/.venv/bin/python -m app
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# Resources: ~0.75 GB RSS with the model loaded; 1-2 inferences x 4 threads. Lower priority than PHP-FPM.
+MemoryMax=1536M
+CPUWeight=50
+Nice=10
+
+# Hardening (read-only code + model; nothing is written to disk)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

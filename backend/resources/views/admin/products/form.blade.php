@@ -24,10 +24,14 @@
 
             <x-card :title="__('admin.pricing')">
                 <p class="mb-3 text-xs text-slate-500">{{ __('admin.pricing_hint') }}</p>
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div data-price-group="product" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <x-input name="price" type="number" step="0.01" min="0" :label="__('admin.fields.price')" :value="$product->price" />
                     <x-input name="sale_price" type="number" step="0.01" min="0" :label="__('admin.fields.sale_price')" :value="$product->sale_price" />
                     <x-input name="cost" type="number" step="0.01" min="0" :label="__('admin.fields.cost')" :value="$product->cost" />
+                    <div>
+                        <label for="f-profit-percent" class="form-label">{{ __('admin.fields.profit_percent') }}</label>
+                        <input id="f-profit-percent" type="number" step="0.01" min="-100" data-profit class="form-control">
+                    </div>
                     <x-input name="min_stock_alert_qty" type="number" step="1" min="0" :label="__('stock_requests.min_alert')" :value="$product->min_stock_alert_qty" :hint="__('stock_requests.min_alert_hint')" />
                 </div>
             </x-card>
@@ -88,21 +92,9 @@
             </x-card>
 
             <x-card :title="__('admin.images')">
-                @if ($editing && $product->images->isNotEmpty())
-                    <div class="mb-3 flex flex-wrap gap-3">
-                        @foreach ($product->images as $img)
-                            <label class="relative block text-center text-xs">
-                                <img src="{{ $img->thumb_url }}" class="size-20 rounded border object-cover" alt="">
-                                <span class="mt-1 flex items-center justify-center gap-1"><input type="checkbox" name="remove_images[]" value="{{ $img->id }}"> {{ __('admin.remove') }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                @endif
-                <div data-field>
-                    <input type="file" name="images[]" multiple accept="image/*" class="form-control">
-                    <p class="mt-1 text-xs text-slate-500">{{ __('admin.images_hint') }}</p>
-                    @unless ($editing)<p class="mt-1 text-xs text-slate-500">{{ __('admin.product_media.after_save') }}</p>@endunless
-                </div>
+                <x-image-dropzone name="images[]" :multiple="true" :max="12" remove-name="remove_images[]" :hint="__('admin.images_hint')"
+                    :existing="$editing ? $product->images->map(fn ($img) => ['id' => $img->id, 'url' => $img->thumb_url])->all() : []" />
+                @unless ($editing)<p class="mt-2 text-xs text-slate-500">{{ __('admin.product_media.after_save') }}</p>@endunless
             </x-card>
 
             <x-card :title="__('admin.variants')" data-variant-section id="variant-section">
@@ -132,7 +124,7 @@
                     <table class="w-full text-sm">
                         <thead><tr class="text-start text-xs uppercase text-slate-500">
                             <th class="text-start">{{ __('admin.variant') }}</th><th class="text-start">{{ __('admin.fields.sku') }}</th><th class="text-start">{{ __('admin.fields.weight') }}</th>
-                            <th class="text-start">{{ __('admin.fields.barcode') }}</th><th class="text-start">{{ __('admin.fields.image') }}</th><th class="text-start">{{ __('admin.fields.price') }}</th><th class="text-start">{{ __('admin.fields.sale_price') }}</th><th class="text-start">{{ __('admin.fields.cost') }}</th><th class="text-start">{{ __('stock_requests.min_alert') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th><th></th>
+                            <th class="text-start">{{ __('admin.fields.barcode') }}</th><th class="text-start">{{ __('admin.fields.image') }}</th><th class="text-start">{{ __('admin.fields.price') }}</th><th class="text-start">{{ __('admin.fields.sale_price') }}</th><th class="text-start">{{ __('admin.fields.cost') }}</th><th class="text-start">{{ __('admin.fields.profit_percent') }}</th><th class="text-start">{{ __('stock_requests.min_alert') }}</th><th class="text-start">{{ __('admin.fields.is_active') }}</th><th></th>
                         </tr></thead>
                         <tbody data-repeater-list>
                             @foreach ($variantRows as $i => $v)

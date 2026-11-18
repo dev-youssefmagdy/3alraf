@@ -97,6 +97,34 @@ describe('tool execution against a mocked Laravel', () => {
     expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/91');
   });
 
+  it('reads the image-search index status', async () => {
+    s.laravelMock.reply(ok({ total: 1196, indexed: 1190, pending: 6, failed: 0, missing: 0, embedder_reachable: true }));
+    const result = await call('get_image_embedding_status');
+    expect(s.laravelMock.last.method).toBe('GET');
+    expect(s.laravelMock.last.url.pathname).toBe('/api/internal/marketing/image-embeddings/status');
+    expect(blockJson(result)).toMatchObject({ data: { indexed: 1190, pending: 6 } });
+  });
+
+  it('fills only missing image embeddings, with an optional limit, as an idempotent non-destructive write', async () => {
+    s.laravelMock.reply(ok({ queued: 6, remaining: 0, status: { pending: 6 } }));
+    const result = await call('fill_missing_image_embeddings', { limit: 50 });
+    const { method, url, body } = s.laravelMock.last;
+    expect(method).toBe('POST');
+    expect(url.pathname).toBe('/api/internal/marketing/image-embeddings/fill-missing');
+    expect(body).toEqual({ limit: 50 });
+    expect(blockJson(result)).toMatchObject({ data: { queued: 6 } });
+
+    s.laravelMock.reply(ok({ queued: 0, remaining: 0 }));
+    await call('fill_missing_image_embeddings');
+    expect(s.laravelMock.last.body ?? {}).toEqual({});
+
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'fill_missing_image_embeddings');
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
+    expect(tool?.description).toMatch(/only/i);
+    expect(tool?.description).toMatch(/never recomputes/i);
+    expect(tool?.description).toMatch(/changes no store content/i);
+  });
+
   it('reads attributes and tags', async () => {
     s.laravelMock.reply({ status: 200, json: { success: true, data: [], meta: {}, warnings: [] } });
     await call('get_attributes');
@@ -155,6 +183,8 @@ describe('tool execution against a mocked Laravel', () => {
       ['client-set source', 'create_blog_suggestion', { title: 'abc', source: 'scheduled', payload: { title: { ar: 'x' }, slug: 'x' } }],
       ['bad meta objective', 'create_campaign_draft', { name: 'abc', objective: 'ACTIVATE', product_ids: [1], budget_type: 'daily', budget_amount: 1, start_at: 'x-y-z', copy: { primary_text: 'a' }, cta: 'SHOP_NOW' }],
       ['status field on a meta draft', 'update_campaign_draft', { draft_id: 1, status: 'ACTIVE' }],
+      ['fill-missing limit of 0', 'fill_missing_image_embeddings', { limit: 0 }],
+      ['fill-missing recompute flag', 'fill_missing_image_embeddings', { recompute: true }],
     ];
 
     it.each(invalid)('%s', async (_label, name, args) => {

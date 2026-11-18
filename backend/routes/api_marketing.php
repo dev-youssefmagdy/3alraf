@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Marketing\AnalyticsController as A;
 use App\Http\Controllers\Api\Marketing\CatalogController as C;
 use App\Http\Controllers\Api\Marketing\ContentController as T;
+use App\Http\Controllers\Api\Marketing\ImageEmbeddingController as IE;
 use App\Http\Controllers\Api\Marketing\MediaController as MD;
 use App\Http\Controllers\Api\Marketing\MerchandisingController as M;
 use App\Http\Controllers\Api\Marketing\MetaController as MT;
@@ -40,6 +41,10 @@ Route::middleware('marketing.token:meta:read')->prefix('meta')->name('meta.')->g
     Route::get('drafts/{id}', [MT::class, 'draft'])->whereNumber('id')->name('drafts.show');
 });
 
+// Image-search index (IMAGE_SEARCH_PLAN.md §3.4): the only non-suggestion write. It queues MISSING embeddings of the internal index, never
+// recomputes existing ones and changes no store content (MCP.md "Image embeddings"). Separate opt-in scope embeddings:write.
+Route::middleware('marketing.token:embeddings:write')->post('image-embeddings/fill-missing', [IE::class, 'fillMissing'])->name('image-embeddings.fill-missing');
+
 Route::middleware('marketing.token:marketing:read')->group(function () {
     Route::get('overview', [A::class, 'overview'])->name('overview');
     Route::get('sales-summary', [A::class, 'salesSummary'])->name('sales-summary');
@@ -50,6 +55,7 @@ Route::middleware('marketing.token:marketing:read')->group(function () {
     Route::get('campaign-candidates', [A::class, 'campaignCandidates'])->name('campaign-candidates');
     Route::get('marketing-metrics', [A::class, 'marketingMetrics'])->name('marketing-metrics');
     Route::get('gift-finder/stats', [A::class, 'giftFinderStats'])->name('gift-finder.stats');
+    Route::get('image-embeddings/status', [IE::class, 'status'])->name('image-embeddings.status');
 
     Route::get('products', [C::class, 'products'])->name('products.index');
     Route::get('products/{id}', [C::class, 'product'])->whereNumber('id')->name('products.show');

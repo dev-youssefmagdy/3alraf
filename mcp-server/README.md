@@ -21,7 +21,7 @@ npm start
 
 See [`.env.example`](.env.example) for every variable. Required: `LARAVEL_BASE_URL`, `LARAVEL_SERVICE_TOKEN`, and at least one of `MCP_BEARER_TOKEN` or `MCP_OAUTH_ENABLED=true` with `MCP_OAUTH_OWNER_PASSWORD`. The server refuses to start with no authentication.
 
-The service token comes from Marketer panel → Marketing API tokens, with scopes `marketing:read`, the `suggestions:write:*` scopes you want Claude to use (one per suggestion type, all 12 for full use, including `suggestions:write:new_product` and `suggestions:write:category`), `meta:read` and `meta:draft`.
+The service token comes from Marketer panel → Marketing API tokens, with scopes `marketing:read`, the `suggestions:write:*` scopes you want Claude to use (one per suggestion type, all 12 for full use, including `suggestions:write:new_product` and `suggestions:write:category`), `meta:read`, `meta:draft` and `embeddings:write` (fill missing image-search embeddings; granted automatically to existing tokens with `suggestions:write:product` by a migration).
 
 ## Authentication for Claude
 
@@ -74,7 +74,7 @@ If sign-in fails, Anthropic's [troubleshooting page](https://claude.com/docs/con
 
 ## Tools
 
-60 tools. Source of truth: `src/tools/`.
+66 tools. Source of truth: `src/tools/`.
 
 | Group | Tools |
 |---|---|
@@ -85,8 +85,9 @@ If sign-in fails, Anthropic's [troubleshooting page](https://claude.com/docs/con
 | Media library (3) | `get_product_social_media_assets`, `list_social_media_assets`, `get_social_media_asset` |
 | Meta reads (10) | `get_meta_status`, `get_meta_ad_accounts`, `get_meta_account`, `get_meta_campaigns`, `get_meta_ad_sets`, `get_meta_ads`, `get_meta_campaign_insights`, `get_meta_ad_insights`, `list_campaign_drafts`, `get_campaign_draft` |
 | Meta drafts (3) | `create_campaign_draft`, `update_campaign_draft`, `submit_campaign_for_approval` |
+| Image search index (2) | `get_image_embedding_status` (read), `fill_missing_image_embeddings` (write, scope `embeddings:write`): queues embeddings only for images that have none or whose file changed; never recomputes existing ones and changes no store content (idempotent; a second call queues 0) |
 
-Create, update and submit tools return a `review_url` so a person can act in the panel. `tests/tools.test.ts` fails if a tool name implies approve, reject, apply, roll back, publish or activate. Its allowlist has two entries: `get_suggestion_application_result` (read-only report) and `submit_campaign_for_approval` (hands the draft to a person).
+Create, update and submit tools return a `review_url` so a person can act in the panel. `tests/tools.test.ts` fails if a tool name implies approve, reject, apply, roll back, publish or activate. `fill_missing_image_embeddings` is the only write that is not a suggestion or draft: it adds to the internal image-search index (MCP.md "Image embeddings"). The allowlist has two entries: `get_suggestion_application_result` (read-only report) and `submit_campaign_for_approval` (hands the draft to a person).
 
 ## Security
 

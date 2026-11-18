@@ -15,6 +15,8 @@ import './lib/search-select';
 import './lib/pos';
 import './lib/whatsapp';
 import './lib/phone-input';
+import './lib/image-search';
+import './lib/image-dropzone';
 
 // WhatsApp inbox: loaded as its own chunk, only on the chat page.
 if (document.getElementById('wa-chat')) import('./whatsapp-chat/index.js');

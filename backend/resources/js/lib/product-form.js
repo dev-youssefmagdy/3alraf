@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import { clearErrors, showErrors } from './ajax-form';
+import { priceFromProfit, profitFromPrice } from './product-pricing';
 
 /**
  * Product form: toggles simple/variable sections and builds the variant matrix into the variants repeater.
@@ -165,6 +166,44 @@ $(() => {
     $(document).on('click', '#variant-generator [data-generate]', generate);
     $(document).on('repeater:changed', '#variant-repeater', refreshEmpty);
 });
+
+/*
+ * Profit % (never submitted): typing it sets price and sale price from the cost; editing the price recalculates it.
+ * A typed profit is kept when the cost changes (prices follow). A variant without its own cost uses the product's.
+ */
+const priceField = ($group, name) => $group.find('[name="' + name + '"],[name$="[' + name + ']"]');
+const productGroup = () => $('[data-price-group="product"]');
+const costOf = ($group) => priceField($group, 'cost').val() || priceField(productGroup(), 'cost').val();
+
+function showProfit($group) {
+    $group.data('profitTyped', false).find('[data-profit]').val(profitFromPrice(costOf($group), priceField($group, 'price').val()) ?? '');
+}
+
+function applyProfit($group) {
+    const price = priceFromProfit(costOf($group), $group.find('[data-profit]').val());
+    if (price === null) return;
+    // the extra argument marks this as our own update; the event still clears a stale inline error
+    ['price', 'sale_price'].forEach((name) => priceField($group, name).val(price).trigger('input', [true]));
+}
+
+const syncProfit = ($group) => ($group.data('profitTyped') ? applyProfit($group) : showProfit($group));
+
+$(document).on('input', '[data-price-group] [data-profit]', function () {
+    const $group = $(this).closest('[data-price-group]');
+    $group.data('profitTyped', this.value !== '');
+    applyProfit($group);
+});
+$(document).on('input', '[data-price-group] [name="price"],[data-price-group] [name$="[price]"]', function (e, own) {
+    if (!own) showProfit($(this).closest('[data-price-group]'));
+});
+$(document).on('input', '[data-price-group] [name="cost"],[data-price-group] [name$="[cost]"]', function () {
+    const $group = $(this).closest('[data-price-group]');
+    syncProfit($group);
+    if ($group.is(productGroup())) {
+        $('[data-price-group="variant"]').filter((_, row) => !priceField($(row), 'cost').val()).each((_, row) => syncProfit($(row)));
+    }
+});
+$(() => $('[data-price-group]').each((_, group) => showProfit($(group))));
 
 /* Product edit page: gallery videos + shared image/video order (P8). Every answer carries the re-rendered card; the product form itself stays untouched. */
 const swapMediaCard = (res) => {

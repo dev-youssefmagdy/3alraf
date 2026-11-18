@@ -47,6 +47,13 @@ class AppServiceProvider extends ServiceProvider
         // ERP strings live in resources/lang-erp (FileLoader merges every registered path per group)
         $this->app->make('translator')->getLoader()->addPath(resource_path('lang-erp'));
         $this->registerLangShims();
+        // Image search index (IMAGE_SEARCH_PLAN.md): new / replaced / deleted catalog images and bundle images keep their embeddings in step.
+        \App\Models\Image::observe(\App\Observers\ImageEmbeddingObserver::class);
+        \App\Models\Bundle::observe(\App\Observers\BundleEmbeddingObserver::class);
+        \App\Models\Product::observe(\App\Observers\CatalogVisibilityObserver::class);
+        \App\Models\ProductVariant::observe(\App\Observers\CatalogVisibilityObserver::class);
+        RateLimiter::for('image-search', fn (Request $r) => Limit::perMinute(max(1, (int) config('image_search.throttle_per_minute', 30)))
+            ->by('image-search|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip())));
         // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
         Gate::define('erp.access', fn ($user) => method_exists($user, 'getAllPermissions')
             && $user->getAllPermissions()->contains(fn ($p) => str_starts_with($p->name, 'erp.') && $p->guard_name === 'admin'));
