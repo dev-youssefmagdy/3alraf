@@ -27,7 +27,7 @@
  *   moves to a variant's image (appending a "variant" slide when the image is not one of the slides), as the retired product-gallery.js did.
  */
 import Swiper from 'swiper';
-import { A11y, Autoplay, FreeMode, Keyboard, Manipulation, Navigation, Pagination, Thumbs } from 'swiper/modules';
+import { A11y, Autoplay, FreeMode, Keyboard, Manipulation, Mousewheel, Navigation, Pagination, Thumbs } from 'swiper/modules';
 // Swiper's core CSS is imported by storefront.css inside a cascade layer, so Tailwind utilities can override it
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -70,8 +70,14 @@ export const presets = {
     chips: () => ({ slidesPerView: 'auto', spaceBetween: 8, freeMode: true, watchOverflow: true }),
     gallery: () => ({ slidesPerView: 1, spaceBetween: 0, rewind: true, pagination: { type: 'fraction' } }), // rewind: the arrows wrap around, as the old gallery did
     galleryThumbs: () => ({
-        slidesPerView: 5.2, spaceBetween: 8, watchSlidesProgress: true, freeMode: true, watchOverflow: true,
-        breakpoints: { 1024: { direction: 'vertical', slidesPerView: 5, spaceBetween: 12 } },
+        // Start in the real direction: a direction set by a breakpoint during init leaves Swiper's RTL flag on, which reverses a vertical slider in Arabic
+        direction: matchMedia('(min-width: 1024px)').matches ? 'vertical' : 'horizontal',
+        watchSlidesProgress: true, freeMode: true, watchOverflow: true,
+        mousewheel: { forceToAxis: true, releaseOnEdges: true }, // the page scrolls on once the strip reaches either end
+        breakpoints: {
+            0: { direction: 'horizontal', slidesPerView: 5.2, spaceBetween: 8 },
+            1024: { direction: 'vertical', slidesPerView: 5, spaceBetween: 12 },
+        },
     }),
 };
 presets.flash = presets.rail;
@@ -88,7 +94,7 @@ function build(root, name, container, extra = {}, controls = true) {
     const reduce = reducedMotion();
 
     const o = {
-        modules: [A11y, Keyboard, Navigation, Pagination, FreeMode, Autoplay, Thumbs, Manipulation], // Manipulation: the gallery appends a variant slide
+        modules: [A11y, Keyboard, Mousewheel, Navigation, Pagination, FreeMode, Autoplay, Thumbs, Manipulation], // Manipulation: the gallery appends a variant slide
         ...opts,
         // RTL: Swiper reads the computed `direction` of the container, which follows <html dir> (or a closer dir attribute)
         speed: reduce ? 0 : (opts.speed ?? 400),
@@ -196,6 +202,14 @@ function initGallery(root) {
     const markThumb = () => root.querySelectorAll('[data-gallery-thumb]').forEach((b) => { if (Number(b.dataset.galleryThumb) === swiper.activeIndex) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
     swiper.on('slideChange', markThumb);
     markThumb();
+    // Swiper's Thumbs only scrolls to a thumb that is fully hidden, so a half-cut active thumb is brought fully into view here
+    const fullyVisible = (s) => s.classList.contains('swiper-slide-fully-visible');
+    const followThumb = () => {
+        const i = swiper.activeIndex;
+        if (!thumbs?.slides[i] || fullyVisible(thumbs.slides[i])) return;
+        thumbs.slideTo(i < thumbs.slides.findIndex(fullyVisible) ? i : Math.max(0, i - Math.floor(thumbs.params.slidesPerView) + 1));
+    };
+    swiper.on('slideChange', followThumb);
     playActive();
 
     const slideList = () => [...swiper.slides];
