@@ -51,7 +51,7 @@
                         <div class="swiper-slide">
                             <a href="{{ route('storefront.category.show', $c['slug']) }}" class="group block text-center">
                                 <span class="mx-auto grid aspect-square w-full place-items-center overflow-hidden rounded-full bg-brand-50 ring-4 ring-inset {{ $rings[$loop->index % 5] }} p-1 transition group-hover:scale-[1.03]">
-                                    @if ($c['image'])<img src="{{ $c['thumb'] ?? $c['image'] }}" alt="" class="size-full rounded-full object-cover" loading="lazy" decoding="async" width="96" height="96">
+                                    @if ($c['image'])<img src="{{ $c['thumb'] ?? $c['image'] }}" @if ($catSrcset = media_srcset($c['thumb'] ?? null)) srcset="{{ $catSrcset }}" sizes="(min-width: 1024px) 96px, (min-width: 768px) 80px, 68px" @endif alt="" class="size-full rounded-full object-cover" loading="lazy" decoding="async" width="96" height="96">
                                     @else<span class="font-display text-2xl font-extrabold text-brand-600">{{ mb_substr($c['name'], 0, 1) }}</span>@endif
                                 </span>
                                 <span class="mt-2 line-clamp-2 block text-xs/4 font-bold text-slate-950 group-hover:text-brand-600 lg:text-sm/5">{{ $c['name'] }}</span>

@@ -44,6 +44,10 @@ class ImageUploadService
         try {
             $main = $this->optimizer->optimize($file->getRealPath(), $profile);
             $thumb = $this->optimizer->optimize($file->getRealPath(), 'thumb');
+            $small = [];
+            foreach (MediaPaths::WIDTHS as $width) {
+                $small[$width] = $this->optimizer->optimize($file->getRealPath(), "thumb_$width");
+            }
             $fallback = config('images.webp_fallback') ? [
                 $this->optimizer->optimize($file->getRealPath(), $profile, Format::WEBP),
                 $this->optimizer->optimize($file->getRealPath(), 'thumb', Format::WEBP),
@@ -51,13 +55,16 @@ class ImageUploadService
         } catch (InvalidImageException $e) {
             throw ValidationException::withMessages(['image' => $e->getMessage()]);
         }
-        foreach ([$main, $thumb] as $r) {
+        foreach ([$main, $thumb, ...array_values($small)] as $r) {
             $r->withinLimit() || Log::warning('image.over_limit', ['dir' => $dir, 'bytes' => $r->size(), 'limit' => $r->limit, 'quality' => $r->quality, 'scale' => $r->scale]);
         }
 
         $dir = $this->namespace().trim($dir, '/').'/'.date('Y/m');
         $name = substr(hash('sha256', $main->bytes), 0, 32).'-'.Str::lower(Str::random(8)); // unique per upload: safe for `immutable` caching, never shared between owners
         $files = ["$dir/$name.avif" => $main->bytes, "$dir/{$name}_thumb.avif" => $thumb->bytes];
+        foreach ($small as $width => $r) {
+            $files["$dir/{$name}_w$width.avif"] = $r->bytes;
+        }
         if ($fallback) {
             $files["$dir/$name.webp"] = $fallback[0]->bytes;
             $files["$dir/{$name}_thumb.webp"] = $fallback[1]->bytes;

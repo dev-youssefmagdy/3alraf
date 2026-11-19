@@ -43,6 +43,9 @@ class ImageOptimizer
         if (preg_match('/_thumb\.[A-Za-z0-9]+$/', $path)) {
             return 'thumb';
         }
+        if (preg_match('/_w(\d+)\.[A-Za-z0-9]+$/', $path, $m) && config("images.profiles.thumb_$m[1]")) {
+            return "thumb_$m[1]";
+        }
         $parts = explode('/', ltrim(preg_replace('#^(tenants/\d+|catalog)/#', '', $path), '/'));
 
         return config('images.dirs.'.$parts[0], 'default');

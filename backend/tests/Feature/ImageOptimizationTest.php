@@ -105,11 +105,11 @@ it('uploads: AVIF + thumb + webp fallback for several files, valid fixtures only
         expect(Storage::disk('media')->size($p['path']))->toBeLessThanOrEqual(102400)->and(Storage::disk('media')->size($p['thumb_path']))->toBeLessThanOrEqual(40960);
     }
     expect(fn () => $svc->store(UploadedFile::fake()->createWithContent('x.jpg', 'not an image'), 'products'))->toThrow(\Illuminate\Validation\ValidationException::class);
-    expect(Storage::disk('media')->allFiles())->toHaveCount(12); // the rejected upload left nothing behind
+    expect(Storage::disk('media')->allFiles())->toHaveCount(18); // the rejected upload left nothing behind
 });
 
 it('MediaPaths treats avif/webp, main/thumb as one family', function () {
-    expect(MediaPaths::family('a/b_thumb.webp'))->toEqualCanonicalizing(['a/b.avif', 'a/b_thumb.avif', 'a/b.webp', 'a/b_thumb.webp'])
+    expect(MediaPaths::family('a/b_thumb.webp'))->toEqualCanonicalizing(['a/b.avif', 'a/b_thumb.avif', 'a/b.webp', 'a/b_thumb.webp', 'a/b_w128.avif', 'a/b_w256.avif'])
         ->and(MediaPaths::thumbOf('a/b.avif'))->toBe('a/b_thumb.avif')
         ->and(MediaPaths::family(null))->toBe([]);
 });
@@ -182,4 +182,30 @@ it('prune-orphans keeps the webp original of a referenced avif', function () {
     $this->artisan('media:prune-orphans')->assertSuccessful();
     Storage::disk('media')->assertExists(['catalog/products/a.avif', 'catalog/products/a.webp', 'catalog/products/a_thumb.webp']);
     Storage::disk('media')->assertMissing('catalog/products/orphan.webp');
+});
+
+it('stores small sizes on upload and lists them in the srcset', function () {
+    $p = (new ImageUploadService)->store(UploadedFile::fake()->createWithContent('p.jpg', file_get_contents(imgFixture('jpg', 900, 700))), 'products');
+    $disk = Storage::disk('media');
+    foreach ([128, 256] as $w) {
+        $file = MediaPaths::variantOf($p['path'], $w);
+        $disk->assertExists($file);
+        expect(getimagesizefromstring($disk->get($file))[0])->toBe($w)->and(ImageOptimizer::profileForPath($file))->toBe("thumb_$w");
+    }
+    $url = media_url($p['thumb_path']);
+    expect(media_srcset($url))->toBe(media_url(MediaPaths::variantOf($p['path'], 128)).' 128w, '.media_url(MediaPaths::variantOf($p['path'], 256))." 256w, $url 400w");
+    (new ImageUploadService)->deletePath($p['path']);
+    expect($disk->allFiles())->toBeEmpty()->and(media_srcset($url))->toBeNull();
+});
+
+it('images:responsive backfills missing sizes once', function () {
+    $p = (new ImageUploadService)->store(UploadedFile::fake()->createWithContent('p.jpg', file_get_contents(imgFixture('jpg', 900, 700))), 'products');
+    $disk = Storage::disk('media');
+    $small = array_map(fn ($w) => MediaPaths::variantOf($p['path'], $w), MediaPaths::WIDTHS);
+    $disk->delete($small);
+    $this->artisan('images:responsive', ['--dry-run' => true])->assertSuccessful();
+    $disk->assertMissing($small);
+    $this->artisan('images:responsive')->expectsOutputToContain('Created 2 file(s)')->assertSuccessful();
+    $disk->assertExists($small);
+    $this->artisan('images:responsive')->expectsOutputToContain('Created 0 file(s)')->assertSuccessful();
 });

@@ -23,6 +23,8 @@ return [
     'profiles' => [
         'product' => ['max_w' => 1000, 'max_h' => 1000, 'fit' => 'scale', 'max_bytes' => 102400],
         'thumb' => ['max_w' => 400, 'max_h' => 400, 'fit' => 'cover', 'max_bytes' => 40960],
+        'thumb_128' => ['max_w' => 128, 'max_h' => 128, 'fit' => 'cover', 'max_bytes' => 10240],
+        'thumb_256' => ['max_w' => 256, 'max_h' => 256, 'fit' => 'cover', 'max_bytes' => 20480],
         'category' => ['max_w' => 700, 'max_h' => 700, 'fit' => 'scale', 'max_bytes' => 81920],
         'banner' => ['max_w' => 1600, 'max_h' => 700, 'fit' => 'scale', 'max_bytes' => 102400],
         'logo' => ['max_w' => 800, 'max_h' => 800, 'fit' => 'scale', 'max_bytes' => 102400],

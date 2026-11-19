@@ -38,6 +38,28 @@ if (! function_exists('media_url')) {
     }
 }
 
+if (! function_exists('media_srcset')) {
+    /** srcset for a stored `_thumb.avif` URL, listing only the small sizes that exist; null when there are none (the plain src is used). */
+    function media_srcset(?string $url): ?string
+    {
+        $base = config('media.url').'/';
+        if (! $url || ! str_starts_with($url, $base) || ! str_ends_with($url, '_thumb.avif')) {
+            return null;
+        }
+        $path = substr($url, strlen($base));
+        $disk = \App\Services\ImageUploadService::disk();
+        $out = [];
+        foreach (\App\Support\MediaPaths::WIDTHS as $width) {
+            $small = \App\Support\MediaPaths::variantOf($path, $width);
+            if ($disk->exists($small)) {
+                $out[] = media_url($small)." {$width}w";
+            }
+        }
+
+        return $out ? implode(', ', [...$out, "$url 400w"]) : null;
+    }
+}
+
 if (! function_exists('private_url')) {
     /** Signed, expiring URL for a file on the private disk (served only to authenticated admins). */
     function private_url(?string $path, ?int $minutes = null): ?string
