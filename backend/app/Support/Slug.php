@@ -13,8 +13,11 @@ class Slug
         $base = Str::slug($text) ?: 'item-'.Str::lower(Str::random(6));
         $slug = $base;
         $i = 2;
-        $q = fn () => $modelClass::query()->when(method_exists($modelClass, 'bootSoftDeletes'), fn ($q) => $q->withTrashed())
+        // by-reference closure: an arrow fn would capture $slug by value and loop forever on a collision
+        $q = function () use ($modelClass, &$slug, $ignoreId) {
+            return $modelClass::query()->when(method_exists($modelClass, 'bootSoftDeletes'), fn ($q) => $q->withTrashed())
             ->where('slug', $slug)->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))->exists();
+        };
         while ($q()) {
             $slug = $base.'-'.$i++;
         }
