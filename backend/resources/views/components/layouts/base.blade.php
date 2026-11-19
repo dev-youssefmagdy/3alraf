@@ -36,14 +36,19 @@
     <meta name="description" content="{{ $fullTitle ?: $title.' | '.($siteName ?: config('app.name')) }}">
     @endunless
     {{ $head ?? '' }}
-    @if (($lite && ! isset($head)) || $panel)
-    {{-- lite storefront pages (customer login / register): same font pair as the storefront layout, loaded in the head --}}
+    @if ($panel && ! $lite)
+    {{-- panels on the admin bundle; storefront.css (storefront and lite pages) self-hosts these fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap">
     @endif
     @if ($lite || isset($head))
+    {{-- no modulepreload on the storefront: scripts must not compete with the stylesheet and the main image --}}
+    @php(\Illuminate\Support\Facades\Vite::usePreloadTagAttributes(false))
     @vite(['resources/css/storefront.css', 'resources/js/storefront.js'])
+    {{-- web fonts: after the page has loaded on a first visit (text shows in the fallback font until then), straight away once they are cached --}}
+    <script>(function(){function f(){var l=document.createElement('link');l.rel='stylesheet';l.href=@js(\Illuminate\Support\Facades\Vite::asset('resources/css/fonts.css'));document.head.appendChild(l)}var k='sf_fonts',s;try{s=localStorage.getItem(k)}catch(e){}if(s)f();else addEventListener('load',function(){setTimeout(function(){f();try{localStorage.setItem(k,'1')}catch(e){}},300)},{once:true})})();</script>
+    <noscript><link rel="stylesheet" href="{{ \Illuminate\Support\Facades\Vite::asset('resources/css/fonts.css') }}"></noscript>
     @else
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif

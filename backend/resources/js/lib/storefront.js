@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import toastr from 'toastr';
-import './sliders'; // evaluated first: the product gallery (Swiper) exists before the product page code below runs
+import './sliders-loader'; // evaluated first: on a product page the gallery (Swiper) exists before the code below runs
 import './drag-scroll'; // desktop category bar: drag / wheel to scroll sideways
 
 const sf = window.__sf;

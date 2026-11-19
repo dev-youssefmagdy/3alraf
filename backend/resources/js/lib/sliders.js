@@ -247,24 +247,38 @@ function initGallery(root) {
     return swiper;
 }
 
+function initSlider(root) {
+    const name = root.dataset.swiper || 'rail';
+    let swiper;
+    if (name === 'gallery') {
+        swiper = initGallery(root);
+    } else {
+        const container = root.classList.contains('swiper') ? root : own(root, '.swiper') || root.querySelector('.swiper');
+        if (!container) return;
+        swiper = new Swiper(container, build(root, name, container));
+        scopeKeyboard(root, swiper);
+        autoplayToggle(root, swiper);
+    }
+    if (!swiper) return;
+    root.dataset.swiperReady = '1';
+    root.swiper = swiper;
+    root.dispatchEvent(new CustomEvent('swiper:ready', { detail: { swiper }, bubbles: true }));
+}
+
+/** Galleries and added rows start at once; a full page's rows start in short batches so the main thread stays free for input. */
 export function initSliders(scope = document) {
-    scope.querySelectorAll('[data-swiper]:not([data-swiper-ready])').forEach((root) => {
-        const name = root.dataset.swiper || 'rail';
-        let swiper;
-        if (name === 'gallery') {
-            swiper = initGallery(root);
-        } else {
-            const container = root.classList.contains('swiper') ? root : own(root, '.swiper') || root.querySelector('.swiper');
-            if (!container) return;
-            swiper = new Swiper(container, build(root, name, container));
-            scopeKeyboard(root, swiper);
-            autoplayToggle(root, swiper);
+    const roots = [...scope.querySelectorAll('[data-swiper]:not([data-swiper-ready])')];
+    if (scope !== document) { roots.forEach(initSlider); return; }
+    const queue = roots.filter((root) => root.dataset.swiper !== 'gallery' || (initSlider(root), false));
+    const batch = () => {
+        const start = performance.now();
+        while (queue.length && performance.now() - start < 8) {
+            const root = queue.shift();
+            if (!root.dataset.swiperReady) initSlider(root);
         }
-        if (!swiper) return;
-        root.dataset.swiperReady = '1';
-        root.swiper = swiper;
-        root.dispatchEvent(new CustomEvent('swiper:ready', { detail: { swiper }, bubbles: true }));
-    });
+        if (queue.length) setTimeout(batch);
+    };
+    batch();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => initSliders());

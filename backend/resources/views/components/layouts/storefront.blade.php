@@ -1,4 +1,4 @@
-@props(['title' => '', 'description' => null, 'image' => null, 'type' => 'website', 'jsonld' => null, 'noindex' => false, 'breadcrumbs' => [], 'canonicalPage' => null, 'preloadImage' => null])
+@props(['title' => '', 'description' => null, 'image' => null, 'type' => 'website', 'jsonld' => null, 'noindex' => false, 'breadcrumbs' => [], 'canonicalPage' => null, 'preloadImage' => null, 'preloadSrcset' => null, 'preloadSizes' => null])
 @php
     $locale = app()->getLocale();
     $seo = app(\App\Services\SeoSettingsService::class)->current();
@@ -66,12 +66,6 @@
         <meta name="theme-color" content="{{ $seasonal['theme_color'] ?? '#a8456c' }}">
         @if ($seasonal['css'] !== '')<style id="seasonal-theme" data-theme-preview="{{ $seasonal['preview']?->id }}">{!! $seasonal['css'] !!}</style>@endif
         @if (($mediaHost = parse_url(media_url('x'), PHP_URL_HOST)) && $mediaHost !== request()->getHost())<link rel="preconnect" href="{{ parse_url(media_url('x'), PHP_URL_SCHEME) }}://{{ $mediaHost }}" crossorigin>@endif
-        {{-- fonts: Cairo (body) + Baloo Bhaijaan 2 (display), only the weights the design uses; the storefront alone loads them --}}
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        {{-- loaded without blocking first paint; text shows in the fallback font until these arrive (display=swap) --}}
-        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-        <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap"></noscript>
         <link rel="apple-touch-icon" href="{{ asset('logo-192.png') }}">
         @foreach (['google-site-verification' => 'google_verification', 'msvalidate.01' => 'bing_verification', 'yandex-verification' => 'yandex_verification', 'p:domain_verify' => 'pinterest_verification', 'facebook-domain-verification' => 'facebook_domain_verification'] as $metaName => $k)
             @if ($seo[$k])<meta name="{{ $metaName }}" content="{{ $seo[$k] }}">@endif
@@ -83,7 +77,7 @@
         <meta property="og:image" content="{{ $ogImage }}"><meta property="og:image:alt" content="{{ $title ?: setting('name') }}">
         <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{{ $fullTitle }}"><meta name="twitter:description" content="{{ $desc }}"><meta name="twitter:image" content="{{ $ogImage }}">
         @if ($seo['twitter_handle'])<meta name="twitter:site" content="{{ '@'.ltrim($seo['twitter_handle'], '@') }}">@endif
-        @if ($preloadImage)<link rel="preload" as="image" href="{{ $preloadImage }}" fetchpriority="high">@endif
+        @if ($preloadImage)<link rel="preload" as="image" href="{{ $preloadImage }}" @if ($preloadSrcset) imagesrcset="{{ $preloadSrcset }}" imagesizes="{{ $preloadSizes }}" @endif fetchpriority="high">@endif
         @foreach ($lds as $ld)<script type="application/ld+json">{!! json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>@endforeach
         <script>window.__sf = {{ Illuminate\Support\Js::from($sfJs) }};</script>
         @include('storefront._tracking', ['seo' => $seo])

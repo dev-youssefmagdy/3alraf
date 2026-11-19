@@ -1,14 +1,19 @@
-<x-layouts.storefront :title="setting('name')" :description="__('store.seo_default_desc')" :preload-image="$hero->first()?->imageUrl()" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => setting('name'), 'url' => url('/'.app()->getLocale()),
+@php
+    // no hero, tile or bundle above it: the first product rail holds the LCP image, so its first cards must not be lazy and the first image is preloaded
+    $eagerRail = $hero->isEmpty() && $tiles->isEmpty() && empty($bundles)
+        ? ($flash ? 'flash' : collect(['recommended', 'most_sold', 'most_reviewed'])->first(fn ($k) => $rails[$k]->isNotEmpty()))
+        : null;
+    $lcpProduct = $eagerRail ? ($eagerRail === 'flash' ? $flash['items'] : $rails[$eagerRail])->take(2)->first(fn ($p) => $p->primaryImageUrl()) : null; // the two eager cards; a card may have no image
+    $lcpImage = $hero->first()?->imageUrl() ?: $lcpProduct?->primaryImageUrl();
+    $lcpSrcset = $lcpProduct ? media_srcset($lcpImage) : null;
+@endphp
+<x-layouts.storefront :title="setting('name')" :description="__('store.seo_default_desc')" :preload-image="$lcpImage" :preload-srcset="$lcpSrcset" :preload-sizes="$lcpSrcset ? \App\Support\MediaPaths::RAIL_SIZES : null" :jsonld="['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => setting('name'), 'url' => url('/'.app()->getLocale()),
     'potentialAction' => ['@type' => 'SearchAction', 'target' => route('storefront.search').'?q={q}', 'query-input' => 'required name=q']]">
     @php
         // design 23:2 / 23:1059: every horizontal row is a Swiper preset (resources/js/lib/sliders.js)
         $rings = ['ring-brand-600', 'ring-pop-500', 'ring-sun-400', 'ring-mint-400', 'ring-violet-500'];
         $tileTints = ['bg-pop-600', 'bg-violet-500', 'bg-mint-400', 'bg-sun-400', 'bg-brand-800'];
         $giftOn = app(\App\Services\GiftFinder\GiftFinderSettings::class)->enabled();
-        // no hero, tile or bundle above it: the first product rail holds the LCP image, so its first cards must not be lazy
-        $eagerRail = $hero->isEmpty() && $tiles->isEmpty() && empty($bundles)
-            ? ($flash ? 'flash' : collect(['recommended', 'most_sold', 'most_reviewed'])->first(fn ($k) => $rails[$k]->isNotEmpty()))
-            : null;
     @endphp
     <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: setting('name') }}</h1>
 
@@ -54,7 +59,7 @@
                                     @if ($c['image'])<img src="{{ $c['thumb'] ?? $c['image'] }}" @if ($catSrcset = media_srcset($c['thumb'] ?? null)) srcset="{{ $catSrcset }}" sizes="(min-width: 1024px) 96px, (min-width: 768px) 80px, 68px" @endif alt="" class="size-full rounded-full object-cover" loading="lazy" decoding="async" width="96" height="96">
                                     @else<span class="font-display text-2xl font-extrabold text-brand-600">{{ mb_substr($c['name'], 0, 1) }}</span>@endif
                                 </span>
-                                <span class="mt-2 line-clamp-2 block text-xs/4 font-bold text-slate-950 group-hover:text-brand-600 lg:text-sm/5">{{ $c['name'] }}</span>
+                                <span class="mt-2 line-clamp-2 block min-h-8 text-xs/4 font-bold text-slate-950 group-hover:text-brand-600 lg:min-h-10 lg:text-sm/5">{{ $c['name'] }}</span>
                             </a>
                         </div>
                     @endforeach

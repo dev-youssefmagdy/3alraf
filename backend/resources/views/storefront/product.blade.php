@@ -58,7 +58,8 @@
                         </div>
                     </div>
                 @endforeach
-                @if ($picker['variable'])<div class="hidden rounded-2xl border border-slate-200 bg-white p-4" data-variant-status></div>@endif
+                {{-- same markup as refresh() in resources/js/lib/storefront.js, rendered here so the buy box does not move when the script starts --}}
+                @if ($picker['variable'])<div class="rounded-2xl border border-slate-200 bg-white p-4" data-variant-status><p class="mb-2 text-sm font-bold">{{ __('store.variants_availability') }}</p>@foreach ($picker['variants'] as $x)<div class="flex items-center justify-between gap-2 border-t border-slate-100 py-1.5 text-sm first-of-type:border-0"><span>{{ $x['label'] ?? '' }}</span><span class="flex items-center gap-2">@if (! $x['in_stock'])<span class="text-red-600">{{ __('store.out_of_stock') }}</span> <button type="button" class="btn-sm btn-secondary" data-request-variant="{{ $x['id'] }}">{{ __('store.request_now') }}</button>@elseif (($x['stock'] ?? null) !== null && $x['stock'] <= ($x['alert'] ?? $picker['alert'] ?? 5))<span class="text-amber-700">{{ __('store.low_stock', ['n' => $x['stock']]) }}</span>@else<span class="text-emerald-700">{{ __('store.in_stock') }}</span>@endif</span></div>@endforeach</div>@endif
                 <p class="hidden text-sm font-semibold text-red-600" data-combo-error role="alert">{{ __('store.unavailable_combo') }}</p>
 
                 <div class="flex flex-wrap items-center gap-3 pt-1" data-buy-box>

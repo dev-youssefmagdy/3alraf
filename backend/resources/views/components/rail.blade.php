@@ -29,7 +29,7 @@
     </div>
     <div class="swiper !py-1 max-lg:-mx-4">
         <div class="swiper-wrapper">
-            @foreach ($items as $item)<div class="swiper-slide"><x-product-card :product="$item" :eager="$loop->index < $eager" sizes="(min-width: 1280px) 230px, (min-width: 1024px) 22vw, (min-width: 768px) 28vw, 35vw" class="h-full" /></div>@endforeach
+            @foreach ($items as $item)<div class="swiper-slide"><x-product-card :product="$item" :eager="$loop->index < $eager" :sizes="\App\Support\MediaPaths::RAIL_SIZES" class="h-full" /></div>@endforeach
         </div>
     </div>
     <div data-swiper-pagination class="mx-auto mt-4 w-32 {{ $flash ? '!bg-white/30 [&_.swiper-pagination-progressbar-fill]:!bg-sun-400' : '' }}"></div>

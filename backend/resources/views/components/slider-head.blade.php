@@ -1,6 +1,6 @@
 @props(['title', 'href' => null, 'tag' => 'h2', 'arrows' => true, 'titleClass' => 'section-title'])
 {{-- Rail header (design 19:639): display-font title, "view all" with a chevron in the reading direction, and the Swiper prev/next (≥1024 only, see sliders.js). Put it inside the [data-swiper] root. --}}
-<div {{ $attributes->merge(['class' => 'mb-4 flex items-center justify-between gap-3']) }}>
+<div {{ $attributes->merge(['class' => 'mb-4 flex items-center justify-between gap-3 lg:min-h-11']) }}>
     <{{ $tag }} class="{{ $titleClass }} min-w-0">{{ $title }}</{{ $tag }}>
     <div class="flex shrink-0 items-center gap-2">
         @if ($href)

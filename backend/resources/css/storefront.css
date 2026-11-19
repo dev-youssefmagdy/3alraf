@@ -135,9 +135,9 @@
 
 /* ---------- Swiper (resources/js/lib/sliders.js) ---------- */
 /* slides are sized in CSS from the preset before Swiper initialises (no layout shift); Swiper then sets the same widths inline */
-[data-swiper] .swiper { container-type: inline-size; --spv: 1; --gap: 0px; }
+[data-swiper] .swiper { container-type: inline-size; --spv: 1; --gap: 0px; --bleed: 0px; }
 [data-swiper] .swiper:not(.swiper-initialized) .swiper-wrapper { gap: var(--gap); }
-[data-swiper] .swiper:not(.swiper-initialized) .swiper-slide { width: calc((100cqw - (var(--spv) - 1) * var(--gap)) / var(--spv)); }
+[data-swiper] .swiper:not(.swiper-initialized) .swiper-slide { width: calc((100cqw - var(--bleed) - (var(--spv) - 1) * var(--gap)) / var(--spv)); }
 [data-swiper] .swiper-slide { height: auto; }
 
 [data-swiper='rail'] .swiper, [data-swiper='flash'] .swiper { --spv: 2.3; --gap: 12px; }
@@ -153,6 +153,7 @@
 [data-swiper='chips'] .swiper:not(.swiper-initialized) .swiper-wrapper { gap: 8px; }
 /* mobile rails bleed to the screen edge; the 16px offsets are padding before init and Swiper offsets after */
 @media (max-width: 1023.98px) {
+    [data-swiper-bleed] .swiper { --bleed: 32px; } /* Swiper takes both offsets out of the slide width: same numbers here, so nothing moves when it starts */
     [data-swiper-bleed] .swiper:not(.swiper-initialized) .swiper-wrapper { padding-inline: 16px; }
     [data-swiper-bleed] .swiper:not(.swiper-initialized) .swiper-wrapper::after { content: ''; flex: 0 0 1px; }
 }
@@ -219,6 +220,7 @@
 [data-swiper-pagination].swiper-pagination-progressbar { position: relative; height: 4px; overflow: hidden; border-radius: 9999px; background: var(--color-brand-100); }
 [data-swiper-pagination] .swiper-pagination-progressbar-fill { position: absolute; inset: 0; transform-origin: left top; background: var(--color-brand-600); border-radius: 9999px; }
 [dir='rtl'] [data-swiper-pagination] .swiper-pagination-progressbar-fill { transform-origin: right top; }
+@media (max-width: 1023.98px) { [data-swiper='rail'] [data-swiper-pagination]:not(.swiper-pagination-progressbar), [data-swiper='flash'] [data-swiper-pagination]:not(.swiper-pagination-progressbar), [data-swiper='posts'] [data-swiper-pagination]:not(.swiper-pagination-progressbar) { height: 4px; } } /* the bar's space is kept before Swiper starts */
 [data-swiper-pagination].swiper-pagination-lock { display: none; }
 @media (min-width: 1024px) { [data-swiper-pagination].swiper-pagination-progressbar { display: none; } }
 @media (prefers-reduced-motion: reduce) { [data-swiper] .swiper-wrapper { transition-duration: 0ms !important; } }

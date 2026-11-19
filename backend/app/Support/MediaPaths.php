@@ -10,6 +10,9 @@ final class MediaPaths
     /** Small square sizes stored beside the 400px thumbnail. */
     public const WIDTHS = [128, 256];
 
+    /** `sizes` of a product-rail card image (also used to preload the first one, so both must match). */
+    public const RAIL_SIZES = '(min-width: 1280px) 230px, (min-width: 1024px) 22vw, (min-width: 768px) 28vw, 35vw';
+
     /** Path without extension and without the `_thumb` / `_w{width}` suffix. */
     public static function stem(string $path): string
     {
