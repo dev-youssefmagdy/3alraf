@@ -83,4 +83,7 @@ return [
         'signed_preview_minutes' => 10,                  // API preview URL lifetime
         'per_page' => 24,
     ],
+
+    // Apply runs inside the web request: its own PHP time limit (seconds), above FPM's 30 s default.
+    'apply_time_limit' => (int) env('MARKETING_APPLY_TIME_LIMIT', 300),
 ];

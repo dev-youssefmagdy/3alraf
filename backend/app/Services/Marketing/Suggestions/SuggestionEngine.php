@@ -358,6 +358,11 @@ class SuggestionEngine
             return $exec;   // already done (idempotent replay)
         }
 
+        // The status is now `applying`: a fatal error (PHP-FPM's 30 s max_execution_time) or a client abort here
+        // would skip the catch below and leave the suggestion stuck. Give apply its own budget; recoverStuck() is the backstop.
+        ignore_user_abort(true);
+        set_time_limit((int) config('marketing.apply_time_limit', 300));
+
         try {
             $result = DB::transaction(fn () => $h->apply($s, $target ?: null, $options, $admin->id));
         } catch (\Throwable $e) {
@@ -435,6 +440,36 @@ class SuggestionEngine
 
             return $exec;
         });
+    }
+
+    /**
+     * Scheduler: an apply whose request died mid-way (fatal timeout, killed worker) leaves the suggestion `applying` with a
+     * `running` execution forever. After $minutes mark both failed so the marketer can retry (failed → applying). @return int count
+     */
+    public function recoverStuck(int $minutes = 15): int
+    {
+        $n = 0;
+        $cutoff = now()->subMinutes($minutes);
+        $ids = MarketingSuggestion::query()->where('status', S::APPLYING->value)->where('updated_at', '<', $cutoff)->pluck('id');
+        foreach ($ids as $id) {
+            DB::transaction(function () use ($id, $cutoff, &$n) {
+                $s = $this->repo->lockForUpdate($id);
+                if ($s->status !== S::APPLYING) {
+                    return;
+                }
+                $running = MarketingSuggestionExecution::query()->where('suggestion_id', $s->id)->where('kind', 'apply')->where('status', X::RUNNING->value)->get();
+                if ($running->contains(fn ($e) => $e->started_at && $e->started_at->gte($cutoff))) {
+                    return;   // still within its time budget
+                }
+                $msg = __('marketing.suggestions.errors.apply_interrupted');
+                $running->each(fn ($e) => $e->update(['status' => X::FAILED, 'error' => $msg, 'finished_at' => now()]));
+                $this->repo->update($s, ['status' => S::FAILED, 'last_error' => $msg]);
+                $this->log($s, 'failed', SuggestionActor::system(), ['execution_ids' => $running->pluck('id')->all(), 'error' => $msg, 'exception' => 'interrupted']);
+                $n++;
+            });
+        }
+
+        return $n;
     }
 
     /** Scheduler: open suggestions past expires_at → expired. @return int count */
