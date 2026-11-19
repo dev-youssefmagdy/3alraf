@@ -26,39 +26,7 @@ beforeEach(function () {
     $this->s = '/ar';
 });
 
-<<<<<<< Updated upstream
 it('renders the Arabic 404 for unknown pages; old store subdomains are 301-redirected, never a store-unavailable page', function () {
-=======
-// ---------------------------------------------------------------- central site
-it('lists only ACTIVE tenants on the central landing page and exposes them as JSON', function () {
-    ($this->mkTenant)('sa');
-    ($this->mkTenant)('closed', false);
-
-    $this->get($this->central.'/')->assertOk()->assertSee('Egypt Store')->assertSee('SA Store')->assertDontSee('CLOSED Store')->assertSee('dir="rtl"', false);
-    $this->get($this->central.'/admin/login')->assertOk();   // admin stays at /admin
-
-    $json = $this->getJson($this->central.'/api/v1/tenants')->assertOk()->json('data');
-    expect(collect($json)->pluck('slug')->all())->toEqualCanonicalizing(['egy', 'sa']);
-    $egy = collect($json)->firstWhere('slug', 'egy');
-    expect(array_keys($egy))->toEqualCanonicalizing(['slug', 'name', 'country', 'flag', 'currency', 'default_locale', 'locales', 'languages', 'logo_url', 'base_url'])
-        ->and($egy['currency'])->toBe('EGP')->and($egy['base_url'])->toBe('http://egy.3alraf.test/');
-});
-
-it('sets the preferred_tenant cookie on choice, redirects to the store default locale and refuses inactive tenants', function () {
-    ($this->mkTenant)('closed', false);
-
-    $this->get($this->central.'/choose/egy')->assertRedirect('http://egy.3alraf.test/ar')->assertCookie('preferred_tenant', 'egy');
-    $this->get($this->central.'/choose/closed')->assertNotFound();
-    $this->get($this->central.'/choose/nope')->assertNotFound();
-});
-
-it('shows the Arabic store-unavailable page for unknown and inactive tenants and an Arabic 404 elsewhere', function () {
-    ($this->mkTenant)('closed', false);
-
-    foreach (['http://closed.3alraf.test/ar', 'http://ghost.3alraf.test/ar'] as $url) {
-        $this->get($url)->assertNotFound()->assertSee('المتجر غير متاح')->assertSee('dir="rtl"', false)->assertSee('http://3alraf.test', false);
-    }
->>>>>>> Stashed changes
     $this->get($this->s.'/category/missing-category')->assertNotFound()->assertSee('الصفحة غير موجودة');
     foreach (['http://closed.3alraf.loc/ar', 'http://ghost.3alraf.loc/ar'] as $url) {
         $this->get($url)->assertStatus(301)->assertRedirect('http://3alraf.loc/ar');

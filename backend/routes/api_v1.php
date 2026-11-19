@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
-use App\Http\Controllers\Api\V1\AmbassadorController;
 use App\Http\Controllers\Api\V1\AffiliateController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BlogController;
@@ -9,7 +8,6 @@ use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\GiftFinderController;
-use App\Http\Controllers\Api\V1\LaunchController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\StockRequestController;
 use App\Http\Controllers\Api\V1\StoreController;
@@ -56,13 +54,6 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
         Route::get('blog/{slug}', [BlogController::class, 'show'])->where('slug', '[^/]+')->name('blog.show');
         Route::post('stock-requests', [StockRequestController::class, 'store'])->middleware('throttle:stock-requests')->name('stock-requests.store');
-<<<<<<< Updated upstream
-=======
-        Route::middleware('growth.feature:small_batch_lab')->group(function () {
-            Route::get('launch/{code}', [LaunchController::class, 'show'])->where('code', '[a-z0-9]{6,12}')->name('launch.show');
-            Route::post('launch/{code}', [LaunchController::class, 'signup'])->where('code', '[a-z0-9]{6,12}')->middleware('throttle:search')->name('launch.signup');
-        });
->>>>>>> Stashed changes
         Route::post('devices', [DeviceController::class, 'store'])->middleware('throttle:devices')->name('devices.store');
         Route::delete('devices', [DeviceController::class, 'destroy'])->middleware('throttle:devices')->name('devices.destroy');
 
@@ -125,10 +116,5 @@ Route::middleware('throttle:api')->group(function () {
         Route::get('products/{slug}/qr', [AffiliateController::class, 'qr'])->name('qr');
         Route::get('payouts', [AffiliateController::class, 'payouts'])->name('payouts');
         Route::post('payouts', [AffiliateController::class, 'requestPayout'])->middleware('throttle:payout')->name('payouts.request');
-        Route::middleware('growth.feature:ambassadors')->prefix('ambassador')->name('ambassador.')->group(function () {
-            Route::get('/', [AmbassadorController::class, 'show'])->name('show');
-            Route::post('join', [AmbassadorController::class, 'join'])->middleware('throttle:auth')->name('join');
-            Route::post('links', [AmbassadorController::class, 'link'])->middleware('throttle:addresses')->name('links');
-        });
     });
 });
