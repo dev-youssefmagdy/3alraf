@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Whitening Cream 50ml",
+    "brand": "Starville",
+    "sku": "SKU-WC",
+    "variants": []
+  },
+  {
+    "name": "Silk Scrunchies",
+    "brand": "Glam",
+    "sku": "SCR",
+    "variants": [
+      { "sku": "SCR-RED", "attributes": { "Color": "Red" } },
+      { "sku": "SCR-BLK", "attributes": { "Color": "Black" } },
+      { "sku": "SCR-12", "name": "12 pack", "query": "Glam silk scrunchies 12 pack" }
+    ]
+  }
+]

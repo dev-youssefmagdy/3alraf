@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Image Picker</title>
+<style>
+  :root { --bg:#f6f4f5; --card:#fff; --line:#e4dfe2; --text:#1d1a1c; --muted:#6b6468; --brand:#b4537a; --brand-soft:#f6e6ed; --ok:#1f7a4d; --warn:#a35a00; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; background:var(--bg); color:var(--text); }
+  button, input { font:inherit; }
+  .app { display:grid; grid-template-columns: 280px 1fr; height:100vh; }
+  aside { border-inline-end:1px solid var(--line); background:var(--card); overflow-y:auto; }
+  aside h1 { font-size:16px; margin:0; padding:16px; border-bottom:1px solid var(--line); }
+  .target { display:flex; justify-content:space-between; gap:8px; width:100%; text-align:start; border:0; background:none; padding:10px 16px; cursor:pointer; border-bottom:1px solid #f1edef; }
+  .target.variant { padding-inline-start:32px; color:var(--muted); }
+  .target[aria-current=true] { background:var(--brand-soft); color:var(--text); font-weight:600; }
+  .target .n { font-size:12px; color:var(--ok); white-space:nowrap; }
+  main { display:flex; flex-direction:column; min-width:0; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line); }
+  .bar input[type=text] { flex:1; min-width:220px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; }
+  .bar label { display:flex; gap:4px; align-items:center; color:var(--muted); font-size:13px; }
+  .btn { padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .content { flex:1; overflow-y:auto; padding:16px; }
+  .note { color:var(--muted); font-size:13px; margin:0 0 12px; }
+  .warn { color:var(--warn); }
+  h2 { font-size:14px; margin:16px 0 8px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; }
+  .card { background:var(--card); border:2px solid transparent; border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.06); display:flex; flex-direction:column; }
+  .card.sel { border-color:var(--brand); }
+  .card .img { position:relative; aspect-ratio:1; background:#fff; cursor:pointer; border:0; padding:0; display:block; width:100%; }
+  .card img { width:100%; height:100%; object-fit:contain; display:block; }
+  .card .check { position:absolute; top:6px; inset-inline-start:6px; width:22px; height:22px; border-radius:50%; background:#fff; border:2px solid var(--line); display:grid; place-items:center; font-size:13px; color:#fff; }
+  .card.sel .check { background:var(--brand); border-color:var(--brand); }
+  .card .main { position:absolute; top:6px; inset-inline-end:6px; border:0; border-radius:999px; padding:2px 8px; font-size:12px; background:rgba(255,255,255,.9); cursor:pointer; }
+  .card .main.on { background:#f2b705; color:#000; font-weight:700; }
+  .meta { padding:8px; font-size:12px; color:var(--muted); display:grid; gap:2px; }
+  .meta .t { color:var(--text); font-weight:600; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .meta a { color:var(--brand); }
+  .small { color:var(--warn); font-weight:600; }
+  .footer { display:flex; gap:12px; align-items:center; justify-content:flex-end; padding:12px 16px; background:var(--card); border-top:1px solid var(--line); }
+  .footer .status { margin-inline-end:auto; color:var(--muted); }
+  .empty { color:var(--muted); padding:40px; text-align:center; }
+  @media (max-width: 760px) { .app { grid-template-columns:1fr; height:auto; } aside { max-height:35vh; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1>Image Picker</h1>
+    <nav id="targets"></nav>
+  </aside>
+  <main>
+    <form class="bar" id="form">
+      <input type="text" id="query" aria-label="Search text" autocomplete="off">
+      <span id="engines"></span>
+      <label><input type="checkbox" id="white"> white background</label>
+      <button class="btn primary" type="submit">Search</button>
+    </form>
+    <div class="content">
+      <p class="note">Search results are <strong>not</strong> free to use. Keep only photos the brand / supplier provides for resellers, or that the owner allowed you to use. The page each photo came from is saved with it.</p>
+      <section id="savedBox" hidden>
+        <h2>Saved for this item</h2>
+        <div class="grid" id="saved"></div>
+      </section>
+      <h2 id="resultsTitle" hidden>Results</h2>
+      <p class="note warn" id="errors" hidden></p>
+      <div class="grid" id="results"></div>
+      <p class="empty" id="empty">Pick an item on the left, check the search text, press Search.</p>
+      <p style="text-align:center"><button class="btn" id="more" hidden>Load more</button></p>
+    </div>
+    <div class="footer">
+      <span class="status" id="status"></span>
+      <button class="btn" id="clear" type="button">Clear selection</button>
+      <button class="btn primary" id="save" type="button" disabled>Save selected</button>
+    </div>
+  </main>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  e.append(...kids);
+  return e;
+};
+const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : null;
+const S = { targets: [], saved: {}, engines: [], allEngines: [], target: null, results: [], page: 1, query: '', sel: new Map(), main: null };
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || res.statusText);
+  return json;
+}
+
+async function init() {
+  const d = await api('/api/targets');
+  Object.assign(S, { targets: d.targets, saved: d.saved, engines: d.engines, allEngines: d.all_engines });
+  $('#engines').replaceChildren(...S.allEngines.map((e) => el('label', {}, el('input', { type: 'checkbox', value: e, ...(S.engines.includes(e) ? { checked: '' } : {}) }), e)));
+  renderTargets();
+  choose(S.targets[0]);
+}
+
+function renderTargets() {
+  $('#targets').replaceChildren(...S.targets.map((t) => {
+    const n = (S.saved[t.id] || []).length;
+    return el('button', { class: `target ${t.kind}`, type: 'button', 'aria-current': String(S.target?.id === t.id), onclick: () => choose(t) },
+      el('span', { text: t.label + (t.sku ? ` (${t.sku})` : '') }), el('span', { class: 'n', text: n ? `✓ ${n}` : '' }));
+  }));
+}
+
+function choose(t) {
+  S.target = t; S.results = []; S.page = 1;
+  // pre-select what was saved before, so saving again keeps it unless you untick it
+  S.sel = new Map((S.saved[t.id] || []).map((s) => [s.id, { id: s.id, image: s.image, thumbnail: s.downloaded_from, page: s.page, title: s.title, engine: s.engine }]));
+  S.main = (S.saved[t.id] || []).find((s) => s.main)?.id || null;
+  $('#query').value = t.query;
+  renderTargets(); renderSaved(); renderResults();
+}
+
+function renderSaved() {
+  const list = S.saved[S.target.id] || [];
+  $('#savedBox').hidden = !list.length;
+  $('#saved').replaceChildren(...list.map((s) => card({ ...s, thumbnail: `/picked/${s.file.split('/').map(encodeURIComponent).join('/')}`, source: s.page ? new URL(s.page).hostname : '' }, true)));
+}
+
+function renderResults() {
+  $('#results').replaceChildren(...S.results.map((r) => card(r)));
+  $('#empty').hidden = S.results.length > 0;
+  $('#resultsTitle').hidden = !S.results.length;
+  const n = S.sel.size;
+  $('#status').textContent = n ? `${n} selected${S.main ? ' · ★ = main photo' : ''}` : '';
+  $('#save').disabled = false;
+}
+
+function card(r, saved = false) {
+  const on = S.sel.has(r.id);
+  const small = r.width && r.height && Math.min(r.width, r.height) < 500;
+  const img = el('img', { alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
+  const src = saved ? r.thumbnail : safeUrl(r.thumbnail);
+  if (src) img.src = src;
+  img.addEventListener('error', () => { if (!saved && safeUrl(r.image) && img.src !== r.image) img.src = r.image; }, { once: true });
+  const pick = () => {
+    if (S.sel.has(r.id)) { S.sel.delete(r.id); if (S.main === r.id) S.main = null; }
+    else { S.sel.set(r.id, { id: r.id, image: r.image, thumbnail: r.thumbnail, page: r.page, title: r.title, engine: r.engine }); if (!S.main) S.main = r.id; }
+    renderSaved(); renderResults();
+  };
+  const page = safeUrl(r.page);
+  return el('div', { class: `card${on ? ' sel' : ''}` },
+    el('button', { class: 'img', type: 'button', 'aria-pressed': String(on), 'aria-label': 'Select', onclick: pick },
+      img, el('span', { class: 'check', text: on ? '✓' : '' }),
+      on ? el('span', { class: `main${S.main === r.id ? ' on' : ''}`, role: 'button', text: S.main === r.id ? '★ main' : '☆ make main',
+        onclick: (e) => { e.stopPropagation(); S.main = r.id; renderSaved(); renderResults(); } }) : ''),
+    el('div', { class: 'meta' },
+      el('span', { class: 't', text: r.title || r.source || '—' }),
+      el('span', { class: small ? 'small' : '', text: `${r.width ? `${r.width}×${r.height}` : 'size ?'}${small ? ' · small' : ''}${r.thumbnail_only ? ' · thumbnail only' : ''}` }),
+      el('span', { text: `${r.source || ''}${r.engine ? ' · ' + r.engine : ''}` }),
+      page ? el('a', { href: page, target: '_blank', rel: 'noopener noreferrer nofollow', text: 'open page ↗' }) : ''));
+}
+
+async function search(more = false) {
+  const extra = $('#white').checked ? ' white background' : '';
+  S.query = $('#query').value.trim() + extra;
+  if (!S.query.trim()) return;
+  S.page = more ? S.page + 1 : 1;
+  const engines = [...document.querySelectorAll('#engines input:checked')].map((c) => c.value);
+  $('#status').textContent = 'Searching…';
+  try {
+    const d = await api('/api/search', { query: S.query, engines, page: S.page });
+    S.results = more ? [...S.results, ...d.results.filter((r) => !S.results.some((x) => x.id === r.id))] : d.results;
+    $('#more').hidden = !d.has_more;
+    const errs = Object.entries(d.errors || {});
+    $('#errors').hidden = !errs.length;
+    $('#errors').textContent = errs.map(([e, m]) => `${e} failed: ${m}`).join(' · ');
+    if (!S.results.length) $('#empty').textContent = 'No images found. Try other words.';
+  } catch (e) {
+    $('#errors').hidden = false; $('#errors').textContent = e.message;
+  }
+  renderResults();
+}
+
+async function save() {
+  const items = [...S.sel.values()].map((i) => ({ ...i, main: i.id === S.main }));
+  $('#save').disabled = true;
+  $('#status').textContent = items.length ? `Downloading ${items.length}…` : 'Removing…';
+  try {
+    const d = await api('/api/save', { target: S.target.id, items });
+    S.saved[S.target.id] = d.saved;
+    $('#status').textContent = `Saved ${d.saved.length}` + (d.failed.length ? ` · ${d.failed.length} could not be downloaded (${d.failed.map((f) => f.error).join(', ')})` : '');
+    for (const f of d.failed) S.sel.delete(f.id);
+    renderTargets(); renderSaved();
+  } catch (e) {
+    $('#status').textContent = e.message;
+  }
+  $('#save').disabled = false;
+}
+
+$('#form').addEventListener('submit', (e) => { e.preventDefault(); search(); });
+$('#more').addEventListener('click', () => search(true));
+$('#save').addEventListener('click', save);
+$('#clear').addEventListener('click', () => { S.sel.clear(); S.main = null; renderSaved(); renderResults(); });
+init().catch((e) => { $('#empty').textContent = e.message; });
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ database. Routes: `routes/api_marketing.php` (names `marketing-api.*`), register
 | Scope | Status | Grants |
 |---|---|---|
 | `marketing:read` | enabled | every endpoint below |
-| `suggestions:write:{type}` (one per type: product, new_product, bundle, slider, offer, coupon, seo, blog, seasonal_theme, social_content, media_asset, category) | enabled | `POST suggestions/{type}`, `PATCH suggestions/{id}` (own pending/edited draft), `POST suggestions/{id}/submit`. Never approve / reject / apply / rollback (no such route exists). Reading suggestions needs `marketing:read`. |
+| `suggestions:write:{type}` (one per type: product, new_product, bundle, slider, offer, coupon, seo, blog, seasonal_theme, social_content, media_asset, category, product_update) | enabled | `POST suggestions/{type}`, `PATCH suggestions/{id}` (own pending/edited draft), `POST suggestions/{id}/submit`. Never approve / reject / apply / rollback (no such route exists). Reading suggestions needs `marketing:read`. |
 | `embeddings:write` | enabled | `POST image-embeddings/fill-missing` only: queue MISSING image-search embeddings (internal index; never recomputes, changes no store content). Granted by migration to non-revoked tokens with `suggestions:write:product`. |
 
 ## 2. Envelope (`App\Support\Marketing\MarketingResponse`)

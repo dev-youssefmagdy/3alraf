@@ -23,6 +23,7 @@ class SuggestionTypeRegistry
         'social_content' => Types\SocialContentSuggestionType::class,
         'media_asset' => Types\MediaAssetSuggestionType::class,
         'category' => Types\CategorySuggestionType::class,
+        'product_update' => Types\ProductUpdateSuggestionType::class,
     ];
 
     private array $resolved = [];

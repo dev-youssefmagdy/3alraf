@@ -30,8 +30,25 @@ describe('tool registry', () => {
     const tools = await list();
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_TOOLS.map((t) => t.name).sort());
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
-    expect(tools.length).toBe(66);
+    expect(tools.length).toBe(85);
     for (const t of tools) expect(t.inputSchema.type).toBe('object');
+  });
+
+  it('pairs every create_*_suggestion tool with a typed update_*_suggestion tool', async () => {
+    const names = (await list()).map((t) => t.name);
+    const creates = names.filter((n) => /^create_.*_suggestion$/.test(n));
+    expect(creates.length).toBe(12);
+    for (const c of creates) expect(names).toContain(c.replace(/^create_/, 'update_'));
+  });
+
+  it('has an "update X" suggestion event for every existing-record type, each requiring the target', async () => {
+    const tools = await list();
+    const events = tools.filter((t) => /^suggest_.*_update$/.test(t.name));
+    expect(events.map((t) => t.name).sort()).toEqual(
+      ['suggest_banner_update', 'suggest_bundle_update', 'suggest_category_update', 'suggest_coupon_update', 'suggest_flash_sale_update', 'suggest_product_update'],
+    );
+    for (const t of events) expect(t.inputSchema.required, t.name).toEqual(expect.arrayContaining(['title', 'target_entity_type', 'target_entity_id', 'payload']));
+    expect(tools.map((t) => t.name)).toContain('update_product_update_suggestion');
   });
 
   it('exposes no forbidden action names beyond the explicit allowlist', async () => {

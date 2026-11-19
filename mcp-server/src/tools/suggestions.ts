@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { dataField, defineTool, reviewUrl, type AnyTool, type ToolContext, type ToolOutcome } from './define.js';
 import * as s from './schemas.js';
-import type { LaravelSuccess, Query } from '../laravel-client.js';
+import { LaravelError, type LaravelSuccess, type Query } from '../laravel-client.js';
 
-const suggestionTypes = z.enum(['product', 'new_product', 'bundle', 'slider', 'offer', 'coupon', 'seo', 'blog', 'seasonal_theme', 'social_content', 'media_asset', 'category']);
+const suggestionTypes = z.enum(['product', 'new_product', 'bundle', 'slider', 'offer', 'coupon', 'seo', 'blog', 'seasonal_theme', 'social_content', 'media_asset', 'category', 'product_update']);
 const statuses = z.enum(['pending', 'under_review', 'edited', 'approved', 'rejected', 'applying', 'applied', 'failed', 'expired', 'archived']);
 
 const reviewNote = (url: string): string =>
@@ -63,11 +63,13 @@ const CREATE_SPECS: CreateSpec[] = [
   { type: 'media_asset', name: 'create_media_asset_suggestion', title: 'Suggest a media asset', description: `Suggest an image or video brief for a product; no file is generated. ${REVIEW_LINE}`, payload: s.mediaAssetPayload, target: required('product') },
 ];
 
+const updateName = (spec: CreateSpec): string => spec.name.replace(/^create_/, 'update_');
+
 const createTools: AnyTool[] = CREATE_SPECS.map((spec) =>
   defineTool({
     name: spec.name,
     title: spec.title,
-    description: spec.description,
+    description: `${spec.description} To change it later, use ${updateName(spec)}.`,
     kind: 'write',
     input: { ...s.suggestionCommon, ...(spec.target ?? {}), payload: spec.payload },
     run: async (args, ctx) => {
@@ -79,6 +81,96 @@ const createTools: AnyTool[] = CREATE_SPECS.map((spec) =>
       });
       const created = dataField(result, 'id');
       return typeof created === 'number' ? withReviewLink(result, ctx, created) : result;
+    },
+  }),
+);
+
+interface UpdateEventSpec {
+  type: string;
+  name: string;
+  title: string;
+  description: string;
+  targetType: string;
+  payload: z.ZodObject;
+}
+
+const UPDATE_LINE = 'It proposes a change to a record that already exists; nothing changes until a person approves and applies it.';
+
+/** "Update X" events: a suggestion to change an EXISTING store record (target required, at least one change). */
+const UPDATE_EVENTS: UpdateEventSpec[] = [
+  {
+    type: 'product_update',
+    name: 'suggest_product_update',
+    title: 'Suggest a product update',
+    description:
+      'Suggest changes to an existing product: catalog name / description, brand, categories, active / hidden, price and sale price (also of existing variants), ' +
+      'and images (add by URL, remove by id, choose the main image). Send any one group or several. Read get_product_details and get_product_images first and use real ids. ' +
+      'Cost is not editable and selling below cost is refused. For storefront wording, tags, gift tags or pins use create_product_suggestion instead. ' +
+      UPDATE_LINE,
+    targetType: 'product',
+    payload: s.productUpdatePayload,
+  },
+  { type: 'slider', name: 'suggest_banner_update', title: 'Suggest a banner update', description: `Suggest changes to an existing banner (id from get_sliders): title, link, placement, dates, order, design notes. Images are uploaded by the owner. ${UPDATE_LINE}`, targetType: 'banner', payload: s.sliderPayload },
+  { type: 'bundle', name: 'suggest_bundle_update', title: 'Suggest a bundle update', description: `Suggest changes to an existing bundle (id from get_bundles): name, description, price, items, dates. A negative margin is refused. ${UPDATE_LINE}`, targetType: 'bundle', payload: s.bundlePayload },
+  { type: 'offer', name: 'suggest_flash_sale_update', title: 'Suggest a flash sale update', description: `Suggest changes to an existing flash sale (id from get_current_offers): name, dates, items. A flash price below cost is refused. ${UPDATE_LINE}`, targetType: 'flash_sale', payload: s.offerPayload },
+  { type: 'coupon', name: 'suggest_coupon_update', title: 'Suggest a coupon update', description: `Suggest changes to an existing discount code (id from get_coupons). Sales below cost are refused. ${UPDATE_LINE}`, targetType: 'discount_code', payload: s.couponPayload },
+  { type: 'category', name: 'suggest_category_update', title: 'Suggest a category update', description: `Suggest a new name, description and/or image (by public URL) for an existing category (id from get_categories). ${UPDATE_LINE}`, targetType: 'category', payload: s.categoryPayload },
+];
+
+const nonEmpty = (payload: z.ZodObject) => payload.refine((p) => Object.keys(p as object).length > 0, 'Send at least one change.');
+
+const updateEventTools: AnyTool[] = UPDATE_EVENTS.map((spec) =>
+  defineTool({
+    name: spec.name,
+    title: spec.title,
+    description: `${spec.description} To change the saved suggestion later, use ${spec.type === 'product_update' ? 'update_product_update_suggestion' : updateName(CREATE_SPECS.find((c) => c.type === spec.type)!)}.`,
+    kind: 'write',
+    input: { ...s.suggestionCommon, target_entity_type: z.literal(spec.targetType), target_entity_id: s.id, payload: nonEmpty(spec.payload) },
+    run: async (args, ctx) => {
+      const { source_meta, ...rest } = args as Record<string, unknown> & { source_meta?: Record<string, unknown> };
+      const result = await ctx.laravel.post(`suggestions/${spec.type}`, { ...rest, source: 'mcp', source_meta: { ...(source_meta ?? {}), tool: spec.name } });
+      const created = dataField(result, 'id');
+      return typeof created === 'number' ? withReviewLink(result, ctx, created) : result;
+    },
+  }),
+);
+
+/** Common editable fields of a draft (PATCH sends only what is given). */
+const editInput = {
+  suggestion_id: s.id,
+  title: s.suggestionCommon.title.optional(),
+  description: s.suggestionCommon.description,
+  reasoning: s.suggestionCommon.reasoning,
+  priority: s.suggestionCommon.priority,
+  expires_at: s.suggestionCommon.expires_at,
+  note: z.string().max(500).optional().describe('Revision note shown to the reviewer.'),
+};
+
+/** Typed edit of an own pending/edited draft: the stored suggestion must be of this tool's type; `payload`, when sent, replaces the whole payload. */
+const EDITABLE: CreateSpec[] = [
+  ...CREATE_SPECS,
+  { type: 'product_update', name: 'suggest_product_update', title: 'Suggest product update', description: '', payload: s.productUpdatePayload },
+];
+
+const editName = (spec: CreateSpec): string => (spec.type === 'product_update' ? 'update_product_update_suggestion' : updateName(spec));
+
+const updateTools: AnyTool[] = EDITABLE.map((spec) =>
+  defineTool({
+    name: editName(spec),
+    title: spec.title.replace(/^Suggest/, 'Update suggested'),
+    description:
+      `Edit a ${spec.type} suggestion made by ${spec.name} (through this connection) while it is pending or edited. ` +
+      'Send only the fields to change; `payload`, when sent, replaces the whole payload, so read get_suggestion first and send the full new payload. ' +
+      'The target cannot be changed (create a new suggestion instead). A person still reviews it; nothing changes in the store.',
+    kind: 'write',
+    input: { ...editInput, payload: spec.payload.optional() },
+    run: async ({ suggestion_id, ...body }, ctx) => {
+      const current = await ctx.laravel.get(`suggestions/${suggestion_id}`);
+      const type = dataField(current, 'type');
+      if (type !== spec.type) {
+        throw new LaravelError('type_mismatch', `Suggestion ${suggestion_id} is of type "${String(type)}", not "${spec.type}". Use the update tool of its type.`, null);
+      }
+      return withReviewLink(await ctx.laravel.patch(`suggestions/${suggestion_id}`, body), ctx, suggestion_id);
     },
   }),
 );
@@ -123,21 +215,16 @@ export const suggestionTools: AnyTool[] = [
     run: ({ suggestion_id }, ctx) => ctx.laravel.get(`suggestions/${suggestion_id}/result`),
   }),
   ...createTools,
+  ...updateEventTools,
+  ...updateTools,
   defineTool({
     name: 'update_suggestion_draft',
     title: 'Update suggestion draft',
-    description: 'Edit a suggestion created through this connection while it is pending or edited. `payload`, when sent, replaces the whole payload and must match the type schema.',
+    description:
+      'Generic edit of a suggestion created through this connection while it is pending or edited. Prefer the typed update_*_suggestion tool of its type ' +
+      '(update_product_suggestion, update_slider_suggestion, ...), which checks the payload shape. `payload`, when sent, replaces the whole payload and must match the type schema.',
     kind: 'write',
-    input: {
-      suggestion_id: s.id,
-      title: s.suggestionCommon.title.optional(),
-      description: s.suggestionCommon.description,
-      reasoning: s.suggestionCommon.reasoning,
-      priority: s.suggestionCommon.priority,
-      expires_at: s.suggestionCommon.expires_at,
-      payload: z.record(z.string(), z.unknown()).optional(),
-      note: z.string().max(500).optional().describe('Revision note.'),
-    },
+    input: { ...editInput, payload: z.record(z.string(), z.unknown()).optional() },
     run: async ({ suggestion_id, ...body }, ctx) => withReviewLink(await ctx.laravel.patch(`suggestions/${suggestion_id}`, body), ctx, suggestion_id),
   }),
   defineTool({

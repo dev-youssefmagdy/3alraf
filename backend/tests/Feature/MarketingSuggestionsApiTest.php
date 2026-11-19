@@ -227,7 +227,7 @@ it('converts existing tokens to the per-type scopes without widening partial one
     $full = $make(['marketing:read', 'suggestions:write']);
     $readOnly = $make(['marketing:read']);
     $migration->up();
-    expect($full->fresh()->scopes)->toBe(['marketing:read', ...array_values(array_diff(SuggestionScopes::all(), [SuggestionScopes::for('new_product'), SuggestionScopes::for('category')]))]) /* types added later (new_product, category) are opt-in */->and($readOnly->fresh()->scopes)->toBe(['marketing:read']);
+    expect($full->fresh()->scopes)->toBe(['marketing:read', ...array_values(array_diff(SuggestionScopes::all(), [SuggestionScopes::for('new_product'), SuggestionScopes::for('category'), SuggestionScopes::for('product_update')]))]) /* types added later (new_product, category, product_update) are opt-in */->and($readOnly->fresh()->scopes)->toBe(['marketing:read']);
 
     $partial = $make(['marketing:read', 'suggestions:write:bundle']);
     $migration->down();
