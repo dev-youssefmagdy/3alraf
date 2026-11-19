@@ -23,6 +23,7 @@ Envelope, auth, scopes, throttling: API_DOCUMENTATION.md §1–2, §8. Store dat
 | `create_seasonal_theme_suggestion` | `POST /suggestions/seasonal_theme` | suggestions:write:seasonal_theme |
 | `create_product_social_content_suggestion` | `POST /suggestions/social_content` | suggestions:write:social_content |
 | `create_media_asset_suggestion` | `POST /suggestions/media_asset` | suggestions:write:media_asset |
+| `update_<type>_suggestion` (one per create tool, e.g. `update_product_suggestion`, `update_slider_suggestion`) | `GET /suggestions/{id}` (type check) then `PATCH /suggestions/{id}` | suggestions:write:{type} of that suggestion (own, `pending`/`edited` only) |
 | `update_suggestion_draft` | `PATCH /suggestions/{id}` | suggestions:write:{type} of that suggestion (own, `pending`/`edited` only) |
 | `submit_suggestion_for_review` | `POST /suggestions/{id}/submit` | suggestions:write:{type} of that suggestion (own) |
 

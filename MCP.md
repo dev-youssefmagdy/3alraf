@@ -1391,6 +1391,7 @@ Provide controlled MCP operations:
 - list_suggestions
 - get_suggestion
 - update_suggestion_draft
+- update_<type>_suggestion (typed edit, one per create_*_suggestion tool)
 - submit_suggestion_for_review
 - get_suggestion_status
 - get_suggestion_application_result

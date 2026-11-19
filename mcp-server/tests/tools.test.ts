@@ -30,8 +30,15 @@ describe('tool registry', () => {
     const tools = await list();
     expect(tools.map((t) => t.name).sort()).toEqual(ALL_TOOLS.map((t) => t.name).sort());
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
-    expect(tools.length).toBe(66);
+    expect(tools.length).toBe(78);
     for (const t of tools) expect(t.inputSchema.type).toBe('object');
+  });
+
+  it('pairs every create_*_suggestion tool with a typed update_*_suggestion tool', async () => {
+    const names = (await list()).map((t) => t.name);
+    const creates = names.filter((n) => /^create_.*_suggestion$/.test(n));
+    expect(creates.length).toBe(12);
+    for (const c of creates) expect(names).toContain(c.replace(/^create_/, 'update_'));
   });
 
   it('exposes no forbidden action names beyond the explicit allowlist', async () => {

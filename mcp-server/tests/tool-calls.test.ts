@@ -133,6 +133,34 @@ describe('tool execution against a mocked Laravel', () => {
     expect(s.laravelMock.last.url.pathname).toBe('/api/internal/marketing/tags');
   });
 
+  it('updates a product suggestion after checking its type, sending only the given fields', async () => {
+    s.laravelMock.reply(ok({ id: 12, type: 'product', status: 'pending' }), ok({ id: 12, status: 'edited', version: 2 }));
+    const result = await call('update_product_suggestion', { suggestion_id: 12, title: 'Better tags', payload: { tags_add: [3] }, note: 'added a tag' });
+    expect(s.laravelMock.calls.map((c) => [c.method, c.url.pathname])).toEqual([
+      ['GET', '/api/internal/marketing/suggestions/12'],
+      ['PATCH', '/api/internal/marketing/suggestions/12'],
+    ]);
+    expect(s.laravelMock.last.body).toEqual({ title: 'Better tags', payload: { tags_add: [3] }, note: 'added a tag' });
+    expect(result.isError).toBeFalsy();
+    expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/12');
+  });
+
+  it('updates a banner suggestion without a payload', async () => {
+    s.laravelMock.reply(ok({ id: 13, type: 'slider' }), ok({ id: 13, status: 'edited' }));
+    const result = await call('update_slider_suggestion', { suggestion_id: 13, priority: 'high' });
+    expect(s.laravelMock.last.method).toBe('PATCH');
+    expect(s.laravelMock.last.body).toEqual({ priority: 'high' });
+    expect(result.isError).toBeFalsy();
+  });
+
+  it('refuses a typed update when the suggestion is of another type, without patching', async () => {
+    s.laravelMock.reply(ok({ id: 14, type: 'coupon' }));
+    const result = await call('update_slider_suggestion', { suggestion_id: 14, title: 'New banner' });
+    expect(result.isError).toBe(true);
+    expect(blockJson(result)).toMatchObject({ error: 'type_mismatch' });
+    expect(s.laravelMock.calls.map((c) => c.method)).toEqual(['GET']);
+  });
+
   it('submit returns the suggestion review_url', async () => {
     s.laravelMock.reply(ok({ id: 9, status: 'pending', submitted: true }));
     const result = await call('submit_suggestion_for_review', { suggestion_id: 9 });
@@ -182,6 +210,9 @@ describe('tool execution against a mocked Laravel', () => {
       ['new product variant without values', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, variants: [{ sku: 'A' }] } }],
       ['client-set source', 'create_blog_suggestion', { title: 'abc', source: 'scheduled', payload: { title: { ar: 'x' }, slug: 'x' } }],
       ['bad meta objective', 'create_campaign_draft', { name: 'abc', objective: 'ACTIVATE', product_ids: [1], budget_type: 'daily', budget_amount: 1, start_at: 'x-y-z', copy: { primary_text: 'a' }, cta: 'SHOP_NOW' }],
+      ['typed update with an unknown payload key', 'update_coupon_suggestion', { suggestion_id: 1, payload: { code: 'ABC', sql: 'DROP TABLE' } }],
+      ['typed update changing the target', 'update_product_suggestion', { suggestion_id: 1, target_entity_id: 2 }],
+      ['typed update without an id', 'update_slider_suggestion', { title: 'abc' }],
       ['status field on a meta draft', 'update_campaign_draft', { draft_id: 1, status: 'ACTIVE' }],
       ['fill-missing limit of 0', 'fill_missing_image_embeddings', { limit: 0 }],
       ['fill-missing recompute flag', 'fill_missing_image_embeddings', { recompute: true }],

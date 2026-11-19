@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { dataField, defineTool, reviewUrl, type AnyTool, type ToolContext, type ToolOutcome } from './define.js';
 import * as s from './schemas.js';
-import type { LaravelSuccess, Query } from '../laravel-client.js';
+import { LaravelError, type LaravelSuccess, type Query } from '../laravel-client.js';
 
 const suggestionTypes = z.enum(['product', 'new_product', 'bundle', 'slider', 'offer', 'coupon', 'seo', 'blog', 'seasonal_theme', 'social_content', 'media_asset', 'category']);
 const statuses = z.enum(['pending', 'under_review', 'edited', 'approved', 'rejected', 'applying', 'applied', 'failed', 'expired', 'archived']);
@@ -63,11 +63,13 @@ const CREATE_SPECS: CreateSpec[] = [
   { type: 'media_asset', name: 'create_media_asset_suggestion', title: 'Suggest a media asset', description: `Suggest an image or video brief for a product; no file is generated. ${REVIEW_LINE}`, payload: s.mediaAssetPayload, target: required('product') },
 ];
 
+const updateName = (spec: CreateSpec): string => spec.name.replace(/^create_/, 'update_');
+
 const createTools: AnyTool[] = CREATE_SPECS.map((spec) =>
   defineTool({
     name: spec.name,
     title: spec.title,
-    description: spec.description,
+    description: `${spec.description} To change it later, use ${updateName(spec)}.`,
     kind: 'write',
     input: { ...s.suggestionCommon, ...(spec.target ?? {}), payload: spec.payload },
     run: async (args, ctx) => {
@@ -79,6 +81,39 @@ const createTools: AnyTool[] = CREATE_SPECS.map((spec) =>
       });
       const created = dataField(result, 'id');
       return typeof created === 'number' ? withReviewLink(result, ctx, created) : result;
+    },
+  }),
+);
+
+/** Common editable fields of a draft (PATCH sends only what is given). */
+const editInput = {
+  suggestion_id: s.id,
+  title: s.suggestionCommon.title.optional(),
+  description: s.suggestionCommon.description,
+  reasoning: s.suggestionCommon.reasoning,
+  priority: s.suggestionCommon.priority,
+  expires_at: s.suggestionCommon.expires_at,
+  note: z.string().max(500).optional().describe('Revision note shown to the reviewer.'),
+};
+
+/** Typed edit of an own pending/edited draft: the stored suggestion must be of this tool's type; `payload`, when sent, replaces the whole payload. */
+const updateTools: AnyTool[] = CREATE_SPECS.map((spec) =>
+  defineTool({
+    name: updateName(spec),
+    title: spec.title.replace(/^Suggest/, 'Update suggested'),
+    description:
+      `Edit a ${spec.type} suggestion made by ${spec.name} (through this connection) while it is pending or edited. ` +
+      'Send only the fields to change; `payload`, when sent, replaces the whole payload, so read get_suggestion first and send the full new payload. ' +
+      'The target cannot be changed (create a new suggestion instead). A person still reviews it; nothing changes in the store.',
+    kind: 'write',
+    input: { ...editInput, payload: spec.payload.optional() },
+    run: async ({ suggestion_id, ...body }, ctx) => {
+      const current = await ctx.laravel.get(`suggestions/${suggestion_id}`);
+      const type = dataField(current, 'type');
+      if (type !== spec.type) {
+        throw new LaravelError('type_mismatch', `Suggestion ${suggestion_id} is of type "${String(type)}", not "${spec.type}". Use the update tool of its type.`, null);
+      }
+      return withReviewLink(await ctx.laravel.patch(`suggestions/${suggestion_id}`, body), ctx, suggestion_id);
     },
   }),
 );
@@ -123,21 +158,15 @@ export const suggestionTools: AnyTool[] = [
     run: ({ suggestion_id }, ctx) => ctx.laravel.get(`suggestions/${suggestion_id}/result`),
   }),
   ...createTools,
+  ...updateTools,
   defineTool({
     name: 'update_suggestion_draft',
     title: 'Update suggestion draft',
-    description: 'Edit a suggestion created through this connection while it is pending or edited. `payload`, when sent, replaces the whole payload and must match the type schema.',
+    description:
+      'Generic edit of a suggestion created through this connection while it is pending or edited. Prefer the typed update_*_suggestion tool of its type ' +
+      '(update_product_suggestion, update_slider_suggestion, ...), which checks the payload shape. `payload`, when sent, replaces the whole payload and must match the type schema.',
     kind: 'write',
-    input: {
-      suggestion_id: s.id,
-      title: s.suggestionCommon.title.optional(),
-      description: s.suggestionCommon.description,
-      reasoning: s.suggestionCommon.reasoning,
-      priority: s.suggestionCommon.priority,
-      expires_at: s.suggestionCommon.expires_at,
-      payload: z.record(z.string(), z.unknown()).optional(),
-      note: z.string().max(500).optional().describe('Revision note.'),
-    },
+    input: { ...editInput, payload: z.record(z.string(), z.unknown()).optional() },
     run: async ({ suggestion_id, ...body }, ctx) => withReviewLink(await ctx.laravel.patch(`suggestions/${suggestion_id}`, body), ctx, suggestion_id),
   }),
   defineTool({
