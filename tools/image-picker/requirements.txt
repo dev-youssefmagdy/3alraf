@@ -1,0 +1,3 @@
+# Image Picker: free image search (Bing + DuckDuckGo through ddgs, no API key) + image validation
+ddgs>=9.16
+pillow>=11.2
