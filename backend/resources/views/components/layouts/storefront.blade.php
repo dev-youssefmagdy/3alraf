@@ -69,7 +69,9 @@
         {{-- fonts: Cairo (body) + Baloo Bhaijaan 2 (display), only the weights the design uses; the storefront alone loads them --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap">
+        {{-- loaded without blocking first paint; text shows in the fallback font until these arrive (display=swap) --}}
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap"></noscript>
         <link rel="apple-touch-icon" href="{{ asset('logo-192.png') }}">
         @foreach (['google-site-verification' => 'google_verification', 'msvalidate.01' => 'bing_verification', 'yandex-verification' => 'yandex_verification', 'p:domain_verify' => 'pinterest_verification', 'facebook-domain-verification' => 'facebook_domain_verification'] as $metaName => $k)
             @if ($seo[$k])<meta name="{{ $metaName }}" content="{{ $seo[$k] }}">@endif
@@ -132,7 +134,7 @@
     <header class="sticky top-0 z-40 bg-white shadow-card" data-site-header>
         <div class="sf-container flex flex-wrap items-center gap-x-3 gap-y-2 py-2 lg:flex-nowrap lg:gap-x-5 lg:py-3">
             <button type="button" class="icon-btn icon-btn-soft lg:hidden" data-drawer-open aria-label="{{ __('store.menu') }}">{!! $svg('menu', 'size-6') !!}</button>
-            <a href="{{ route('storefront.home') }}" class="flex shrink-0 items-center rounded-xl"><img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') }}" width="96" height="80" fetchpriority="high" class="h-14 w-auto max-w-[200px] object-contain lg:h-20"></a>
+            <a href="{{ route('storefront.home') }}" class="flex shrink-0 items-center rounded-xl"><x-logo :width="96" :height="80" sizes="(min-width: 1024px) 96px, 67px" class="h-14 w-auto max-w-[200px] object-contain lg:h-20" /></a>
 
             <form action="{{ route('storefront.search') }}" method="GET" class="relative order-last w-full lg:order-none lg:flex-1" data-search-form role="search">
                 <label for="site-search" class="sr-only">{{ __('store.search') }}</label>
@@ -246,7 +248,7 @@
         <div class="absolute inset-0 bg-black/50" data-drawer-close></div>
         <aside class="absolute inset-y-0 start-0 flex w-80 max-w-[85vw] flex-col overflow-y-auto bg-white shadow-overlay">
             <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                <a href="{{ route('storefront.home') }}"><img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') }}" width="58" height="48" loading="lazy" class="h-12 w-auto object-contain"></a>
+                <a href="{{ route('storefront.home') }}"><x-logo :width="58" :height="48" loading="lazy" class="h-12 w-auto object-contain" /></a>
                 <button type="button" data-drawer-close class="icon-btn icon-btn-outline" aria-label="{{ __('store.close') }}">{!! $svg('close') !!}</button>
             </div>
             <div class="flex-1 space-y-4 p-4">
@@ -323,7 +325,7 @@
             {{-- phones: centred brand block, the two link lists side by side, app badges in one row; desktop: 4 columns --}}
             <div class="sf-container grid grid-cols-2 gap-x-6 gap-y-8 py-8 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-8 lg:py-10">
                 <div class="col-span-2 border-b border-white/10 pb-7 text-center lg:col-span-1 lg:border-0 lg:pb-0 lg:text-start">
-                    <a href="{{ route('storefront.home') }}" class="mb-4 inline-grid rounded-2xl bg-white p-2"><img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') }}" width="67" height="56" loading="lazy" class="h-14 w-auto object-contain"></a>
+                    <a href="{{ route('storefront.home') }}" class="mb-4 inline-grid rounded-2xl bg-white p-2"><x-logo loading="lazy" class="h-14 w-auto object-contain" /></a>
                     <p class="mx-auto max-w-sm text-sm/[22px] text-white/80 lg:mx-0">{{ __('store.seo_default_desc') }}</p>
                     @if ($socials)
                         <p class="sr-only">{{ __('store.follow_us') }}</p>

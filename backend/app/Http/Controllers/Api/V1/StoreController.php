@@ -161,11 +161,19 @@ class StoreController extends ApiController
         $scope = $this->search->scope($category, $filter->q);
         if ($request->filled('brand')) {
             $brand = Brand::where('slug', (string) $request->query('brand'))->where('is_active', true)->firstOrFail();
+<<<<<<< Updated upstream
             $scope->where('brand_id', $brand->id);
         }
         if ($request->filled('tag')) {
             $tag = Tag::where('slug', (string) $request->query('tag'))->where('is_active', true)->firstOrFail();
             $scope->whereHas('tags', fn ($t) => $t->where('tags.id', $tag->id));
+=======
+            $scope->whereHas('product', fn ($p) => $p->where('brand_id', $brand->id));
+        }
+        if ($request->filled('tag')) {
+            $tag = Tag::where('slug', (string) $request->query('tag'))->where('is_active', true)->firstOrFail();
+            $scope->whereHas('product', fn ($p) => $p->whereHas('tags', fn ($t) => $t->where('tags.id', $tag->id)));
+>>>>>>> Stashed changes
         }
 
         return [$scope, $filter];
@@ -173,6 +181,10 @@ class StoreController extends ApiController
 
     private function sellable(): \Closure
     {
+<<<<<<< Updated upstream
         return fn ($p) => $p->where('is_active', true)->whereNotNull('price');
+=======
+        return fn ($p) => $p->where('is_active', true)->whereIn('id', TenantProduct::where('is_active', true)->select('product_id'));
+>>>>>>> Stashed changes
     }
 }

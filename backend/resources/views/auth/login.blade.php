@@ -23,7 +23,7 @@
         <div class="w-full max-w-sm">
             <div class="mb-6 text-center">
                 <a href="{{ url('/') }}" class="inline-block" aria-label="{{ setting('name') ?? config('app.name') }}">
-                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?? config('app.name') }}" width="67" height="56" class="mx-auto mb-2 h-14 w-auto object-contain">
+                    <x-logo class="mx-auto mb-2 h-14 w-auto object-contain" />
                 </a>
                 <p class="text-sm text-slate-500">{{ __('admin.'.$titleKey) }}</p>
             </div>

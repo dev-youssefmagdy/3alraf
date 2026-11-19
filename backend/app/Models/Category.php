@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Models\Concerns\HasDraftState;
 use App\Models\Concerns\HasTranslations;
+use App\Support\MediaPaths;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 /** Unlimited-depth tree: parent_id + materialized `path` ("1/5/9", ids incl. self) + `depth`. */
 class Category extends Model
@@ -61,5 +63,16 @@ class Category extends Model
     public function getImageUrlAttribute(): ?string
     {
         return $this->image ? media_url($this->image) : null;
+    }
+
+    /** The 400px thumbnail when one is stored (older or external images may have none), otherwise the full image. */
+    public function getThumbUrlAttribute(): ?string
+    {
+        if (! $this->image || preg_match('#^https?://#i', $this->image)) {
+            return $this->image_url;
+        }
+        $thumb = MediaPaths::thumbOf($this->image);
+
+        return Storage::disk('media')->exists($thumb) ? media_url($thumb) : $this->image_url;
     }
 }

@@ -27,7 +27,7 @@ class StorefrontData
             $all = Category::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()->groupBy('parent_id');
             $build = function (?int $parent) use (&$build, $all): array {
                 return ($all[$parent] ?? collect())->map(fn ($c) => [
-                    'id' => $c->id, 'name' => $c->name, 'slug' => $c->slug, 'image' => $c->image_url, 'icon' => $c->icon, 'children' => $build($c->id),
+                    'id' => $c->id, 'name' => $c->name, 'slug' => $c->slug, 'image' => $c->image_url, 'thumb' => $c->thumb_url, 'icon' => $c->icon, 'children' => $build($c->id),
                 ])->values()->all();
             };
 

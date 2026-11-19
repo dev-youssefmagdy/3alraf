@@ -1,4 +1,4 @@
-@props(['title', 'items', 'href' => null, 'countdown' => null, 'accent' => false])
+@props(['title', 'items', 'href' => null, 'countdown' => null, 'accent' => false, 'eager' => 0])
 {{--
     Product rail (design 19:1272 / rail header 19:639) on Swiper: preset "rail", or "flash" with a countdown (pop block, full-bleed on phones).
     2.3 / 3.3 / 4 / 5 cards per view; arrows from 1024px, progress bar below. See resources/js/lib/sliders.js for the markup contract.
@@ -29,7 +29,7 @@
     </div>
     <div class="swiper !py-1 max-lg:-mx-4">
         <div class="swiper-wrapper">
-            @foreach ($items as $item)<div class="swiper-slide"><x-product-card :product="$item" class="h-full" /></div>@endforeach
+            @foreach ($items as $item)<div class="swiper-slide"><x-product-card :product="$item" :eager="$loop->index < $eager" class="h-full" /></div>@endforeach
         </div>
     </div>
     <div data-swiper-pagination class="mx-auto mt-4 w-32 {{ $flash ? '!bg-white/30 [&_.swiper-pagination-progressbar-fill]:!bg-sun-400' : '' }}"></div>

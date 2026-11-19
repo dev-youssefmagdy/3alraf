@@ -27,9 +27,19 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MediaScanner::class, NullMediaScanner::class);
+<<<<<<< Updated upstream
         $this->app->bind(PushDispatcher::class, LogPushDispatcher::class);
         $this->app->scoped(ErpSettings::class);
         $this->app->scoped(\App\Services\Marketing\Meta\MetaAudit::class);   // per-request acting user of the Meta audit log (P6)
+=======
+        $this->app->bind(\App\Services\Push\PushDispatcher::class, \App\Services\Push\LogPushDispatcher::class);
+        $this->app->scoped(AiAccess::class);
+        $this->app->singleton(ApprovalService::class); // module handlers register on it
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('experiment_budget', fn ($ap) => app(ExperimentLabService::class)->materializeBudget($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('batch_reorder', fn ($ap) => app(SmallBatchService::class)->materializeDecision($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('inventory_reorder', fn ($ap) => app(InventoryDecisionService::class)->materialize($ap)));
+        $this->app->resolving(ApprovalService::class, fn ($a) => $a->register('bundle_draft', fn ($ap) => app(BundleProposalService::class)->materialize($ap)));
+>>>>>>> Stashed changes
     }
 
     /**
@@ -37,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+<<<<<<< Updated upstream
         // Former .env keys, now Admin → System settings (stored in `settings`); must run first so every later boot step sees them.
         \App\Support\SystemSettings::apply();
         // Site timezone (setting `timezone`): set once per process (web, console, queue), never per request. Missing while installing → app default (UTC).
@@ -63,6 +74,13 @@ class AppServiceProvider extends ServiceProvider
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per client IP (one shop, so no per-shop part).
         foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'devices' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.$r->ip()));
+=======
+        Blade::if('growthFeature', fn (string $key) => app(GrowthFeatures::class)->active($key, current_tenant()));
+        // Named limiters (docs/GAP_ANALYSIS §3); keyed per resolved tenant + client IP so one tenant cannot starve another
+        // and a client cannot mint fresh buckets by varying the X-Tenant header (ignored on subdomain hosts).
+        foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'devices' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
+            RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.self::tenantKey($r).'|'.$r->ip()));
+>>>>>>> Stashed changes
         }
 
         // Sensitive endpoints (login / register / password reset / e-mail codes / checkout / reviews): one bucket per route as well.

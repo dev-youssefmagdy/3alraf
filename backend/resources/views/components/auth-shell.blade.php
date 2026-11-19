@@ -10,7 +10,7 @@
         <div class="w-full max-w-[420px] rounded-[32px] bg-white p-6 shadow-overlay sm:p-8">
             <div class="mb-5 text-center">
                 <a href="{{ route('storefront.home') }}" class="inline-block rounded-xl" aria-label="{{ setting('name') ?? config('app.name') }}">
-                    <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?? config('app.name') }}" width="67" height="56" class="mx-auto h-16 w-auto object-contain">
+                    <x-logo :width="77" :height="64" class="mx-auto h-16 w-auto object-contain" />
                 </a>
                 <h1 class="mt-3 font-display text-[28px]/9 font-extrabold text-slate-950">{{ $heading }}</h1>
                 @if ($intro)<p class="mt-1 text-sm text-slate-600">{{ $intro }}</p>@endif
@@ -20,7 +20,7 @@
         <div class="hidden max-w-md text-white lg:block">
             {{-- brand mark: the real logo on a white tile, store name ("ع الرف") under it --}}
             <a href="{{ route('storefront.home') }}" class="inline-grid -rotate-2 rounded-[28px] bg-white p-4 shadow-overlay transition hover:rotate-0" aria-label="{{ setting('name') ?? config('app.name') }}">
-                <img src="{{ asset('logo-sm.webp') }}" alt="" width="206" height="171" class="h-28 w-auto object-contain">
+                <x-logo alt="" :width="135" :height="112" class="h-28 w-auto object-contain" />
             </a>
             <p class="mt-6 font-display text-[40px]/[48px] font-extrabold">{{ setting('name') ?? config('app.name') }}</p>
             <p class="mt-2 text-base/[26px] text-white">{{ __('store.brand_tagline') }}</p>

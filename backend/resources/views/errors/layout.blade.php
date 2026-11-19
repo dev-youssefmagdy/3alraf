@@ -41,7 +41,7 @@
     </style>
 </head>
 <body>
-    <header><img src="/logo-sm.webp" alt="{{ $name }}" style="height:44px;width:auto"></header>
+    <header><img src="/logo-sm.avif" alt="{{ $name }}" style="height:44px;width:auto"></header>
     <main>
         <div class="card" role="alert">
             <div class="code">{{ $code }}</div>

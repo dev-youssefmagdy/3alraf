@@ -20,7 +20,7 @@
     <div class="flex min-h-screen">
         <aside id="sidebar" class="fixed inset-y-0 start-0 z-50 hidden w-64 shrink-0 flex-col bg-panel-sidebar p-4 md:sticky md:top-0 md:z-auto md:h-screen md:flex" aria-label="{{ $panelName }}">
             <a href="{{ $home }}" class="mb-1 flex items-center gap-2 px-2">
-                <img src="{{ asset('logo-sm.webp') }}" alt="{{ setting('name') ?: config('app.name') }}" class="h-10 w-auto max-w-full object-contain">
+                <x-logo :width="48" :height="40" class="h-10 w-auto max-w-full object-contain" />
             </a>
             <p class="mb-5 px-2 text-xs font-bold tracking-wide text-panel-stripe">{{ $panelName }}</p>
             <nav class="-me-2 flex-1 space-y-1 overflow-y-auto pe-2" data-nav>

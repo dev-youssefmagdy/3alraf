@@ -10,11 +10,12 @@
     // media tints rotate mint / pop / sun / violet (design 8:454)
     $tint = ['bg-mint-100', 'bg-pop-50', 'bg-sun-100', 'bg-violet-100'][$p->id % 4];
     $stars = $d['rating'] ? (int) round($d['rating']) : 0;
+    $img = $p->primaryImageUrl();
 @endphp
 <div {{ $attributes->merge(['class' => 'product-card group relative flex flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-card']) }} data-product-card>
     <div class="relative">
-        <a href="{{ $url }}" class="block overflow-hidden rounded-xl {{ $tint }}">
-            @if ($img = $p->primaryImageUrl())<x-media-img :src="$img" :alt="$p->name" width="400" height="400" :eager="(bool) $eager" class="product-card-img aspect-square w-full object-cover {{ $d['out'] ? 'opacity-60 grayscale' : '' }}" />
+        <a href="{{ $url }}" @unless ($img) aria-label="{{ $p->name }}" @endunless class="block overflow-hidden rounded-xl {{ $tint }}">
+            @if ($img)<x-media-img :src="$img" :alt="$p->name" width="400" height="400" :eager="(bool) $eager" class="product-card-img aspect-square w-full object-cover {{ $d['out'] ? 'opacity-60 grayscale' : '' }}" />
             @else<div class="aspect-square w-full"></div>@endif
         </a>
         <div class="pointer-events-none absolute start-2 top-2 z-10 flex flex-col items-start gap-1">

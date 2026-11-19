@@ -5,6 +5,10 @@
         $rings = ['ring-brand-600', 'ring-pop-500', 'ring-sun-400', 'ring-mint-400', 'ring-violet-500'];
         $tileTints = ['bg-pop-600', 'bg-violet-500', 'bg-mint-400', 'bg-sun-400', 'bg-brand-800'];
         $giftOn = app(\App\Services\GiftFinder\GiftFinderSettings::class)->enabled();
+        // no hero, tile or bundle above it: the first product rail holds the LCP image, so its first cards must not be lazy
+        $eagerRail = $hero->isEmpty() && $tiles->isEmpty() && empty($bundles)
+            ? ($flash ? 'flash' : collect(['recommended', 'most_sold', 'most_reviewed'])->first(fn ($k) => $rails[$k]->isNotEmpty()))
+            : null;
     @endphp
     <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: setting('name') }}</h1>
 
@@ -47,7 +51,7 @@
                         <div class="swiper-slide">
                             <a href="{{ route('storefront.category.show', $c['slug']) }}" class="group block text-center">
                                 <span class="mx-auto grid aspect-square w-full place-items-center overflow-hidden rounded-full bg-brand-50 ring-4 ring-inset {{ $rings[$loop->index % 5] }} p-1 transition group-hover:scale-[1.03]">
-                                    @if ($c['image'])<img src="{{ $c['image'] }}" alt="" class="size-full rounded-full object-cover" loading="lazy" decoding="async" width="96" height="96">
+                                    @if ($c['image'])<img src="{{ $c['thumb'] ?? $c['image'] }}" alt="" class="size-full rounded-full object-cover" loading="lazy" decoding="async" width="96" height="96">
                                     @else<span class="font-display text-2xl font-extrabold text-brand-600">{{ mb_substr($c['name'], 0, 1) }}</span>@endif
                                 </span>
                                 <span class="mt-2 line-clamp-2 block text-xs/4 font-bold text-slate-950 group-hover:text-brand-600 lg:text-sm/5">{{ $c['name'] }}</span>
@@ -91,7 +95,7 @@
 
     {{-- flash sale: pop block with the countdown (rail "flash" preset) --}}
     @if ($flash)
-        <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" />
+        <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :eager="$eagerRail === 'flash' ? 2 : 0" />
     @endif
 
     {{-- gift finder CTA (19:558) --}}
@@ -122,9 +126,9 @@
         </section>
     @endif
 
-    <x-rail :title="__('store.recommended')" :items="$rails['recommended']" />
-    <x-rail :title="__('store.most_sold')" :items="$rails['most_sold']" />
-    <x-rail :title="__('store.most_reviewed')" :items="$rails['most_reviewed']" />
+    <x-rail :title="__('store.recommended')" :items="$rails['recommended']" :eager="$eagerRail === 'recommended' ? 2 : 0" />
+    <x-rail :title="__('store.most_sold')" :items="$rails['most_sold']" :eager="$eagerRail === 'most_sold' ? 2 : 0" />
+    <x-rail :title="__('store.most_reviewed')" :items="$rails['most_reviewed']" :eager="$eagerRail === 'most_reviewed' ? 2 : 0" />
 
     @foreach ($categoryRails as $r)
         <x-rail :title="$r['category']->name" :items="$r['items']" :href="route('storefront.category.show', $r['category']->slug)" />
