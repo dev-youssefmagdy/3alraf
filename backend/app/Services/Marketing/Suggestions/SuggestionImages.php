@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 /**
- * Images proposed by URL in a new_product (images) or category (image) suggestion. Each URL is downloaded ONCE, when the suggestion is created or edited (SafeImageFetcher),
+ * Images proposed by URL in a new_product (images), category (image) or product_update (images_add) suggestion. Each URL is downloaded ONCE, when the suggestion is created or edited (SafeImageFetcher),
  * validated as a real image (ImageOptimizer::inspect) and kept on the PRIVATE disk under its content hash (suggestion-images/{sha256}.{ext}).
  * The payload stores that hash, so the approval is bound to the exact bytes the reviewer saw; apply re-checks the hash before using the file.
  * The public site never sees these files: reviewers get them through an authenticated marketer route, the catalog gets them through
@@ -98,15 +98,15 @@ class SuggestionImages
         return new UploadedFile($tmp, $name.'.'.(self::EXT[$image['mime']] ?? 'img'), $image['mime'], null, true);
     }
 
-    /** Remove staged files (and URL index entries) older than $days that no open new_product / category suggestion references. @return int files removed */
+    /** Remove staged files (and URL index entries) older than $days that no open new_product / category / product_update suggestion references. @return int files removed */
     public function prune(int $days = 7): int
     {
         $keep = [];
-        MarketingSuggestion::query()->whereIn('type', [SuggestionTypeKey::NEW_PRODUCT->value, SuggestionTypeKey::CATEGORY->value])
+        MarketingSuggestion::query()->whereIn('type', [SuggestionTypeKey::NEW_PRODUCT->value, SuggestionTypeKey::CATEGORY->value, SuggestionTypeKey::PRODUCT_UPDATE->value])
             ->whereIn('status', array_map(fn ($s) => $s->value, self::OPEN))
             ->select(['id', 'payload'])->chunkById(200, function ($rows) use (&$keep) {
                 foreach ($rows as $s) {
-                    $images = (array) ($s->payload['images'] ?? []);
+                    $images = [...(array) ($s->payload['images'] ?? []), ...(array) ($s->payload['images_add'] ?? [])];   // new_product / product_update
                     isset($s->payload['image']) && $images[] = (array) $s->payload['image'];   // category: one image
                     foreach ($images as $img) {
                         isset($img['sha256']) && $keep[$img['sha256']] = true;

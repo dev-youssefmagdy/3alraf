@@ -149,6 +149,7 @@ return [
             'suggestions_write_social_content' => 'اقتراح محتوى سوشيال ميديا (بدون اعتماد أو تطبيق)',
             'suggestions_write_media_asset' => 'اقتراح صور وفيديوهات (بدون اعتماد أو تطبيق)',
             'suggestions_write_category' => 'اقتراح تعديل الأقسام: الاسم والوصف والصورة (بدون اعتماد أو تطبيق)',
+            'suggestions_write_product_update' => 'اقتراح تعديل المنتجات: النص والماركة والأقسام والحالة والأسعار والصور (بدون اعتماد أو تطبيق)',
             'meta_read' => 'قراءة بيانات ميتا (الحسابات، الحملات، النتائج) والمسودات',
             'meta_draft' => 'إنشاء وتعديل مسودات حملات ميتا وإرسالها للاعتماد (بدون اعتماد أو نشر)',
             'embeddings_write' => 'إضافة بصمات الصور الناقصة لفهرس البحث بالصورة فقط (لا يعيد حساب الموجود ولا يغيّر محتوى المتجر)',
@@ -198,7 +199,7 @@ return [
         'rolled_back' => 'تم التراجع',
         'types' => [
             'product' => 'منتج', 'bundle' => 'باندل', 'slider' => 'سلايدر / بنر', 'offer' => 'عرض', 'coupon' => 'كوبون', 'seo' => 'SEO',
-            'blog' => 'مقال مدونة', 'seasonal_theme' => 'ثيم موسمي', 'social_content' => 'محتوى سوشيال', 'media_asset' => 'ملف وسائط', 'new_product' => 'منتج جديد', 'category' => 'تعديل قسم',
+            'blog' => 'مقال مدونة', 'seasonal_theme' => 'ثيم موسمي', 'social_content' => 'محتوى سوشيال', 'media_asset' => 'ملف وسائط', 'new_product' => 'منتج جديد', 'category' => 'تعديل قسم', 'product_update' => 'تعديل منتج',
         ],
         'statuses' => [
             'pending' => 'بانتظار المراجعة', 'under_review' => 'قيد المراجعة', 'edited' => 'معدّل', 'approved' => 'معتمد', 'rejected' => 'مرفوض',
@@ -277,6 +278,7 @@ return [
             'tag_ids' => 'أرقام الوسوم مفصولة بفاصلة',
             'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
             'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (أول صورة هي الرئيسية)',
+            'variant_prices_hint' => '[{"variant_id": 12, "price": 1500, "sale_price": 1350}, {"variant_id": 13, "remove_sale_price": true}]',
             'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (تستبدل صورة القسم الحالية)',
             'variants_hint' => '[{"values": [12, 30], "sku": "W-1-BLK", "price": 1500, "image": 0}]',
             'new_attributes_hint' => '[{"ref": "case_size", "name": {"ar": "قطر الهيكل", "en": "Case size"}, "type": "select", "values": [{"ref": "s42", "value": {"ar": "42 مم", "en": "42 mm"}}]}]',
@@ -316,6 +318,8 @@ return [
             'sku' => 'رمز المنتج (SKU)', 'barcode' => 'الباركود', 'brand_id' => 'الماركة', 'tag_ids' => 'الوسوم', 'sale_price' => 'سعر الخصم', 'cost' => 'التكلفة',
             'weight' => 'الوزن (جم)', 'min_stock_alert_qty' => 'حد تنبيه المخزون', 'images' => 'الصور', 'variants' => 'المتغيرات', 'values' => 'قيم الخصائص', 'image' => 'صورة', 'inactive' => 'غير مفعل',
             'new_attributes' => 'خصائص جديدة', 'new_values' => 'قيم جديدة لخصائص موجودة', 'new' => 'جديدة', 'attribute_id' => 'الخاصية',
+            'status' => 'الحالة في المتجر', 'remove_sale_price' => 'إلغاء سعر الخصم', 'images_add' => 'إضافة صور', 'images_remove' => 'حذف صور (الأرقام)',
+            'main_image_id' => 'الصورة الرئيسية (رقم صورة موجودة)', 'main_image_index' => 'الصورة الرئيسية (ترتيب صورة مضافة، من 0)',
         ],
         'errors' => [
             'illegal_transition' => 'لا يمكن الانتقال من حالة ":from" إلى ":to".',
@@ -344,6 +348,10 @@ return [
             'ref_duplicate' => 'المرجع :ref مستخدم أكثر من مرة.', 'attribute_code_taken' => 'كود الخاصية :code مستخدم بالفعل.', 'value_duplicate' => 'القيمة ":value" مكررة في نفس الخاصية.',
             'value_exists' => 'القيمة ":value" موجودة بالفعل في :attribute (#:id): استخدم رقمها.', 'new_product_published' => 'تم نشر المنتج بالفعل، لا يمكن التراجع. أخفِه من صفحة المنتجات بدلًا من ذلك.',
             'tag_conflict' => 'لا يمكن إضافة وإزالة نفس الوسم.',
+            'variant_not_of_product' => 'النسخة #:id ليست من نسخ هذا المنتج.', 'sale_price_conflict' => 'أرسل سعر خصم أو remove_sale_price وليس الاثنين.',
+            'product_is_draft' => 'المنتج مسودة: انشره من صفحة المنتج.', 'product_without_price' => 'لا يمكن تفعيل منتج بدون سعر.',
+            'product_without_sku' => 'لا يمكن تفعيل منتج بدون SKU حقيقي.', 'image_not_of_product' => 'الصور :ids ليست ضمن صور هذا المنتج.',
+            'main_image_conflict' => 'اختر الصورة الرئيسية بالرقم أو بالترتيب وليس الاثنين.',
             'pin_conflict' => 'لا يمكن تثبيت وإلغاء تثبيت نفس القائمة.',
             'internal_link' => 'الروابط يجب أن تكون داخل المتجر فقط.',
             'negative_margin' => 'هامش الربح سالب (:margin%).',
@@ -365,6 +373,8 @@ return [
         ],
         'warnings' => [
             'category_inactive' => 'القسم مخفي من المتجر حاليًا.',
+            'product_wording_overlay' => ':field (:locale) له نص بديل في واجهة المتجر، وسيستمر المتجر في عرضه بدل نص الكتالوج.',
+            'product_no_images_left' => 'لن يتبقى للمنتج أي صور.',
             'product_not_listed' => 'المنتج غير معروض حاليًا (غير مفعل أو بدون سعر).',
             'long_title' => 'عنوان (:locale) طويل (:n حرف، الأفضل ≤ 60).',
             'long_description' => 'وصف (:locale) طويل (:n حرف، الأفضل ≤ 160).',

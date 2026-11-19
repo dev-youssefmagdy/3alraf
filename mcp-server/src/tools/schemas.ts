@@ -53,6 +53,35 @@ export const categoryPayload = z
   })
   .describe('At least one field is required.');
 
+export const productUpdatePayload = z
+  .strictObject({
+    name: localized(200).optional().describe('Catalog name per locale; locales you leave out keep their text.'),
+    description: localized(20000).optional().describe('Catalog description per locale. HTML allowlist, sanitised by the store.'),
+    brand_id: id.optional().describe('See get_brands.'),
+    category_ids: z.array(id).min(1).max(20).optional().describe('Replaces the whole category set. See get_categories.'),
+    status: z.enum(['active', 'hidden']).optional().describe('Show or hide the product in the store. A draft cannot be made active here.'),
+    price: money.optional().describe('New selling price (EGP), > 0.'),
+    sale_price: money.optional().describe('At most the price. Do not combine with remove_sale_price.'),
+    remove_sale_price: z.literal(true).optional().describe('Remove the current sale price.'),
+    variants: z
+      .array(
+        z.strictObject({
+          variant_id: id.describe('An existing variant of this product (get_product_details).'),
+          price: money.optional(),
+          sale_price: money.optional(),
+          remove_sale_price: z.literal(true).optional(),
+        }),
+      )
+      .max(100)
+      .optional()
+      .describe('Price changes of existing variants. Variants are never added or removed here.'),
+    images_add: z.array(z.strictObject({ url: imageUrl })).max(10).optional().describe('Added after the current images.'),
+    images_remove: z.array(id).max(50).optional().describe('Image ids of this product (get_product_images).'),
+    main_image_id: id.optional().describe('Existing image id to make the main image.'),
+    main_image_index: z.number().int().min(0).max(9).optional().describe('Index into images_add (0 = first) to make the main image.'),
+  })
+  .describe('At least one field. Cost is not editable (it comes from purchases); selling below cost is refused.');
+
 const ref = z.string().regex(/^[a-z][a-z0-9_-]{0,49}$/i, 'starts with a letter: a-z, 0-9, _ or -').describe('Your own short name for a proposed value, e.g. "teal" or "s42".');
 const hex = z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('#rrggbb, required for colour attributes.');
 const proposedValue = z.strictObject({ ref, value: localized(255).describe('{"ar": "...", "en": "..."}'), color_hex: hex.optional() });

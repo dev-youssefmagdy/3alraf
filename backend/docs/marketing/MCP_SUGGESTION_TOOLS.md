@@ -13,6 +13,8 @@ Envelope, auth, scopes, throttling: API_DOCUMENTATION.md §1–2, §8. Store dat
 | `create_product_suggestion` | `POST /suggestions/product` | suggestions:write:product |
 | `create_new_product_suggestion` | `POST /suggestions/new_product` | suggestions:write:new_product |
 | `create_category_suggestion` | `POST /suggestions/category` | suggestions:write:category |
+| `suggest_product_update` | `POST /suggestions/product_update` (target `product` required) | suggestions:write:product_update |
+| `suggest_banner_update` / `suggest_bundle_update` / `suggest_flash_sale_update` / `suggest_coupon_update` / `suggest_category_update` | `POST /suggestions/{slider\|bundle\|offer\|coupon\|category}` with the target required (`banner` / `bundle` / `flash_sale` / `discount_code` / `category`) | suggestions:write:{type} |
 | `get_attributes` / `get_tags` | `GET /attributes`, `GET /tags` | marketing:read |
 | `create_bundle_suggestion` | `POST /suggestions/bundle` | suggestions:write:bundle |
 | `create_slider_suggestion` | `POST /suggestions/slider` | suggestions:write:slider |
@@ -116,6 +118,25 @@ sale_price, cost, weight, min_stock_alert_qty, image (index into images), is_act
 - `image.url` is downloaded once at create / edit (SSRF-safe, same rules as new_product images) and pinned by sha256; the reviewer sees current vs proposed image. A URL that cannot be fetched or is not an image → 422 on `payload.image.url`.
 - Apply: CategoryService (name/description) + `CategoryService::replaceImage` (the previous image file is kept). Rollback restores name, description and the old image, and deletes the added image while it is still the current one. Approval: `ai_suggestions.approve` / `.apply`.
 
+### product_update (target required: `product`) — the catalog record of an existing product (MCP `suggest_product_update`)
+
+```json
+{ "target_entity_type": "product", "target_entity_id": 42,
+  "payload": { "name": {"ar": "ساعة كاسيو"}, "description": {"en": "<p>...</p>"}, "brand_id": 2, "category_ids": [3, 5], "status": "active",
+               "price": 1200, "sale_price": 990, "remove_sale_price": true,
+               "variants": [{"variant_id": 9, "price": 1250, "sale_price": 1100}, {"variant_id": 10, "remove_sale_price": true}],
+               "images_add": [{"url": "https://cdn.example/w2.jpg"}], "images_remove": [44], "main_image_id": 43, "main_image_index": 0 } }
+```
+- Any group alone or together: **core** (catalog `name` / `description` per locale, other locales kept; `brand_id`; `category_ids` = the whole set; `status` active | hidden),
+  **pricing** (`price` > 0, `sale_price` ≤ price or `remove_sale_price`, the same for existing `variants` of this product — never added / removed here),
+  **images** (`images_add` by URL, ≤ 10, staged like new_product images; `images_remove` = image ids of this product; main image = `main_image_id` or `main_image_index` into `images_add`, not both).
+- `cost` is not accepted (the listing cost is the weighted-average purchase cost, docs/CALCULATIONS.md). Margin check on every line whose selling price changes
+  (simple product, or each variant incl. those inheriting the product price), against the variant cost else the product cost: below cost ⇒ 422, below the minimum margin / no cost ⇒ warning.
+- `status: active` is refused on a draft (publish it from the product page), without a price or with a placeholder SKU. A storefront wording overlay (`product` type) on a proposed locale ⇒ warning (the overlay keeps showing).
+- Apply: `ProductService::updateListing` (only the proposed columns, categories, variant prices; QR codes refreshed), `addImages`, `detachImages` (rows removed, **files kept**), `setMainImage`.
+  Rollback restores every touched value and the gallery order, re-attaches removed images and deletes the added ones. Approval also needs `ai_products.approve`.
+- Not the `product` type: that one only changes the storefront wording overlay, tags, gift tags and pins.
+
 ### bundle (no target = new bundle, created **inactive**; target `bundle` = update)
 `name` {locale ≤200} (required on create), `description` {locale ≤5000}, `price` (> 0, required on create), `items` [{product_id, variant_id
 (0 = simple), quantity 1..999}] 1..50 (required on create; components must be listed), `starts_at`, `ends_at` (> starts_at), `sort_order`.
@@ -199,7 +220,7 @@ required), `caption` {locale ≤2200} (required), `hashtags` [≤60, letters/dig
 ## Update / submit
 `PATCH /suggestions/{id}`: any of `title`, `description`, `reasoning`, `priority`, `expires_at`, `payload` (full replacement, same schema),
 `note` (≤500, revision note). Only the creating token, only while `pending` / `edited` ⇒ new version + revision; the content hash changes
-when the payload changes. `POST /suggestions/{id}/submit`: sets `submitted` (drafts cannot be approved before).
+when the payload changes. MCP: `update_<type>_suggestion` (typed, checks the suggestion's type first; `update_product_update_suggestion` for product_update) or the generic `update_suggestion_draft`. `POST /suggestions/{id}/submit`: sets `submitted` (drafts cannot be approved before).
 
 ## Status values
 pending · under_review · edited · approved · rejected · applying · applied · failed · expired · archived (SUGGESTION_LIFECYCLE.md).

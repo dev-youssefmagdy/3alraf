@@ -12,7 +12,7 @@ const INSTRUCTIONS =
   'a person does that in the marketer panel. After saving or submitting, give the owner the review link. ' +
   'When asked to generate, propose or suggest anything for the store (for example bundles for the next season in Egypt), a reply in chat is not enough: ' +
   'read the real data first (get_seasonal_calendar for dates, get_products, get_bundles and the like), check get_existing_suggestions for duplicates, ' +
-  'then save every idea by calling the matching create_*_suggestion tool, one call per idea. Only ideas saved this way reach the owner for review. ' +
+  'then save every idea by calling the matching create_*_suggestion tool (or suggest_*_update to change an existing product, banner, bundle, flash sale, coupon or category), one call per idea. Only ideas saved this way reach the owner for review. ' +
   'Use real product ids and never invent prices, costs or stock.';
 
 function register(server: McpServer, tool: AnyTool, ctx: ToolContext): void {

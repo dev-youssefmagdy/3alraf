@@ -314,6 +314,7 @@ return [
                 'suggestions_write_social_content' => 'Suggest social media content (never approve or apply)',
                 'suggestions_write_media_asset' => 'Suggest images and videos (never approve or apply)',
                 'suggestions_write_category' => 'Suggest category changes: name, description, image (never approve or apply)',
+                'suggestions_write_product_update' => 'Suggest product updates: catalog wording, brand, categories, status, prices, images (never approve or apply)',
                 'meta_read' => 'Read Meta data (accounts, campaigns, insights) and drafts',
                 'meta_draft' => 'Create / edit Meta campaign drafts and submit them for approval (never approve or publish)',
                 'embeddings_write' => 'Add missing image-search embeddings to the internal index only (never recomputes existing ones, changes no store content)',
@@ -363,7 +364,7 @@ return [
             'rolled_back' => 'Rolled back',
             'types' => [
                 'product' => 'Product', 'bundle' => 'Bundle', 'slider' => 'Slider / banner', 'offer' => 'Offer', 'coupon' => 'Coupon', 'seo' => 'SEO',
-                'blog' => 'Blog article', 'seasonal_theme' => 'Seasonal theme', 'social_content' => 'Social content', 'media_asset' => 'Media asset', 'new_product' => 'New product', 'category' => 'Category update',
+                'blog' => 'Blog article', 'seasonal_theme' => 'Seasonal theme', 'social_content' => 'Social content', 'media_asset' => 'Media asset', 'new_product' => 'New product', 'category' => 'Category update', 'product_update' => 'Product update',
             ],
             'statuses' => [
                 'pending' => 'Pending review', 'under_review' => 'Under review', 'edited' => 'Edited', 'approved' => 'Approved', 'rejected' => 'Rejected',
@@ -443,6 +444,7 @@ return [
                 'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
                 'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (the first image is the main one)',
                 'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (replaces the current category image)',
+                'variant_prices_hint' => '[{"variant_id": 12, "price": 1500, "sale_price": 1350}, {"variant_id": 13, "remove_sale_price": true}]',
                 'variants_hint' => '[{"values": [12, 30], "sku": "W-1-BLK", "price": 1500, "image": 0}]',
                 'new_attributes_hint' => '[{"ref": "case_size", "name": {"ar": "قطر الهيكل", "en": "Case size"}, "type": "select", "values": [{"ref": "s42", "value": {"ar": "42 مم", "en": "42 mm"}}]}]',
                 'new_values_hint' => '[{"attribute_id": 3, "ref": "teal", "value": {"ar": "تيل", "en": "Teal"}, "color_hex": "#008080"}]',
@@ -481,6 +483,8 @@ return [
                 'sku' => 'SKU', 'barcode' => 'Barcode', 'brand_id' => 'Brand', 'tag_ids' => 'Tags', 'sale_price' => 'Sale price', 'cost' => 'Cost',
                 'weight' => 'Weight (g)', 'min_stock_alert_qty' => 'Low-stock alert', 'images' => 'Images', 'variants' => 'Variants', 'values' => 'Attribute values', 'image' => 'Image', 'inactive' => 'Inactive',
                 'new_attributes' => 'New attributes', 'new_values' => 'New values of existing attributes', 'new' => 'new', 'attribute_id' => 'Attribute',
+                'status' => 'Store status', 'remove_sale_price' => 'Remove sale price', 'images_add' => 'Add images', 'images_remove' => 'Remove images (ids)',
+                'main_image_id' => 'Main image (existing id)', 'main_image_index' => 'Main image (number of an added image, from 0)',
             ],
             'errors' => [
                 'illegal_transition' => 'Cannot move from ":from" to ":to".',
@@ -509,6 +513,10 @@ return [
                 'ref_duplicate' => 'The ref :ref is used more than once.', 'attribute_code_taken' => 'The attribute code :code is already used.', 'value_duplicate' => 'The value ":value" is repeated in the same attribute.',
                 'value_exists' => 'The value ":value" already exists in :attribute (#:id): use its id.', 'new_product_published' => 'The product was already published, so it cannot be rolled back. Hide it from the products page instead.',
                 'tag_conflict' => 'A tag cannot be both added and removed.',
+                'variant_not_of_product' => 'Variant #:id is not a variant of this product.', 'sale_price_conflict' => 'Send a sale price or remove_sale_price, not both.',
+                'product_is_draft' => 'The product is a draft: publish it from the product page.', 'product_without_price' => 'A product without a price cannot be made active.',
+                'product_without_sku' => 'A product without a real SKU cannot be made active.', 'image_not_of_product' => 'Image(s) :ids are not in this product\'s gallery.',
+                'main_image_conflict' => 'Choose the main image by id or by index, not both.',
                 'pin_conflict' => 'A list cannot be both pinned and unpinned.',
                 'internal_link' => 'Links must point to this store only.',
                 'negative_margin' => 'Negative margin (:margin%).',
@@ -530,6 +538,8 @@ return [
             ],
             'warnings' => [
                 'category_inactive' => 'The category is hidden from the store right now.',
+                'product_wording_overlay' => ':field (:locale) has a storefront wording override, which the store keeps showing instead of the catalog text.',
+                'product_no_images_left' => 'The product would have no images left.',
                 'product_not_listed' => 'The product is not on sale right now (inactive or no price).',
                 'long_title' => 'Title (:locale) is long (:n chars, best ≤ 60).',
                 'long_description' => 'Description (:locale) is long (:n chars, best ≤ 160).',

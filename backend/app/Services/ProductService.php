@@ -82,6 +82,99 @@ class ProductService
         });
     }
 
+    /**
+     * Marketing `product_update` suggestions: change ONLY the given listing columns, the category set (null = keep) and existing variants'
+     * price / sale_price ([variant id => ['price' => ..., 'sale_price' => ...]]). The caller validates the values. QR codes refreshed.
+     */
+    public function updateListing(Product $product, array $attrs, ?array $categoryIds = null, array $variantPrices = []): Product
+    {
+        return DB::transaction(function () use ($product, $attrs, $categoryIds, $variantPrices) {
+            if ($attrs) {
+                $product = $this->products->update($product, array_intersect_key($attrs, array_flip(['name', 'description', 'brand_id', 'is_active', 'price', 'sale_price'])));
+            }
+            if ($categoryIds !== null) {
+                $this->products->syncCategories($product, array_values(array_unique(array_map('intval', $categoryIds))));
+            }
+            foreach ($variantPrices as $id => $row) {
+                $product->variants()->whereKey((int) $id)->first()?->update(array_intersect_key($row, array_flip(['price', 'sale_price'])));
+            }
+            if (! $product->is_draft) {
+                $this->qr->queueCatalogProduct($product->id);
+            }
+
+            return $product->refresh();
+        });
+    }
+
+    /** Append uploaded images to the gallery (after the images and videos). @param UploadedFile[] $files @return int[] the new image ids, in order */
+    public function addImages(Product $product, array $files): array
+    {
+        $before = $product->images()->pluck('id')->all();
+        $this->images->attach($product, $files, 'products', $this->videos->lastMediaOrder($product));
+
+        return array_values(array_diff($product->images()->reorder()->orderBy('sort_order')->orderBy('id')->pluck('id')->all(), $before));
+    }
+
+    /** Remove gallery images AND their files. @param int[] $ids */
+    public function removeImages(Product $product, array $ids): void
+    {
+        $this->images->removeByIds($product, $ids);
+    }
+
+    /**
+     * Remove gallery images but KEEP their files, so restoreImages() can put them back (marketing suggestion rollback).
+     * @param int[] $ids @return list<array{path:string, thumb_path:?string, sort_order:int}>
+     */
+    public function detachImages(Product $product, array $ids): array
+    {
+        $rows = $product->images()->whereIn('id', $ids)->get();
+        $product->images()->whereIn('id', $rows->pluck('id'))->delete();
+
+        return $rows->map(fn ($i) => ['path' => $i->path, 'thumb_path' => $i->thumb_path, 'sort_order' => (int) $i->sort_order])->values()->all();
+    }
+
+    /** Re-attach images removed by detachImages() (rows whose file path is already in the gallery are skipped). */
+    public function restoreImages(Product $product, array $rows): void
+    {
+        $have = $product->images()->pluck('path')->all();
+        foreach ($rows as $r) {
+            if (! in_array($r['path'] ?? null, $have, true)) {
+                $product->images()->create(['path' => $r['path'], 'thumb_path' => $r['thumb_path'] ?? null, 'sort_order' => (int) ($r['sort_order'] ?? 0)]);
+            }
+        }
+    }
+
+    /** Make one gallery image the main (first) one: it takes the lowest position, the other images and videos (same order) move one down. */
+    public function setMainImage(Product $product, int $imageId): void
+    {
+        $mins = array_filter([$product->images()->reorder()->min('sort_order'), $product->videos()->reorder()->min('sort_order')], fn ($v) => $v !== null);
+        $min = $mins ? (int) min($mins) : 0;   // sort_order is unsigned: shift the others instead of going below 0
+        DB::transaction(function () use ($product, $imageId, $min) {
+            $product->images()->reorder()->whereKeyNot($imageId)->where('sort_order', '>=', $min)->increment('sort_order');
+            $product->videos()->reorder()->where('sort_order', '>=', $min)->increment('sort_order');
+            $product->images()->reorder()->whereKey($imageId)->update(['sort_order' => $min]);
+        });
+    }
+
+    /** @return array{images: array<int, int>, videos: array<int, int>} current gallery order (id => sort_order), for restoreMediaOrder() */
+    public function mediaOrder(Product $product): array
+    {
+        $map = fn ($q) => $q->reorder()->get(['id', 'sort_order'])->mapWithKeys(fn ($m) => [$m->id => (int) $m->sort_order])->all();
+
+        return ['images' => $map($product->images()), 'videos' => $map($product->videos())];
+    }
+
+    /** Put the gallery order back (ids that no longer exist are ignored). */
+    public function restoreMediaOrder(Product $product, array $order): void
+    {
+        foreach ((array) ($order['images'] ?? []) as $id => $o) {
+            $product->images()->reorder()->whereKey((int) $id)->update(['sort_order' => (int) $o]);
+        }
+        foreach ((array) ($order['videos'] ?? []) as $id => $o) {
+            $product->videos()->reorder()->whereKey((int) $id)->update(['sort_order' => (int) $o]);
+        }
+    }
+
     private function finish(Product $product, ProductData $dto): Product
     {
         $this->products->syncCategories($product, $dto->categoryIds);

@@ -161,6 +161,42 @@ describe('tool execution against a mocked Laravel', () => {
     expect(s.laravelMock.calls.map((c) => c.method)).toEqual(['GET']);
   });
 
+  it('suggests a product update with core, pricing and image changes on the product_update type', async () => {
+    s.laravelMock.reply({ status: 201, json: { success: true, data: { id: 120, status: 'pending' }, meta: {}, warnings: [] } });
+    const payload = {
+      name: { ar: 'ساعة كاسيو' },
+      category_ids: [3, 5],
+      status: 'active',
+      price: 1200,
+      remove_sale_price: true,
+      variants: [{ variant_id: 9, price: '1250' }],
+      images_add: [{ url: 'https://cdn.example/w2.jpg' }],
+      images_remove: [44],
+      main_image_index: 0,
+    };
+    const result = await call('suggest_product_update', { title: 'Refresh watch', target_entity_type: 'product', target_entity_id: 42, payload });
+    const { method, url, body } = s.laravelMock.last;
+    expect(method).toBe('POST');
+    expect(url.pathname).toBe('/api/internal/marketing/suggestions/product_update');
+    expect(body).toMatchObject({ source: 'mcp', source_meta: { tool: 'suggest_product_update' }, target_entity_type: 'product', target_entity_id: 42, payload });
+    expect(blockJson(result)['review_url']).toBe('https://panel.test/marketer/suggestions/120');
+  });
+
+  it('suggests a banner update on the slider type with the banner target', async () => {
+    s.laravelMock.reply({ status: 201, json: { success: true, data: { id: 121 }, meta: {}, warnings: [] } });
+    await call('suggest_banner_update', { title: 'Eid banner copy', target_entity_type: 'banner', target_entity_id: 7, payload: { title: { ar: 'عيد سعيد' } } });
+    expect(s.laravelMock.last.url.pathname).toBe('/api/internal/marketing/suggestions/slider');
+    expect(s.laravelMock.last.body).toMatchObject({ target_entity_type: 'banner', target_entity_id: 7, source_meta: { tool: 'suggest_banner_update' } });
+  });
+
+  it('edits a product_update draft after checking its type', async () => {
+    s.laravelMock.reply(ok({ id: 120, type: 'product_update' }), ok({ id: 120, status: 'edited' }));
+    const result = await call('update_product_update_suggestion', { suggestion_id: 120, payload: { price: 1300 } });
+    expect(s.laravelMock.last.method).toBe('PATCH');
+    expect(s.laravelMock.last.body).toEqual({ payload: { price: 1300 } });
+    expect(result.isError).toBeFalsy();
+  });
+
   it('submit returns the suggestion review_url', async () => {
     s.laravelMock.reply(ok({ id: 9, status: 'pending', submitted: true }));
     const result = await call('submit_suggestion_for_review', { suggestion_id: 9 });
@@ -210,6 +246,13 @@ describe('tool execution against a mocked Laravel', () => {
       ['new product variant without values', 'create_new_product_suggestion', { title: 'abc', payload: { name: { en: 'x' }, variants: [{ sku: 'A' }] } }],
       ['client-set source', 'create_blog_suggestion', { title: 'abc', source: 'scheduled', payload: { title: { ar: 'x' }, slug: 'x' } }],
       ['bad meta objective', 'create_campaign_draft', { name: 'abc', objective: 'ACTIVATE', product_ids: [1], budget_type: 'daily', budget_amount: 1, start_at: 'x-y-z', copy: { primary_text: 'a' }, cta: 'SHOP_NOW' }],
+      ['product update without a target', 'suggest_product_update', { title: 'abc', payload: { price: 10 } }],
+      ['product update with an empty payload', 'suggest_product_update', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: {} }],
+      ['product update changing the cost', 'suggest_product_update', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { cost: 5 } }],
+      ['product update with a bad status', 'suggest_product_update', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { status: 'deleted' } }],
+      ['product update image that is not http(s)', 'suggest_product_update', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { images_add: [{ url: 'file:///etc/passwd' }] } }],
+      ['banner update without a target', 'suggest_banner_update', { title: 'abc', payload: { title: { ar: 'x' } } }],
+      ['coupon update on the wrong target type', 'suggest_coupon_update', { title: 'abc', target_entity_type: 'product', target_entity_id: 1, payload: { value: 10 } }],
       ['typed update with an unknown payload key', 'update_coupon_suggestion', { suggestion_id: 1, payload: { code: 'ABC', sql: 'DROP TABLE' } }],
       ['typed update changing the target', 'update_product_suggestion', { suggestion_id: 1, target_entity_id: 2 }],
       ['typed update without an id', 'update_slider_suggestion', { title: 'abc' }],
