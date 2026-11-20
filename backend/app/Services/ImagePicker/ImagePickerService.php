@@ -125,11 +125,7 @@ class ImagePickerService
             $variant = $product->variants()->whereKey($d->variantId)->first()
                 ?? throw ValidationException::withMessages(['variant_id' => __('admin.image_picker.bad_variant')]);
         }
-        try {
-            $bytes = $this->fetcher->fetch($d->imageUrl, (int) config('image_picker.download_max_bytes'));
-        } catch (RuntimeException $e) {
-            throw ValidationException::withMessages(['image_url' => __('admin.image_picker.download_failed', ['reason' => $e->getMessage()])]);
-        }
+        $bytes = $this->download($d);
 
         $tmp = tempnam(sys_get_temp_dir(), 'imgpick');
         file_put_contents($tmp, $bytes);
@@ -161,6 +157,38 @@ class ImagePickerService
             ->log('image_picker.imported');
 
         return $image;
+    }
+
+    /**
+     * The original picture; when its site answers with something that is not a supported image (a bot check / hotlink page, SVG, …)
+     * the search engine's copy (thumbnail) is used instead. Browser-like headers + the result page as Referer get past most hotlink blocks.
+     *
+     * @throws ValidationException
+     */
+    private function download(ImagePickerImportData $d): string
+    {
+        $max = (int) config('image_picker.download_max_bytes');
+        $headers = ['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36',
+            'Accept' => 'image/webp,image/png,image/jpeg,image/avif,image/*;q=0.8'];
+        $tries = array_values(array_unique(array_filter([$d->imageUrl, $d->thumbnailUrl])));
+        $reason = null;
+        foreach ($tries as $i => $url) {
+            try {
+                $bytes = $this->fetcher->fetch($url, $max, $i === 0 && $d->pageUrl ? [...$headers, 'Referer' => $d->pageUrl] : $headers);
+            } catch (RuntimeException $e) {
+                $reason ??= __('admin.image_picker.download_failed', ['reason' => $e->getMessage()]);
+
+                continue;
+            }
+            $info = @getimagesizefromstring($bytes);
+            if ($info !== false && in_array($info['mime'] ?? '', config('images.allowed_mimes'), true)) {
+                return $bytes;
+            }
+            $reason ??= __('admin.image_picker.not_image');
+            logger()->info('image_picker: not an image', ['url' => $url, 'mime' => $info['mime'] ?? null, 'start' => substr(preg_replace('/\s+/', ' ', $bytes), 0, 80)]);
+        }
+
+        throw ValidationException::withMessages(['image_url' => $reason ?? __('admin.image_picker.not_image')]);
     }
 
     private static function url(mixed $u): ?string

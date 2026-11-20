@@ -993,6 +993,7 @@ return [
         'unavailable' => 'Image search is not available right now. Try again in a minute.',
         'engine_failed' => ':engine did not answer',
         'bad_variant' => 'This variant does not belong to the product.',
+        'not_image' => 'This site did not give a picture (it may block downloads). Try another result.',
         'download_failed' => 'Could not download this picture (:reason). Try another one.',
         'imported_gallery' => 'Picture added to the product gallery.',
         'imported_main' => 'Picture added and set as the main photo.',

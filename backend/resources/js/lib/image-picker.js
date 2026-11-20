@@ -117,6 +117,7 @@ if (root) {
         const before = label.textContent;
         label.textContent = t.importing;
         const body = { image_url: r.image, page_url: r.page, title: r.title, as };
+        if (isHttp(r.thumbnail) && r.thumbnail !== r.image) body.thumbnail_url = r.thumbnail; // fallback when the site blocks the download
         if (as === 'main' && S.target.type === 'variant') body.variant_id = S.target.id;
         const res = await post(cfg.import, body);
         label.textContent = before;

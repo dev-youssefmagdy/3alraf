@@ -13,12 +13,14 @@ final readonly class ImagePickerImportData
         public ?string $title,
         public string $as,             // gallery | main
         public ?int $variantId = null, // main + variant = the variant's photo
+        public ?string $thumbnailUrl = null, // the search engine's copy, used when the original site does not give a picture
     ) {}
 
     public static function fromRequest(ImagePickerImportRequest $r): self
     {
         $v = $r->validated();
 
-        return new self($v['image_url'], $v['page_url'] ?? null, $v['title'] ?? null, $v['as'], isset($v['variant_id']) ? (int) $v['variant_id'] : null);
+        return new self($v['image_url'], $v['page_url'] ?? null, $v['title'] ?? null, $v['as'], isset($v['variant_id']) ? (int) $v['variant_id'] : null,
+            $v['thumbnail_url'] ?? null);
     }
 }

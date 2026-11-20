@@ -16,6 +16,7 @@ class ImagePickerImportRequest extends FormRequest
     {
         return [
             'image_url' => ['required', 'string', 'max:2048', 'url:http,https'],
+            'thumbnail_url' => ['nullable', 'string', 'max:2048', 'url:http,https'],
             'page_url' => ['nullable', 'string', 'max:2048', 'url:http,https'],
             'title' => ['nullable', 'string', 'max:300'],
             'as' => ['required', 'in:gallery,main'],

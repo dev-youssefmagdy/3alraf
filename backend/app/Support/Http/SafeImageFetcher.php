@@ -27,11 +27,12 @@ class SafeImageFetcher
     public function __construct(private ?Closure $resolver = null, private int $timeout = 20) {}
 
     /**
+     * @param  array<string,string>  $headers  extra / overriding request headers (e.g. a browser User-Agent and Referer for hotlink-protected shops)
      * @return string the downloaded bytes
      *
      * @throws RuntimeException with a short, safe reason (shown to the suggestion author)
      */
-    public function fetch(string $url, int $maxBytes): string
+    public function fetch(string $url, int $maxBytes, array $headers = []): string
     {
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
             [$host, $port, $ip] = $this->check($url);
@@ -44,7 +45,7 @@ class SafeImageFetcher
                             throw new RuntimeException('too_large');
                         }
                     },
-                ])->withHeaders(['Accept' => 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8', 'User-Agent' => 'StoreImageFetcher/1.0'])
+                ])->withHeaders([...['Accept' => 'image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8', 'User-Agent' => 'StoreImageFetcher/1.0'], ...$headers])
                     ->timeout($this->timeout)->connectTimeout(8)->get($url);
             } catch (ConnectionException $e) {
                 throw new RuntimeException(str_contains($e->getMessage(), 'too_large') ? 'too_large' : 'unreachable');

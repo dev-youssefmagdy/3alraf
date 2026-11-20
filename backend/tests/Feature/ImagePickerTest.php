@@ -13,6 +13,7 @@ use App\Services\BarcodeService;
 use App\Services\ImagePicker\ImagePickerService;
 use App\Support\Http\SafeImageFetcher;
 use Database\Seeders\FoundationSeeder;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Cache;
@@ -145,6 +146,24 @@ it('never downloads from internal addresses and never stores something that is n
     $this->postJson("{$this->base}/import", ['image_url' => 'https://img.test/not-image.png', 'as' => 'gallery'])->assertStatus(422);
     Http::assertNotSent(fn (HttpRequest $r) => str_contains($r->url(), 'internal.test') || str_contains($r->url(), '127.0.0.1') || str_contains($r->url(), '169.254.'));
     expect($this->product->images()->count())->toBe(0)->and(Storage::disk(config('media.disk'))->allFiles())->toBe([]);
+});
+
+it('uses the search engine copy when the site answers with a web page instead of the picture, and says so when both fail', function () {
+    Http::swap(new HttpFactory); // drop the catch-all 404 of beforeEach
+    Http::fake([
+        'https://shop.test/blocked.jpg' => Http::response('<!doctype html><title>Just a moment...</title>', 200, ['Content-Type' => 'text/html']),
+        'https://tse.mm.bing.net/th?id=ok' => Http::response($this->png, 200, ['Content-Type' => 'image/jpeg']),
+        '*' => Http::response('<html></html>', 200),
+    ]);
+    $this->postJson("{$this->base}/import", ['image_url' => 'https://shop.test/blocked.jpg', 'thumbnail_url' => 'https://tse.mm.bing.net/th?id=ok',
+        'page_url' => 'https://shop.test/p', 'as' => 'gallery'])->assertOk();
+    expect($this->product->images()->count())->toBe(1);
+    Http::assertSent(fn (HttpRequest $r) => $r->url() === 'https://shop.test/blocked.jpg' && $r->header('Referer') === ['https://shop.test/p']
+        && str_starts_with($r->header('User-Agent')[0], 'Mozilla/'));
+
+    $this->postJson("{$this->base}/import", ['image_url' => 'https://shop.test/blocked.jpg', 'thumbnail_url' => 'https://tse.mm.bing.net/th?id=bad', 'as' => 'gallery'])
+        ->assertStatus(422)->assertJsonPath('errors.image_url.0', __('admin.image_picker.not_image'));
+    expect($this->product->images()->count())->toBe(1);
 });
 
 it('needs products.edit', function () {
