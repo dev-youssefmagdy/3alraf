@@ -6,9 +6,9 @@
 <h2>{{ __('erp_dist.statement_title') }}</h2>
 <p><b>{{ $owner->name }}</b> &middot; {{ rtrim(rtrim(number_format((float) $owner->ownership_percent, 4), '0'), '.') }}% &middot; {{ $shopName }} &middot; {{ now()->toDateString() }}</p>
 @php $n = fn ($v) => number_format((float) $v, 2); $acc = 0; $paid = 0; @endphp
-<table><thead><tr><th>#</th><th>{{ __('erp.f.period') }}</th><th class="n">%</th><th class="n">{{ __('erp_ext.f.amount') }}</th><th>{{ __('erp_ext.f.status') }}</th></tr></thead><tbody>
+<x-ui.table><thead><tr><th>#</th><th>{{ __('erp.f.period') }}</th><th class="n">%</th><th class="n">{{ __('erp_ext.f.amount') }}</th><th>{{ __('erp_ext.f.status') }}</th></tr></thead><tbody>
 @foreach ($lines as $l)@php if ($l->distribution->status === 'posted') { $acc += (float) $l->amount; $paid += $l->paid ? (float) $l->amount : 0; } @endphp
-<tr><td>{{ $l->distribution_id }}</td><td>{{ $l->distribution->period_start->format('Y-m-d') }} → {{ $l->distribution->period_end->format('Y-m-d') }}</td><td class="n">{{ $n($l->percent) }}</td><td class="n">{{ $n($l->amount) }}</td>
-<td>{{ __('erp_dist.status.'.$l->distribution->status) }}{{ $l->paid ? ' / '.__('erp_dist.paid_flag').' '.$l->paid_at?->format('Y-m-d') : '' }}</td></tr>@endforeach
-<tr><th colspan="3">{{ __('erp_dist.accrued') }} / {{ __('erp_dist.paid_flag') }} / {{ __('erp_dist.outstanding') }}</th><th class="n" colspan="2">{{ $n($acc) }} / {{ $n($paid) }} / {{ $n($acc - $paid) }}</th></tr></tbody></table>
+<tr><td data-label="">{{ $l->distribution_id }}</td><td data-label="{{ __('erp.f.period') }}">{{ $l->distribution->period_start->format('Y-m-d') }} → {{ $l->distribution->period_end->format('Y-m-d') }}</td><td data-label="%" class="n">{{ $n($l->percent) }}</td><td data-label="{{ __('erp_ext.f.amount') }}" class="n">{{ $n($l->amount) }}</td>
+<td data-label="{{ __('erp_ext.f.status') }}">{{ __('erp_dist.status.'.$l->distribution->status) }}{{ $l->paid ? ' / '.__('erp_dist.paid_flag').' '.$l->paid_at?->format('Y-m-d') : '' }}</td></tr>@endforeach
+<tr><th colspan="3">{{ __('erp_dist.accrued') }} / {{ __('erp_dist.paid_flag') }} / {{ __('erp_dist.outstanding') }}</th><th class="n" colspan="2">{{ $n($acc) }} / {{ $n($paid) }} / {{ $n($acc - $paid) }}</th></tr></tbody></x-ui.table>
 </body></html>

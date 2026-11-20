@@ -1,16 +1,17 @@
 <x-layouts.admin :title="__('access.roles')">
-    <x-card>
+    <x-slot:header><x-ui.page-header :title="__('access.roles')" /></x-slot:header>
+    <x-ui.card>
         <x-slot:actions>
-            @can('roles.create')<x-button :href="route('admin.roles.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            @can('roles.create')<x-ui.button :href="route('admin.roles.create')">{{ __('admin.add_new') }}</x-ui.button>@endcan
         </x-slot:actions>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="border-b border-slate-200 text-start text-slate-500"><tr>
+                <thead class="border-b border-panel-border text-start text-panel-text-subtle"><tr>
                     <th class="py-2 text-start">{{ __('access.fields.name') }}</th><th class="text-start">{{ __('access.permissions') }}</th><th class="text-start">{{ __('access.users') }}</th><th></th>
                 </tr></thead>
                 <tbody>
                 @foreach ($roles as $r)
-                    <tr class="border-b border-slate-100">
+                    <tr class="border-b border-panel-border">
                         <td class="py-2 font-medium">{{ $r['name'] }} @if ($r['system'])<span class="badge badge-muted">{{ __('access.system') }}</span>@endif</td>
                         <td>{{ $r['system'] ? __('access.all') : $r['permissions'] }}</td>
                         <td>{{ $r['users'] }}</td>
@@ -27,5 +28,5 @@
                 </tbody>
             </table>
         </div>
-    </x-card>
+    </x-ui.card>
 </x-layouts.admin>

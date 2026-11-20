@@ -21,10 +21,10 @@ if (bell && bell.dataset.url) {
         const $cnt = $('#notif-count');
         $cnt.toggleClass('hidden', !res.unread).text(res.unread > 9 ? '9+' : res.unread || '');
         const $list = $('#notif-list').empty();
-        if (!res.items.length) $list.append($('<p class="p-3 text-sm text-slate-500">').text(bell.dataset.empty));
+        if (!res.items.length) $list.append($('<p class="p-3 text-sm text-panel-text-subtle">').text(bell.dataset.empty));
         res.items.forEach((n) => {
-            const $a = $('<a class="block border-b border-slate-100 px-3 py-2 text-sm hover:bg-slate-50">').attr('href', n.url || '#').attr('data-notif-id', n.id)
-                .toggleClass('bg-brand-50', !n.read).append($('<div class="font-medium text-slate-800">').text(n.title), $('<div class="text-xs text-slate-500">').text(n.time));
+            const $a = $('<a class="block border-b border-panel-border px-3 py-2 text-sm text-panel-text hover:bg-panel-surface-sunken">').attr('href', n.url || '#').attr('data-notif-id', n.id)
+                .toggleClass('bg-panel-accent-soft', !n.read).append($('<div class="font-medium text-panel-text">').text(n.title), $('<div class="text-xs text-panel-text-subtle">').text(n.time));
             $list.append($a);
         });
     };

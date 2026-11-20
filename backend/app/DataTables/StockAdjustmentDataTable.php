@@ -2,6 +2,8 @@
 
 namespace App\DataTables;
 
+use App\Enums\AdjustmentType;
+use App\Models\Branch;
 use App\Models\StockAdjustment;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
@@ -17,8 +19,8 @@ class StockAdjustmentDataTable extends BaseDataTable
     {
         return [
             $this->textFilter('number', ['number']),
-            $this->selectFilter('branch_id', $this->nameOptions(\App\Models\Branch::class), label: $this->filterLabel('branch')),
-            $this->selectFilter('type', fn () => \App\Enums\AdjustmentType::options()),
+            $this->selectFilter('branch_id', $this->nameOptions(Branch::class), label: $this->filterLabel('branch')),
+            $this->selectFilter('type', fn () => AdjustmentType::options()),
             ...$this->dateFilters(),
         ];
     }
@@ -37,7 +39,7 @@ class StockAdjustmentDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('number_link', fn (StockAdjustment $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.stock-adjustments.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (StockAdjustment $m) => '<a class="font-semibold text-panel-accent-text" href="'.e(route('admin.stock-adjustments.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->addColumn('branch_label', fn (StockAdjustment $m) => e($m->branch?->name))
             ->addColumn('type_label', fn (StockAdjustment $m) => e($m->type->label()))

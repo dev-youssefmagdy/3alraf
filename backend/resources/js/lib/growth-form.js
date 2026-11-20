@@ -8,7 +8,7 @@ $(document).on('click', '[data-pin-add]', function () {
     const id = $sel.val();
     if (!id) return;
     if ($w.find('input[name="product_ids[]"][value="' + id + '"]').length) { toastr.warning(window.__t?.nothing_new || 'Already added'); return; }
-    const $li = $('<li data-pin-item class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm"></li>');
+    const $li = $('<li data-pin-item class="flex items-center gap-2 rounded-lg border border-panel-border px-3 py-1.5 text-sm"></li>');
     $li.append($('<input type="hidden" name="product_ids[]">').val(id), $('<span class="flex-1"></span>').text($sel.find('option:selected').text()),
         '<button type="button" data-pin-up class="btn-sm btn-secondary">↑</button><button type="button" data-pin-down class="btn-sm btn-secondary">↓</button><button type="button" data-pin-remove class="btn-sm btn-danger">&times;</button>');
     $w.find('[data-pin-items]').append($li);

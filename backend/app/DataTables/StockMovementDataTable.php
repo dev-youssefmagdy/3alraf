@@ -23,12 +23,12 @@ class StockMovementDataTable extends BaseDataTable
         return [
             ['data' => 'created_at', 'title' => __('ops.fields.date')],
             ['data' => 'item_label', 'title' => __('ops.fields.item'), 'orderable' => false],
-            ['data' => 'branch_label', 'title' => __('ops.fields.branch'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'branch_label', 'title' => __('ops.fields.branch'), 'orderable' => false, 'searchable' => false, 'className' => 'dt-hide-md'],
             ['data' => 'type_label', 'title' => __('ops.fields.type'), 'orderable' => false, 'searchable' => false],
             ['data' => 'quantity', 'title' => __('ops.fields.quantity')],
-            ['data' => 'unit_cost', 'title' => __('ops.fields.unit_cost')],
+            ['data' => 'unit_cost', 'title' => __('ops.fields.unit_cost'), 'className' => 'dt-hide-md'],
             ['data' => 'balance_after', 'title' => __('ops.fields.balance')],
-            ['data' => 'note', 'title' => __('ops.fields.note'), 'orderable' => false],
+            ['data' => 'note', 'title' => __('ops.fields.note'), 'orderable' => false, 'className' => 'dt-hide-md'],
         ];
     }
 

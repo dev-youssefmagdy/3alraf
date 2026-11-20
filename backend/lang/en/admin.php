@@ -304,6 +304,7 @@ return [
             'scope_desc' => [
                 'marketing_read' => 'Read marketing data (products, aggregated sales, offers, content); no customer data',
                 'suggestions_write_product' => 'Suggest product changes (never approve or apply)',
+                'suggestions_write_new_product' => 'Suggest new products, applied as a draft (never approve or apply)',
                 'suggestions_write_bundle' => 'Suggest new bundles (never approve or apply)',
                 'suggestions_write_slider' => 'Suggest banners and sliders (never approve or apply)',
                 'suggestions_write_offer' => 'Suggest offers (never approve or apply)',
@@ -502,6 +503,7 @@ return [
                 'not_owner' => 'Only the token that created this suggestion may change it.',
                 'not_editable' => 'This suggestion cannot be edited in its current status.',
                 'apply_failed' => 'An error occurred while applying.',
+                'apply_interrupted' => 'The apply was interrupted before it finished (timed out). Reload the page and press Apply again.',
                 'unknown_type' => 'Unknown suggestion type.',
                 'unknown_field' => 'Field not allowed: :field',
                 'source_data_too_big' => 'source_data is too large.',

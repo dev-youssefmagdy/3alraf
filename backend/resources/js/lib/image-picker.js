@@ -100,7 +100,7 @@ if (root) {
             const small = r.width && r.height && Math.min(r.width, r.height) < 500;
             const size = $('[data-size]', li);
             size.textContent = r.width ? `${r.width}×${r.height}${small ? ` · ${t.small}` : ''}` : t.size_unknown;
-            if (small) size.classList.add('font-bold', 'text-amber-600');
+            if (small) size.classList.add('font-bold', 'text-panel-warning-fg');
             $('[data-source]', li).textContent = r.source || '';
             const page = $('[data-page]', li);
             if (isHttp(r.page)) page.href = r.page; else page.remove();
@@ -141,8 +141,8 @@ if (root) {
 
     function setLinkMessage(text, warn = false) {
         linkMsg.textContent = text;
-        linkMsg.classList.toggle('text-amber-700', warn);
-        linkMsg.classList.toggle('text-slate-500', !warn);
+        linkMsg.classList.toggle('text-panel-warning-fg', warn);
+        linkMsg.classList.toggle('text-panel-text-subtle', !warn);
     }
 
     function showLink() {
@@ -160,14 +160,14 @@ if (root) {
         if (r.page) page.href = r.page; else page.removeAttribute('href');
         const size = $('[data-size]', linkCard);
         size.textContent = t.link_loading;
-        size.classList.remove('font-bold', 'text-amber-600');
+        size.classList.remove('font-bold', 'text-panel-warning-fg');
         const img = $('[data-img]', linkCard);
         const wanted = r.image;
         img.onload = () => {
             if (S.link?.image !== wanted) return;
             const small = Math.min(img.naturalWidth, img.naturalHeight) < 500;
             size.textContent = `${img.naturalWidth}×${img.naturalHeight}${small ? ` · ${t.small}` : ''}`;
-            if (small) size.classList.add('font-bold', 'text-amber-600');
+            if (small) size.classList.add('font-bold', 'text-panel-warning-fg');
         };
         img.onerror = () => { if (S.link?.image === wanted) size.textContent = t.link_no_preview; };
         img.src = wanted;

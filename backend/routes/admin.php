@@ -37,6 +37,9 @@ use App\Http\Controllers\Admin\ExpenseCategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\FlashSaleController;
 use App\Http\Controllers\Admin\GeneralSettingsController;
+use App\Http\Controllers\Admin\HealthController;
+use App\Http\Controllers\Admin\ImagePickerController;
+use App\Http\Controllers\Admin\ImageSearchController;
 use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\LowStockController;
 use App\Http\Controllers\Admin\NotificationController;
@@ -47,8 +50,8 @@ use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PrivateFileController;
 use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\ProductVideoController;
 use App\Http\Controllers\Admin\ProductListController;
+use App\Http\Controllers\Admin\ProductVideoController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
@@ -61,6 +64,7 @@ use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\StockRequestController;
 use App\Http\Controllers\Admin\StockTransferController;
 use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\BarcodeController;
@@ -87,6 +91,8 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::post('logout', [AdminLoginController::class, 'logout'])->name('logout');
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::view('welcome', 'admin.welcome')->name('welcome');
+        // Living style guide of the panel UI kit (every x-ui.* component and variant); developer page, not served outside local / testing
+        Route::get('_ui', fn () => app()->environment(['local', 'testing']) ? view('admin._ui') : abort(404))->name('ui-guide');
         Route::get('locale/{code}', function (string $code) {
             session()->put('admin_locale', $code);
 
@@ -100,12 +106,12 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::put('settings/general', [GeneralSettingsController::class, 'update'])->name('general-settings.update');
 
         // Settings → System (former .env keys: URLs, media, Google, WhatsApp, Reverb, Meta)
-        Route::get('health', [\App\Http\Controllers\Admin\HealthController::class, 'index'])->middleware('can:settings.view')->name('health.index');
-        Route::get('health/{key}', [\App\Http\Controllers\Admin\HealthController::class, 'run'])->middleware(['can:settings.view', 'throttle:60,1'])->where('key', '[a-z0-9]+')->name('health.run');
-        Route::get('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'edit'])->name('system-settings.edit');
-        Route::post('settings/system/validate', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
-        Route::put('settings/system', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('system-settings.update');
-        Route::post('settings/system/test-mail', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'testMail'])->middleware('throttle:5,1')->name('system-settings.test-mail');
+        Route::get('health', [HealthController::class, 'index'])->middleware('can:settings.view')->name('health.index');
+        Route::get('health/{key}', [HealthController::class, 'run'])->middleware(['can:settings.view', 'throttle:60,1'])->where('key', '[a-z0-9]+')->name('health.run');
+        Route::get('settings/system', [SystemSettingsController::class, 'edit'])->name('system-settings.edit');
+        Route::post('settings/system/validate', [SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
+        Route::put('settings/system', [SystemSettingsController::class, 'update'])->name('system-settings.update');
+        Route::post('settings/system/test-mail', [SystemSettingsController::class, 'testMail'])->middleware('throttle:5,1')->name('system-settings.test-mail');
 
         // Languages + products / categories / brands / tags / attributes
         Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');
@@ -118,11 +124,11 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::post('products/{product}/qr/regenerate', [ProductController::class, 'regenerateQr'])->whereNumber('product')->name('products.qr.regenerate');
         Route::post('products/{product}/unlist', [ProductController::class, 'unlist'])->whereNumber('product')->name('products.unlist');
         // Search by image (IMAGE_SEARCH_PLAN.md): the photo is embedded by the local embedder and never stored
-        Route::post('products/image-search', [\App\Http\Controllers\Admin\ImageSearchController::class, 'search'])->middleware(['can:products.view', 'throttle:image-search'])->name('image-search');
-        Route::get('products/image-search/coverage', [\App\Http\Controllers\Admin\ImageSearchController::class, 'coverage'])->middleware(['can:products.view', 'throttle:60,1'])->name('image-search.coverage');
+        Route::post('products/image-search', [ImageSearchController::class, 'search'])->middleware(['can:products.view', 'throttle:image-search'])->name('image-search');
+        Route::get('products/image-search/coverage', [ImageSearchController::class, 'coverage'])->middleware(['can:products.view', 'throttle:60,1'])->name('image-search.coverage');
         // Find images (tools/image-picker): free web image search + import of the picture the admin chose (products.edit)
         Route::prefix('products/{product}/image-picker')->whereNumber('product')->middleware('can:products.edit')->name('products.image-picker.')
-            ->controller(\App\Http\Controllers\Admin\ImagePickerController::class)->group(function () {
+            ->controller(ImagePickerController::class)->group(function () {
                 Route::post('search', 'search')->middleware('throttle:image-picker')->name('search');
                 Route::post('import', 'import')->middleware('throttle:30,1')->name('import');
             });
@@ -246,7 +252,6 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::get('cod-fees', [CodFeeSettingsController::class, 'edit'])->name('cod-fees.edit');
         Route::put('cod-fees', [CodFeeSettingsController::class, 'update'])->name('cod-fees.update');
         Route::post('cod-fees/validate', [CodFeeSettingsController::class, 'validateForm'])->name('cod-fees.validate');
-
 
         Route::post('payment-methods/{id}/toggle', [PaymentMethodController::class, 'toggle'])->whereNumber('id')->name('payment-methods.toggle');
 

@@ -9,8 +9,8 @@ if (panel) {
         const ok = s.status === 'connected';
         const bad = ['error', 'logged_out'].includes(s.status);
         $('#wa-status-text').text(labels[s.status] || s.status);
-        $('#wa-status').removeClass('bg-emerald-50 text-emerald-700 bg-red-50 text-red-700 bg-amber-50 text-amber-700')
-            .addClass(ok ? 'bg-emerald-50 text-emerald-700' : bad ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700');
+        $('#wa-status').removeClass('bg-panel-success-bg text-panel-success-fg bg-panel-danger-bg text-panel-danger-fg bg-panel-warning-bg text-panel-warning-fg')
+            .addClass(ok ? 'bg-panel-success-bg text-panel-success-fg' : bad ? 'bg-panel-danger-bg text-panel-danger-fg' : 'bg-panel-warning-bg text-panel-warning-fg');
         $('#wa-phone-big').text(s.phone ? '+' + s.phone : '');
         $('#wa-connected').toggleClass('hidden', !ok);
         $('#wa-scan').toggleClass('hidden', ok);

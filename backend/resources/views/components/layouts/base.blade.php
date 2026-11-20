@@ -14,11 +14,19 @@
         'vb_new' => __('admin.variant_builder.new'),
         'vb_generated' => __('admin.variant_builder.generated'),
         'cmdk_empty' => __('admin.cmdk_empty'),
+        'close' => __('ui.close'),
+        'copied' => __('ui.copied'),
+        'undo' => __('ui.undo'),
         'datatable' => [
-            'search' => __('admin.search').':',
+            'search' => __('ui.datatable.search'),
             'processing' => __('admin.processing'),
             'emptyTable' => __('admin.no_data'),
             'zeroRecords' => __('admin.no_data'),
+            'lengthMenu' => __('ui.datatable.lengthMenu'),
+            'info' => __('ui.datatable.info'),
+            'infoEmpty' => __('ui.datatable.infoEmpty'),
+            'infoFiltered' => __('ui.datatable.infoFiltered'),
+            'paginate' => ['first' => __('ui.datatable.first'), 'last' => __('ui.datatable.last'), 'next' => __('ui.datatable.next'), 'previous' => __('ui.datatable.previous')],
         ],
     ];
 @endphp
@@ -36,11 +44,15 @@
     <meta name="description" content="{{ $fullTitle ?: $title.' | '.($siteName ?: config('app.name')) }}">
     @endunless
     {{ $head ?? '' }}
+    @if ($panel)
+    {{-- panel theme (light default, dark from the top-bar toggle) is applied before first paint so there is no flash --}}
+    <script>try{var t=localStorage.getItem('panel_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+    @endif
     @if ($panel && ! $lite)
     {{-- panels on the admin bundle; storefront.css (storefront and lite pages) self-hosts these fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap">
     @endif
     @if ($lite || isset($head))
     {{-- no modulepreload on the storefront: scripts must not compete with the stylesheet and the main image --}}
@@ -54,7 +66,7 @@
     @endif
     <script>window.__t = {{ Illuminate\Support\Js::from($jsStrings) }};</script>
 </head>
-<body class="{{ $bodyClass }} min-h-screen font-sans text-slate-800 antialiased">
+<body class="{{ $bodyClass }} min-h-screen font-sans {{ $panel ? 'text-panel-text' : 'text-slate-800' }} antialiased">
     {{ $slot }}
 </body>
 </html>

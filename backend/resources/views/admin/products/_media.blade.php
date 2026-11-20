@@ -1,13 +1,13 @@
 {{-- Product edit: public gallery videos and the shared image + video order (P8). Re-rendered by ProductVideoController after every change. Outside the product <form>, so uploading never submits it. --}}
 @php($maxMb = \App\Services\ProductVideoService::maxMb())
 <div data-product-media data-order-url="{{ route('admin.products.media.order', $product) }}" data-max-bytes="{{ \App\Services\ProductVideoService::maxKb() * 1024 }}" data-too-large="{{ __('admin.product_media.too_large', ['mb' => $maxMb]) }}" class="mt-5 max-w-4xl">
-    <x-card :title="__('admin.product_media.title')">
-        <p class="mb-3 text-xs text-slate-500">{{ __('admin.product_media.hint') }}</p>
+    <x-ui.form-section :title="__('admin.product_media.title')" :cols="1" class="mx-auto mt-5 max-w-5xl">
+        <p class="mb-3 text-xs text-panel-text-subtle">{{ __('admin.product_media.hint') }}</p>
         @if ($media->isNotEmpty())
             <ol class="mb-4 flex flex-wrap gap-3" data-media-list>
                 @foreach ($media as $m)
                     <li data-media-key="{{ $m['key'] }}" data-media-type="{{ $m['type'] }}" class="w-24 text-center text-xs">
-                        <div class="relative size-24 overflow-hidden rounded border border-slate-200 bg-slate-800">
+                        <div class="relative size-24 overflow-hidden rounded border border-panel-border bg-panel-text">
                             @if ($m['thumb'])<img src="{{ $m['thumb'] }}" class="size-full object-cover" alt="">@endif
                             @if ($m['type'] === 'video')<span class="absolute inset-0 grid place-items-center"><span class="grid size-8 place-items-center rounded-full bg-black/60 text-white"><svg viewBox="0 0 24 24" class="size-4 fill-current" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></span>@endif
                         </div>
@@ -25,17 +25,17 @@
             <div data-field>
                 <label class="form-label" for="product-video-file">{{ __('admin.product_media.video') }}</label>
                 <input id="product-video-file" type="file" name="video" accept="video/mp4,video/webm,.mp4,.webm" class="form-control">
-                <p class="mt-1 text-xs text-slate-500">{{ __('admin.product_media.video_hint', ['mb' => $maxMb]) }}</p>
+                <p class="mt-1 text-xs text-panel-text-subtle">{{ __('admin.product_media.video_hint', ['mb' => $maxMb]) }}</p>
             </div>
             <div data-field>
                 <label class="form-label" for="product-video-poster">{{ __('admin.product_media.poster') }}</label>
                 <input id="product-video-poster" type="file" name="poster" accept="image/jpeg,image/png,image/webp" class="form-control">
-                <p class="mt-1 text-xs text-slate-500">{{ __('admin.product_media.poster_hint') }}</p>
+                <p class="mt-1 text-xs text-panel-text-subtle">{{ __('admin.product_media.poster_hint') }}</p>
             </div>
             <div class="flex items-center gap-3 sm:col-span-2">
                 <button type="submit" class="btn btn-primary">{{ __('admin.product_media.upload') }}</button>
                 <progress data-video-progress class="hidden h-2 w-48" max="100" value="0"></progress>
             </div>
         </form>
-    </x-card>
+    </x-ui.form-section>
 </div>

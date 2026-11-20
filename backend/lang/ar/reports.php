@@ -11,6 +11,12 @@ return [
     'sales_trend' => 'اتجاه المبيعات',
     'orders_by_status' => 'الطلبات حسب الحالة',
     'top_products' => 'أفضل المنتجات',
+    'recent_orders' => 'أحدث الطلبات',
+    'low_stock_items' => 'مخزون منخفض',
+    'view_all' => 'عرض الكل',
+    'stock_left' => 'متبقي :n',
+    'no_recent_orders' => 'لا توجد طلبات بعد.',
+    'no_low_stock' => 'لا توجد أصناف منخفضة المخزون.',
     'amounts_in' => 'المبالغ بعملة :c',
     'titles' => [
         'sales' => 'المبيعات',

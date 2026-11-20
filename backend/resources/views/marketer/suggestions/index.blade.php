@@ -8,56 +8,47 @@
     $seoTargets = ['product', 'category', 'brand', 'static_page', 'bundle', 'blog_post', 'custom_page', 'site'];
 @endphp
 <x-layouts.marketer :title="$title">
+    <x-slot:header><x-ui.page-header :title="$title" :subtitle="$t('overview_hint')" /></x-slot:header>
     <div class="space-y-4" data-suggestions-page="{{ $page }}">
-        <div>
-            <h1 class="text-xl font-bold text-slate-800">{{ $title }}</h1>
-            <p class="mt-1 text-sm text-slate-500">{{ $t('overview_hint') }}</p>
-        </div>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-kpis>
-            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-kpi="total">
-                <p class="text-sm text-slate-500">{{ $t('kpi.total') }}</p>
-                <p class="mt-1 text-2xl font-bold text-brand-600">{{ number_format($counts['total']) }}</p>
-            </div>
-            @foreach (['pending', 'approved', 'rejected', 'applied', 'failed'] as $st)
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-kpi="{{ $st }}">
-                    <p class="text-sm text-slate-500">{{ $t('statuses.'.$st) }}</p>
-                    <p class="mt-1 text-2xl font-bold {{ $st === 'failed' || $st === 'rejected' ? 'text-red-600' : ($st === 'applied' || $st === 'approved' ? 'text-emerald-700' : 'text-slate-700') }}">{{ number_format($counts['by_status'][$st] ?? 0) }}</p>
-                </div>
+            <x-ui.stat-card size="compact" icon="sparkles" :label="$t('kpi.total')" :value="number_format($counts['total'])" data-kpi="total" />
+            @foreach (['pending' => ['clock', 'sun'], 'approved' => ['check', 'emerald'], 'rejected' => ['x', 'slate'], 'applied' => ['check', 'emerald'], 'failed' => ['alert', 'slate']] as $st => [$ic, $tn])
+                <x-ui.stat-card size="compact" :icon="$ic" :tone="$tn" :label="$t('statuses.'.$st)" :value="number_format($counts['by_status'][$st] ?? 0)" data-kpi="{{ $st }}" />
             @endforeach
         </div>
 
         @if ($page === 'overview')
             <div class="grid gap-4 lg:grid-cols-3">
-                <x-card :title="$t('kpi.by_type')" class="lg:col-span-1">
-                    <ul class="divide-y divide-slate-100 text-sm" data-by-type>
+                <x-ui.card :title="$t('kpi.by_type')" class="lg:col-span-1">
+                    <ul class="divide-y divide-panel-border text-sm" data-by-type>
                         @foreach (\App\Enums\Marketing\SuggestionTypeKey::cases() as $type)
                             <li class="flex items-center justify-between py-1.5">
-                                <a href="{{ route('marketer.suggestions.'.$type->page()) }}" class="text-brand-700 hover:underline">{{ $type->label() }}</a>
-                                <span class="font-semibold text-slate-700">{{ $counts['by_type'][$type->value] ?? 0 }}</span>
+                                <a href="{{ route('marketer.suggestions.'.$type->page()) }}" class="text-panel-accent-text hover:underline">{{ $type->label() }}</a>
+                                <span class="font-semibold text-panel-text">{{ $counts['by_type'][$type->value] ?? 0 }}</span>
                             </li>
                         @endforeach
                     </ul>
-                </x-card>
-                <x-card :title="$t('kpi.recent')" class="lg:col-span-2">
+                </x-ui.card>
+                <x-ui.card :title="$t('kpi.recent')" class="lg:col-span-2">
                     @forelse ($recent as $a)
-                        <div class="flex flex-wrap items-center gap-x-2 border-b border-slate-100 py-1.5 text-sm last:border-0">
-                            <span class="text-xs text-slate-400" dir="ltr">{{ $a->created_at?->format('Y-m-d H:i') }}</span>
-                            <span class="badge badge-muted">{{ $t('actions.'.$a->action) }}</span>
-                            @if ($a->suggestion)<a class="min-w-0 truncate text-brand-700 hover:underline" href="{{ route('marketer.suggestions.show', $a->suggestion_id) }}">#{{ $a->suggestion_id }} {{ $a->suggestion->title }}</a>@endif
-                            <span class="text-xs text-slate-500">{{ $a->actorLabel() }}</span>
+                        <div class="flex flex-wrap items-center gap-x-2 border-b border-panel-border py-1.5 text-sm last:border-0">
+                            <span class="text-xs text-panel-text-subtle" dir="ltr">{{ $a->created_at?->format('Y-m-d H:i') }}</span>
+                            <x-ui.badge size="sm">{{ $t('actions.'.$a->action) }}</x-ui.badge>
+                            @if ($a->suggestion)<a class="min-w-0 truncate text-panel-accent-text hover:underline" href="{{ route('marketer.suggestions.show', $a->suggestion_id) }}">#{{ $a->suggestion_id }} {{ $a->suggestion->title }}</a>@endif
+                            <span class="text-xs text-panel-text-muted">{{ $a->actorLabel() }}</span>
                         </div>
                     @empty
-                        <p class="text-sm text-slate-500">{{ __('admin.no_data') }}</p>
+                        <p class="text-sm text-panel-text-muted">{{ __('admin.no_data') }}</p>
                     @endforelse
-                </x-card>
+                </x-ui.card>
             </div>
         @endif
 
         @if ($page === 'themes')
-            <x-card :title="$t('themes.versions')">
+            <x-ui.card :title="$t('themes.versions')">
                 <div class="mb-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span class="text-slate-500">{{ $t('themes.active') }}:</span>
+                    <span class="text-panel-text-muted">{{ $t('themes.active') }}:</span>
                     <b data-active-theme>{{ $activeTheme ? $activeTheme->name.' · '.$activeTheme->key.' v'.$activeTheme->version : $t('themes.none') }}</b>
                     @can('ai_theme.approve')
                         @if ($activeTheme)
@@ -66,56 +57,52 @@
                         @endif
                     @endcan
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead><tr class="text-start text-slate-500"><th class="py-1 text-start">{{ $t('fields.name') }}</th><th class="text-start">{{ $t('themes.version') }}</th><th class="text-start">{{ $t('themes.swatches') }}</th><th class="text-start">{{ $t('cols.when') }}</th><th></th></tr></thead>
-                        <tbody>
-                        @forelse ($themeVersions as $v)
-                            <tr class="border-t border-slate-100" data-theme-version="{{ $v->id }}">
-                                <td class="py-1.5">{{ $v->name }} <span class="text-xs text-slate-400" dir="ltr">{{ $v->key }}</span> @if ($v->is_active)<span class="badge badge-success">{{ $t('themes.active') }}</span>@endif</td>
-                                <td>v{{ $v->version }}</td>
-                                <td><div class="flex flex-wrap gap-0.5">@foreach (array_slice((array) $v->tokens, 0, 12) as $k => $hex)<span class="inline-block size-4 rounded border border-slate-200" style="background: {{ $hex }}" title="{{ $k }} {{ $hex }}"></span>@endforeach</div></td>
-                                <td class="text-xs" dir="ltr">{{ $v->activated_at?->format('Y-m-d H:i') }}</td>
-                                <td>@can('ai_theme.approve')@unless ($v->is_active)<button type="button" class="btn-sm btn-secondary" data-sugg-post="{{ route('marketer.suggestions.themes.activate', $v->id) }}" data-confirm="{{ $t('confirm.activate') }}">{{ $t('btn.activate') }}</button>@endunless @endcan</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" class="py-2 text-slate-500">{{ $t('themes.none') }}</td></tr>
-                        @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </x-card>
+                <x-ui.table>
+                    <thead><tr><th>{{ $t('fields.name') }}</th><th>{{ $t('themes.version') }}</th><th>{{ $t('themes.swatches') }}</th><th>{{ $t('cols.when') }}</th><th></th></tr></thead>
+                    <tbody>
+                    @forelse ($themeVersions as $v)
+                        <tr data-theme-version="{{ $v->id }}">
+                            <td data-label="">{{ $v->name }} <span class="text-xs text-panel-text-subtle" dir="ltr">{{ $v->key }}</span> @if ($v->is_active)<x-ui.badge tone="success" size="sm">{{ $t('themes.active') }}</x-ui.badge>@endif</td>
+                            <td data-label="{{ $t('themes.version') }}">v{{ $v->version }}</td>
+                            <td data-label="{{ $t('themes.swatches') }}"><div class="flex flex-wrap gap-0.5">@foreach (array_slice((array) $v->tokens, 0, 12) as $k => $hex)<span class="inline-block size-4 rounded border border-panel-border" style="background: {{ $hex }}" title="{{ $k }} {{ $hex }}"></span>@endforeach</div></td>
+                            <td data-label="{{ $t('cols.when') }}" class="text-xs" dir="ltr">{{ $v->activated_at?->format('Y-m-d H:i') }}</td>
+                            <td class="ui-table-actions">@can('ai_theme.approve')@unless ($v->is_active)<button type="button" class="btn-sm btn-secondary" data-sugg-post="{{ route('marketer.suggestions.themes.activate', $v->id) }}" data-confirm="{{ $t('confirm.activate') }}">{{ $t('btn.activate') }}</button>@endunless @endcan</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="py-2 text-panel-text-muted">{{ $t('themes.none') }}</td></tr>
+                    @endforelse
+                    </tbody>
+                </x-ui.table>
+            </x-ui.card>
         @endif
 
-        <x-card>
-            <form id="sugg-filters" class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" data-base="{{ $dtUrl }}">
-                <div><label class="form-label" for="f-status">{{ $t('filters.status') }}</label>
-                    <select id="f-status" name="status" class="form-control"><option value="">{{ $t('filters.all') }}</option>@foreach ($statuses as $st)<option value="{{ $st->value }}">{{ $st->label() }}</option>@endforeach</select></div>
-                @if (count($pageTypes) > 1)
-                    <div><label class="form-label" for="f-type">{{ $t('filters.type') }}</label>
-                        <select id="f-type" name="type" class="form-control"><option value="">{{ $t('filters.all') }}</option>@foreach ($pageTypes as $ty)<option value="{{ $ty->value }}">{{ $ty->label() }}</option>@endforeach</select></div>
-                @endif
-                @if ($page === 'seo')
-                    <div><label class="form-label" for="f-target">{{ $t('filters.target') }}</label>
-                        <select id="f-target" name="target" class="form-control"><option value="">{{ $t('filters.all') }}</option>@foreach ($seoTargets as $tg)<option value="{{ $tg }}">{{ $t('targets.'.$tg) }}</option>@endforeach</select></div>
-                @endif
-                <div><label class="form-label" for="f-priority">{{ $t('filters.priority') }}</label>
-                    <select id="f-priority" name="priority" class="form-control"><option value="">{{ $t('filters.all') }}</option>@foreach (\App\Enums\Marketing\SuggestionPriority::cases() as $p)<option value="{{ $p->value }}">{{ $p->label() }}</option>@endforeach</select></div>
-                <div><label class="form-label" for="f-from">{{ $t('filters.from') }}</label><input id="f-from" type="date" name="from" class="form-control"></div>
-                <div><label class="form-label" for="f-to">{{ $t('filters.to') }}</label><input id="f-to" type="date" name="to" class="form-control"></div>
-                <div><label class="form-label" for="f-q">{{ $t('filters.search') }}</label><input id="f-q" type="search" name="q" class="form-control" maxlength="100"></div>
-                <div><label class="form-label" for="f-product">{{ $t('filters.product') }}</label><input id="f-product" type="number" min="1" name="product_id" class="form-control" dir="ltr"></div>
-                <div><label class="form-label" for="f-category">{{ $t('filters.category') }}</label>
-                    <select id="f-category" name="category_id" class="form-control"><option value="">{{ $t('filters.all') }}</option>@foreach (\App\Models\Category::query()->orderBy('path')->limit(300)->get(['id', 'name', 'depth']) as $c)<option value="{{ $c->id }}">{{ str_repeat('— ', (int) $c->depth) }}{{ $c->name }}</option>@endforeach</select></div>
-                <div><label class="form-label" for="f-sort">{{ $t('filters.sort') }}</label>
-                    <select id="f-sort" name="sort" class="form-control">@foreach (['newest', 'oldest', 'priority', 'updated'] as $so)<option value="{{ $so }}">{{ $t('sorts.'.$so) }}</option>@endforeach</select></div>
-                <div class="col-span-2 flex items-end gap-2 sm:col-span-1">
-                    <button type="submit" class="btn btn-primary">{{ $t('filters.apply') }}</button>
-                    <button type="reset" class="btn btn-secondary">{{ $t('filters.reset') }}</button>
-                </div>
+        <div>
+            <form id="sugg-filters" data-base="{{ $dtUrl }}">
+                <x-ui.table-toolbar id="sugg-filter-sheet">
+                    <div class="grid w-full grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        <x-ui.select name="status" :label="$t('filters.status')" :options="['' => $t('filters.all')] + collect($statuses)->mapWithKeys(fn ($st) => [$st->value => $st->label()])->all()" />
+                        @if (count($pageTypes) > 1)
+                            <x-ui.select name="type" :label="$t('filters.type')" :options="['' => $t('filters.all')] + collect($pageTypes)->mapWithKeys(fn ($ty) => [$ty->value => $ty->label()])->all()" />
+                        @endif
+                        @if ($page === 'seo')
+                            <x-ui.select name="target" :label="$t('filters.target')" :options="['' => $t('filters.all')] + collect($seoTargets)->mapWithKeys(fn ($tg) => [$tg => $t('targets.'.$tg)])->all()" />
+                        @endif
+                        <x-ui.select name="priority" :label="$t('filters.priority')" :options="['' => $t('filters.all')] + collect(\App\Enums\Marketing\SuggestionPriority::cases())->mapWithKeys(fn ($p) => [$p->value => $p->label()])->all()" />
+                        <x-ui.date name="from" :label="$t('filters.from')" />
+                        <x-ui.date name="to" :label="$t('filters.to')" />
+                        <x-ui.search name="q" :label="$t('filters.search')" maxlength="100" :placeholder="''" />
+                        <x-ui.input name="product_id" type="number" min="1" :label="$t('filters.product')" dir="ltr" />
+                        <x-ui.select name="category_id" :label="$t('filters.category')" :options="['' => $t('filters.all')] + \App\Models\Category::query()->orderBy('path')->limit(300)->get(['id', 'name', 'depth'])->mapWithKeys(fn ($c) => [$c->id => str_repeat('— ', (int) $c->depth).$c->name])->all()" />
+                        <x-ui.select name="sort" :label="$t('filters.sort')" :options="collect(['newest', 'oldest', 'priority', 'updated'])->mapWithKeys(fn ($so) => [$so => $t('sorts.'.$so)])->all()" />
+                        <div class="flex items-end gap-2">
+                            <x-ui.button type="submit">{{ $t('filters.apply') }}</x-ui.button>
+                            <button type="reset" class="btn btn-secondary btn-md">{{ $t('filters.reset') }}</button>
+                        </div>
+                    </div>
+                </x-ui.table-toolbar>
             </form>
-            <x-datatable :table="$table" :url="$dtUrl" id="sugg-table" />
-        </x-card>
+            <x-ui.data-table :table="$table" :url="$dtUrl" id="sugg-table" />
+        </div>
     </div>
     @include('marketer.suggestions._script')
     <script>

@@ -39,6 +39,9 @@ export function showErrors($form, errors) {
             toastr.error(msg);
         }
     });
+    // reveal the page tab (x-ui.tabs panels) that holds the first error, then scroll to it
+    const tabPanel = first && first.closest('[data-ptab-panel]');
+    if (tabPanel && tabPanel.classList.contains('hidden')) document.querySelector('[data-ptabs="' + tabPanel.dataset.ptabFor + '"] [data-ptab="' + tabPanel.dataset.ptabPanel + '"]')?.click();
     if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 

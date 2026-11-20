@@ -11,9 +11,10 @@ use App\Models\City;
 use App\Models\Customer;
 use App\Models\PackagingOption;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\ShippingRate;
 use App\Models\StockLevel;
-use App\Models\Product;
+use App\Services\Orders\CounterSaleService;
 use App\Services\Orders\OrderPaymentService;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderQuoteService;
@@ -24,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /** Point of sale: staff build an order for a customer (searchable / quick-created) from the catalog and place it through the storefront pipeline. */
 class PosController extends Controller implements HasMiddleware
@@ -52,7 +54,7 @@ class PosController extends Controller implements HasMiddleware
     public function products(Request $r): JsonResponse
     {
         $q = trim((string) $r->query('q', ''));
-        $tps = Product::with(['variants.values'])->where('is_active', true)->whereNotNull('price')
+        $tps = Product::with(['images', 'variants.values', 'variants.images'])->where('is_active', true)->whereNotNull('price')
             ->where(function ($p) use ($q) {
                 if ($q !== '') {
                     $like = '%'.addcslashes($q, '%_\\').'%';
@@ -64,9 +66,11 @@ class PosController extends Controller implements HasMiddleware
         $rows = [];
         foreach ($tps as $p) {
             foreach ($p->isVariable() ? $p->variants->where('is_active', true)->pluck('id') : [0] as $vid) {
+                // a variant row shows its own image; fall back to the product image when the variant has none
+                $image = ($vid ? $p->variants->firstWhere('id', $vid)?->primaryImageUrl() : null) ?: $p->primaryImageUrl();
                 if ($item = $this->prices->item($p->id, (int) $vid)) {
                     $rows[] = ['product_id' => $p->id, 'variant_id' => (int) $vid, 'key' => $p->id.'-'.$vid, 'name' => $item['name'], 'sku' => $item['sku'],
-                        'price' => $item['price'], 'image' => $p->primaryImageUrl()];
+                        'price' => $item['price'], 'image' => $image];
                 }
             }
         }
@@ -139,11 +143,11 @@ class PosController extends Controller implements HasMiddleware
     public function store(PosOrderRequest $r): JsonResponse
     {
         if ($r->boolean('paid_at_counter') && (PaymentMethod::find((int) $r->input('payment_method_id'))?->type !== PaymentMethodType::COD || $r->filled('prepay_method_id'))) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['payment_method_id' => __('erp_acc.counter_sale_cod_only')]);
+            throw ValidationException::withMessages(['payment_method_id' => __('erp_acc.counter_sale_cod_only')]);
         }
         $res = $this->placement->place($this->data($r), $this->lines($r));
         if ($r->boolean('paid_at_counter')) { // walk-in sale paid in cash at the register: completed at once, cash into POS cash (ERP-014)
-            app(\App\Services\Orders\CounterSaleService::class)->complete($res['order']);
+            app(CounterSaleService::class)->complete($res['order']);
         }
 
         return $this->ok(__('pos.order_created', ['number' => $res['order']->number]), route('admin.orders.show', $res['order']->id));

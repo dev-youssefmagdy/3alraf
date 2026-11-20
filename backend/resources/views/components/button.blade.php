@@ -1,7 +1,3 @@
+{{-- Kept for existing pages: the implementation is <x-ui.button>. --}}
 @props(['variant' => 'primary', 'type' => 'button', 'href' => null])
-@php($cls = 'btn btn-'.$variant)
-@if ($href)
-    <a href="{{ $href }}" {{ $attributes->merge(['class' => $cls]) }}>{{ $slot }}</a>
-@else
-    <button type="{{ $type }}" {{ $attributes->merge(['class' => $cls]) }}>{{ $slot }}</button>
-@endif
+<x-ui.button :variant="$variant" :type="$type" :href="$href" {{ $attributes }}>{{ $slot }}</x-ui.button>

@@ -11,14 +11,14 @@
     <td class="px-1 py-2" data-field><input type="number" step="1" min="0" inputmode="numeric" name="variants[{{ $i }}][weight]" value="{{ $v['weight'] ?? '' }}" class="form-control w-24"></td>
     <td class="px-1 py-2">
         @if (! empty($v['barcode']))
-            <img src="{{ route('admin.barcode', $v['barcode']) }}?h=40" alt="{{ $v['barcode'] }}" class="h-10"><div class="text-xs text-slate-500">{{ $v['barcode'] }}</div>
+            <img src="{{ route('admin.barcode', $v['barcode']) }}?h=40" alt="{{ $v['barcode'] }}" class="h-10"><div class="text-xs text-panel-text-subtle">{{ $v['barcode'] }}</div>
         @else
-            <span class="text-xs text-slate-400">{{ __('admin.barcode_auto') }}</span>
+            <span class="text-xs text-panel-text-subtle">{{ __('admin.barcode_auto') }}</span>
         @endif
     </td>
-    <td class="px-1 py-2"><x-image-dropzone :name="'variants['.$i.'][image]'" :preview="$v['image'] ?? null" />
+    <td class="px-1 py-2"><x-ui.uploader :name="'variants['.$i.'][image]'" :preview="$v['image'] ?? null" />
         @if (! empty($v['id']))
-            @can('products.edit')<button type="button" class="mt-1 text-xs font-bold text-brand-600 underline" data-image-picker-open data-target-type="variant" data-target-id="{{ $v['id'] }}" aria-haspopup="dialog" aria-controls="image-picker">{{ __('admin.image_picker.find') }}</button>@endcan
+            @can('products.edit')<button type="button" class="mt-1 text-xs font-bold text-panel-accent-text underline" data-image-picker-open data-target-type="variant" data-target-id="{{ $v['id'] }}" aria-haspopup="dialog" aria-controls="image-picker">{{ __('admin.image_picker.find') }}</button>@endcan
         @endif
     </td>
     <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][price]" value="{{ $v['price'] ?? '' }}" class="form-control !w-24"></td>
@@ -28,7 +28,7 @@
     <td class="px-1 py-2" data-field><input type="number" step="1" min="0" name="variants[{{ $i }}][min_stock_alert_qty]" value="{{ $v['min_stock_alert_qty'] ?? '' }}" class="form-control !w-20"></td>
     <td class="px-1 py-2">
         <input type="hidden" name="variants[{{ $i }}][is_active]" value="0">
-        <input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" @checked($v['is_active'] ?? true) class="size-4 rounded border-slate-300 text-brand-600">
+        <input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" @checked($v['is_active'] ?? true) class="size-4 rounded border-panel-border-strong text-panel-accent-text">
     </td>
     <td class="px-1 py-2"><button type="button" data-repeater-remove class="btn-sm btn-danger">&times;</button></td>
 </tr>

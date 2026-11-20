@@ -64,11 +64,11 @@ function syncPicker() {
 function groupHtml(a, checked) {
     const chips = a.values.map((v) => {
         const sw = v.color ? '<span class="inline-block size-3 rounded-full border" style="background:' + esc(v.color) + '"></span>' : '';
-        return '<label class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-xs has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50">'
+        return '<label class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-panel-border px-2 py-1 text-xs has-[:checked]:border-panel-accent has-[:checked]:bg-panel-accent-soft">'
             + '<input type="checkbox" data-pick="' + a.id + '" value="' + v.id + '"' + (checked.has(Number(v.id)) ? ' checked' : '') + '> ' + sw + esc(v.name) + '</label>';
     }).join(' ');
-    const empty = a.values.length ? '' : '<p class="text-xs text-slate-500">' + esc(t('vb_no_values', 'This attribute has no values yet.')) + '</p>';
-    return '<div data-attr-group="' + a.id + '" class="rounded-lg border border-slate-200 p-3">'
+    const empty = a.values.length ? '' : '<p class="text-xs text-panel-text-subtle">' + esc(t('vb_no_values', 'This attribute has no values yet.')) + '</p>';
+    return '<div data-attr-group="' + a.id + '" class="rounded-lg border border-panel-border p-3">'
         + '<div class="mb-2 flex flex-wrap items-center gap-2">'
         + '<span class="text-sm font-semibold">' + esc(a.name) + '</span>'
         + '<span data-attr-count dir="ltr" class="badge badge-muted"></span>'

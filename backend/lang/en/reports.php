@@ -11,6 +11,12 @@ return [
     'sales_trend' => 'Sales trend',
     'orders_by_status' => 'Orders by status',
     'top_products' => 'Top products',
+    'recent_orders' => 'Recent orders',
+    'low_stock_items' => 'Low stock',
+    'view_all' => 'View all',
+    'stock_left' => ':n left',
+    'no_recent_orders' => 'No orders yet.',
+    'no_low_stock' => 'No items are running low.',
     'amounts_in' => 'Amounts in :c',
     'titles' => [
         'sales' => 'Sales',

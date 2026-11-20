@@ -150,14 +150,14 @@ if (root) {
     };
 
     const BADGE = {
-        product: ['bg-brand-50', 'text-brand-800'],
+        product: ['bg-panel-accent-soft', 'text-panel-accent-text'],
         variant: ['bg-[#ece7ff]', 'text-[#4b2bc9]'],
         bundle: ['bg-accent-light', 'text-[#7a5a22]'],
     };
     const MATCH = {
-        strong: ['text-emerald-700', 'bg-emerald-600'],
-        medium: ['text-[#8a5a12]', 'bg-amber-500'],
-        weak: ['text-slate-500', 'bg-slate-400'],
+        strong: ['text-panel-success-fg', 'bg-panel-success-solid'],
+        medium: ['text-panel-warning-fg', 'bg-panel-warning-solid'],
+        weak: ['text-panel-text-subtle', 'bg-panel-text-subtle'],
     };
 
     const card = (r, best) => {

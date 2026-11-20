@@ -1,14 +1,15 @@
 <x-layouts.admin :title="$data['title']">
-    <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-        <a href="{{ route('admin.reports.index', $f->query()) }}" class="text-brand-600 hover:underline">&larr; {{ __('reports.reports') }}</a>
+    <x-slot:header><x-ui.page-header :title="$data['title']" /></x-slot:header>
+    <div class="mb-3 flex flex-wrap items-center gap-3 text-sm text-panel-text-subtle">
+        <a href="{{ route('admin.reports.index', $f->query()) }}" class="text-panel-accent-text hover:underline">&larr; {{ __('reports.reports') }}</a>
         <span>{{ __('reports.amounts_in', ['c' => $data['currency']]) }}</span>
     </div>
-    @if (session('status'))<div class="mb-3 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{{ session('status') }}</div>@endif
+    @if (session('status'))<div class="mb-3 rounded-lg bg-panel-success-bg px-4 py-2 text-sm text-panel-success-fg">{{ session('status') }}</div>@endif
     @include('reports._filter', ['f' => $f, 'branches' => $branches, 'snapshot' => $data['snapshot']])
     @include('reports._cards', ['cards' => $data['cards']])
     <div class="grid gap-4 xl:grid-cols-3">
-        <x-card :title="__('reports.chart')" class="xl:col-span-1">@include('reports._chart', ['chart' => $data['chart']])</x-card>
-        <x-card :title="$data['title']" class="xl:col-span-2">
+        <x-ui.card :title="__('reports.chart')" class="xl:col-span-1">@include('reports._chart', ['chart' => $data['chart']])</x-ui.card>
+        <x-ui.card :title="$data['title']" class="xl:col-span-2">
             <x-slot:actions>
                 <a href="{{ route('admin.reports.export', ['report' => $key] + $f->query()) }}" class="btn-sm btn-secondary">{{ __('reports.export_csv') }}</a>
             </x-slot:actions>
@@ -23,6 +24,6 @@
                     <button class="btn-sm btn-secondary">{{ __('reports.mark_settled') }}</button>
                 </form>
             @endif
-        </x-card>
+        </x-ui.card>
     </div>
 </x-layouts.admin>

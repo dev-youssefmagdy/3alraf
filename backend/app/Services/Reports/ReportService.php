@@ -5,7 +5,10 @@ namespace App\Services\Reports;
 use App\DTOs\Reports\ReportFilter;
 use App\Enums\FeeBearer;
 use App\Enums\OrderStatus;
+use App\Enums\ReturnStatus;
+use App\Models\Order;
 use App\Repositories\Contracts\ReportRepositoryInterface;
+use App\Services\Admin\LowStockService;
 use App\Support\Money;
 use Illuminate\Support\Str;
 
@@ -75,9 +78,41 @@ class ReportService
             'paymentChart' => $pm['chart'],
             'topProducts' => ['columns' => $products['columns'], 'rows' => array_slice($products['rows'], 0, 5)],
             'currency' => $this->currency($f),
+            'recentOrders' => $this->recentOrders(),
+            'lowStockItems' => $this->lowStockItems(),
         ];
 
         return $d;
+    }
+
+    /** Latest orders (all statuses, not date-filtered) for the dashboard list: number, customer, total, status label/class, created_at, admin show url. */
+    public function recentOrders(int $limit = 8): array
+    {
+        return Order::query()->latest('id')->limit($limit)
+            ->get(['id', 'number', 'customer_name', 'total', 'status', 'currency', 'created_at'])
+            ->map(fn ($o) => [
+                'id' => $o->id, 'number' => $o->number, 'customer' => $o->customer_name,
+                'total' => $this->money((string) $o->total), 'total_raw' => (string) $o->total,
+                'status' => $o->status->value, 'status_label' => $o->status->label(), 'status_class' => $o->status->color(),
+                'created_at' => $o->created_at, 'url' => route('admin.orders.show', $o->id),
+            ])->all();
+    }
+
+    /** Lowest-stock products/variants (existing LowStockService rule: available <= alert qty): name, sku, qty, threshold, admin edit url. */
+    public function lowStockItems(int $limit = 8): array
+    {
+        return app(LowStockService::class)->rows()->take($limit)->map(function ($r) {
+            $variant = $r['variant'];
+            $name = (string) $r['product']->name;
+
+            return [
+                'product_id' => $r['product']->id,
+                'name' => $variant ? $name.' - '.$variant->label() : $name,
+                'sku' => (string) ($variant?->sku ?: $r['product']->sku),
+                'stock' => $r['available'], 'threshold' => $r['alert'],
+                'url' => route('admin.products.edit', $r['product']->id),
+            ];
+        })->all();
     }
 
     public function csv(array $report): string
@@ -215,7 +250,7 @@ class ReportService
 
     private function buildReturns(ReportFilter $f): array
     {
-        $rows = array_map(fn ($r) => ['status' => \App\Enums\ReturnStatus::tryFrom($r['status'])?->label() ?? $r['status']] + $r, $this->repo->returns($f));
+        $rows = array_map(fn ($r) => ['status' => ReturnStatus::tryFrom($r['status'])?->label() ?? $r['status']] + $r, $this->repo->returns($f));
         $daily = [];
         foreach ($rows as $r) {
             $daily[$r['day']] = Money::add($daily[$r['day']] ?? 0, $r['return_value']);

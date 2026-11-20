@@ -1,1 +1,1 @@
-<a href="{{ route('admin.erp.hub') }}" class="mb-4 inline-block text-sm text-brand-600">&larr; {{ __('erp.title') }}</a>
+<a href="{{ route('admin.erp.hub') }}" class="mb-4 inline-block text-sm text-panel-accent-text">&larr; {{ __('erp.title') }}</a>

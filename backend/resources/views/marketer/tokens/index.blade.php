@@ -1,23 +1,23 @@
 <x-layouts.marketer :title="__('marketing.tokens.title')">
     @php $t = fn ($k, $r = []) => __('marketing.tokens.'.$k, $r); @endphp
+    <x-slot:header><x-ui.page-header :title="$t('title')" :subtitle="$t('hint')" /></x-slot:header>
     <div class="space-y-4">
-        <x-card :title="$t('title')">
-            <p class="mb-3 text-sm text-slate-600">{{ $t('hint') }} <code class="break-all rounded bg-slate-100 px-1" dir="ltr">{{ $base }}</code></p>
-            <div id="token-box" class="mb-4 hidden rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm" role="status">
-                <p class="font-semibold text-amber-800">{{ $t('show_once') }}</p>
+        <x-ui.alert tone="info"><code class="break-all" dir="ltr">{{ $base }}</code></x-ui.alert>
+        <div id="token-box" class="hidden" role="status">
+            <x-ui.alert tone="warning">
+                <p class="font-semibold">{{ $t('show_once') }}</p>
                 <p class="mt-2" dir="ltr"><code id="token-value" class="break-all select-all"></code></p>
-                <button type="button" class="btn-sm btn-secondary mt-2" data-copy-token>{{ $t('copy') }}</button>
-            </div>
-            <form data-ajax-form data-validate-url="{{ route('marketer.tokens.validate') }}" action="{{ route('marketer.tokens.store') }}" method="POST" class="mb-6 grid gap-3 sm:grid-cols-3" novalidate>
-                @csrf
-                <x-input name="name" :label="$t('name')" required :placeholder="$t('name_placeholder')" />
+                <button type="button" class="btn btn-secondary btn-sm mt-2" data-copy-token>{{ $t('copy') }}</button>
+            </x-ui.alert>
+        </div>
+        <form data-ajax-form data-validate-url="{{ route('marketer.tokens.validate') }}" action="{{ route('marketer.tokens.store') }}" method="POST" novalidate>
+            @csrf
+            <x-ui.form-section :title="$t('create')" :cols="1">
+                <x-ui.input name="name" :label="$t('name')" required :placeholder="$t('name_placeholder')" />
                 <div data-field>
                     <span class="form-label">{{ $t('scopes') }}</span>
                     @foreach ($scopes as $k => $def)
-                        <label class="flex items-start gap-2 text-sm {{ ($def['enabled'] ?? false) ? '' : 'opacity-60' }}">
-                            <input type="checkbox" name="scopes[]" value="{{ $k }}" class="mt-1" @checked($k === 'marketing:read') @disabled(! ($def['enabled'] ?? false))>
-                            <span><b dir="ltr">{{ $k }}</b> <span class="text-slate-500">{{ $t('scope_desc.'.str_replace(':', '_', $k)) }}</span>@unless ($def['enabled'] ?? false) <span class="badge badge-muted">{{ $t('reserved') }}</span>@endunless</span>
-                        </label>
+                        <x-ui.checkbox name="scopes[]" :value="$k" :bool="false" :checked="$k === 'marketing:read'" :disabled="! ($def['enabled'] ?? false)" :label="$k" :help="$t('scope_desc.'.str_replace(':', '_', $k)).(($def['enabled'] ?? false) ? '' : ' · '.$t('reserved'))" class="!w-full" />
                     @endforeach
                 </div>
                 <div data-field>
@@ -28,10 +28,10 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="sm:col-span-3"><x-button type="submit">{{ $t('create') }}</x-button></div>
-            </form>
-            <x-datatable :table="$table" :url="route('marketer.tokens.datatable')" />
-        </x-card>
+                <div><x-ui.button type="submit">{{ $t('create') }}</x-ui.button></div>
+            </x-ui.form-section>
+        </form>
+        <x-ui.data-table :table="$table" :url="route('marketer.tokens.datatable')" />
     </div>
     <script>
     document.addEventListener('click', async (ev) => {

@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockLevel;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
+use App\Services\ProductService;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -53,12 +54,12 @@ class ProductDataTable extends BaseDataTable
             ['data' => 'thumb', 'title' => '', 'orderable' => false, 'searchable' => false],
             ['data' => 'name_label', 'title' => __('admin.fields.name'), 'orderable' => false, 'className' => 'dt-wide'],
             ['data' => 'sku', 'title' => __('admin.fields.sku')],
-            ['data' => 'barcode', 'title' => __('admin.fields.barcode')],
-            ['data' => 'brand_label', 'title' => __('admin.brand'), 'orderable' => false, 'searchable' => false],
-            ['data' => 'category_label', 'title' => __('admin.categories'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'barcode', 'title' => __('admin.fields.barcode'), 'className' => 'dt-hide-md'],
+            ['data' => 'brand_label', 'title' => __('admin.brand'), 'orderable' => false, 'searchable' => false, 'className' => 'dt-hide-md'],
+            ['data' => 'category_label', 'title' => __('admin.categories'), 'orderable' => false, 'searchable' => false, 'className' => 'dt-hide-md'],
             ['data' => 'price', 'title' => __('admin.fields.price'), 'searchable' => false],
-            ['data' => 'sale_price', 'title' => __('admin.fields.sale_price'), 'searchable' => false],
-            ['data' => 'cost', 'title' => __('admin.fields.cost'), 'searchable' => false],
+            ['data' => 'sale_price', 'title' => __('admin.fields.sale_price'), 'searchable' => false, 'className' => 'dt-hide-md'],
+            ['data' => 'cost', 'title' => __('admin.fields.cost'), 'searchable' => false, 'className' => 'dt-hide-md'],
             ['data' => 'stock_on_hand', 'title' => __('admin.stock_qty'), 'orderable' => false, 'searchable' => false],
             ['data' => 'status', 'title' => __('admin.status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'actions', 'title' => '', 'orderable' => false, 'searchable' => false],
@@ -71,7 +72,7 @@ class ProductDataTable extends BaseDataTable
         $dt->addColumn('thumb', fn (Product $p) => ($url = $p->primaryImageUrl()) ? '<img src="'.e($url).'" class="size-10 rounded object-cover" alt="">' : '')
             ->addColumn('name_label', fn (Product $p) => e($p->name).($p->isVariable() ? ' <span class="badge badge-muted">'.e(__('admin.variants')).'</span>' : ''))
             ->filterColumn('name_label', fn ($q, $k) => $q->where(fn ($w) => $w->where('name', 'like', "%$k%")->orWhere('sku', 'like', "%$k%")->orWhere('barcode', 'like', "%$k%")))
-            ->editColumn('sku', fn (Product $p) => \App\Services\ProductService::isDraftSku($p->sku) ? '—' : e($p->sku))
+            ->editColumn('sku', fn (Product $p) => ProductService::isDraftSku($p->sku) ? '—' : e($p->sku))
             ->editColumn('barcode', fn (Product $p) => e($p->barcode ?? '—'))
             ->addColumn('brand_label', fn (Product $p) => e($p->brand?->name ?? '—'))
             ->addColumn('category_label', fn (Product $p) => e($p->categories->pluck('name')->implode(', ') ?: '—'))

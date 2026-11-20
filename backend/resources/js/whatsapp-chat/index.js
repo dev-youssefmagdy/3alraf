@@ -36,13 +36,13 @@ function renderList() {
     for (const c of sortedConvs()) {
         if (!visible(c)) continue;
         n++;
-        el.list.append(h('li', { dataset: { cid: c.id }, class: 'flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-slate-50 ' + (S.active === c.id ? 'bg-emerald-50' : '') },
-            h('div', { class: 'grid size-11 shrink-0 place-items-center rounded-full bg-emerald-100 font-bold text-emerald-700' }, initial(title(c))),
+        el.list.append(h('li', { dataset: { cid: c.id }, class: 'flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-panel-surface-sunken ' + (S.active === c.id ? 'bg-panel-success-bg' : '') },
+            h('div', { class: 'grid size-11 shrink-0 place-items-center rounded-full bg-panel-success-bg font-bold text-panel-success-fg' }, initial(title(c))),
             h('div', { class: 'min-w-0 flex-1' },
-                h('div', { class: 'flex items-baseline gap-2' }, h('span', { class: 'flex-1 truncate text-sm font-semibold text-slate-800', dir: 'auto' }, title(c)), h('span', { class: 'shrink-0 text-[11px] ' + (c.unread_count ? 'font-semibold text-emerald-600' : 'text-slate-400'), dir: 'ltr' }, listTime(c.last_message_at))),
-                h('div', { class: 'flex items-center gap-2' }, h('span', { class: 'flex-1 truncate text-xs text-slate-500', dir: 'auto' }, c.last_message_preview || ''),
+                h('div', { class: 'flex items-baseline gap-2' }, h('span', { class: 'flex-1 truncate text-sm font-semibold text-panel-text', dir: 'auto' }, title(c)), h('span', { class: 'shrink-0 text-[11px] ' + (c.unread_count ? 'font-semibold text-panel-success-fg' : 'text-panel-text-subtle'), dir: 'ltr' }, listTime(c.last_message_at))),
+                h('div', { class: 'flex items-center gap-2' }, h('span', { class: 'flex-1 truncate text-xs text-panel-text-muted', dir: 'auto' }, c.last_message_preview || ''),
                     c.is_pinned ? h('span', { class: 'text-xs' }, '📌') : null,
-                    c.unread_count ? h('span', { class: 'min-w-5 rounded-full bg-emerald-600 px-1.5 text-center text-[11px] font-bold leading-5 text-white' }, c.unread_count > 99 ? '99+' : c.unread_count) : null))));
+                    c.unread_count ? h('span', { class: 'min-w-5 rounded-full bg-panel-success-solid px-1.5 text-center text-[11px] font-bold leading-5 text-white' }, c.unread_count > 99 ? '99+' : c.unread_count) : null))));
     }
     el.empty.classList.toggle('hidden', n > 0);
     el.empty.textContent = S.q || S.filter !== 'all' ? t('no_results') : t('no_chats');
@@ -104,12 +104,12 @@ function renderThread(keepBottom = true) {
     const box = el.msgs;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
     box.replaceChildren();
-    if (S.hasBefore) box.append(h('button', { type: 'button', class: 'mx-auto my-1 rounded-full bg-white/80 px-3 py-1 text-xs text-slate-600', dataset: { act: 'older' } }, t('load_older')));
+    if (S.hasBefore) box.append(h('button', { type: 'button', class: 'mx-auto my-1 rounded-full bg-panel-surface/80 px-3 py-1 text-xs text-panel-text-muted', dataset: { act: 'older' } }, t('load_older')));
     let day = 0;
     const ctx = { canSend: can.send };
     for (const m of S.msgs) {
         const d = dayOf(m.wa_timestamp || m._createdAt);
-        if (d !== day) { day = d; box.append(h('div', { class: 'mx-auto my-2 rounded-full bg-white/80 px-3 py-0.5 text-xs text-slate-500' }, dayLabel(m.wa_timestamp || m._createdAt))); }
+        if (d !== day) { day = d; box.append(h('div', { class: 'mx-auto my-2 rounded-full bg-panel-surface/80 px-3 py-0.5 text-xs text-panel-text-muted' }, dayLabel(m.wa_timestamp || m._createdAt))); }
         box.append(renderMessage(m, ctx));
     }
     if (keepBottom && nearBottom) box.scrollTop = box.scrollHeight;
@@ -141,10 +141,10 @@ async function openConv(id, focus = true) {
     el.listPane.classList.add('hidden', 'md:flex');
     el.typing.classList.add('hidden');
     renderList(); renderHeader();
-    el.msgs.replaceChildren(h('div', { class: 'm-auto text-sm text-slate-500' }, t('loading')));
+    el.msgs.replaceChildren(h('div', { class: 'm-auto text-sm text-panel-text-muted' }, t('loading')));
     const r = await api('GET', `/conversations/${id}/messages?limit=40`).catch(() => null);
     if (S.active !== id) return;
-    if (!r?.ok) { el.msgs.replaceChildren(h('div', { class: 'm-auto text-sm text-red-600' }, errMsg(r, t('action_error')))); return; }
+    if (!r?.ok) { el.msgs.replaceChildren(h('div', { class: 'm-auto text-sm text-panel-danger-fg' }, errMsg(r, t('action_error')))); return; }
     S.msgs = r.data.data; S.hasBefore = r.data.has_more_before;
     renderThread(false);
     el.msgs.scrollTop = el.msgs.scrollHeight;
@@ -281,9 +281,9 @@ function addFiles(list) {
 }
 function renderTray() {
     const tray = $('wa-tray');
-    tray.replaceChildren(...S.files.map((f, i) => h('div', { class: 'flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-1.5 text-xs' },
+    tray.replaceChildren(...S.files.map((f, i) => h('div', { class: 'flex items-center gap-2 rounded-lg border border-panel-border bg-panel-surface p-1.5 text-xs' },
         f._type === 'image' ? h('img', { src: URL.createObjectURL(f), alt: '', class: 'size-10 rounded object-cover' }) : h('span', { class: 'text-lg' }, f._type === 'document' ? '📄' : '🎞'),
-        h('span', { class: 'max-w-32 truncate', dir: 'auto' }, f.name), h('button', { type: 'button', class: 'text-red-600', dataset: { rmfile: i }, 'aria-label': t('cancel') }, '×'))));
+        h('span', { class: 'max-w-32 truncate', dir: 'auto' }, f.name), h('button', { type: 'button', class: 'text-panel-danger-fg', dataset: { rmfile: i }, 'aria-label': t('cancel') }, '×'))));
     tray.classList.toggle('hidden', !S.files.length); tray.classList.toggle('flex', !!S.files.length);
     el.input.placeholder = S.files.length ? t('caption') : t('type_message');
 }
@@ -293,8 +293,8 @@ function clearReply() { S.replyTo = null; const r = $('wa-reply'); if (r) { r.cl
 function setReply(m) {
     S.replyTo = m;
     const r = $('wa-reply');
-    r.replaceChildren(h('div', { class: 'min-w-0 flex-1' }, h('div', { class: 'font-semibold text-emerald-700' }, t('replying_to'), ' ', m.direction === 'out' ? t('you') : title(S.convs.get(S.active))), h('div', { class: 'truncate text-slate-600', dir: 'auto' }, m.body || m.caption || t('unsupported'))),
-        h('button', { type: 'button', class: 'text-slate-500', onclick: clearReply, 'aria-label': t('cancel') }, '×'));
+    r.replaceChildren(h('div', { class: 'min-w-0 flex-1' }, h('div', { class: 'font-semibold text-panel-success-fg' }, t('replying_to'), ' ', m.direction === 'out' ? t('you') : title(S.convs.get(S.active))), h('div', { class: 'truncate text-panel-text-muted', dir: 'auto' }, m.body || m.caption || t('unsupported'))),
+        h('button', { type: 'button', class: 'text-panel-text-muted', onclick: clearReply, 'aria-label': t('cancel') }, '×'));
     r.classList.remove('hidden'); r.classList.add('flex'); el.input.focus();
 }
 
@@ -325,8 +325,8 @@ function openMenu(btn, m) {
         if (m.body) items.push([t('copy'), () => navigator.clipboard?.writeText(m.body)]);
         if (own) items.push([t('delete_everyone'), () => delMsg(m)]);
     }
-    const quick = !m._tmp && m.status !== 'failed' ? h('div', { class: 'flex gap-1 border-b border-slate-100 px-2 pb-1.5' }, QUICK_REACTIONS.map((e) => h('button', { type: 'button', class: 'rounded px-1 text-lg hover:bg-slate-100', onclick: () => { closePop(); react(m, e); } }, e))) : null;
-    pop = h('div', { class: 'fixed z-50 min-w-44 rounded-lg border border-slate-200 bg-white py-1.5 text-sm shadow-lg' }, quick, items.map(([label, fn]) => h('button', { type: 'button', class: 'block w-full px-3 py-1.5 text-start hover:bg-slate-50', onclick: () => { closePop(); fn(); } }, label)));
+    const quick = !m._tmp && m.status !== 'failed' ? h('div', { class: 'flex gap-1 border-b border-panel-border px-2 pb-1.5' }, QUICK_REACTIONS.map((e) => h('button', { type: 'button', class: 'rounded px-1 text-lg hover:bg-panel-surface-sunken', onclick: () => { closePop(); react(m, e); } }, e))) : null;
+    pop = h('div', { class: 'fixed z-50 min-w-44 rounded-lg border border-panel-border bg-panel-surface py-1.5 text-sm shadow-lg' }, quick, items.map(([label, fn]) => h('button', { type: 'button', class: 'block w-full px-3 py-1.5 text-start hover:bg-panel-surface-sunken', onclick: () => { closePop(); fn(); } }, label)));
     document.body.append(pop);
     const r = btn.getBoundingClientRect();
     pop.style.top = Math.min(r.bottom + 4, window.innerHeight - pop.offsetHeight - 8) + 'px';
@@ -378,7 +378,7 @@ function dialog(titleText, okText, fields, onSubmit) {
     };
     fields[0]?.focus?.();
 }
-const field = (label, input) => h('label', { class: 'block text-xs font-medium text-slate-600' }, label, h('div', { class: 'mt-1' }, input));
+const field = (label, input) => h('label', { class: 'block text-xs font-medium text-panel-text-muted' }, label, h('div', { class: 'mt-1' }, input));
 const COUNTRIES = [['EG', '+20'], ['SA', '+966'], ['AE', '+971'], ['KW', '+965'], ['QA', '+974'], ['BH', '+973'], ['OM', '+968'], ['JO', '+962'], ['LB', '+961'], ['IQ', '+964'], ['LY', '+218'], ['MA', '+212'], ['DZ', '+213'], ['TN', '+216'], ['SD', '+249'], ['PS', '+970'], ['TR', '+90'], ['GB', '+44'], ['US', '+1']];
 
 function newChat() {
@@ -397,7 +397,7 @@ function shareLocation() {
     const lat = h('input', { name: 'lat', class: 'form-control', inputmode: 'decimal', dir: 'ltr' }), lng = h('input', { name: 'lng', class: 'form-control', inputmode: 'decimal', dir: 'ltr' });
     dialog(t('location_title'), t('send'), [
         field(t('latitude'), lat), field(t('longitude'), lng), field(t('place_name'), h('input', { name: 'name', class: 'form-control', dir: 'auto', maxlength: 100 })),
-        h('button', { type: 'button', class: 'text-xs text-sky-700 underline', onclick: () => navigator.geolocation?.getCurrentPosition((p) => { lat.value = p.coords.latitude.toFixed(6); lng.value = p.coords.longitude.toFixed(6); }, () => toast('error', t('action_error'))) }, t('use_my_location')),
+        h('button', { type: 'button', class: 'text-xs text-panel-info-fg underline', onclick: () => navigator.geolocation?.getCurrentPosition((p) => { lat.value = p.coords.latitude.toFixed(6); lng.value = p.coords.longitude.toFixed(6); }, () => toast('error', t('action_error'))) }, t('use_my_location')),
     ], async (f, err) => {
         const a = Number(f.lat.value), b = Number(f.lng.value);
         if (!f.lat.value || !f.lng.value || !Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a) > 90 || Math.abs(b) > 180) return err(t('latitude') + ' / ' + t('longitude'));
@@ -467,7 +467,7 @@ const EMOJI = '😀 😁 😂 🤣 😊 😍 😘 😎 🤔 😅 😉 🙂 😢 
 function buildEmoji() {
     const p = $('wa-emoji-pop');
     if (!p) return;
-    p.append(h('div', { class: 'grid grid-cols-8 gap-1' }, EMOJI.map((e) => h('button', { type: 'button', class: 'rounded p-1 text-xl hover:bg-slate-100', onclick: () => { const i = el.input; const s = i.selectionStart ?? i.value.length; i.setRangeText(e, s, i.selectionEnd ?? s, 'end'); i.focus(); onType(); } }, e))));
+    p.append(h('div', { class: 'grid grid-cols-8 gap-1' }, EMOJI.map((e) => h('button', { type: 'button', class: 'rounded p-1 text-xl hover:bg-panel-surface-sunken', onclick: () => { const i = el.input; const s = i.selectionStart ?? i.value.length; i.setRangeText(e, s, i.selectionEnd ?? s, 'end'); i.focus(); onType(); } }, e))));
 }
 
 /* ---------------- realtime ---------------- */
@@ -530,7 +530,7 @@ el.msgs.addEventListener('click', (e) => {
     const lb = e.target.closest('[data-lightbox]'); if (lb) return lightbox(lb.dataset.src);
     const row = e.target.closest('.wa-msg');
     const jump = e.target.closest('[data-jump]');
-    if (jump) { const tgt = el.msgs.querySelector(`[data-mid="${CSS.escape(jump.dataset.jump)}"]`); tgt?.scrollIntoView({ block: 'center', behavior: 'smooth' }); tgt?.classList.add('ring-2', 'ring-emerald-400'); setTimeout(() => tgt?.classList.remove('ring-2', 'ring-emerald-400'), 1500); return; }
+    if (jump) { const tgt = el.msgs.querySelector(`[data-mid="${CSS.escape(jump.dataset.jump)}"]`); tgt?.scrollIntoView({ block: 'center', behavior: 'smooth' }); tgt?.classList.add('ring-2', 'ring-panel-success-solid'); setTimeout(() => tgt?.classList.remove('ring-2', 'ring-panel-success-solid'), 1500); return; }
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'older') return loadOlder();
     if (!row) return;

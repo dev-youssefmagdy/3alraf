@@ -1,5 +1,8 @@
-<div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+@php
+    $icons = ['brand' => 'wallet', 'mint' => 'check-circle', 'sun' => 'receipt', 'violet' => 'chart', 'slate' => 'box', 'emerald' => 'wallet', 'panel' => 'chart'];
+@endphp
+<div class="mb-4 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
     @foreach ($cards as $c)
-        <x-stat-card :label="$c['label']" :value="$c['value']" :tone="$c['tone']" class="[&_p:nth-child(2)]:!text-2xl" />
+        <x-ui.stat-card :label="$c['label']" :value="$c['value']" :tone="$c['tone']" :icon="$icons[$c['tone']] ?? 'chart'" :hint="$c['hint'] ?? null" />
     @endforeach
 </div>

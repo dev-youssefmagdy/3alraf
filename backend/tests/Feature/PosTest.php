@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\StockMovementType;
+use App\Models\Admin;
+use App\Models\Attribute;
 use App\Models\Branch;
 use App\Models\City;
 use App\Models\Customer;
@@ -8,7 +10,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingCompany;
-use App\Models\Admin;
+use App\Services\BarcodeService;
 use App\Services\Stock\StockLedger;
 use Database\Seeders\FoundationSeeder;
 use Illuminate\Support\Facades\Storage;
@@ -69,4 +71,23 @@ it('requires a customer and the pos.use permission', function () {
 
 it('renders the page for the owner', function () {
     $this->get("{$this->t}/pos")->assertOk()->assertSee('pos-customer');
+});
+
+it('shows the variant image instead of the product image for variable products', function () {
+    $attr = Attribute::create(['name' => ['ar' => 'لون', 'en' => 'Color'], 'code' => 'color', 'type' => 'select']);
+    $red = $attr->values()->create(['value' => ['ar' => 'أحمر', 'en' => 'Red'], 'sort_order' => 1]);
+    $blue = $attr->values()->create(['value' => ['ar' => 'أزرق', 'en' => 'Blue'], 'sort_order' => 2]);
+    $p = Product::create(['type' => 'variable', 'name' => ['ar' => 'قميص', 'en' => 'Shirt'], 'slug' => 'shirt', 'sku' => 'SHIRT']);
+    listProduct($p, ['price' => 100, 'cost' => 10, 'is_active' => true]);
+    $p->images()->create(['path' => 'products/main.jpg', 'sort_order' => 1]);
+    $vars = [];
+    foreach ([[$red, 'RED'], [$blue, 'BLU']] as [$val, $code]) {
+        $vars[$code] = $p->variants()->create(['combination_hash' => (string) $val->id, 'sku' => "SH-$code", 'barcode' => app(BarcodeService::class)->generateUnique(), 'is_active' => true, 'price' => 100, 'cost' => 10]);
+        $vars[$code]->values()->sync([$val->id]);
+    }
+    $vars['RED']->images()->create(['path' => 'products/red.jpg', 'sort_order' => 1]);   // BLU has no image of its own
+
+    $items = collect($this->getJson("{$this->t}/pos/products?q=SH-")->assertOk()->json('items'))->keyBy('sku');
+    expect($items['SH-RED']['image'])->toContain('red.jpg')
+        ->and($items['SH-BLU']['image'])->toContain('main.jpg');   // falls back to the product image
 });

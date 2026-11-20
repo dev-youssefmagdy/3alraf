@@ -1,40 +1,43 @@
 <x-layouts.marketer :title="__('admin.integration.title')">
+    <x-slot:header><x-ui.page-header :title="__('admin.integration.title')" :subtitle="__('admin.integration.hint')" /></x-slot:header>
     <div class="space-y-4">
-        <x-card :title="__('admin.integration.title')">
-            <p class="mb-3 text-sm text-slate-600">{{ __('admin.integration.hint') }} <code class="break-all rounded bg-slate-100 px-1" dir="ltr">{{ $base }}</code></p>
-            <div id="secret-box" class="mb-4 hidden rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-                <p class="font-semibold text-amber-800">{{ __('admin.integration.show_once') }}</p>
+        <x-ui.alert tone="info"><code class="break-all" dir="ltr">{{ $base }}</code></x-ui.alert>
+        <div id="secret-box" class="hidden">
+            <x-ui.alert tone="warning">
+                <p class="font-semibold">{{ __('admin.integration.show_once') }}</p>
                 <p class="mt-2">{{ __('admin.integration.token') }}: <code id="secret-token" class="break-all"></code></p>
                 <p class="mt-1">{{ __('admin.integration.hmac') }}: <code id="secret-hmac" class="break-all"></code></p>
-            </div>
-            @can('integration_clients.manage')
-                <form data-ajax-form action="{{ route('marketer.integration-clients.store') }}" method="POST" class="mb-6 grid gap-3 sm:grid-cols-3" novalidate>
-                    @csrf
-                    <x-input name="name" :label="__('admin.integration.name')" required />
+            </x-ui.alert>
+        </div>
+        @can('integration_clients.manage')
+            <form data-ajax-form action="{{ route('marketer.integration-clients.store') }}" method="POST" novalidate>
+                @csrf
+                <x-ui.form-section :title="__('admin.integration.create')" :cols="1">
+                    <x-ui.input name="name" :label="__('admin.integration.name')" required />
                     <div data-field>
                         <span class="form-label">{{ __('admin.integration.scopes') }}</span>
                         @foreach ($scopes as $k => $desc)
-                            <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="scopes[]" value="{{ $k }}" class="mt-1"> <span><b>{{ $k }}</b> <span class="text-slate-500">{{ $desc }}</span></span></label>
+                            <x-ui.checkbox name="scopes[]" :value="$k" :bool="false" :label="$k" :help="$desc" class="!w-full" />
                         @endforeach
                     </div>
-                    <div class="sm:col-span-3"><x-button type="submit">{{ __('admin.integration.create') }}</x-button></div>
-                </form>
-            @endcan
-            @can('integration_clients.manage')
-                <form id="edit-client" data-ajax-form data-method="PUT" action="#" method="POST" class="mb-6 hidden grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-3" novalidate>
-                    @csrf
-                    <x-input name="name" :label="__('admin.integration.name')" required />
+                    <div><x-ui.button type="submit">{{ __('admin.integration.create') }}</x-ui.button></div>
+                </x-ui.form-section>
+            </form>
+            <form id="edit-client" data-ajax-form data-method="PUT" action="#" method="POST" class="hidden" novalidate>
+                @csrf
+                <x-ui.form-section :title="__('admin.edit')" :cols="1">
+                    <x-ui.input name="name" :label="__('admin.integration.name')" required />
                     <div data-field>
                         <span class="form-label">{{ __('admin.integration.scopes') }}</span>
                         @foreach ($scopes as $k => $desc)
-                            <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="scopes[]" value="{{ $k }}" class="mt-1"> <span><b>{{ $k }}</b></span></label>
+                            <x-ui.checkbox name="scopes[]" :value="$k" :bool="false" :label="$k" class="!w-full" />
                         @endforeach
                     </div>
-                    <div class="sm:col-span-3"><x-button type="submit">{{ __('admin.save') }}</x-button></div>
-                </form>
-            @endcan
-            <x-datatable :table="$table" :url="route('marketer.integration-clients.datatable')" />
-        </x-card>
+                    <div><x-ui.button type="submit">{{ __('admin.save') }}</x-ui.button></div>
+                </x-ui.form-section>
+            </form>
+        @endcan
+        <x-ui.data-table :table="$table" :url="route('marketer.integration-clients.datatable')" />
     </div>
 {{-- POST action buttons: <button data-gpost="url" [data-confirm="text"]> (rotate / revoke); reloads the DataTable on success. --}}
 <script>

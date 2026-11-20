@@ -15,6 +15,7 @@ use App\Models\AffiliateTier;
 use App\Models\Branch;
 use App\Models\City;
 use App\Models\Customer;
+use App\Models\Erp\Account;
 use App\Models\Erp\JournalEntry;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -24,11 +25,15 @@ use App\Services\Affiliates\AffiliateBonusService;
 use App\Services\Affiliates\AffiliateCommissionService;
 use App\Services\Affiliates\AffiliateService;
 use App\Services\BarcodeService;
+use App\Services\Erp\Backfill\BackfillService;
+use App\Services\Erp\Equity\ErpSettings;
 use App\Services\Orders\OrderPlacementService;
 use App\Services\Orders\OrderStatusService;
 use App\Services\Orders\ReturnService;
 use App\Services\Stock\StockLedger;
+use App\Support\Money;
 use Database\Seeders\FoundationSeeder;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /** Affiliate sales bonus: 200 EGP for every 10,000 EGP of eligible sales (docs/CALCULATIONS.md §Affiliate sales bonus). */
@@ -176,9 +181,9 @@ it('payout amount = paid commissions + paid bonuses', function () {
     $affs = app(AffiliateService::class);
     $commission = (string) AffiliateCommission::sole()->amount;
     $p = $affs->requestPayout($this->aff);
-    expect((string) $p->amount)->toBe(\App\Support\Money::add($commission, '200'));
+    expect((string) $p->amount)->toBe(Money::add($commission, '200'));
     $affs->markPaid($p);
-    expect((string) $p->fresh()->amount)->toBe(\App\Support\Money::add($commission, '200'));
+    expect((string) $p->fresh()->amount)->toBe(Money::add($commission, '200'));
 });
 
 it('posts the bonus to the ERP once (Dr affiliate expense / Cr affiliate payable)', function () {
@@ -250,8 +255,9 @@ it('shows the commission / bonus split in the dashboard payout history', functio
     $this->actingAs($this->aff, 'affiliate');
     app()->setLocale('en');
     $html = $this->get('/en/affiliate')->assertOk()->getContent();
-    $total = \App\Support\Money::add('200.00', (string) AffiliateCommission::sum('amount'));
-    expect($html)->toContain('<td class="whitespace-nowrap pe-2">200.00</td>')->toContain(number_format((float) $total, 2));
+    $total = Money::add('200.00', (string) AffiliateCommission::sum('amount'));
+    // payout history rows (x-ui.list-item): the bonus part is in the subtitle, the payout total in the trailing amount
+    expect($html)->toContain(e(__('growth.bonuses')).' 200.00')->toContain('dir="ltr">'.number_format((float) $total, 2).'</span>');
 });
 
 it('advertises the bonus on the public register page from the live settings, with translated title and meta (ar + en)', function () {
@@ -263,7 +269,7 @@ it('advertises the bonus on the public register page from the live settings, wit
         $line = __('growth.register_bonus', ['amount' => '150 EGP', 'threshold' => '8,000 EGP']);
         expect($html)->toContain('data-bonus-benefit')->toContain(e($line))
             ->toContain('<title>'.e(__('growth.register_title')))
-            ->toContain('name="description" content="'.e(\Illuminate\Support\Str::limit(__('growth.register_meta_bonus', ['store' => setting('name'), 'amount' => '150 EGP', 'threshold' => '8,000 EGP']), 158, '')).'"')
+            ->toContain('name="description" content="'.e(Str::limit(__('growth.register_meta_bonus', ['store' => setting('name'), 'amount' => '150 EGP', 'threshold' => '8,000 EGP']), 158, '')).'"')
             ->toContain('index,follow')->not->toContain('noindex')->and(substr_count($html, '<h1'))->toBe(1);
     }
     settings(['affiliate_bonus_enabled' => false]);
@@ -384,7 +390,7 @@ it('isolates a failing affiliate: the others are still awarded', function () {
 
 it('posts bonuses and paid payouts missed while auto-posting was off through the ERP "post missing" scan, once', function () {
     AffiliateTier::query()->delete();                                          // bonus only: the payout = the bonus
-    $erp = app(\App\Services\Erp\Equity\ErpSettings::class);
+    $erp = app(ErpSettings::class);
     $erp->set('auto_posting_enabled', false);
     ($this->sale)(10);
     $this->travel(15)->days();
@@ -395,13 +401,13 @@ it('posts bonuses and paid payouts missed while auto-posting was off through the
     expect(JournalEntry::where('idempotency_key', 'affbonus:'.$b->id)->exists())->toBeFalse()
         ->and(JournalEntry::where('idempotency_key', 'affpayout:'.$p->id)->exists())->toBeFalse();
     $erp->set('auto_posting_enabled', true);
-    $bf = app(\App\Services\Erp\Backfill\BackfillService::class);
+    $bf = app(BackfillService::class);
     expect($bf->missing()['affiliates']['created'])->toBe(2);                  // detect (dry)
     $bf->missing(true);
     $bf->missing(true);                                                       // idempotent
     expect(JournalEntry::where('idempotency_key', 'like', 'affbonus:'.$b->id.'%')->count())->toBe(1)
         ->and(JournalEntry::where('idempotency_key', 'like', 'affpayout:'.$p->id.'%')->count())->toBe(1)
         ->and($bf->missing()['affiliates']['created'])->toBe(0);
-    $bal = fn (string $role) => (float) \App\Models\Erp\Account::where('role_key', $role)->value('current_balance');
+    $bal = fn (string $role) => (float) Account::where('role_key', $role)->value('current_balance');
     expect($bal('affiliate_payable'))->toBe(0.0);                             // accrued by the bonus, cleared by the payout
 });

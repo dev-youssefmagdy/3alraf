@@ -6,16 +6,20 @@
  * Run alone: php artisan test tests/Feature/QaE2eErpI18nPermsTest.php
  */
 
-use App\Models\Branch;
+use App\Http\Controllers\Admin\Erp\HubController;
+use App\Models\Admin;
 use App\Models\Customer;
 use App\Models\Erp\Account;
+use App\Models\Erp\FixedAsset;
 use App\Models\Erp\JournalEntry;
 use App\Models\Erp\Owner;
+use App\Models\Erp\Period;
 use App\Models\Supplier;
-use App\Models\Admin;
 use App\Services\Erp\Accounting\CoaTemplate;
 use App\Services\Erp\Accounting\JournalService;
+use App\Services\Erp\Equity\ProfitDistributionService;
 use Database\Seeders\FoundationSeeder;
+use Illuminate\Support\ViewErrorBag;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -50,7 +54,7 @@ function qaiPost(string $dr, string $cr, string $amt, array $e = []): JournalEnt
 function qaiErrs(): array
 {
     $e = session('errors');
-    if ($e instanceof \Illuminate\Support\ViewErrorBag) {
+    if ($e instanceof ViewErrorBag) {
         return $e->getBag('default')->all();
     }
     $out = [];
@@ -63,10 +67,10 @@ function qaiErrs(): array
     return $out;
 }
 
-/** Hub card hrefs (hub cards are <a class="group rounded-xl ..."). */
+/** Hub card hrefs (hub cards are <a class="group rounded-2xl ..."). */
 function qaiCards(string $html): array
 {
-    preg_match_all('#<a href="([^"]+)" class="group rounded-xl#', $html, $m);
+    preg_match_all('#<a href="([^"]+)" class="group rounded-2xl#', $html, $m);
 
     return array_map(fn ($u) => preg_replace('#^https?://[^/]+#', '', html_entity_decode($u)), $m[1]);
 }
@@ -140,9 +144,9 @@ it('PERMS journals.create without journals.post: can draft, cannot post (form op
 it('PERMS view-only users never see action forms (accounts, parties, periods, profits, branches)', function () {
     $c = Customer::create(['name' => 'C', 'email' => 'c@x.com', 'phone' => '1055500111', 'password' => 'secret-123', 'is_active' => true]);
     $s = Supplier::create(['name' => 'S', 'is_active' => true]);
-    \App\Models\Erp\Owner::create(['name' => 'O', 'ownership_percent' => 100, 'is_eligible' => true]);
+    Owner::create(['name' => 'O', 'ownership_percent' => 100, 'is_eligible' => true]);
     qaiPost('cash', 'sales_revenue', '1000');
-    $dist = app(\App\Services\Erp\Equity\ProfitDistributionService::class)->create(['from' => now()->startOfMonth()->toDateString(), 'to' => now()->toDateString(), 'acknowledge_open' => true], $this->owner->id);
+    $dist = app(ProfitDistributionService::class)->create(['from' => now()->startOfMonth()->toDateString(), 'to' => now()->toDateString(), 'acknowledge_open' => true], $this->owner->id);
     $u = qaiUser(['erp.dashboard.view', 'erp.accounts.view', 'erp.periods.view', 'erp.profits.view', 'erp.branches.view'], 'viewer');
     $this->actingAs($u, 'admin');
     $this->get($this->e.'/accounts')->assertOk()->assertDontSee('erp/accounts" ', false)->assertDontSee('name="code"', false)->assertDontSee('/restore"', false);
@@ -152,7 +156,7 @@ it('PERMS view-only users never see action forms (accounts, parties, periods, pr
         $this->post($this->e."/parties/$p/settle", ['amount' => 1, 'account' => 'cash', 'ref' => 'x'])->assertForbidden();
     }
     $this->get($this->e.'/periods')->assertOk()->assertDontSee('/close"', false)->assertDontSee('/reopen"', false);
-    $this->post($this->e.'/periods/'.\App\Models\Erp\Period::value('id').'/close')->assertForbidden();
+    $this->post($this->e.'/periods/'.Period::value('id').'/close')->assertForbidden();
     $this->get($this->e.'/profits')->assertOk()->assertDontSee('name="acknowledge_open"', false);
     $this->get($this->e."/profits/{$dist->id}")->assertOk()->assertDontSee('/approve"', false)->assertDontSee('/cancel"', false);
     $this->post($this->e."/profits/{$dist->id}/approve")->assertForbidden();
@@ -222,7 +226,7 @@ it('PANEL sidebar shows the ERP item, highlighted on ERP pages; hub cards link t
     $j = $this->get($this->e.'/reports/profit-loss')->getContent();
     expect($j)->toMatch('#<a href="'.preg_quote(url('/admin/erp'), '#').'" class="side-link[^"]*\bactive\b#');
     $cards = qaiCards($hub);
-    expect(count($cards))->toBe(count(\App\Http\Controllers\Admin\Erp\HubController::CARDS));
+    expect(count($cards))->toBe(count(HubController::CARDS));
     foreach ($cards as $url) {
         $this->get(''.$url)->assertOk();
     }
@@ -264,7 +268,7 @@ it('ROBUST XSS payloads in account name, journal description/memo, owner, suppli
     $this->post($this->e."/parties/supplier/{$s->id}/note", ['kind' => 'debit_note', 'amount' => 5, 'ref' => 'n1', 'description' => $x])->assertSessionHasNoErrors();
     $this->post($this->e.'/assets', ['name' => $x, 'category' => $x, 'acquisition_date' => now()->toDateString(), 'cost' => 100, 'useful_life_months' => 10, 'method' => 'straight_line', 'paid_from' => 'cash', 'note' => $x])->assertSessionHasNoErrors();
     $o = Owner::first();
-    $asset = \App\Models\Erp\FixedAsset::first();
+    $asset = FixedAsset::first();
     $bad = [];
     $pages = ['/accounts', '/journals', "/journals/{$e->id}", '/journals/create', '/dashboard', '/owners', "/owners/{$o->id}", "/parties/supplier/{$s->id}", '/parties/supplier', '/parties/supplier/ageing',
         '/assets', "/assets/{$asset->id}", '/profits', '/settings', '/reports/trial-balance', '/reports/profit-loss', '/reports/general-ledger?account_id='.$acc->id, '/reports/journal-entries', '/reports/expenses', '/reports/payables', '/reports/owner-equity'];

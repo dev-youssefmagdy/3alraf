@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\StockRequest;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Yajra\DataTables\EloquentDataTable;
 
 class StockRequestDataTable extends BaseDataTable
@@ -29,10 +30,10 @@ class StockRequestDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $u = auth('admin')->user();
-        $dt->addColumn('product_name', fn (StockRequest $m) => e($m->product?->name).($m->variant ? '<div class="text-xs text-slate-500">'.e($m->variant->label()).'</div>' : ''))
+        $dt->addColumn('product_name', fn (StockRequest $m) => e($m->product?->name).($m->variant ? '<div class="text-xs text-panel-text-subtle">'.e($m->variant->label()).'</div>' : ''))
             ->editColumn('name', fn (StockRequest $m) => e($m->name))
-            ->addColumn('phone_full', fn (StockRequest $m) => '<a dir="ltr" class="text-brand-600" href="tel:'.e($m->phone_country_code.$m->phone).'">'.e(trim($m->phone_country_code.' '.$m->phone)).'</a>')
-            ->editColumn('note', fn (StockRequest $m) => e(\Illuminate\Support\Str::limit((string) $m->note, 120)))
+            ->addColumn('phone_full', fn (StockRequest $m) => '<a dir="ltr" class="text-panel-accent-text" href="tel:'.e($m->phone_country_code.$m->phone).'">'.e(trim($m->phone_country_code.' '.$m->phone)).'</a>')
+            ->editColumn('note', fn (StockRequest $m) => e(Str::limit((string) $m->note, 120)))
             ->editColumn('created_at', fn (StockRequest $m) => $m->created_at?->format('Y-m-d H:i'))
             ->addColumn('status_label', fn (StockRequest $m) => '<span class="badge '.['new' => 'badge-warn', 'contacted' => 'badge-success', 'closed' => 'badge-muted'][$m->status->value].'">'.e($m->status->label()).'</span>')
             ->addColumn('actions', function (StockRequest $m) use ($u) {

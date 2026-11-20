@@ -61,7 +61,7 @@ export function linkify(text) {
         try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') safe = u.href; } catch { /* not a URL */ }
         if (!safe) continue;
         if (m.index > last) out.push(document.createTextNode(text.slice(last, m.index)));
-        out.push(h('a', { href: safe, target: '_blank', rel: 'noopener noreferrer nofollow', class: 'text-sky-700 underline break-all' }, url));
+        out.push(h('a', { href: safe, target: '_blank', rel: 'noopener noreferrer nofollow', class: 'text-panel-info-fg underline break-all' }, url));
         last = m.index + url.length;
     }
     if (last < text.length) out.push(document.createTextNode(text.slice(last)));

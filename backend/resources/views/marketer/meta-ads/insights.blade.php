@@ -1,26 +1,23 @@
 @php $t = fn ($k, $r = []) => __('marketing.meta.'.$k, $r); $cols = ['spend', 'impressions', 'reach', 'clicks', 'ctr', 'cpc', 'cpm', 'conversions', 'conversion_value', 'roas']; @endphp
 <x-layouts.marketer :title="$t('insights_title')">
+    <x-slot:header><x-ui.page-header :title="$t('insights_title')" :breadcrumbs="[[$t('title'), route('marketer.meta-ads.index')]]" /></x-slot:header>
     <div class="space-y-4" data-meta-insights>
-        <a href="{{ route('marketer.meta-ads.index') }}" class="text-sm text-brand-600 hover:underline">← {{ $t('btn.back') }}</a>
-        <h1 class="text-xl font-bold text-slate-800">{{ $t('insights_title') }}</h1>
-        @unless ($status['configured'])<p class="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700" role="status" data-not-configured>{{ $t('not_configured') }}</p>@endunless
-        @if ($error)<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" data-meta-error>{{ $error }}</p>@endif
-        <form method="GET" class="flex flex-wrap items-end gap-2">
-            <div><label class="form-label" for="f-level">{{ $t('insights.level') }}</label><select id="f-level" name="level" class="form-control">@foreach (['campaign', 'adset', 'ad'] as $l)<option value="{{ $l }}" @selected($level === $l)>{{ $t('levels.'.$l) }}</option>@endforeach</select></div>
-            <div><label class="form-label" for="f-preset">{{ $t('insights.preset') }}</label><select id="f-preset" name="preset" class="form-control">@foreach (config('meta.insights_presets') as $p)<option value="{{ $p }}" @selected($preset === $p)>{{ $t('presets.'.$p) }}</option>@endforeach</select></div>
-            <x-button type="submit">{{ $t('btn.filter') }}</x-button>
+        @unless ($status['configured'])<x-ui.alert tone="info" data-not-configured>{{ $t('not_configured') }}</x-ui.alert>@endunless
+        @if ($error)<x-ui.alert tone="danger" data-meta-error>{{ $error }}</x-ui.alert>@endif
+        <form method="GET" class="grid grid-cols-1 items-end gap-3 sm:flex sm:flex-wrap">
+            <x-ui.select name="level" :label="$t('insights.level')" :value="$level" :options="collect(['campaign', 'adset', 'ad'])->mapWithKeys(fn ($l) => [$l => $t('levels.'.$l)])->all()" />
+            <x-ui.select name="preset" :label="$t('insights.preset')" :value="$preset" :options="collect(config('meta.insights_presets'))->mapWithKeys(fn ($p) => [$p => $t('presets.'.$p)])->all()" />
+            <x-ui.button type="submit">{{ $t('btn.filter') }}</x-ui.button>
         </form>
-        <x-card>
+        <x-ui.card>
             @if ($rows)
-                <div class="overflow-x-auto" data-insights-table>
-                    <table class="w-full text-sm">
-                        <thead class="text-xs text-slate-500"><tr><th class="py-1 text-start">{{ $t('insights.name') }}</th>@foreach ($cols as $c)<th class="px-2 py-1 text-start">{{ $t('insights.'.$c) }}</th>@endforeach</tr></thead>
-                        <tbody>@foreach ($rows as $r)<tr class="border-t border-slate-100"><td class="py-1.5">{{ $r['name'] ?? '—' }}</td>@foreach ($cols as $c)<td class="whitespace-nowrap px-2 py-1.5" dir="ltr">{{ $r[$c] ?? '—' }}</td>@endforeach</tr>@endforeach</tbody>
-                    </table>
-                </div>
+                <x-ui.table data-insights-table :mobile="false">
+                    <thead><tr><th>{{ $t('insights.name') }}</th>@foreach ($cols as $c)<th>{{ $t('insights.'.$c) }}</th>@endforeach</tr></thead>
+                    <tbody>@foreach ($rows as $r)<tr><td>{{ $r['name'] ?? '—' }}</td>@foreach ($cols as $c)<td class="whitespace-nowrap" dir="ltr">{{ $r[$c] ?? '—' }}</td>@endforeach</tr>@endforeach</tbody>
+                </x-ui.table>
             @else
-                <p class="py-6 text-center text-sm text-slate-500">{{ $t('none') }}</p>
+                <x-ui.empty-state kind="nodata" :title="$t('none')" message="" class="!py-6" />
             @endif
-        </x-card>
+        </x-ui.card>
     </div>
 </x-layouts.marketer>

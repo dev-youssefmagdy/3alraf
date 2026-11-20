@@ -2,7 +2,10 @@
 
 namespace App\DataTables;
 
+use App\Enums\PurchaseStatus;
+use App\Models\Branch;
 use App\Models\PurchaseOrder;
+use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -17,9 +20,9 @@ class PurchaseOrderDataTable extends BaseDataTable
     {
         return [
             $this->textFilter('number', ['number']),
-            $this->selectFilter('supplier_id', $this->nameOptions(\App\Models\Supplier::class), label: $this->filterLabel('supplier'), searchable: true),
-            $this->selectFilter('branch_id', $this->nameOptions(\App\Models\Branch::class), label: $this->filterLabel('branch')),
-            $this->enumFilter(\App\Enums\PurchaseStatus::class, 'status'),
+            $this->selectFilter('supplier_id', $this->nameOptions(Supplier::class), label: $this->filterLabel('supplier'), searchable: true),
+            $this->selectFilter('branch_id', $this->nameOptions(Branch::class), label: $this->filterLabel('branch')),
+            $this->enumFilter(PurchaseStatus::class, 'status'),
             ...$this->dateFilters('ordered_at'),
         ];
     }
@@ -40,7 +43,7 @@ class PurchaseOrderDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $u = auth('admin')->user();
-        $dt->addColumn('number_link', fn (PurchaseOrder $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.purchases.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (PurchaseOrder $m) => '<a class="font-semibold text-panel-accent-text" href="'.e(route('admin.purchases.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->addColumn('supplier_label', fn (PurchaseOrder $m) => e($m->supplier?->name))
             ->addColumn('branch_label', fn (PurchaseOrder $m) => e($m->branch?->name))

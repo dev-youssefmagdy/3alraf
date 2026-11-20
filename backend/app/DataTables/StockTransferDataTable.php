@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Enums\TransferStatus;
+use App\Models\Branch;
 use App\Models\StockTransfer;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
@@ -18,8 +19,8 @@ class StockTransferDataTable extends BaseDataTable
     {
         return [
             $this->textFilter('number', ['number']),
-            Filter::select('branch_id', $this->filterLabel('branch'), $this->nameOptions(\App\Models\Branch::class), fn (Builder $q, string $v) => $q->where(fn (Builder $w) => $w->where('from_branch_id', $v)->orWhere('to_branch_id', $v)), true),
-            $this->enumFilter(\App\Enums\TransferStatus::class, 'status'),
+            Filter::select('branch_id', $this->filterLabel('branch'), $this->nameOptions(Branch::class), fn (Builder $q, string $v) => $q->where(fn (Builder $w) => $w->where('from_branch_id', $v)->orWhere('to_branch_id', $v)), true),
+            $this->enumFilter(TransferStatus::class, 'status'),
             ...$this->dateFilters(),
         ];
     }
@@ -40,7 +41,7 @@ class StockTransferDataTable extends BaseDataTable
     protected function tweak(EloquentDataTable $dt): void
     {
         $u = auth('admin')->user();
-        $dt->addColumn('number_link', fn (StockTransfer $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.stock-transfers.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (StockTransfer $m) => '<a class="font-semibold text-panel-accent-text" href="'.e(route('admin.stock-transfers.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->addColumn('from_label', fn (StockTransfer $m) => e($m->from?->name))
             ->addColumn('to_label', fn (StockTransfer $m) => e($m->to?->name))

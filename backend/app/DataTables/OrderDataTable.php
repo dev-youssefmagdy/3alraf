@@ -30,7 +30,7 @@ class OrderDataTable extends BaseDataTable
             ['data' => 'customer_name', 'title' => __('orders.fields.customer')],
             ['data' => 'placed_at', 'title' => __('ops.fields.date')],
             ['data' => 'total', 'title' => __('ops.fields.total')],
-            ['data' => 'payment_label', 'title' => __('orders.fields.payment'), 'orderable' => false, 'searchable' => false],
+            ['data' => 'payment_label', 'title' => __('orders.fields.payment'), 'orderable' => false, 'searchable' => false, 'className' => 'dt-hide-md'],
             ['data' => 'status_label', 'title' => __('admin.status'), 'orderable' => false, 'searchable' => false],
             ['data' => 'actions', 'title' => '', 'orderable' => false, 'searchable' => false],
         ];
@@ -38,7 +38,7 @@ class OrderDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('number_link', fn (Order $m) => '<a class="font-semibold text-brand-600" href="'.e(route('admin.orders.show', $m->id)).'">'.e($m->number).'</a>')
+        $dt->addColumn('number_link', fn (Order $m) => '<a class="font-semibold text-panel-accent-text" href="'.e(route('admin.orders.show', $m->id)).'">'.e($m->number).'</a>')
             ->filterColumn('number_link', fn ($q, $k) => $q->where('number', 'like', "%$k%"))
             ->editColumn('placed_at', fn (Order $m) => $m->placed_at?->format('Y-m-d H:i'))
             ->editColumn('total', fn (Order $m) => $this->money($m->total))

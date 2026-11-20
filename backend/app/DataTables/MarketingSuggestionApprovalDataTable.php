@@ -45,7 +45,7 @@ class MarketingSuggestionApprovalDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('suggestion_link', fn (MarketingSuggestionApproval $a) => $a->suggestion ? '<a class="text-brand-700 hover:underline" href="'.e(route('marketer.suggestions.show', $a->suggestion_id)).'">#'.$a->suggestion_id.' '.e($a->suggestion->title).'</a>' : '#'.$a->suggestion_id)
+        $dt->addColumn('suggestion_link', fn (MarketingSuggestionApproval $a) => $a->suggestion ? '<a class="text-panel-accent-text hover:underline" href="'.e(route('marketer.suggestions.show', $a->suggestion_id)).'">#'.$a->suggestion_id.' '.e($a->suggestion->title).'</a>' : '#'.$a->suggestion_id)
             ->addColumn('decision_badge', fn (MarketingSuggestionApproval $a) => '<span class="badge '.($a->decision === 'approved' ? 'badge-success' : 'badge-danger').'">'.e(__('marketing.suggestions.statuses.'.$a->decision)).'</span>')
             ->addColumn('admin_name', fn (MarketingSuggestionApproval $a) => $a->admin?->name ?? '—')
             ->editColumn('created_at', fn (MarketingSuggestionApproval $a) => $a->created_at?->format('Y-m-d H:i'))

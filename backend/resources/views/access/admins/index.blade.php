@@ -1,16 +1,17 @@
 <x-layouts.admin :title="__('access.admins')">
-    <x-card>
+    <x-slot:header><x-ui.page-header :title="__('access.admins')" /></x-slot:header>
+    <x-ui.card>
         <x-slot:actions>
-            @can('admins.create')<x-button :href="route('admin.admins.create')">{{ __('admin.add_new') }}</x-button>@endcan
+            @can('admins.create')<x-ui.button :href="route('admin.admins.create')">{{ __('admin.add_new') }}</x-ui.button>@endcan
         </x-slot:actions>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="border-b border-slate-200 text-slate-500"><tr>
+                <thead class="border-b border-panel-border text-panel-text-subtle"><tr>
                     <th class="py-2 text-start">{{ __('access.fields.name') }}</th><th class="text-start">{{ __('access.fields.email') }}</th><th class="text-start">{{ __('access.roles') }}</th><th class="text-start">{{ __('admin.status') }}</th><th></th>
                 </tr></thead>
                 <tbody>
                 @foreach ($admins as $a)
-                    <tr class="border-b border-slate-100">
+                    <tr class="border-b border-panel-border">
                         <td class="py-2 font-medium">{{ $a->name }}</td><td>{{ $a->email }}</td>
                         <td>@foreach ($a->roles as $r)<span class="badge badge-muted">{{ $access->displayName('admin', $r) }}</span> @endforeach</td>
                         <td>{!! $a->is_active ? '<span class="badge badge-success">'.e(__('admin.active')).'</span>' : '<span class="badge badge-danger">'.e(__('admin.inactive')).'</span>' !!}</td>
@@ -23,5 +24,5 @@
                 </tbody>
             </table>
         </div>
-    </x-card>
+    </x-ui.card>
 </x-layouts.admin>

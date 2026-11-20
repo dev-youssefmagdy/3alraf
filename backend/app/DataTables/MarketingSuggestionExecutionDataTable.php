@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\MarketingSuggestionExecution;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Yajra\DataTables\EloquentDataTable;
 
 /** Execution log (apply / rollback / publish / schedule) of every suggestion. */
@@ -45,11 +46,11 @@ class MarketingSuggestionExecutionDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->addColumn('suggestion_link', fn (MarketingSuggestionExecution $e) => $e->suggestion ? '<a class="text-brand-700 hover:underline" href="'.e(route('marketer.suggestions.show', $e->suggestion_id)).'">#'.$e->suggestion_id.' '.e($e->suggestion->title).'</a>' : '#'.$e->suggestion_id)
+        $dt->addColumn('suggestion_link', fn (MarketingSuggestionExecution $e) => $e->suggestion ? '<a class="text-panel-accent-text hover:underline" href="'.e(route('marketer.suggestions.show', $e->suggestion_id)).'">#'.$e->suggestion_id.' '.e($e->suggestion->title).'</a>' : '#'.$e->suggestion_id)
             ->addColumn('kind_label', fn (MarketingSuggestionExecution $e) => __('marketing.suggestions.exec_kinds.'.$e->kind))
             ->addColumn('status_badge', fn (MarketingSuggestionExecution $e) => '<span class="badge '.['succeeded' => 'badge-success', 'failed' => 'badge-danger', 'running' => 'badge-warn'][$e->status->value].'">'.e($e->status->label()).'</span>')
             ->addColumn('executor_name', fn (MarketingSuggestionExecution $e) => $e->executor?->name ?? '—')
             ->editColumn('started_at', fn (MarketingSuggestionExecution $e) => $e->started_at?->format('Y-m-d H:i:s'))
-            ->editColumn('error', fn (MarketingSuggestionExecution $e) => $e->error ? \Illuminate\Support\Str::limit($e->error, 160) : '');
+            ->editColumn('error', fn (MarketingSuggestionExecution $e) => $e->error ? Str::limit($e->error, 160) : '');
     }
 }

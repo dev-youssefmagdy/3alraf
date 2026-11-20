@@ -3,9 +3,9 @@
 @endphp
 <x-resource-form route="admin.stock-transfers" :editing="$editing" :model="$t" width="max-w-4xl" :title="$editing ? __('admin.edit').': '.$t->number : __('ops.new_transfer')">
     <div class="grid gap-4 sm:grid-cols-2">
-        <x-select name="from_branch_id" :label="__('ops.fields.from_branch')" :options="$branches" :value="$t->from_branch_id" :placeholder="__('admin.select')" required />
-        <x-select name="to_branch_id" :label="__('ops.fields.to_branch')" :options="$branches" :value="$t->to_branch_id" :placeholder="__('admin.select')" required />
+        <x-ui.select name="from_branch_id" :label="__('ops.fields.from_branch')" :options="$branches" :value="$t->from_branch_id" :placeholder="__('admin.select')" required />
+        <x-ui.select name="to_branch_id" :label="__('ops.fields.to_branch')" :options="$branches" :value="$t->to_branch_id" :placeholder="__('admin.select')" required />
     </div>
-    <x-textarea name="note" :label="__('ops.fields.note')" :value="$t->note" />
+    <x-ui.textarea name="note" :label="__('ops.fields.note')" :value="$t->note" />
     @include('admin.stock._items', ['rows' => $rows, 'items' => $items, 'cost' => false])
 </x-resource-form>

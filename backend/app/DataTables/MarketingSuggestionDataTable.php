@@ -55,7 +55,7 @@ class MarketingSuggestionDataTable extends BaseDataTable
 
     protected function tweak(EloquentDataTable $dt): void
     {
-        $dt->editColumn('title', fn (MarketingSuggestion $s) => '<a class="font-medium text-brand-700 hover:underline" href="'.e(route('marketer.suggestions.show', $s->id)).'">'.e($s->title).'</a>'
+        $dt->editColumn('title', fn (MarketingSuggestion $s) => '<a class="font-medium text-panel-accent-text hover:underline" href="'.e(route('marketer.suggestions.show', $s->id)).'">'.e($s->title).'</a>'
                 .($s->submitted_at ? '' : ' <span class="badge badge-muted">'.e(__('marketing.suggestions.blog.draft')).'</span>'))
             ->addColumn('type_label', fn (MarketingSuggestion $s) => $s->type->label())
             ->addColumn('target', fn (MarketingSuggestion $s) => $s->target_entity_type ? __('marketing.suggestions.targets.'.$s->target_entity_type).($s->target_entity_id ? ' #'.$s->target_entity_id : '') : __('marketing.suggestions.new_target'))

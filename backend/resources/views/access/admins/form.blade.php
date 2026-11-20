@@ -10,40 +10,41 @@
     }
 @endphp
 <x-layouts.admin :title="$editing ? __('admin.edit') : __('admin.add_new')">
-    <x-card class="max-w-2xl">
+    <x-slot:header><x-ui.page-header :title="$editing ? __('admin.edit') : __('admin.add_new')" /></x-slot:header>
+    <x-ui.form-section :title="__('ui.sections.details')" :cols="1" class="mx-auto max-w-5xl">
         <form data-ajax-form @if ($editing) data-method="PUT" @endif data-validate-url="{{ route('admin.admins.validate', $editing ? [$admin->id] : []) }}"
             action="{{ $editing ? route('admin.admins.update', $admin->id) : route('admin.admins.store') }}" method="POST" class="space-y-4" novalidate>
             @csrf
             <div class="grid gap-4 sm:grid-cols-2">
-                <x-input name="name" :label="__('access.fields.name')" :value="$admin->name" required />
-                <x-input name="email" type="email" :label="__('access.fields.email')" :value="$admin->email" />
+                <x-ui.input name="name" :label="__('access.fields.name')" :value="$admin->name" required />
+                <x-ui.input name="email" type="email" :label="__('access.fields.email')" :value="$admin->email" />
                 <div data-field>
-                    <label for="f-phone" class="form-label">{{ __('whatsapp.fields.phone') }}<span class="text-red-500">*</span></label>
+                    <label for="f-phone" class="form-label">{{ __('whatsapp.fields.phone') }}<span class="text-panel-danger-fg">*</span></label>
                     <div dir="ltr">
                         <input type="hidden" name="country" value="{{ $selIso }}">
                         <input id="f-phone" type="tel" data-intl-phone="country" name="phone" value="{{ $national }}" class="form-control w-full" required>
                     </div>
                 </div>
-                <x-input name="password" type="password" autocomplete="new-password" :label="__('access.fields.password')" :required="! $editing" :hint="$editing ? __('access.password_hint') : null" />
+                <x-ui.input name="password" type="password" autocomplete="new-password" :label="__('access.fields.password')" :required="! $editing" :hint="$editing ? __('access.password_hint') : null" />
             </div>
             <div data-field>
                 <label class="form-label">{{ __('access.roles') }}</label>
                 <div class="flex flex-wrap gap-x-5 gap-y-1">
                     @foreach ($roles as $id => $name)
                         @php($locked = $editing && $admin->getKey() === auth('admin')->id() && in_array($id, $assigned) && in_array($admin->roles->firstWhere('id', $id)?->name, \App\Services\Access\AccessService::SYSTEM, true))
-                        <label class="inline-flex items-center gap-1.5 text-sm text-slate-700" @if ($locked) title="{{ __('access.cannot_remove_own_system_role') }}" @endif>
+                        <label class="inline-flex items-center gap-1.5 text-sm text-panel-text" @if ($locked) title="{{ __('access.cannot_remove_own_system_role') }}" @endif>
                             @if ($locked)<input type="hidden" name="roles[]" value="{{ $id }}">@endif
-                            <input type="checkbox" @if (! $locked) name="roles[]" @endif value="{{ $id }}" @checked(in_array($id, $assigned)) @disabled($locked) class="size-4 rounded border-slate-300 text-brand-600"> {{ $name }}
+                            <input type="checkbox" @if (! $locked) name="roles[]" @endif value="{{ $id }}" @checked(in_array($id, $assigned)) @disabled($locked) class="size-4 rounded border-panel-border-strong text-panel-accent-text"> {{ $name }}
                         </label>
                     @endforeach
                 </div>
             </div>
-            <x-checkbox name="is_active" :label="__('admin.active')" :checked="$editing ? $admin->is_active : true" />
+            <x-ui.checkbox name="is_active" :label="__('admin.active')" :checked="$editing ? $admin->is_active : true" />
             @if (app(\App\Services\Access\AccessService::class)->actorIsSystem())
-                <div><x-checkbox name="otp_exempt" :label="__('access.otp_exempt')" :checked="$editing && $admin->otp_exempt" />
-                    <p class="mt-1 text-xs text-slate-500">{{ __('access.otp_exempt_hint') }}</p></div>
+                <div><x-ui.checkbox name="otp_exempt" :label="__('access.otp_exempt')" :checked="$editing && $admin->otp_exempt" />
+                    <p class="mt-1 text-xs text-panel-text-subtle">{{ __('access.otp_exempt_hint') }}</p></div>
             @endif
-            <x-form-actions :cancel="route('admin.admins.index')" />
+            <x-ui.save-bar :cancel="route('admin.admins.index')" />
         </form>
-    </x-card>
+    </x-ui.form-section>
 </x-layouts.admin>

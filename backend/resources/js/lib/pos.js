@@ -22,15 +22,15 @@ if ($pos.length) {
         $.getJSON($pos.data('url-products'), { q }).done((res) => {
             if (seq !== searchSeq) return;
             $list.empty();
-            if (!res.items.length) return $list.append($('<p class="col-span-full py-6 text-center text-sm text-slate-500">').text(t.no_products));
+            if (!res.items.length) return $list.append($('<p class="col-span-full py-6 text-center text-sm text-panel-text-subtle">').text(t.no_products));
             res.items.forEach((p) => {
-                const $img = p.image ? $('<img class="size-14 shrink-0 rounded-lg object-cover" alt="">').attr('src', p.image) : $('<div class="size-14 shrink-0 rounded-lg bg-slate-100">');
-                const $badge = $('<span class="text-xs">').addClass(p.stock > 0 ? 'text-emerald-600' : 'font-medium text-red-600').text(p.stock > 0 ? t.in_stock.replace(':n', p.stock) : t.out_of_stock);
-                const $b = $('<button type="button" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2 text-start transition hover:border-brand-500 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30">')
+                const $img = p.image ? $('<img class="size-14 shrink-0 rounded-lg object-cover" alt="">').attr('src', p.image) : $('<div class="size-14 shrink-0 rounded-lg bg-panel-surface-sunken">');
+                const $badge = $('<span class="text-xs">').addClass(p.stock > 0 ? 'text-panel-success-fg' : 'font-medium text-panel-danger-fg').text(p.stock > 0 ? t.in_stock.replace(':n', p.stock) : t.out_of_stock);
+                const $b = $('<button type="button" class="flex items-center gap-3 rounded-xl border border-panel-border bg-panel-surface p-2 text-start transition hover:border-panel-accent hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-panel-accent-soft">')
                     .append($img, $('<div class="min-w-0 flex-1">').append(
-                        $('<div class="truncate text-sm font-medium text-slate-800">').text(p.name),
-                        $('<div class="text-xs text-slate-500">').text(p.sku || ''),
-                        $('<div class="flex items-center justify-between gap-2">').append($('<span class="text-sm font-semibold text-slate-900">').text(money(p.price)), $badge)));
+                        $('<div class="truncate text-sm font-medium text-panel-text">').text(p.name),
+                        $('<div class="text-xs text-panel-text-subtle">').text(p.sku || ''),
+                        $('<div class="flex items-center justify-between gap-2">').append($('<span class="text-sm font-semibold text-panel-text">').text(money(p.price)), $badge)));
                 $b.on('click', () => addToCart(p));
                 $list.append($b);
             });
@@ -48,19 +48,38 @@ if ($pos.length) {
         renderCart();
         changed(true);
     };
+    // floating cart button (mobile bottom sheet): item count + total (the quoted total once the server answered, the cart subtotal until then)
+    let lastTotal = null;
+    const updateFab = () => {
+        let n = 0, sub = 0;
+        cart.forEach((r) => { n += r.qty; sub += Number(r.price) * r.qty; });
+        const $f = $('#pos-fab');
+        $f.find('[data-fab-count]').text(n);
+        $f.find('[data-fab-total]').text(money(lastTotal !== null ? lastTotal : sub));
+        $('#pos-fab-wrap').toggleClass('hidden', !n);
+        if (!n) closeSheet();
+    };
+    const sheet = document.getElementById('pos-cart-sheet'), backdrop = document.getElementById('pos-sheet-backdrop');
+    const closeSheet = () => { sheet?.removeAttribute('data-open'); backdrop?.classList.add('hidden'); document.body.style.overflow = ''; };
+    $('#pos-fab').on('click', () => { sheet.setAttribute('data-open', ''); backdrop.classList.remove('hidden'); document.body.style.overflow = 'hidden'; });
+    $('#pos-sheet-close').on('click', closeSheet);
+    $(backdrop).on('click', closeSheet);
+    $(document).on('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
     const renderCart = () => {
+        updateFab();
         const $c = $('#pos-cart').empty();
-        if (!cart.size) return $c.append($('<p class="py-6 text-center text-sm text-slate-500">').text(t.cart_empty));
+        if (!cart.size) return $c.append($('<p class="py-6 text-center text-sm text-panel-text-subtle">').text(t.cart_empty));
         cart.forEach((r, key) => {
             const $qty = $('<input type="number" min="1" max="9999" class="form-control w-20 text-center">').val(r.qty).on('change input', function () {
                 r.qty = Math.max(1, parseInt(this.value, 10) || 1);
                 $line.text(money(Number(r.price) * r.qty));
+                updateFab();
                 changed(true);
             });
-            const $line = $('<span class="w-24 text-end text-sm font-semibold text-slate-800">').text(money(Number(r.price) * r.qty));
+            const $line = $('<span class="w-24 text-end text-sm font-semibold text-panel-text">').text(money(Number(r.price) * r.qty));
             const $rm = $('<button type="button" class="btn-sm btn-danger" aria-label="">').attr('title', t.remove).html('&times;').on('click', () => { cart.delete(key); renderCart(); changed(true); });
             $c.append($('<div class="flex items-center gap-3 py-2">').append(
-                $('<div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-slate-800"></div><div class="text-xs text-slate-500"></div></div>')
+                $('<div class="min-w-0 flex-1"><div class="truncate text-sm font-medium text-panel-text"></div><div class="text-xs text-panel-text-subtle"></div></div>')
                     .find('div:first').text(r.name).end().find('div:last').text(money(r.price)).end(), $qty, $line, $rm));
         });
     };
@@ -69,15 +88,15 @@ if ($pos.length) {
 
     // ---------- customer (remote search + quick create) ----------
     const customerLabel = (c) => $('<div class="flex items-center justify-between gap-3">').append(
-        $('<div>').append($('<div class="font-medium">').text(c.name), $('<div class="text-xs text-slate-500" dir="ltr">').text([c.phone_display || c.phone, c.email].filter(Boolean).join(' · '))),
-        $('<span class="shrink-0 text-xs text-slate-400">').text(t.orders_count.replace(':n', c.orders))).prop('outerHTML');
+        $('<div>').append($('<div class="font-medium">').text(c.name), $('<div class="text-xs text-panel-text-subtle" dir="ltr">').text([c.phone_display || c.phone, c.email].filter(Boolean).join(' · '))),
+        $('<span class="shrink-0 text-xs text-panel-text-subtle">').text(t.orders_count.replace(':n', c.orders))).prop('outerHTML');
     const ts = new TomSelect('#pos-customer', {
         valueField: 'id', labelField: 'name', searchField: [], maxOptions: 20, create: false, preload: 'focus', loadThrottle: 250,
         load: (q, cb) => $.getJSON($pos.data('url-customers'), { q }).done((r) => cb(r.items)).fail(() => cb()),
         score: () => () => 1, // server already ranked/filtered
         render: {
             option: (c) => `<div class="py-1">${customerLabel(c)}</div>`,
-            item: (c) => `<div>${$('<span>').text(c.name).prop('outerHTML')} <span class="text-xs text-slate-500" dir="ltr">${$('<span>').text(c.phone_display || c.phone || '').html()}</span></div>`,
+            item: (c) => `<div>${$('<span>').text(c.name).prop('outerHTML')} <span class="text-xs text-panel-text-subtle" dir="ltr">${$('<span>').text(c.phone_display || c.phone || '').html()}</span></div>`,
             no_results: () => `<div class="no-results">${$('<span>').text(t.no_customers).html()}</div>`,
         },
         onChange: (id) => {
@@ -114,7 +133,7 @@ if ($pos.length) {
         return f;
     };
     const $ship = $('#pos-shipping');
-    const renderShipHint = () => $ship.empty().append($('<p class="text-sm text-slate-500 sm:col-span-2">').text(t.pick_city));
+    const renderShipHint = () => $ship.empty().append($('<p class="text-sm text-panel-text-subtle sm:col-span-2">').text(t.pick_city));
     renderShipHint();
     const loadShipping = () => {
         const city = $form.find('[name=city_id]').val();
@@ -127,10 +146,10 @@ if ($pos.length) {
             $ship.empty();
             opts.forEach((o) => {
                 const on = String(o.id) === sel;
-                $ship.append($('<button type="button" class="rounded-xl border p-3 text-start transition">').addClass(on ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-slate-200 bg-white hover:border-slate-300').append(
-                    $('<div class="flex items-center justify-between gap-2"><span class="text-sm font-medium text-slate-800"></span><span class="text-sm font-semibold"></span></div>')
+                $ship.append($('<button type="button" class="rounded-xl border p-3 text-start transition">').addClass(on ? 'border-panel-accent bg-panel-accent-soft ring-2 ring-panel-accent-soft' : 'border-panel-border bg-panel-surface hover:border-panel-border-strong').append(
+                    $('<div class="flex items-center justify-between gap-2"><span class="text-sm font-medium text-panel-text"></span><span class="text-sm font-semibold"></span></div>')
                         .find('span:first').text(o.name).end().find('span:last').text(Number(o.fee) === 0 ? t.free : money(o.fee)).end(),
-                    $('<div class="text-xs text-slate-500">').text([o.eta && o.eta !== '—' ? t.eta_days.replace(':d', o.eta) : '', o.supports_cod ? '' : t.cod_unavailable].filter(Boolean).join(' · ')))
+                    $('<div class="text-xs text-panel-text-subtle">').text([o.eta && o.eta !== '—' ? t.eta_days.replace(':d', o.eta) : '', o.supports_cod ? '' : t.cod_unavailable].filter(Boolean).join(' · ')))
                     .on('click', () => { $form.find('[name=shipping_company_id]').val(o.id); loadShipping(); quote(); }));
             });
             if (!opts.length) renderShipHint();
@@ -139,23 +158,24 @@ if ($pos.length) {
 
     const $totals = $('#pos-totals');
     const $err = $('#pos-quote-error');
-    const row = (label, value, cls = '') => $('<div class="flex justify-between">').addClass(cls).append($('<dt class="text-slate-500">').text(label), $('<dd>').text(value));
+    const row = (label, value, cls = '') => $('<div class="flex justify-between">').addClass(cls).append($('<dt class="text-panel-text-subtle">').text(label), $('<dd>').text(value));
     let quoteSeq = 0;
     const quote = () => {
-        if (!cart.size) { $totals.empty(); $err.addClass('hidden'); return; }
+        if (!cart.size) { lastTotal = null; updateFab(); $totals.empty(); $err.addClass('hidden'); return; }
         const seq = ++quoteSeq;
         ajax($pos.data('url-quote'), fd()).done((res) => {
             if (seq !== quoteSeq) return;
             $err.addClass('hidden');
             const q = res.data, x = q.totals;
+            lastTotal = x.total; updateFab();
             $totals.empty().append(row(t.subtotal, money(x.subtotal)));
-            if (Number(x.discount) > 0) $totals.append(row(t.discount + (q.discount_code ? ` (${q.discount_code})` : ''), '- ' + money(x.discount), 'text-emerald-700'));
+            if (Number(x.discount) > 0) $totals.append(row(t.discount + (q.discount_code ? ` (${q.discount_code})` : ''), '- ' + money(x.discount), 'text-panel-success-fg'));
             $totals.append(row(t.shipping_fee, $form.find('[name=shipping_company_id]').val() ? money(x.shippingNet) : '—'));
             if (Number(x.packagingFee) > 0) $totals.append(row(t.packaging_fee, money(x.packagingFee)));
             if (Number(x.tax) > 0) $totals.append(row(t.tax, money(x.tax)));
             if (Number(x.codFee) > 0) $totals.append(row(t.cod_fee, money(x.codFee)));
             if (Number(x.paymentFeeCharged) > 0) $totals.append(row(t.payment_fee, money(x.paymentFeeCharged)));
-            $totals.append(row(t.total, money(x.total), 'border-t border-slate-200 pt-2 text-lg font-bold text-slate-900'));
+            $totals.append(row(t.total, money(x.total), 'border-t border-panel-border pt-2 text-lg font-bold text-panel-text'));
             if (Number(x.prepaidShipping) > 0) $totals.append(row(t.prepaid_shipping, money(x.prepaidShipping)));
             if (q.needs_prepay || Number(x.codAmount) > 0 && Number(x.prepaidShipping) > 0) $totals.append(row(t.collect_on_delivery, money(x.codAmount), 'font-semibold'));
             $('#pos-prepay').toggleClass('hidden', !q.needs_prepay);

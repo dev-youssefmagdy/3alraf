@@ -1,4 +1,4 @@
-<div data-repeater-item data-field class="flex flex-wrap items-start gap-2 rounded-lg border border-slate-200 p-3">
+<div data-repeater-item data-field class="flex flex-wrap items-start gap-2 rounded-lg border border-panel-border p-3">
     <input type="hidden" name="values[{{ $i }}][id]" value="{{ $row['id'] ?? '' }}">
     @foreach ($languages as $lang)
         <div class="min-w-32 flex-1" data-field>
