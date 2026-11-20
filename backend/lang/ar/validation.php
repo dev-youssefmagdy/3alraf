@@ -144,6 +144,7 @@ return [
 
     // Field names (ERP forms + shared admin fields). Nested line fields use the "lines.*.x" form.
     'attributes' => [
+        'name.ar' => 'الاسم بالعربية', 'name.en' => 'الاسم بالإنجليزية',
         'shipping_company_id' => 'شركة الشحن',
         'city_id' => 'المدينة',
         'payment_method_id' => 'طريقة الدفع',
