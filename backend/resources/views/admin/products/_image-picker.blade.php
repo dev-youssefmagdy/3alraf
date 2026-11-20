@@ -36,7 +36,33 @@
                 <input type="checkbox" data-ip-white class="size-4 rounded border-slate-300 text-brand-600"> {{ $t('white_bg') }}
             </label>
             <button type="submit" data-ip-submit class="btn btn-primary">{{ $t('search') }}</button>
+            <a data-ip-google href="https://www.google.com/search?udm=2" target="_blank" rel="noopener noreferrer" class="btn btn-secondary inline-flex items-center gap-1.5">
+                {{ $t('search_google') }}
+                <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h4v4M13 3L7 9M11 9.5V13H3V5h3.5"/></svg>
+            </a>
         </form>
+
+        {{-- From a link: an image address copied from Google / any site. Page links of Google, Bing and Yandex image results are unwrapped. --}}
+        <div class="shrink-0 border-b border-slate-200 bg-slate-50 px-4 py-3 md:px-6">
+            <div class="flex flex-wrap items-center gap-2">
+                <label for="image-picker-link" class="text-xs font-bold text-slate-600">{{ $t('from_link') }}</label>
+                <input id="image-picker-link" data-ip-link type="url" inputmode="url" maxlength="2048" class="form-control min-w-56 flex-1"
+                       placeholder="{{ $t('link_placeholder') }}" autocomplete="off" spellcheck="false">
+            </div>
+            <p data-ip-link-msg class="mt-1.5 text-xs text-slate-500">{{ $t('link_hint') }}</p>
+            <div data-ip-link-card class="mt-2 hidden items-center gap-3 rounded-xl border border-slate-200 bg-white p-2">
+                <img data-img alt="" referrerpolicy="no-referrer" class="size-16 shrink-0 rounded-lg bg-white object-contain">
+                <div class="min-w-0 flex-1 text-xs">
+                    <p data-source class="truncate font-bold text-slate-900"></p>
+                    <p data-size class="tabular-nums text-slate-500"></p>
+                    <a data-page target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" class="text-brand-600 underline">{{ $t('open_page') }}</a>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" data-act="main" class="btn-sm btn-primary"></button>
+                    <button type="button" data-act="gallery" class="btn-sm btn-secondary">{{ $t('add_gallery') }}</button>
+                </div>
+            </div>
+        </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-4 md:p-6" aria-live="polite">
             <p class="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">{{ $t('license_note') }}</p>

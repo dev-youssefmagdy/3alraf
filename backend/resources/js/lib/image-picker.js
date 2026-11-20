@@ -8,7 +8,8 @@ if (root) {
     const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
     const $ = (s, el = root) => el.querySelector(s);
     const isHttp = (u) => /^https?:\/\//i.test(u || '');
-    const S = { target: cfg.targets[0], query: '', page: 1, results: [] };
+    const S = { target: cfg.targets[0], query: '', page: 1, results: [], link: null };
+    const mainLabel = () => (S.target.type === 'variant' ? t.set_variant : t.set_main);
 
     async function post(url, body) {
         try {
@@ -35,6 +36,8 @@ if (root) {
         S.target = cfg.targets[i] || cfg.targets[0];
         sel.value = String(cfg.targets.indexOf(S.target));
         $('[data-ip-query]').value = S.target.query || '';
+        googleHref();
+        $('[data-act="main"]', linkCard).textContent = mainLabel();
         const th = $('[data-ip-thumb]');
         th.classList.toggle('hidden', !S.target.thumb);
         if (S.target.thumb) th.src = S.target.thumb;
@@ -102,11 +105,75 @@ if (root) {
             const page = $('[data-page]', li);
             if (isHttp(r.page)) page.href = r.page; else page.remove();
             const main = $('[data-act="main"]', li);
-            main.textContent = S.target.type === 'variant' ? t.set_variant : t.set_main;
+            main.textContent = mainLabel();
             main.addEventListener('click', () => importPicture(r, 'main', li));
             $('[data-act="gallery"]', li).addEventListener('click', () => importPicture(r, 'gallery', li));
             return li;
         }));
+    }
+
+    // ---------------------------------------------------------------- from a link (Google or any site)
+    const linkInput = $('[data-ip-link]');
+    const linkCard = $('[data-ip-link-card]');
+    const linkMsg = $('[data-ip-link-msg]');
+
+    function googleHref() {
+        const q = $('[data-ip-query]').value.trim();
+        $('[data-ip-google]').href = 'https://www.google.com/search?udm=2' + (q ? `&q=${encodeURIComponent(q)}` : '');
+    }
+
+    // A copied image address, or a result-page link of Google / Bing / Yandex images, which carries the real picture in a parameter.
+    function parseLink(text) {
+        const raw = (text || '').trim();
+        if (!raw) return { empty: true };
+        if (/^data:/i.test(raw)) return { error: t.link_data };
+        let u;
+        try { u = new URL(raw); } catch { return { error: t.link_bad }; }
+        if (!/^https?:$/.test(u.protocol)) return { error: t.link_bad };
+        const p = u.searchParams;
+        const inner = p.get('imgurl') || p.get('mediaurl') || p.get('img_url');
+        if (inner && isHttp(inner)) {
+            const page = p.get('imgrefurl') || p.get('pageurl') || p.get('refurl');
+            return { image: inner, page: isHttp(page) ? page : null };
+        }
+        return { image: u.href, page: null };
+    }
+
+    function setLinkMessage(text, warn = false) {
+        linkMsg.textContent = text;
+        linkMsg.classList.toggle('text-amber-700', warn);
+        linkMsg.classList.toggle('text-slate-500', !warn);
+    }
+
+    function showLink() {
+        const r = parseLink(linkInput.value);
+        S.link = null;
+        linkCard.classList.add('hidden'); linkCard.classList.remove('flex', 'ring-2', 'ring-emerald-500');
+        if (r.empty) { setLinkMessage(t.link_hint); return; }
+        if (r.error) { setLinkMessage(r.error, true); return; }
+        let host = '';
+        try { host = new URL(r.image).hostname.replace(/^www\./, ''); } catch { /* checked above */ }
+        S.link = { image: r.image, page: r.page, title: null, source: host };
+        $('[data-source]', linkCard).textContent = host;
+        const page = $('[data-page]', linkCard);
+        page.classList.toggle('hidden', !r.page);
+        if (r.page) page.href = r.page; else page.removeAttribute('href');
+        const size = $('[data-size]', linkCard);
+        size.textContent = t.link_loading;
+        size.classList.remove('font-bold', 'text-amber-600');
+        const img = $('[data-img]', linkCard);
+        const wanted = r.image;
+        img.onload = () => {
+            if (S.link?.image !== wanted) return;
+            const small = Math.min(img.naturalWidth, img.naturalHeight) < 500;
+            size.textContent = `${img.naturalWidth}×${img.naturalHeight}${small ? ` · ${t.small}` : ''}`;
+            if (small) size.classList.add('font-bold', 'text-amber-600');
+        };
+        img.onerror = () => { if (S.link?.image === wanted) size.textContent = t.link_no_preview; };
+        img.src = wanted;
+        $('[data-act="main"]', linkCard).textContent = mainLabel();
+        linkCard.classList.remove('hidden'); linkCard.classList.add('flex');
+        setLinkMessage(t.link_hint);
     }
 
     // ---------------------------------------------------------------- import
@@ -146,4 +213,20 @@ if (root) {
     sel.addEventListener('change', () => setTarget(Number(sel.value)));
     $('[data-ip-form]').addEventListener('submit', (e) => { e.preventDefault(); search(); });
     $('[data-ip-more]').addEventListener('click', () => search(true));
+    $('[data-ip-query]').addEventListener('input', googleHref);
+    let linkTimer;
+    linkInput.addEventListener('input', () => { clearTimeout(linkTimer); linkTimer = setTimeout(showLink, 250); });
+    linkInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(linkTimer); showLink(); } });
+    $('[data-act="main"]', linkCard).addEventListener('click', () => S.link && importPicture(S.link, 'main', linkCard));
+    $('[data-act="gallery"]', linkCard).addEventListener('click', () => S.link && importPicture(S.link, 'gallery', linkCard));
+    // Paste a link anywhere in the open window (pastes into a text field are left to that field).
+    document.addEventListener('paste', (e) => {
+        if (root.classList.contains('hidden') || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+        const text = e.clipboardData?.getData('text') || '';
+        if (!text.trim()) return;
+        e.preventDefault();
+        linkInput.value = text.trim();
+        showLink();
+        linkInput.focus();
+    });
 }

@@ -71,7 +71,8 @@ it('shows Find images on the edit page for the product and each saved variant, w
     $html = $this->get("/admin/products/{$this->product->id}/edit")->assertOk()->getContent();
     expect($html)->toContain('data-image-picker')->toContain('data-image-picker-open data-target-type="product"')
         ->toContain('data-target-type="variant" data-target-id="'.$this->variant->id.'"')
-        ->toContain(__('admin.image_picker.find_images'));
+        ->toContain(__('admin.image_picker.find_images'))
+        ->toContain('data-ip-link')->toContain('data-ip-google'); // paste-a-link row + "Search on Google"
 
     $targets = app(ImagePickerService::class)->targets($this->product->fresh());
     expect(collect($targets)->pluck('query')->all())->toBe(['Glam Silk Scrunchies', 'Glam Silk Scrunchies Red']);
