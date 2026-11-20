@@ -424,3 +424,25 @@ it('shows an edit button in the suggestions table only where a person can still 
     $s->forceFill(['status' => 'rejected'])->save();
     expect($actions($this->owner))->not->toContain($edit);
 });
+
+it('recovers an apply whose request died mid-way: stuck applying → failed, then a retry applies it', function () {
+    $p = ($this->product)('stuck');
+    $s = ($this->make)('product', ['name' => ['ar' => 'اسم جديد']], 'product', $p->id);
+    $this->engine->approve($s->fresh(), $this->owner);
+    // simulate the fatal timeout: status flipped + running execution, nothing else happened
+    $s->fresh()->forceFill(['status' => 'applying'])->save();
+    $exec = MarketingSuggestionExecution::create(['suggestion_id' => $s->id, 'kind' => 'apply', 'idempotency_key' => 'k:stuck', 'status' => 'running',
+        'version' => $s->version, 'content_hash' => $s->content_hash, 'executed_by' => $this->owner->id, 'started_at' => now()]);
+
+    expect($this->engine->recoverStuck(15))->toBe(0);   // still within its time budget
+
+    $this->travel(20)->minutes();
+    $this->artisan('marketing:recover-stuck-suggestions')->expectsOutput('Recovered: 1')->assertSuccessful();
+    expect($s->fresh()->status->value)->toBe('failed')->and($exec->fresh()->status->value)->toBe('failed')
+        ->and($s->fresh()->last_error)->toBe(__('marketing.suggestions.errors.apply_interrupted'));
+    expect($this->engine->recoverStuck(15))->toBe(0);   // idempotent
+
+    // retry with a fresh key (the page renders a new one) succeeds
+    $retry = $this->engine->apply($s->fresh(), $this->owner, 'retry-1');
+    expect($retry->status->value)->toBe('succeeded')->and($s->fresh()->status->value)->toBe('applied');
+});
