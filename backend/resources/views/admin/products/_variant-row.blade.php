@@ -16,7 +16,11 @@
             <span class="text-xs text-slate-400">{{ __('admin.barcode_auto') }}</span>
         @endif
     </td>
-    <td class="px-1 py-2"><x-image-dropzone :name="'variants['.$i.'][image]'" :preview="$v['image'] ?? null" /></td>
+    <td class="px-1 py-2"><x-image-dropzone :name="'variants['.$i.'][image]'" :preview="$v['image'] ?? null" />
+        @if (! empty($v['id']))
+            @can('products.edit')<button type="button" class="mt-1 text-xs font-bold text-brand-600 underline" data-image-picker-open data-target-type="variant" data-target-id="{{ $v['id'] }}" aria-haspopup="dialog" aria-controls="image-picker">{{ __('admin.image_picker.find') }}</button>@endcan
+        @endif
+    </td>
     <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][price]" value="{{ $v['price'] ?? '' }}" class="form-control !w-24"></td>
     <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][sale_price]" value="{{ $v['sale_price'] ?? '' }}" class="form-control !w-24"></td>
     <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][cost]" value="{{ $v['cost'] ?? '' }}" class="form-control !w-24"></td>

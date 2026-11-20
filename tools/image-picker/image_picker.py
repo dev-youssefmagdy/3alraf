@@ -93,9 +93,10 @@ def _int(v) -> int | None:
 # ---------------------------------------------------------------------------------------------- search + cache
 
 class Searcher:
-    def __init__(self, cache_dir: Path):
-        self.cache_dir = cache_dir
-        cache_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, cache_dir: Path | None):
+        self.cache_dir = cache_dir  # None = no file cache (the caller caches, e.g. the 3alraf admin)
+        if cache_dir:
+            cache_dir.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
 
     def search(self, query: str, engines: list[str], page: int = 1) -> dict:
@@ -126,6 +127,8 @@ class Searcher:
         return {'query': query, 'page': page, 'results': merged[start:start + PER_PAGE], 'has_more': len(merged) >= want, 'errors': errors}
 
     def _cached(self, engine: str, query: str, n: int, fn) -> list[dict]:
+        if self.cache_dir is None:
+            return fn(query, n)
         path = self.cache_dir / (hashlib.sha1(f'{engine}|{query.lower().strip()}|{n}'.encode()).hexdigest() + '.json')
         if path.exists() and time.time() - path.stat().st_mtime < CACHE_DAYS * 86400:
             return json.loads(path.read_text('utf-8'))
@@ -393,6 +396,8 @@ def main() -> None:
     q.add_argument('query')
     q.add_argument('-n', type=int, default=20)
     q.add_argument('--engines', default='bing,duckduckgo')
+    q.add_argument('--page', type=int, default=1)
+    q.add_argument('--no-cache', action='store_true', help='do not read / write picked/.cache')
 
     a = ap.parse_args()
     engines = [e.strip() for e in a.engines.split(',') if e.strip() in ENGINES]
@@ -400,7 +405,7 @@ def main() -> None:
         sys.exit(f'No known engine in --engines. Available: {", ".join(ENGINES)}')
 
     if a.cmd == 'search':
-        res = Searcher(Path('picked') / '.cache').search(a.query, engines)
+        res = Searcher(None if a.no_cache else Path('picked') / '.cache').search(a.query, engines, max(1, min(10, a.page)))
         res['results'] = res['results'][:a.n]
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return

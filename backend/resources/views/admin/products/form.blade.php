@@ -92,6 +92,13 @@
             </x-card>
 
             <x-card :title="__('admin.images')">
+                @if ($editing)
+                    @can('products.edit')
+                        <x-slot:actions>
+                            <button type="button" class="btn-sm btn-secondary" data-image-picker-open data-target-type="product" aria-haspopup="dialog" aria-controls="image-picker">{{ __('admin.image_picker.find_images') }}</button>
+                        </x-slot:actions>
+                    @endcan
+                @endif
                 <x-image-dropzone name="images[]" :multiple="true" :max="12" remove-name="remove_images[]" :hint="__('admin.images_hint')"
                     :existing="$editing ? $product->images->map(fn ($img) => ['id' => $img->id, 'url' => $img->thumb_url])->all() : []" />
                 @unless ($editing)<p class="mt-2 text-xs text-slate-500">{{ __('admin.product_media.after_save') }}</p>@endunless
@@ -196,6 +203,9 @@
     </form>
     @if ($editing)
         @include('admin.products._media', ['product' => $product, 'media' => $media])
+        @can('products.edit')
+            @include('admin.products._image-picker', ['product' => $product])
+        @endcan
     @endif
     @if ($editing && $product->price !== null)
         @php($variants = $product->variants->filter(fn ($v) => ! $v->trashed() && $v->is_active))

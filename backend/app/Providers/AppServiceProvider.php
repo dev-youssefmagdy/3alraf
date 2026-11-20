@@ -52,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Bundle::observe(\App\Observers\BundleEmbeddingObserver::class);
         \App\Models\Product::observe(\App\Observers\CatalogVisibilityObserver::class);
         \App\Models\ProductVariant::observe(\App\Observers\CatalogVisibilityObserver::class);
+        RateLimiter::for('image-picker', fn (Request $r) => Limit::perMinute(max(1, (int) config('image_picker.throttle_per_minute', 20)))
+            ->by('image-picker|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip())));
         RateLimiter::for('image-search', fn (Request $r) => Limit::perMinute(max(1, (int) config('image_search.throttle_per_minute', 30)))
             ->by('image-search|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip())));
         // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
