@@ -20,7 +20,7 @@
         @csrf
         <x-draft-notice :model="$product" />
         <div class="space-y-5" data-ptab-panel="general" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.general')" :cols="1">
+            <x-ui.form-section :title="__('admin.general')" :cols="1" stacked>
                 <div class="space-y-4">
                     <x-ui.lang-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$product->getTranslations('name')" />
                     <x-ui.lang-tabs name="description" type="textarea" :rows="6" :label="__('admin.fields.description')" :languages="$languages" :values="$product->getTranslations('description')" />
@@ -29,7 +29,7 @@
 
         </div>
         <div class="space-y-5" data-ptab-panel="pricing" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.pricing')" :cols="1">
+            <x-ui.form-section :title="__('admin.pricing')" :cols="1" stacked>
                 <p class="mb-3 text-xs text-panel-text-subtle">{{ __('admin.pricing_hint') }}</p>
                 <div data-price-group="product" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <x-ui.input name="price" type="number" step="0.01" min="0" :label="__('admin.fields.price')" :value="$product->price" />
@@ -44,7 +44,7 @@
             </x-ui.form-section>
 
             @if ($editing && ! empty($costHistory))
-                <x-ui.form-section :title="__('admin.cost_history.title')" :cols="1">
+                <x-ui.form-section :title="__('admin.cost_history.title')" :cols="1" stacked>
                     <p class="mb-3 text-xs text-panel-text-subtle">{{ __('admin.cost_history.hint') }}</p>
                     @if ($costHistory['items']->isEmpty())
                         <p class="text-sm text-panel-text-subtle">{{ __('admin.cost_history.empty') }}</p>
@@ -84,7 +84,7 @@
 
         </div>
         <div class="space-y-5" data-ptab-panel="general" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.gift')" :cols="1">
+            <x-ui.form-section :title="__('admin.gift')" :cols="1" stacked>
                 @php($giftR = (array) old('gift_recipients', $product->gift_recipients ?? []))
                 @php($giftO = (array) old('gift_occasions', $product->gift_occasions ?? []))
                 <div class="space-y-3">
@@ -102,7 +102,7 @@
 
         </div>
         <div class="space-y-5" data-ptab-panel="media" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.images')" :cols="1">
+            <x-ui.form-section :title="__('admin.images')" :cols="1" stacked>
                 @if ($editing)
                     @can('products.edit')
                         <x-slot:actions>
@@ -117,7 +117,7 @@
 
         </div>
         <div class="space-y-5" data-ptab-panel="variants" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.variants')" :cols="1" data-variant-section id="variant-section">
+            <x-ui.form-section :title="__('admin.variants')" :cols="1" stacked data-variant-section id="variant-section">
                 <div id="variant-generator" data-attributes='@json($attrJson)' data-used='@json($usedValueIds)' class="space-y-4">
                     <p class="text-sm text-panel-text-subtle">{{ __('admin.variant_generator_hint') }}</p>
                     @if ($attrJson->isEmpty())
@@ -163,7 +163,7 @@
 
         </div>
         <div class="space-y-5" data-ptab-panel="seo" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.seo')" :cols="1">
+            <x-ui.form-section :title="__('admin.seo')" :cols="1" stacked>
                 <div class="space-y-4">
                     <x-ui.lang-tabs name="meta_title" :label="__('admin.fields.meta_title')" :languages="$languages" :values="$product->getTranslations('meta_title')" />
                     <x-ui.lang-tabs name="meta_description" type="textarea" :label="__('admin.fields.meta_description')" :languages="$languages" :values="$product->getTranslations('meta_description')" />
@@ -173,7 +173,7 @@
         </div>
 
         <div class="space-y-5" data-ptab-panel="general" data-ptab-for="product">
-            <x-ui.form-section :title="__('admin.organization')" :cols="1">
+            <x-ui.form-section :title="__('admin.organization')" :cols="1" stacked>
                 <div class="space-y-4">
                     <x-ui.select name="type" :label="__('admin.fields.type')" :options="$types" :value="$product->type?->value" required />
                     <x-ui.select name="brand_id" :label="__('admin.brand')" :options="$brands" :value="$product->brand_id" :placeholder="__('admin.no_brand')" />
@@ -200,7 +200,7 @@
                 </div>
             </x-ui.form-section>
 
-            <x-ui.form-section :title="__('admin.identification')" :cols="1">
+            <x-ui.form-section :title="__('admin.identification')" :cols="1" stacked>
                 <div class="space-y-4">
                     <x-ui.input name="sku" :label="__('admin.fields.sku')" :value="\App\Services\ProductService::isDraftSku($product->sku) ? '' : $product->sku" required />
                     <div data-simple-section>
