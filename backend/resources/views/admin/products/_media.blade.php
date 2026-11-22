@@ -1,7 +1,7 @@
 {{-- Product edit: public gallery videos and the shared image + video order (P8). Re-rendered by ProductVideoController after every change. Outside the product <form>, so uploading never submits it. --}}
 @php($maxMb = \App\Services\ProductVideoService::maxMb())
-<div data-product-media data-order-url="{{ route('admin.products.media.order', $product) }}" data-max-bytes="{{ \App\Services\ProductVideoService::maxKb() * 1024 }}" data-too-large="{{ __('admin.product_media.too_large', ['mb' => $maxMb]) }}" class="mt-5 max-w-4xl">
-    <x-ui.form-section :title="__('admin.product_media.title')" :cols="1" class="mx-auto mt-5 max-w-5xl">
+<div data-product-media data-order-url="{{ route('admin.products.media.order', $product) }}" data-max-bytes="{{ \App\Services\ProductVideoService::maxKb() * 1024 }}" data-too-large="{{ __('admin.product_media.too_large', ['mb' => $maxMb]) }}" class="mx-auto mt-5 max-w-5xl">
+    <x-ui.form-section :title="__('admin.product_media.title')" :cols="1">
         <p class="mb-3 text-xs text-panel-text-subtle">{{ __('admin.product_media.hint') }}</p>
         @if ($media->isNotEmpty())
             <ol class="mb-4 flex flex-wrap gap-3" data-media-list>
