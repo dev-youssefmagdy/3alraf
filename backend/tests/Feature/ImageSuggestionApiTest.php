@@ -4,6 +4,7 @@
 // approve + apply puts them on the product and its variants, rollback restores the old images.
 
 use App\DTOs\Marketing\MarketingTokenData;
+use App\Models\Banner;
 use App\Models\MarketingSuggestion;
 use App\Models\Product;
 use App\Services\BarcodeService;
@@ -97,4 +98,58 @@ it('grants existing marketers every marketer permission and media:write tokens t
     expect($plain->fresh()->can('ai_products.approve'))->toBeTrue()->and($plain->fresh()->can('ai_suggestions.apply'))->toBeTrue()
         ->and($studio->fresh()->scopes)->toContain(SuggestionScopes::for('product_update'))
         ->and($readOnly->fresh()->scopes)->not->toContain(SuggestionScopes::for('product_update'));
+});
+
+// ---- banners: the image travels with the slider suggestion ----
+
+it('creates a slider suggestion that carries the banner image and applies it as an inactive banner with that image, then rolls back', function () {
+    $tok = app(MarketingTokenService::class)->create(new MarketingTokenData('b', ['marketing:read', SuggestionScopes::for('slider')], null, null))[1];
+    $send = fn (array $body) => $this->flushHeaders()->withHeaders(['Accept' => 'application/json', 'Authorization' => 'Bearer '.$tok])->post('/api/internal/marketing/banners/image-suggestion', $body);
+    $r = $send(['image' => ($this->img)('b.jpg', 800), 'title_ar' => 'شتاء دافي', 'title_en' => 'Warm winter', 'link_url' => '/ar/category/skin-care', 'sort_order' => 1])->assertCreated();
+    $s = MarketingSuggestion::findOrFail($r->json('data.id'));
+    expect($s->type->value)->toBe('slider')->and($s->payload['image']['url'])->toStartWith('upload://')->and($s->payload['image'])->toHaveKey('sha256')
+        ->and($s->payload['placement'])->toBe('home_hero')->and($r->json('warnings'))->toBe([])
+        ->and(collect($this->engine->compare($s->fresh()))->pluck('field')->all())->toContain('image');
+    expect(Banner::count())->toBe(0);
+
+    $this->engine->approve($s->fresh(), $this->owner);
+    $this->engine->apply($s->fresh(), $this->owner);
+    $b = Banner::firstOrFail();
+    expect($b->is_active)->toBeFalse()->and($b->images)->toHaveKey('ar')->and($b->imageUrl())->not->toBeNull();
+    Storage::disk(config('media.disk'))->assertExists($b->images['ar']);
+
+    $this->engine->rollback($s->fresh(), $this->owner);
+    expect(Banner::count())->toBe(0);
+});
+
+it('activates a new banner when the suggestion carries its image, and replaces the image of an existing banner with rollback', function () {
+    $tok = app(MarketingTokenService::class)->create(new MarketingTokenData('b', ['marketing:read', SuggestionScopes::for('slider')], null, null))[1];
+    $send = fn (array $body) => $this->flushHeaders()->withHeaders(['Accept' => 'application/json', 'Authorization' => 'Bearer '.$tok])->post('/api/internal/marketing/banners/image-suggestion', $body);
+    $s = MarketingSuggestion::findOrFail($send(['image' => ($this->img)('b.jpg', 800), 'title_ar' => 'بنر نشط'])->assertCreated()->json('data.id'));
+    $this->engine->approve($s->fresh(), $this->owner);
+    $this->engine->apply($s->fresh(), $this->owner, null, ['activate' => true]);
+    $b = Banner::firstOrFail();
+    expect($b->is_active)->toBeTrue()->and($b->imageUrl())->not->toBeNull();
+    $old = $b->images['ar'];
+
+    $s2 = MarketingSuggestion::findOrFail($send(['image' => ($this->img)('c.png', 900), 'title_ar' => 'بنر نشط', 'banner_id' => $b->id])->assertCreated()->json('data.id'));
+    $this->engine->approve($s2->fresh(), $this->owner);
+    $this->engine->apply($s2->fresh(), $this->owner);
+    $new = $b->fresh()->images['ar'];
+    expect($new)->not->toBe($old);
+    Storage::disk(config('media.disk'))->assertExists($old);   // replaced file kept for rollback
+    $this->engine->rollback($s2->fresh(), $this->owner);
+    expect($b->fresh()->images['ar'])->toBe($old);
+    Storage::disk(config('media.disk'))->assertMissing($new);
+});
+
+it('refuses a banner call without an image, with a bad file, an unknown banner or the wrong scope', function () {
+    $tok = fn (array $sc) => app(MarketingTokenService::class)->create(new MarketingTokenData('t'.count($sc), $sc, null, null))[1];
+    $send = fn (string $t, array $body) => $this->flushHeaders()->withHeaders(['Accept' => 'application/json', 'Authorization' => 'Bearer '.$t])->post('/api/internal/marketing/banners/image-suggestion', $body);
+    $ok = $tok(['marketing:read', SuggestionScopes::for('slider')]);
+    $send($ok, ['title_ar' => 'x'])->assertStatus(422);
+    $send($ok, ['image' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'), 'title_ar' => 'x'])->assertStatus(422);
+    $send($ok, ['image' => ($this->img)(), 'title_ar' => 'x', 'banner_id' => 9999])->assertNotFound();
+    $send($tok([SuggestionScopes::for('product_update')]), ['image' => ($this->img)(), 'title_ar' => 'x'])->assertForbidden();
+    expect(MarketingSuggestion::count())->toBe(0);
 });

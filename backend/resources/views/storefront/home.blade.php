@@ -17,7 +17,7 @@
     @endphp
     <h1 class="sr-only">{{ (app(\App\Services\SeoSettingsService::class)->current()['home_title'][app()->getLocale()] ?? '') ?: setting('name') }}</h1>
 
-    {{-- hero banners (19:477): CMS images fill the slide; autoplay with a pause toggle, off under reduced motion --}}
+    {{-- hero banners (19:477): CMS images keep their own proportions at every width (never cropped); autoplay with a pause toggle, off under reduced motion --}}
     @if ($hero->isNotEmpty())
         <section data-swiper="hero" class="group/hero relative" aria-roledescription="carousel" aria-label="{{ __('store.featured_offers') }}">
             <div class="swiper overflow-hidden rounded-3xl bg-brand-800 lg:rounded-[32px]">
@@ -25,7 +25,7 @@
                     @foreach ($hero as $b)
                         <div class="swiper-slide" role="group" aria-roledescription="slide" aria-label="{{ $loop->iteration }} / {{ $hero->count() }}">
                             <a href="{{ $b->safeLink() ?: '#' }}" class="block">
-                                @if ($b->imageUrl())<x-media-img :src="$b->imageUrl()" :alt="$b->title" width="1600" height="550" :eager="$loop->first" draggable="false" class="aspect-[16/9] w-full object-cover sm:aspect-[2/1] lg:aspect-[1280/440]" />
+                                @if ($b->imageUrl())<x-media-img :src="$b->imageUrl()" :alt="$b->title" width="1600" height="550" :eager="$loop->first" draggable="false" class="h-auto w-full" />
                                 @else<span class="grid aspect-[16/9] w-full place-items-center p-6 text-center font-display text-[32px]/[40px] font-extrabold text-white sm:aspect-[2/1] lg:aspect-[1280/440] lg:text-[56px]/[64px]">{{ $b->title }}</span>@endif
                             </a>
                         </div>

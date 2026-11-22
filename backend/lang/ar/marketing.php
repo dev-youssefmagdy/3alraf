@@ -284,6 +284,7 @@ return [
             'tag_ids' => 'أرقام الوسوم مفصولة بفاصلة',
             'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
             'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (أول صورة هي الرئيسية)',
+            'banner_image_hint' => '{"url": "https://example.com/banner.jpg"} (صورة البنر: رابط يُحمَّل مرة واحدة)',
             'variant_images_hint' => '[{"variant_id": 219, "url": "https://example.com/gold.jpg"}] (صورة واحدة لكل متغير، تستبدل صورته الحالية)',
             'variant_prices_hint' => '[{"variant_id": 12, "price": 1500, "sale_price": 1350}, {"variant_id": 13, "remove_sale_price": true}]',
             'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (تستبدل صورة القسم الحالية)',

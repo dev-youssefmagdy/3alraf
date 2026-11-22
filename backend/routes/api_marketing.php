@@ -50,6 +50,7 @@ Route::middleware('marketing.token:media:write')->post('media/upload', [MD::clas
 // Product / variant images uploaded in one call -> a `product_update` suggestion (pending review). Same scope as creating that suggestion type;
 // applying still happens only in the Suggestions Center (approve + apply, with rollback).
 Route::middleware('marketing.token:suggestions:write:product_update')->post('products/{id}/image-suggestion', [IS::class, 'store'])->whereNumber('id')->name('products.image-suggestion');
+Route::middleware('marketing.token:suggestions:write:slider')->post('banners/image-suggestion', [IS::class, 'banner'])->name('banners.image-suggestion');
 
 Route::middleware('marketing.token:embeddings:write')->post('image-embeddings/fill-missing', [IE::class, 'fillMissing'])->name('image-embeddings.fill-missing');
 
