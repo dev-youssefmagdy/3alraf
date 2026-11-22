@@ -7,10 +7,13 @@ use App\Enums\Marketing\MediaAssetKind as K;
 use App\Enums\Marketing\MediaAssetStatus as S;
 use App\Models\Marketer;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\SocialMediaAsset;
 use App\Models\SocialMediaAssetVersion;
 use App\Repositories\Contracts\SocialMediaAssetRepositoryInterface;
+use App\Services\ImageUploadService;
 use App\Services\Marketing\MarketingActionException as E;
+use App\Services\ProductService;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
@@ -34,7 +37,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SocialMediaLibraryService
 {
-    public function __construct(private SocialMediaAssetRepositoryInterface $repo) {}
+    public function __construct(private SocialMediaAssetRepositoryInterface $repo, private ProductService $products, private ImageUploadService $images) {}
 
     public static function disk(): Filesystem
     {
@@ -192,6 +195,71 @@ class SocialMediaLibraryService
         }
 
         return $this->repo->update($a, ['status' => $to, 'reviewed_by' => $by->id, 'reviewed_at' => now(), 'review_note' => $note ? mb_substr(trim($note), 0, 1000) : null]);
+    }
+
+    /**
+     * A person turns an approved library IMAGE into a real catalog image: `gallery` (added after the current images), `main` (added and made the
+     * first image) or `variant` (replaces that variant's image). This is the ONLY bridge from the private library to the public catalog: it needs
+     * ai_media.approve, it approves a pending item in the same step, and it is recorded on the item (generation_meta.used_on). Never called by the API / MCP.
+     *
+     * @return array{target:string,product_id:int,variant_id:?int,image_ids:int[]}
+     */
+    public function useOnProduct(SocialMediaAsset $a, Marketer $by, string $target, ?int $variantId = null): array
+    {
+        if (! $by->can('ai_media.approve')) {
+            throw E::make('media', 'forbidden', 403);
+        }
+        if (! in_array($target, ['gallery', 'main', 'variant'], true)) {
+            throw E::make('media', 'bad_target', 422);
+        }
+        if (! $a->isImage() || ! $a->hasFile() || $a->status === S::ARCHIVED) {
+            throw E::make('media', 'not_usable', 422);
+        }
+        $product = Product::query()->find($a->product_id);
+        if (! $product) {
+            throw E::make('media', 'product_missing', 404);
+        }
+        $variant = null;
+        if ($target === 'variant') {
+            $variant = $variantId ? ProductVariant::query()->where('product_id', $product->id)->find($variantId) : null;
+            if (! $variant) {
+                throw E::make('media', 'bad_variant', 422);
+            }
+        }
+        $disk = Storage::disk($a->disk ?: (string) config('media.private_disk'));
+        if (! $a->path || str_contains($a->path, '..') || ! $disk->exists($a->path)) {
+            throw E::make('media', 'not_usable', 422);
+        }
+        $tmp = tempnam(sys_get_temp_dir(), 'mlu');
+        file_put_contents($tmp, (string) $disk->get($a->path));
+        $file = new UploadedFile($tmp, Str::slug($product->slug ?: 'product-'.$product->id).'.'.(pathinfo((string) $a->path, PATHINFO_EXTENSION) ?: 'jpg'), $a->mime, null, true);
+
+        try {
+            $ids = DB::transaction(function () use ($a, $by, $product, $variant, $target, $file) {
+                if ($variant) {
+                    $old = $variant->images()->pluck('id')->all();
+                    $this->images->attach($variant, [$file], 'variants');
+                    $new = array_values(array_diff($variant->images()->pluck('id')->all(), $old));
+                    $this->images->removeByIds($variant, $old);   // the variant shows one image: the new one replaces the old
+                } else {
+                    $new = $this->products->addImages($product, [$file]);
+                    $target === 'main' && $new && $this->products->setMainImage($product, (int) $new[0]);
+                }
+                if (! in_array($a->status, [S::APPROVED], true)) {
+                    $this->decide($a, $by, S::APPROVED, null);
+                    $a->refresh();
+                }
+                $meta = (array) $a->generation_meta;
+                $meta['used_on'][] = ['target' => $target, 'variant_id' => $variant?->id, 'image_ids' => $new, 'by' => $by->id, 'at' => now()->toIso8601String()];
+                $this->repo->update($a, ['generation_meta' => $meta]);
+
+                return $new;
+            });
+        } finally {
+            @unlink($tmp);
+        }
+
+        return ['target' => $target, 'product_id' => $product->id, 'variant_id' => $variant?->id, 'image_ids' => $ids];
     }
 
     public function archive(SocialMediaAsset $a): SocialMediaAsset
