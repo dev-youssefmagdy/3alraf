@@ -89,6 +89,7 @@ Route::prefix('marketer')->middleware(['admin.locale:marketer', 'auth:marketer',
             Route::post('submit', 'submit')->middleware('can:ai_media.edit')->name('submit');
             Route::post('approve', 'approve')->middleware('can:ai_media.approve')->name('approve');
             Route::post('reject', 'reject')->middleware('can:ai_media.approve')->name('reject');
+            Route::post('use-on-product', 'useOnProduct')->middleware(['can:ai_media.approve', 'throttle:30,1'])->name('use-on-product');
             Route::post('archive', 'archive')->middleware('can:ai_media.edit')->name('archive');
             Route::delete('/', 'destroy')->middleware('can:ai_media.delete')->name('destroy');
         });

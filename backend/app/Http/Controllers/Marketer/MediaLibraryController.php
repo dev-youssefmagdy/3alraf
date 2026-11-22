@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Marketer\MediaDecisionRequest;
+use App\Http\Requests\Marketer\MediaUseOnProductRequest;
 use App\Http\Requests\Marketer\SocialMediaAssetRequest;
 use App\Models\Product;
 use App\Models\SocialMediaAsset;
@@ -70,6 +71,15 @@ class MediaLibraryController extends Controller
     public function approve(MediaDecisionRequest $r, int $id): JsonResponse
     {
         return $this->run(fn () => $this->media->approve($this->find($id), $r->user('marketer'), $r->input('note')) ? $this->ok(__('marketing.media.done.approved')) : null);
+    }
+
+    public function useOnProduct(MediaUseOnProductRequest $r, int $id): JsonResponse
+    {
+        return $this->run(function () use ($r, $id) {
+            $res = $this->media->useOnProduct($this->find($id), $r->user('marketer'), $r->string('target')->toString(), $r->filled('variant_id') ? $r->integer('variant_id') : null);
+
+            return $this->ok(__('marketing.media.done.used_'.$res['target']), url()->previous(), $res);
+        });
     }
 
     public function reject(MediaDecisionRequest $r, int $id): JsonResponse
