@@ -43,6 +43,10 @@ Route::middleware('marketing.token:meta:read')->prefix('meta')->name('meta.')->g
 
 // Image-search index (IMAGE_SEARCH_PLAN.md §3.4): the only non-suggestion write. It queues MISSING embeddings of the internal index, never
 // recomputes existing ones and changes no store content (MCP.md "Image embeddings"). Separate opt-in scope embeddings:write.
+// Local AI studio -> live (AI Casting Studio): one file per call into the PRIVATE library, always `pending_review`, idempotent by client_ref. Opt-in scope media:write;
+// approving / publishing stays a marketer-panel action. Files are re-validated by SocialMediaLibraryService (real MIME, dimensions, size limits).
+Route::middleware('marketing.token:media:write')->post('media/upload', [MD::class, 'upload'])->name('media.upload');
+
 Route::middleware('marketing.token:embeddings:write')->post('image-embeddings/fill-missing', [IE::class, 'fillMissing'])->name('image-embeddings.fill-missing');
 
 Route::middleware('marketing.token:marketing:read')->group(function () {

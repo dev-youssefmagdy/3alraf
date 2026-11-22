@@ -192,3 +192,52 @@ Route::prefix('marketer')->middleware(['admin.locale:marketer', 'auth:marketer',
 // Short-lived signed preview of a private library file (P6): for the MCP server / API consumers (URL from GET /api/internal/marketing/media/*).
 // No session: the signature (+ expiry, + version) is the authorisation. Responses are private, no-store, noindex.
 Route::get('marketer/media-preview/{id}', [MediaLibraryController::class, 'signedPreview'])->whereNumber('id')->middleware(['signed', 'throttle:60,1'])->name('marketing-media.preview');
+
+// AI Casting Studio (virtual models, casting sessions, ad workflow). Each route has its own ai_casting.* permission; files are streamed from the private disk only.
+Route::prefix('marketer/casting')->middleware(['admin.locale:marketer', 'auth:marketer', 'can:marketing.panel'])->name('marketer.casting.')->group(function () {
+    $c = \App\Http\Controllers\Marketer\CastingController::class;
+    $m = \App\Http\Controllers\Marketer\CastingModelController::class;
+    $s = \App\Http\Controllers\Marketer\CastingStudioController::class;
+    Route::get('/', [$c, 'index'])->middleware('can:ai_casting.view')->name('index');
+    Route::post('sessions', [$c, 'store'])->middleware(['can:ai_casting.create', 'throttle:10,1'])->name('sessions.store');
+    Route::get('sessions/{id}', [$c, 'show'])->whereNumber('id')->middleware('can:ai_casting.view')->name('show');
+    Route::get('sessions/{id}/status', [$c, 'status'])->whereNumber('id')->middleware('can:ai_casting.view')->name('status');
+    Route::prefix('candidates/{id}')->whereNumber('id')->group(function () use ($c) {
+        Route::get('image', [$c, 'image'])->middleware('can:ai_casting.view')->name('candidates.image');
+        Route::post('regenerate', [$c, 'regenerate'])->middleware(['can:ai_casting.edit', 'throttle:20,1'])->name('candidates.regenerate');
+        Route::put('/', [$c, 'update'])->middleware('can:ai_casting.edit')->name('candidates.update');
+        Route::post('reject', [$c, 'reject'])->middleware('can:ai_casting.edit')->name('candidates.reject');
+        Route::post('approve', [$c, 'approve'])->middleware('can:ai_casting.approve')->name('candidates.approve');
+    });
+    Route::prefix('models')->name('models.')->group(function () use ($m) {
+        Route::get('/', [$m, 'index'])->middleware('can:ai_casting.view')->name('index');
+        Route::get('create', [$m, 'create'])->middleware('can:ai_casting.create')->name('create');
+        Route::post('/', [$m, 'store'])->middleware('can:ai_casting.create')->name('store');
+        Route::prefix('{id}')->whereNumber('id')->group(function () use ($m) {
+            Route::get('/', [$m, 'show'])->middleware('can:ai_casting.view')->name('show');
+            Route::put('/', [$m, 'update'])->middleware('can:ai_casting.edit')->name('update');
+            Route::post('duplicate', [$m, 'duplicate'])->middleware('can:ai_casting.create')->name('duplicate');
+            Route::post('archive', [$m, 'archive'])->middleware('can:ai_casting.delete')->name('archive');
+            Route::post('restore', [$m, 'restore'])->middleware('can:ai_casting.delete')->name('restore');
+            Route::post('approve', [$m, 'approve'])->middleware('can:ai_casting.approve')->name('approve');
+            Route::post('references', [$m, 'addReference'])->middleware(['can:ai_casting.edit', 'throttle:20,1'])->name('references.store');
+            Route::get('references/{rid}/image', [$m, 'referenceImage'])->whereNumber('rid')->middleware('can:ai_casting.view')->name('references.image');
+            Route::delete('references/{rid}', [$m, 'deleteReference'])->whereNumber('rid')->middleware('can:ai_casting.edit')->name('references.destroy');
+        });
+    });
+    $v = \App\Http\Controllers\Marketer\CastingVideoController::class;
+    Route::get('video', [$v, 'index'])->middleware('can:ai_casting.view')->name('video');
+    Route::post('video', [$v, 'store'])->middleware(['can:ai_casting.create', 'throttle:10,1'])->name('video.store');
+    Route::post('video/prompt', [$v, 'prompt'])->middleware('can:ai_casting.view')->name('video.prompt');
+    Route::post('generations/{id}/retry', [$v, 'retry'])->whereNumber('id')->middleware(['can:ai_casting.create', 'throttle:10,1'])->name('generations.retry');
+    Route::get('generations/{id}/source', [$v, 'source'])->whereNumber('id')->middleware('can:ai_casting.view')->name('generations.source');
+    Route::get('studio', [$s, 'index'])->middleware('can:ai_casting.view')->name('studio');
+    Route::post('studio', [$s, 'store'])->middleware(['can:ai_casting.create', 'throttle:20,1'])->name('studio.store');
+    Route::prefix('generations/{id}')->whereNumber('id')->group(function () use ($s) {
+        Route::get('status', [$s, 'status'])->middleware('can:ai_casting.view')->name('generations.status');
+        Route::get('image', [$s, 'image'])->middleware('can:ai_casting.view')->name('generations.image');
+        Route::post('video', [$s, 'video'])->middleware(['can:ai_casting.create', 'throttle:10,1'])->name('generations.video');
+        Route::post('push-live', [$s, 'pushLive'])->middleware(['can:ai_casting.approve', 'can:ai_media.upload', 'throttle:10,1'])->name('generations.push-live');
+        Route::post('library', [$s, 'toLibrary'])->middleware(['can:ai_casting.approve', 'can:ai_media.upload'])->name('generations.library');
+    });
+});

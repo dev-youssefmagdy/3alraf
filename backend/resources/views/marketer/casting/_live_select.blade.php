@@ -1,0 +1,2 @@
+{{-- Optional: a product that exists on 3alraf.com (imported snapshot via `php artisan casting:live-import`). Chosen instead of the local product. --}}
+<x-ui.select name="live_product_id" :label="__('casting.live.label')" :options="$liveProducts->mapWithKeys(fn ($p) => [$p->id => $p->displayName().' — '.$p->sku.' (#'.$p->live_id.')'])->all()" searchable :placeholder="__('casting.live.none')" :help="$liveProducts->isEmpty() ? __('casting.live.empty_hint') : null" />

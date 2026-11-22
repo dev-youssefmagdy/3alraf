@@ -42,6 +42,13 @@ final class MarketerNav
                 ['marketer.media.index', 'nav.media_library', 'ai_media.view', null, 'marketer.media.*'],
                 ['marketer.meta-ads.index', 'nav.meta_ads', 'meta_ads.view', null, 'marketer.meta-ads.*'],
             ]],
+            // AI Casting Studio
+            ['key' => 'casting', 'icon' => 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', 'items' => [
+                ['marketer.casting.index', 'nav.casting_sessions', 'ai_casting.view', null, ['marketer.casting.index', 'marketer.casting.show']],
+                ['marketer.casting.models.index', 'nav.casting_models', 'ai_casting.view', null, 'marketer.casting.models.*'],
+                ['marketer.casting.studio', 'nav.casting_studio', 'ai_casting.view', null, 'marketer.casting.studio'],
+                ['marketer.casting.video', 'nav.casting_video', 'ai_casting.view', null, 'marketer.casting.video'],
+            ]],
             ['key' => 'gift_finder', 'icon' => 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7a3 3 0 100-4c-2 0-3 2-3 4M12 7a3 3 0 110-4c2 0 3 2 3 4', 'items' => [
                 ['marketer.gift-finder.index', 'nav.gift_finder', 'gift_finder.view', null, 'marketer.gift-finder.index'],
                 ['marketer.gift-finder.tags', 'nav.gift_tags', 'gift_finder.view', null, 'marketer.gift-finder.tags*'],

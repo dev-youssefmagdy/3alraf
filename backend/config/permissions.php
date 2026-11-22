@@ -91,6 +91,7 @@ return [
         'marketing' => ['view', 'analytics', 'tokens.manage', 'audit.view'],          // panel dashboard, analytics, API tokens, API request log
         'ai_suggestions' => ['view', 'create', 'edit', 'approve', 'reject', 'apply', 'archive'], // Suggestions Center (approve/apply = dashboard only)
         'ai_media' => ['view', 'upload', 'edit', 'delete', 'approve'],                 // private social-media library (approve = library item review)
+        'ai_casting' => ['view', 'create', 'edit', 'delete', 'approve'],               // AI Casting Studio: models, sessions, ad generations (approve = official model / library hand-off)
         'ai_products' => ['approve'],                                                  // approve / apply NEW product suggestions (creates catalog data)
         'ai_seo' => ['approve'],
         'ai_blog' => ['approve'],

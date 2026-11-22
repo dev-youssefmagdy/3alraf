@@ -25,6 +25,7 @@ return [
         'suggestions:write:product_update' => ['enabled' => true],   // existing product: catalog wording, brand, categories, status, prices, images (opt-in on existing tokens)
         'meta:read' => ['enabled' => true],         // P6: Meta ad accounts / campaigns / ad sets / ads / insights (cached reads) + campaign drafts (read)
         'meta:draft' => ['enabled' => true],        // P6: create / edit own Meta campaign drafts, submit for approval (never approve / publish)
+        'media:write' => ['enabled' => true],       // upload ONE generated image / video into a product's PRIVATE social library as pending review (never approve / publish); opt-in
         'embeddings:write' => ['enabled' => true],  // queue MISSING image-search embeddings (internal index only; never recomputes, no store content)
     ],
 
