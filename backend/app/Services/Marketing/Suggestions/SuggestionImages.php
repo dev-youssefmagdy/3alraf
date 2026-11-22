@@ -133,11 +133,11 @@ class SuggestionImages
         return new UploadedFile($tmp, $name.'.'.(self::EXT[$image['mime']] ?? 'img'), $image['mime'], null, true);
     }
 
-    /** Remove staged files (and URL index entries) older than $days that no open new_product / category / product_update suggestion references. @return int files removed */
+    /** Remove staged files (and URL index entries) older than $days that no open new_product / category / product_update / slider suggestion references. @return int files removed */
     public function prune(int $days = 7): int
     {
         $keep = [];
-        MarketingSuggestion::query()->whereIn('type', [SuggestionTypeKey::NEW_PRODUCT->value, SuggestionTypeKey::CATEGORY->value, SuggestionTypeKey::PRODUCT_UPDATE->value])
+        MarketingSuggestion::query()->whereIn('type', [SuggestionTypeKey::NEW_PRODUCT->value, SuggestionTypeKey::CATEGORY->value, SuggestionTypeKey::PRODUCT_UPDATE->value, SuggestionTypeKey::SLIDER->value])
             ->whereIn('status', array_map(fn ($s) => $s->value, self::OPEN))
             ->select(['id', 'payload'])->chunkById(200, function ($rows) use (&$keep) {
                 foreach ($rows as $s) {
