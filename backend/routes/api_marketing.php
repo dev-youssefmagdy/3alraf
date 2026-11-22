@@ -1,14 +1,15 @@
 <?php
 
+use App\Enums\Marketing\SuggestionTypeKey;
 use App\Http\Controllers\Api\Marketing\AnalyticsController as A;
 use App\Http\Controllers\Api\Marketing\CatalogController as C;
 use App\Http\Controllers\Api\Marketing\ContentController as T;
 use App\Http\Controllers\Api\Marketing\ImageEmbeddingController as IE;
+use App\Http\Controllers\Api\Marketing\ImageSuggestionController as IS;
 use App\Http\Controllers\Api\Marketing\MediaController as MD;
 use App\Http\Controllers\Api\Marketing\MerchandisingController as M;
 use App\Http\Controllers\Api\Marketing\MetaController as MT;
 use App\Http\Controllers\Api\Marketing\SuggestionController as S;
-use App\Enums\Marketing\SuggestionTypeKey;
 use App\Support\Marketing\MarketingResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,9 @@ Route::middleware('marketing.token:meta:read')->prefix('meta')->name('meta.')->g
 // Local AI studio -> live (AI Casting Studio): one file per call into the PRIVATE library, always `pending_review`, idempotent by client_ref. Opt-in scope media:write;
 // approving / publishing stays a marketer-panel action. Files are re-validated by SocialMediaLibraryService (real MIME, dimensions, size limits).
 Route::middleware('marketing.token:media:write')->post('media/upload', [MD::class, 'upload'])->name('media.upload');
+// Product / variant images uploaded in one call -> a `product_update` suggestion (pending review). Same scope as creating that suggestion type;
+// applying still happens only in the Suggestions Center (approve + apply, with rollback).
+Route::middleware('marketing.token:suggestions:write:product_update')->post('products/{id}/image-suggestion', [IS::class, 'store'])->whereNumber('id')->name('products.image-suggestion');
 
 Route::middleware('marketing.token:embeddings:write')->post('image-embeddings/fill-missing', [IE::class, 'fillMissing'])->name('image-embeddings.fill-missing');
 

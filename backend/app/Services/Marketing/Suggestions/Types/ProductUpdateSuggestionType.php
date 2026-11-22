@@ -21,8 +21,9 @@ use Illuminate\Support\Str;
  * - core: catalog name / description (per locale; other locales kept), brand, categories (the whole set), status (active | hidden),
  * - pricing: price, sale_price (or remove_sale_price), and price / sale_price of existing variants. Cost is NOT editable: the listing cost
  *   is the weighted-average purchase cost (docs/CALCULATIONS.md), so the margin check uses the current cost. Selling below cost is refused.
- * - images: add by URL (downloaded once at create / edit time, SuggestionImages, SSRF-safe, sha256 in the payload), remove by image id,
- *   choose the main image (an existing id or the index of an added one).
+ * - images: add by URL (downloaded once at create / edit time, SuggestionImages, SSRF-safe, sha256 in the payload) or by upload://{sha256}
+ *   (a file uploaded straight to the store, POST products/{id}/image-suggestion), remove by image id, choose the main image (an existing id or
+ *   the index of an added one), and replace the image of existing variants (variant_images: one image per variant, same staging).
  * Applied through ProductService (updateListing / addImages / detachImages / setMainImage), never raw writes. Removed images keep their
  * files, so rollback restores every touched value, re-attaches removed images and deletes the ones this suggestion added.
  * Unlike the `product` type (storefront wording overlay, tags, pins), this changes the catalog itself: approving needs ai_products.approve.
@@ -73,13 +74,19 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             'payload.variants.*.remove_sale_price' => ['nullable', 'boolean'],
             'payload.images_add' => ['nullable', 'array', 'max:'.self::MAX_IMAGES],
             'payload.images_add.*' => ['array'],
-            'payload.images_add.*.url' => ['required', 'string', 'max:2048', 'regex:#^https?://#i'],
+            'payload.images_add.*.url' => ['required', 'string', 'max:2048', 'regex:#^(https?|upload)://#i'],
             // filled by normalize() (staged download); accepted back unchanged when a reviewer edits the payload
             'payload.images_add.*.sha256' => ['nullable', 'string'], 'payload.images_add.*.mime' => ['nullable', 'string'], 'payload.images_add.*.width' => ['nullable', 'integer'],
             'payload.images_add.*.height' => ['nullable', 'integer'], 'payload.images_add.*.bytes' => ['nullable', 'integer'], 'payload.images_add.*.error' => ['nullable', 'string'],
             'payload.images_remove' => ['nullable', 'array', 'max:50'], 'payload.images_remove.*' => ['integer', 'min:1'],
             'payload.main_image_id' => ['nullable', 'integer', 'min:1'],
             'payload.main_image_index' => ['nullable', 'integer', 'min:0', 'max:'.(self::MAX_IMAGES - 1)],
+            'payload.variant_images' => ['nullable', 'array', 'max:'.self::MAX_VARIANTS],
+            'payload.variant_images.*' => ['array'],
+            'payload.variant_images.*.variant_id' => ['required', 'integer', 'min:1'],
+            'payload.variant_images.*.url' => ['required', 'string', 'max:2048', 'regex:#^(https?|upload)://#i'],
+            'payload.variant_images.*.sha256' => ['nullable', 'string'], 'payload.variant_images.*.mime' => ['nullable', 'string'], 'payload.variant_images.*.width' => ['nullable', 'integer'],
+            'payload.variant_images.*.height' => ['nullable', 'integer'], 'payload.variant_images.*.bytes' => ['nullable', 'integer'], 'payload.variant_images.*.error' => ['nullable', 'string'],
         ];
     }
 
@@ -97,6 +104,16 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             }
         }
         ksort($variants);
+
+        $variantImages = [];
+        foreach ((array) ($payload['variant_images'] ?? []) as $v) {
+            $id = $int($v['variant_id'] ?? null);
+            $url = trim((string) ($v['url'] ?? ''));
+            if ($id && $url !== '') {
+                $variantImages[$id] = ['variant_id' => $id] + $this->images->stage($url);   // one image per variant (last wins)
+            }
+        }
+        ksort($variantImages);
 
         $images = [];
         foreach ((array) ($payload['images_add'] ?? []) as $img) {
@@ -118,6 +135,7 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             'images_remove' => $this->intList($payload['images_remove'] ?? []),
             'main_image_id' => $int($payload['main_image_id'] ?? null),
             'main_image_index' => $int($payload['main_image_index'] ?? null),
+            'variant_images' => array_values($variantImages),
         ], fn ($v) => $v !== null && $v !== []);
         ksort($out);
 
@@ -206,6 +224,16 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
         } elseif (isset($payload['main_image_index']) && $payload['main_image_index'] >= count($added)) {
             $errors['payload.main_image_index'] = __('marketing.suggestions.errors.variant_image_index', ['n' => count($added)]);
         }
+        $liveIds = $product ? $product->variants()->pluck('id')->map(fn ($v) => (int) $v)->all() : [];
+        foreach ((array) ($payload['variant_images'] ?? []) as $n => $img) {
+            if ($product && ! in_array((int) $img['variant_id'], $liveIds, true)) {
+                $errors["payload.variant_images.$n.variant_id"] = __('marketing.suggestions.errors.variant_not_of_product', ['id' => $img['variant_id']]);
+            } elseif (isset($img['error'])) {
+                $errors["payload.variant_images.$n.url"] = __('marketing.suggestions.errors.image_fetch', ['url' => Str::limit((string) $img['url'], 80), 'reason' => __('marketing.suggestions.image_errors.'.$img['error'])]);
+            } elseif (! $this->images->exists($img)) {
+                $errors["payload.variant_images.$n.url"] = __('marketing.suggestions.errors.image_missing');
+            }
+        }
         if ($product && ($added || $remove) && count(array_diff($have, $remove)) + count($added) === 0) {
             $warnings[] = __('marketing.suggestions.warnings.product_no_images_left');
         }
@@ -237,6 +265,10 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
         }
         if ($this->touchesImages($payload)) {
             $snap['images'] = $target->images()->pluck('id')->map(fn ($v) => (int) $v)->all();
+        }
+        foreach ((array) ($payload['variant_images'] ?? []) as $img) {
+            $v = $target->variants()->find($img['variant_id']);
+            $snap['variant_images'][$img['variant_id']] = $v ? $v->images()->pluck('id')->map(fn ($x) => (int) $x)->all() : null;
         }
 
         return $snap;
@@ -292,6 +324,16 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             }
             $rows[] = $this->row('images', $current ?: null, array_map(fn ($i) => array_diff_key($i, ['id' => 1]), $proposed) ?: null) + ['images' => true];
         }
+        if (! empty($p['variant_images']) && $product) {
+            $live = $product->variants()->with(['values', 'images'])->get()->keyBy('id');
+            foreach ($p['variant_images'] as $img) {
+                $v = $live->get($img['variant_id']);
+                $cur = $v ? $v->images->map(fn ($i) => ['src' => $i->thumb_url, 'url' => $i->url, 'size' => '#'.$i->id])->values()->all() : [];
+                $new = isset($img['sha256']) ? [['src' => route('marketer.suggestions.image', ['sha' => $img['sha256']]), 'url' => $img['url'], 'size' => ($img['width'] ?? '?').'×'.($img['height'] ?? '?')]]
+                    : [['src' => null, 'url' => $img['url'] ?? '', 'size' => __('marketing.suggestions.image_errors.'.($img['error'] ?? 'missing'))]];
+                $rows[] = $this->row('variant_images.'.$img['variant_id'], $cur ?: null, $new, $this->label('variant_image').': '.($v ? $v->label().' ('.$v->sku.')' : '#'.$img['variant_id'])) + ['images' => true];
+            }
+        }
 
         return $rows;
     }
@@ -337,6 +379,13 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             $main = $p['main_image_id'] ?? (isset($p['main_image_index']) ? ($images['added'][$p['main_image_index']] ?? null) : null);
             $main && $this->products->setMainImage($target, (int) $main);
         }
+        if (! empty($p['variant_images'])) {
+            $slug = $target->slug ?: 'product-'.$target->id;
+            foreach ($p['variant_images'] as $img) {
+                $variant = $target->variants()->findOrFail($img['variant_id']);
+                $images['variants'][$variant->id] = $this->products->replaceVariantImage($variant, $this->images->toUploadedFile($img, $slug.'-'.$variant->id));
+            }
+        }
 
         $after = $this->state($target->refresh(), $p);
         $images && $after['image_changes'] = $images;
@@ -365,6 +414,11 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
         if ($added = (array) ($changes['added'] ?? [])) {
             $this->products->removeImages($product, $added);
         }
+        foreach ((array) ($changes['variants'] ?? []) as $variantId => $vc) {
+            if ($variant = $product->variants()->find($variantId)) {
+                $this->products->restoreVariantImage($variant, (array) ($vc['added'] ?? []), (array) ($vc['removed'] ?? []));
+            }
+        }
         if ($removed = (array) ($changes['removed'] ?? [])) {
             $this->products->restoreImages($product, $removed);
         }
@@ -391,6 +445,7 @@ class ProductUpdateSuggestionType extends AbstractSuggestionType
             $this->field('payload.images_remove', 'id-list'),
             $this->field('payload.main_image_id', 'number'),
             $this->field('payload.main_image_index', 'number'),
+            $this->field('payload.variant_images', 'json', null, ['hint' => 'variant_images_hint']),
         ];
     }
 

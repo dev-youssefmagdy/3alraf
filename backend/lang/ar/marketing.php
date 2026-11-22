@@ -285,6 +285,7 @@ return [
             'tag_ids' => 'أرقام الوسوم مفصولة بفاصلة',
             'gift_hint' => '{"suitable": true, "recipients": ["partner"], "occasions": ["birthday"]}',
             'images_hint' => '[{"url": "https://example.com/watch-front.jpg"}] (أول صورة هي الرئيسية)',
+            'variant_images_hint' => '[{"variant_id": 219, "url": "https://example.com/gold.jpg"}] (صورة واحدة لكل متغير، تستبدل صورته الحالية)',
             'variant_prices_hint' => '[{"variant_id": 12, "price": 1500, "sale_price": 1350}, {"variant_id": 13, "remove_sale_price": true}]',
             'category_image_hint' => '{"url": "https://example.com/category.jpg"}  (تستبدل صورة القسم الحالية)',
             'variants_hint' => '[{"values": [12, 30], "sku": "W-1-BLK", "price": 1500, "image": 0}]',
@@ -327,6 +328,7 @@ return [
             'new_attributes' => 'خصائص جديدة', 'new_values' => 'قيم جديدة لخصائص موجودة', 'new' => 'جديدة', 'attribute_id' => 'الخاصية',
             'status' => 'الحالة في المتجر', 'remove_sale_price' => 'إلغاء سعر الخصم', 'images_add' => 'إضافة صور', 'images_remove' => 'حذف صور (الأرقام)',
             'main_image_id' => 'الصورة الرئيسية (رقم صورة موجودة)', 'main_image_index' => 'الصورة الرئيسية (ترتيب صورة مضافة، من 0)',
+            'variant_images' => 'صور المتغيرات', 'variant_image' => 'صورة المتغير',
         ],
         'errors' => [
             'illegal_transition' => 'لا يمكن الانتقال من حالة ":from" إلى ":to".',
@@ -436,10 +438,8 @@ return [
         'btn' => [
             'upload' => 'رفع', 'save' => 'حفظ البيانات', 'submit' => 'إرسال للمراجعة', 'approve' => 'اعتماد', 'reject' => 'رفض', 'archive' => 'أرشفة', 'delete' => 'حذف',
             'download' => 'تنزيل', 'preview' => 'معاينة', 'new_version' => 'رفع إصدار جديد', 'open' => 'فتح', 'back' => 'المكتبة', 'library' => 'فتح المكتبة الكاملة',
-            'add' => 'إضافة محتوى', 'meta_draft' => 'مسودة حملة ميتا', 'use_on_product' => 'استخدام على المنتج',
+            'add' => 'إضافة محتوى', 'meta_draft' => 'مسودة حملة ميتا',
         ],
-        'use' => ['target' => 'الوجهة', 'gallery' => 'إضافة لمعرض صور المنتج', 'main' => 'جعلها الصورة الرئيسية للمنتج', 'variant' => 'صورة متغير (لون) محدد', 'pick_variant' => 'اختر المتغير',
-            'hint' => 'يعتمد الملف إن لم يكن معتمداً، ثم ينسخه كصورة فعلية على المتجر. صورة المتغير تستبدل صورته الحالية.'],
         'upload_title' => 'إضافة محتوى للمكتبة',
         'upload_hint' => 'صور JPG/PNG/WebP حتى :img ميجا، فيديو MP4/WebM/MOV حتى :vid ميجا. بدون ملف = فكرة منشور / سيناريو.',
         'new_version_title' => 'إصدار جديد للملف',
@@ -456,11 +456,10 @@ return [
             'archive' => 'أرشفة هذا العنصر؟',
             'approve' => 'اعتماد هذا المحتوى للاستخدام التسويقي؟',
             'reject' => 'رفض هذا المحتوى؟',
-            'use_on_product' => 'سيُنشر هذا الملف فوراً على المتجر (يظهر للعملاء). متابعة؟',
         ],
         'done' => [
             'created' => 'تمت الإضافة للمكتبة.', 'saved' => 'تم حفظ البيانات.', 'version' => 'تم رفع الإصدار :v.', 'submitted' => 'أُرسل للمراجعة.',
-            'approved' => 'تم الاعتماد.', 'rejected' => 'تم الرفض.', 'used_gallery' => 'أُضيفت الصورة لمعرض المنتج.', 'used_main' => 'أصبحت الصورة الرئيسية للمنتج.', 'used_variant' => 'تم تعيين الصورة للمتغير.', 'archived' => 'تمت الأرشفة.', 'deleted' => 'تم الحذف.',
+            'approved' => 'تم الاعتماد.', 'rejected' => 'تم الرفض.', 'archived' => 'تمت الأرشفة.', 'deleted' => 'تم الحذف.',
         ],
         'errors' => [
             'file_required' => 'اختر ملف صورة أو فيديو (أو اختر النوع منشور / فكرة).',
@@ -472,7 +471,6 @@ return [
             'bad_video' => 'الملف ليس فيديو MP4 / WebM / MOV صالحاً.',
             'unsupported' => 'نوع ملف غير مسموح (صور JPG/PNG/WebP أو فيديو MP4/WebM/MOV فقط).',
             'illegal_transition' => 'لا يمكن تنفيذ هذا الإجراء في الحالة الحالية.',
-            'bad_target' => 'اختر وجهة صحيحة.', 'not_usable' => 'هذا العنصر ليس صورة صالحة للاستخدام على المنتج.', 'product_missing' => 'المنتج غير موجود.', 'bad_variant' => 'اختر متغيراً تابعاً لهذا المنتج.',
             'forbidden' => 'ليست لديك صلاحية اعتماد محتوى المكتبة.',
             'archived' => 'العنصر مؤرشف ولا يمكن تعديله.',
         ],

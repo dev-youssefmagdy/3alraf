@@ -131,46 +131,6 @@
             </x-ui.card>
         @endif
 
-        @if ($canApprove && $a->isImage() && $a->hasFile() && $st !== $S::ARCHIVED && $a->product)
-            @php $variants = $a->product->variants()->with('values')->get(); @endphp
-            <x-ui.card :title="$t('btn.use_on_product')">
-                <div class="flex flex-wrap items-end gap-3" data-use-on-product data-url="{{ route('marketer.media.use-on-product', $a->id) }}" data-confirm="{{ $t('confirm.use_on_product') }}">
-                    <label class="text-sm">
-                        <span class="mb-1 block text-panel-text-muted">{{ $t('use.target') }}</span>
-                        <select class="form-select" data-use-target>
-                            <option value="gallery">{{ $t('use.gallery') }}</option>
-                            <option value="main">{{ $t('use.main') }}</option>
-                            @if ($variants->isNotEmpty())<option value="variant">{{ $t('use.variant') }}</option>@endif
-                        </select>
-                    </label>
-                    @if ($variants->isNotEmpty())
-                        <label class="hidden text-sm" data-use-variant-wrap>
-                            <span class="mb-1 block text-panel-text-muted">{{ $t('use.pick_variant') }}</span>
-                            <select class="form-select" data-use-variant>
-                                @foreach ($variants as $v)<option value="{{ $v->id }}">{{ $v->label() }} ({{ $v->sku }})</option>@endforeach
-                            </select>
-                        </label>
-                    @endif
-                    <button type="button" class="btn btn-primary btn-md" data-use-go>{{ $t('btn.use_on_product') }}</button>
-                </div>
-                <p class="mt-2 text-xs text-panel-text-muted">{{ $t('use.hint') }}</p>
-            </x-ui.card>
-            <script>
-                (function () {
-                    const box = document.querySelector('[data-use-on-product]'); if (!box) return;
-                    const target = box.querySelector('[data-use-target]'), wrap = box.querySelector('[data-use-variant-wrap]'), variant = box.querySelector('[data-use-variant]'), go = box.querySelector('[data-use-go]');
-                    target.addEventListener('change', () => wrap && wrap.classList.toggle('hidden', target.value !== 'variant'));
-                    go.addEventListener('click', () => {
-                        if (!window.confirm(box.dataset.confirm)) return;
-                        go.disabled = true;
-                        $.ajax({ url: box.dataset.url, method: 'POST', data: { target: target.value, variant_id: target.value === 'variant' && variant ? variant.value : '' } })
-                            .done((res) => { if (res.message) toastr.success(res.message); setTimeout(() => location.reload(), 600); })
-                            .fail((xhr) => { const e = xhr.responseJSON?.errors; toastr.error(e ? Object.values(e)[0][0] : xhr.responseJSON?.message || 'Error'); go.disabled = false; });
-                    });
-                })();
-            </script>
-        @endif
-
         <x-ui.card :title="$t('versions')">
             <div data-versions>
                 @if ($a->versions->isEmpty())

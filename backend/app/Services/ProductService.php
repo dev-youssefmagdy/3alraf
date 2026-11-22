@@ -10,8 +10,9 @@ use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Repositories\Contracts\ProductVideoRepositoryInterface;
 use App\Services\Qr\QrCodeManager;
 use App\Support\Slug;
-use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductService
 {
@@ -123,7 +124,8 @@ class ProductService
 
     /**
      * Remove gallery images but KEEP their files, so restoreImages() can put them back (marketing suggestion rollback).
-     * @param int[] $ids @return list<array{path:string, thumb_path:?string, sort_order:int}>
+     *
+     * @param  int[]  $ids  @return list<array{path:string, thumb_path:?string, sort_order:int}>
      */
     public function detachImages(Product $product, array $ids): array
     {
@@ -140,6 +142,32 @@ class ProductService
         foreach ($rows as $r) {
             if (! in_array($r['path'] ?? null, $have, true)) {
                 $product->images()->create(['path' => $r['path'], 'thumb_path' => $r['thumb_path'] ?? null, 'sort_order' => (int) ($r['sort_order'] ?? 0)]);
+            }
+        }
+    }
+
+    /**
+     * Replace a variant's image with $file (a variant shows one image). The old rows are detached but their FILES are kept, so
+     * restoreVariantImage() can undo it. @return array{added:int[],removed:array<int,array{path:string,thumb_path:?string,sort_order:int}>}
+     */
+    public function replaceVariantImage(ProductVariant $variant, UploadedFile $file): array
+    {
+        $old = $variant->images()->get();
+        $this->images->attach($variant, [$file], 'variants');
+        $variant->images()->whereIn('id', $old->pluck('id'))->delete();
+
+        return ['added' => $variant->images()->pluck('id')->map(fn ($v) => (int) $v)->values()->all(),
+            'removed' => $old->map(fn ($i) => ['path' => $i->path, 'thumb_path' => $i->thumb_path, 'sort_order' => (int) $i->sort_order])->values()->all()];
+    }
+
+    /** Undo replaceVariantImage(): delete the added images (and files), re-attach the removed rows. */
+    public function restoreVariantImage(ProductVariant $variant, array $added, array $removed): void
+    {
+        $added && $this->images->removeByIds($variant, $added);
+        $have = $variant->images()->pluck('path')->all();
+        foreach ($removed as $r) {
+            if (! in_array($r['path'] ?? null, $have, true)) {
+                $variant->images()->create(['path' => $r['path'], 'thumb_path' => $r['thumb_path'] ?? null, 'sort_order' => (int) ($r['sort_order'] ?? 0)]);
             }
         }
     }
