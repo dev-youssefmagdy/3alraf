@@ -82,7 +82,8 @@ class ProductController extends Controller implements HasMiddleware
     {
         $this->service->update($product, ProductData::fromRequest($request));
 
-        return $this->ok(__('admin.saved'), route('admin.products.index'));
+        // "Save as draft" stays on the same page (reload); a normal save/publish returns to the list.
+        return $this->ok(__('admin.saved'), $request->boolean('save_as_draft') ? route('admin.products.edit', $product) : route('admin.products.index'));
     }
 
     /** "Activate products": products without a price yet, with inline price inputs. */
