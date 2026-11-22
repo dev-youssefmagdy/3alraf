@@ -24,6 +24,9 @@ class SuggestionImages
 {
     public const DIR = 'suggestion-images';
 
+    /** Reference of a file uploaded straight to the store (POST products/{id}/image-suggestion), instead of a public URL: upload://{sha256}. */
+    public const UPLOAD = 'upload://';
+
     private const EXT = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/avif' => 'avif', 'image/gif' => 'gif', 'image/bmp' => 'bmp'];
 
     /** Statuses whose staged images are still needed (review, approval or a retry of apply). */
@@ -49,6 +52,10 @@ class SuggestionImages
             return ['url' => $url] + $meta;   // already downloaded: never fetched twice (edits re-normalise the payload)
         }
 
+        if (str_starts_with($url, self::UPLOAD)) {
+            return ['url' => $url, 'error' => 'missing'];   // an upload reference is never fetched: the file must already be staged (stageFile)
+        }
+
         try {
             $bytes = $this->fetcher->fetch($url, (int) config('images.max_source_bytes'));
             $tmp = tempnam(sys_get_temp_dir(), 'sgi');
@@ -71,6 +78,34 @@ class SuggestionImages
         $disk->exists($path) || $disk->put($path, $bytes);
         $meta = ['sha256' => $sha, 'mime' => $info['mime'], 'width' => $info['w'], 'height' => $info['h'], 'bytes' => $info['bytes']];
         $disk->put($index, json_encode($meta));
+
+        return ['url' => $url] + $meta;
+    }
+
+    /**
+     * Stage an uploaded file (already on this server) exactly like a downloaded URL: validated as a real image, kept on the PRIVATE disk under its
+     * content hash, indexed as upload://{sha256} so the suggestion payload can reference it.
+     *
+     * @return array{url:string,sha256:string,mime:string,width:int,height:int,bytes:int}|array{url:string,error:string}
+     */
+    public function stageFile(string $path): array
+    {
+        $bytes = (string) @file_get_contents($path);
+        if ($bytes === '' || strlen($bytes) > (int) config('images.max_source_bytes')) {
+            return ['url' => self::UPLOAD, 'error' => $bytes === '' ? 'empty' : 'too_large'];
+        }
+        try {
+            $info = $this->optimizer->inspect($path);
+        } catch (InvalidImageException) {
+            return ['url' => self::UPLOAD, 'error' => 'not_image'];
+        }
+        $sha = hash('sha256', $bytes);
+        $url = self::UPLOAD.$sha;
+        $disk = self::disk();
+        $file = $this->path($sha, $info['mime']);
+        $disk->exists($file) || $disk->put($file, $bytes);
+        $meta = ['sha256' => $sha, 'mime' => $info['mime'], 'width' => $info['w'], 'height' => $info['h'], 'bytes' => $info['bytes']];
+        $disk->put(self::DIR.'/urls/'.sha1($url).'.json', json_encode($meta));
 
         return ['url' => $url] + $meta;
     }
@@ -106,7 +141,7 @@ class SuggestionImages
             ->whereIn('status', array_map(fn ($s) => $s->value, self::OPEN))
             ->select(['id', 'payload'])->chunkById(200, function ($rows) use (&$keep) {
                 foreach ($rows as $s) {
-                    $images = [...(array) ($s->payload['images'] ?? []), ...(array) ($s->payload['images_add'] ?? [])];   // new_product / product_update
+                    $images = [...(array) ($s->payload['images'] ?? []), ...(array) ($s->payload['images_add'] ?? []), ...(array) ($s->payload['variant_images'] ?? [])];   // new_product / product_update
                     isset($s->payload['image']) && $images[] = (array) $s->payload['image'];   // category: one image
                     foreach ($images as $img) {
                         isset($img['sha256']) && $keep[$img['sha256']] = true;
