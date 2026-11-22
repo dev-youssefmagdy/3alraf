@@ -6,6 +6,7 @@
 @endphp
 <x-resource-form :route="$route" :editing="$editing" :model="$model" width="max-w-5xl">
     <x-ui.lang-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$model->getTranslations('name')" />
+    <p class="-mt-2 text-xs text-panel-text-subtle">{{ __('admin.flash_title_hint') }}</p>
     <div class="grid gap-4 sm:grid-cols-3">
         <x-ui.input name="starts_at" type="datetime-local" :label="__('orders.fields.starts_at')" :value="$fmt($model->starts_at)" required />
         <x-ui.input name="ends_at" type="datetime-local" :label="__('orders.fields.ends_at')" :value="$fmt($model->ends_at)" required />

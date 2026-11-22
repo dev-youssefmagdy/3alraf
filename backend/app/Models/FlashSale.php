@@ -24,6 +24,12 @@ class FlashSale extends Model
         return $this->hasMany(FlashSaleItem::class);
     }
 
+    /** Admin title in the current locale, or the default "flash sale" label when left empty. */
+    public function displayName(): string
+    {
+        return trim((string) $this->name) ?: __('store.flash_sale');
+    }
+
     public function isRunning(): bool
     {
         return $this->is_active && now()->between($this->starts_at, $this->ends_at);

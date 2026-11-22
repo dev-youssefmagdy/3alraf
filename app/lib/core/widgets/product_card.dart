@@ -251,6 +251,9 @@ class ProductCard extends StatelessWidget {
     if (withSale || withFlash) h += 16 * scale;
     if (withFlash) h += 4 + 26 * scale.clamp(1, 1.4);
     if (withCta) h += 6 + 44 + 4 * scale;
+    // Past 1.5x the price and struck price wrap onto extra lines on a 156
+    // card; without this the bottom of the info block was clipped at 2x.
+    if (scale > 1.5) h += 64 * (scale - 1.5);
     return h;
   }
 }

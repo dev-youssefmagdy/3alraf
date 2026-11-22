@@ -155,6 +155,20 @@ class FlashSale {
   final List<ProductSummary> products;
 }
 
+class CategoryRail {
+  const CategoryRail({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.products,
+  });
+
+  final int id;
+  final String name;
+  final String slug;
+  final List<ProductSummary> products;
+}
+
 class HomeData {
   const HomeData({
     this.hero = const [],
@@ -166,6 +180,7 @@ class HomeData {
     this.recommended = const [],
     this.mostSold = const [],
     this.mostReviewed = const [],
+    this.categoryRails = const [],
     this.brands = const [],
   });
 
@@ -198,6 +213,16 @@ class HomeData {
       recommended: pl(rails['recommended']),
       mostSold: pl(rails['most_sold']),
       mostReviewed: pl(rails['most_reviewed']),
+      categoryRails: asMapList(j['category_rails'])
+          .map(
+            (r) => CategoryRail(
+              id: intOf(r['id']),
+              name: str(r['name']),
+              slug: str(r['slug']),
+              products: pl(r['products']),
+            ),
+          )
+          .toList(),
       brands: asMapList(j['brands']).map(Brand.fromJson).toList(),
     );
   }
@@ -211,6 +236,7 @@ class HomeData {
   final List<ProductSummary> recommended;
   final List<ProductSummary> mostSold;
   final List<ProductSummary> mostReviewed;
+  final List<CategoryRail> categoryRails;
   final List<Brand> brands;
 }
 

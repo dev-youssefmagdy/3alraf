@@ -100,7 +100,7 @@
 
     {{-- flash sale: pop block with the countdown (rail "flash" preset) --}}
     @if ($flash)
-        <x-rail :title="$flash['sale']->name" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :eager="$eagerRail === 'flash' ? 2 : 0" />
+        <x-rail :title="$flash['sale']->displayName()" :items="$flash['items']" :countdown="$flash['sale']->ends_at->toIso8601String()" :eager="$eagerRail === 'flash' ? 2 : 0" />
     @endif
 
     {{-- gift finder CTA (19:558) --}}

@@ -2,6 +2,7 @@
 
 return [
     'dashboard' => 'Dashboard', 'languages' => 'Languages', 'settings' => 'Settings', 'settings_general' => 'General settings', 'settings_system' => 'System settings',
+    'flash_title_hint' => 'Optional. Shown as the flash sale title on the home page (e.g. "Year-end deals"). Leave empty to show "Flash sale".',
     'affiliate_bonus_section' => 'Affiliate sales bonus', 'affiliate_bonus_intro' => 'Affiliates earn the bonus amount for every threshold of delivered sales (goods after discount, excluding shipping and VAT, minus returns), repeated.',
     'affiliate_bonus_started_hint' => 'Only orders placed after this date count. Changes apply to future bonuses only; bonuses already earned keep their amount.',
     'affiliate_bonus_not_started' => 'Not set',

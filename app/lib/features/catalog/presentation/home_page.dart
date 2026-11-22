@@ -106,7 +106,6 @@ class _HomeContent extends ConsumerWidget {
         ref.watch(storeProfileProvider)?.features['gift_finder'] ?? false;
     final bundles =
         ref.watch(bundlesProvider).asData?.value ?? const <Bundle>[];
-    final promos = [...data.strips, ...data.tiles];
     final empty =
         data.hero.isEmpty &&
         data.categories.isEmpty &&
@@ -141,7 +140,8 @@ class _HomeContent extends ConsumerWidget {
             },
           ),
         ],
-        if (promos.isNotEmpty) _PromoTiles(banners: promos),
+        if (data.strips.isNotEmpty) _PromoStrips(banners: data.strips),
+        if (data.tiles.isNotEmpty) _PromoTiles(banners: data.tiles),
         if (data.flashSale != null && data.flashSale!.products.isNotEmpty)
           _FlashSaleBlock(
             sale: data.flashSale!,
@@ -175,6 +175,13 @@ class _HomeContent extends ConsumerWidget {
           products: data.mostReviewed,
           scope: 'home-reviewed',
         ),
+        for (final r in data.categoryRails)
+          ProductRail(
+            title: r.name,
+            products: r.products,
+            scope: 'home-cat-${r.id}',
+            onViewAll: () => context.push(AppRoutes.category(r.slug)),
+          ),
         if (data.brands.isNotEmpty) ...[
           SectionHeader(
             title: l10n.brands,
@@ -258,12 +265,16 @@ class _FlashSaleBlock extends StatelessWidget {
                     size: 22,
                   ),
                   const SizedBox(width: 6),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      title,
-                      style: context.text.headlineSmall?.copyWith(
-                        color: Colors.white,
+                  Flexible(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -307,6 +318,61 @@ class _HeroCarousel extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Promo strips (`App/Promo strip`, HOME_STRIP banners): full-width 16:3
+/// banners (radius 16) in the gutter; more than one becomes a snapping
+/// rail where the next strip peeks, like the website's strip row.
+class _PromoStrips extends StatelessWidget {
+  const _PromoStrips({required this.banners});
+
+  final List<PromoBanner> banners;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    Widget strip(PromoBanner b) => Semantics(
+      button: true,
+      label: b.title,
+      child: Material(
+        color: context.extra.brandSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openLink(context, b.link),
+          child: NetworkImageX(
+            url: b.image,
+            width: double.infinity,
+            height: double.infinity,
+            semanticLabel: b.title,
+            cacheWidth: 800,
+          ),
+        ),
+      ),
+    );
+    if (banners.length == 1) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.section,
+          AppSpacing.gutter,
+          0,
+        ),
+        child: AspectRatio(aspectRatio: 16 / 3, child: strip(banners.first)),
+      );
+    }
+    final itemWidth = (width - AppSpacing.gutter * 2) * 0.92;
+    return Padding(
+      key: const ValueKey('home-strips'),
+      padding: const EdgeInsets.only(top: AppSpacing.section),
+      child: HorizontalRail(
+        height: itemWidth * 3 / 16,
+        itemWidth: itemWidth,
+        itemCount: banners.length,
+        itemBuilder: (_, i) => strip(banners[i]),
+      ),
     );
   }
 }

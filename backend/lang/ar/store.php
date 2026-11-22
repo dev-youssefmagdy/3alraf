@@ -17,7 +17,7 @@ return [
     'suggest_products' => 'منتجات', 'suggest_categories' => 'أقسام',
     'all_categories' => 'كل الأقسام', 'categories' => 'الأقسام', 'my_account' => 'حسابي', 'login' => 'تسجيل الدخول', 'register' => 'إنشاء حساب', 'logout' => 'خروج',
     'cart' => 'السلة', 'home' => 'الرئيسية', 'language' => 'اللغة', 'menu' => 'القائمة', 'close' => 'إغلاق',
-    'shop_now' => 'تسوق الآن', 'view_all' => 'عرض الكل', 'flash_sale' => 'عروض خاطفة', 'ends_in' => 'ينتهي خلال', 'd' => 'يوم', 'h' => 'ساعة', 'm' => 'دقيقة', 's' => 'ثانية',
+    'shop_now' => 'تسوق الآن', 'view_all' => 'عرض الكل', 'flash_sale' => 'العروض الخاطفة', 'ends_in' => 'ينتهي خلال', 'd' => 'يوم', 'h' => 'ساعة', 'm' => 'دقيقة', 's' => 'ثانية',
     'recommended' => 'موصى به لك', 'most_sold' => 'الأكثر مبيعاً', 'most_reviewed' => 'الأكثر تقييماً', 'brands' => 'تسوق حسب الماركة', 'all_brands' => 'كل الماركات', 'brand_products' => 'منتج', 'brands_empty' => 'لا توجد ماركات حالياً.', 'top_categories' => 'تسوق حسب القسم',
     'filters' => 'الفلاتر', 'brand' => 'الماركة', 'price' => 'السعر', 'price_from' => 'من', 'price_to' => 'إلى', 'apply' => 'تطبيق', 'reset' => 'مسح الفلاتر', 'sort' => 'الترتيب',
     'sorts' => ['newest' => 'الأحدث', 'price_asc' => 'السعر: من الأقل', 'price_desc' => 'السعر: من الأعلى', 'best_selling' => 'الأكثر مبيعاً', 'top_rated' => 'الأعلى تقييماً'],

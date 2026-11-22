@@ -10,7 +10,7 @@ class FlashSaleRequest extends BaseRequest
 {
     public function rules(): array
     {
-        return $this->translatable('name') + [
+        return $this->translatable('name', false) + [
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'is_active' => ['nullable', 'boolean'],

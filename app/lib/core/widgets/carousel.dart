@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../theme/app_theme.dart';
@@ -19,24 +18,45 @@ class SnapScrollPhysics extends ScrollPhysics {
   SnapScrollPhysics applyTo(ScrollPhysics? ancestor) =>
       SnapScrollPhysics(itemExtent: itemExtent, parent: buildParent(ancestor));
 
+  /// Seconds of momentum: travel = speed × this, so a light swipe moves
+  /// about one card and a hard flick a few (a 2000px/s flick ≈ 280px).
+  static const double _momentum = 0.14;
+
+  /// Below this speed a release just settles on the nearest card.
+  static const double _flickVelocity = 250;
+
   double _target(ScrollMetrics position, double velocity) {
-    final projected = FrictionSimulation(
-      0.135,
-      position.pixels,
-      velocity,
-    ).finalX;
-    // Never skip more than ~3 items on a single swipe.
     final from = position.pixels / itemExtent;
-    var page = (projected / itemExtent).roundToDouble();
-    page = page.clamp(from.floorToDouble() - 3, from.ceilToDouble() + 3);
-    if (page == from.roundToDouble() && velocity.abs() > 300) {
-      page = velocity > 0 ? from.floorToDouble() + 1 : from.ceilToDouble() - 1;
+    // At most one screenful of cards per fling, so a flick never throws the
+    // rail to the end of the list.
+    final maxCards = (position.viewportDimension / itemExtent)
+        .floorToDouble()
+        .clamp(1.0, 4.0);
+    final travel = (velocity * _momentum / itemExtent).clamp(
+      -maxCards,
+      maxCards,
+    );
+    var page = (from + travel).roundToDouble();
+    // A deliberate flick always advances at least one card in its direction.
+    if (velocity.abs() > _flickVelocity) {
+      page = velocity > 0
+          ? page.clamp(from.floorToDouble() + 1, double.infinity)
+          : page.clamp(double.negativeInfinity, from.ceilToDouble() - 1);
     }
     return (page * itemExtent).clamp(
       position.minScrollExtent,
       position.maxScrollExtent,
     );
   }
+
+  /// Slightly softer than the default spring so the settle glides instead
+  /// of snapping hard.
+  @override
+  SpringDescription get spring => SpringDescription.withDampingRatio(
+    mass: 0.5,
+    stiffness: 120,
+    ratio: 1.0,
+  );
 
   @override
   Simulation? createBallisticSimulation(
@@ -49,12 +69,16 @@ class SnapScrollPhysics extends ScrollPhysics {
     }
     final tolerance = toleranceFor(position);
     final target = _target(position, velocity);
-    if ((target - position.pixels).abs() < tolerance.distance) return null;
+    final distance = (target - position.pixels).abs();
+    if (distance < tolerance.distance) return null;
+    // Keep the release speed proportional to the remaining distance so the
+    // spring eases into the card edge rather than overshooting and bouncing.
+    final limit = distance * 6;
     return ScrollSpringSimulation(
       spring,
       position.pixels,
       target,
-      velocity,
+      velocity.clamp(-limit, limit),
       tolerance: tolerance,
     );
   }

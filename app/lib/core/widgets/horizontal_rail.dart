@@ -54,23 +54,45 @@ class _HorizontalRailState extends State<HorizontalRail> {
   @override
   Widget build(BuildContext context) {
     final w = widget.itemWidth;
-    final list = SizedBox(
-      height: widget.height,
-      child: ListView.separated(
+    final gap = widget.gap;
+    final Widget scroller;
+    if (w == null) {
+      scroller = ListView.separated(
         controller: _controller,
         scrollDirection: Axis.horizontal,
         padding: widget.padding,
-        physics: widget.snap && w != null
-            ? SnapScrollPhysics(itemExtent: w + widget.gap)
-            : null,
         itemCount: widget.itemCount,
-        separatorBuilder: (_, _) => SizedBox(width: widget.gap),
-        itemBuilder: (context, i) {
-          final child = widget.itemBuilder(context, i);
-          return w == null ? child : SizedBox(width: w, child: child);
-        },
-      ),
-    );
+        separatorBuilder: (_, _) => SizedBox(width: gap),
+        itemBuilder: widget.itemBuilder,
+      );
+    } else {
+      // Fixed item extent (card + trailing gap): the scroll length is exact
+      // from the first frame, so a fling is never restarted by the list
+      // re-estimating its length (that used to carry a swipe to the end).
+      // The last card's trailing gap is taken out of the end padding.
+      final pad = widget.padding.resolve(Directionality.of(context));
+      final rtl = Directionality.of(context) == TextDirection.rtl;
+      final start = rtl ? pad.right : pad.left;
+      final end = rtl ? pad.left : pad.right;
+      scroller = ListView.builder(
+        controller: _controller,
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsetsDirectional.fromSTEB(
+          start,
+          pad.top,
+          (end - gap).clamp(0, double.infinity),
+          pad.bottom,
+        ),
+        physics: widget.snap ? SnapScrollPhysics(itemExtent: w + gap) : null,
+        itemExtent: w + gap,
+        itemCount: widget.itemCount,
+        itemBuilder: (context, i) => Padding(
+          padding: EdgeInsetsDirectional.only(end: gap),
+          child: widget.itemBuilder(context, i),
+        ),
+      );
+    }
+    final list = SizedBox(height: widget.height, child: scroller);
     if (!widget.showProgress) return list;
     return Column(
       mainAxisSize: MainAxisSize.min,

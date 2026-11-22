@@ -323,7 +323,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeEmptyBody => 'المتجر قيد التجهيز. اسحب للأسفل للتحديث.';
 
   @override
-  String get flashSale => 'عروض خاطفة';
+  String get flashSale => 'العروض الخاطفة';
 
   @override
   String get flashEndsIn => 'ينتهي خلال';
