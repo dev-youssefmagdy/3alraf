@@ -4,17 +4,20 @@ namespace App\Models;
 
 use App\Models\Concerns\Audited;
 use App\Models\Concerns\HasImages;
+use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/** Variant of a variable product; price / sale_price / cost NULL = the product's value. */
+/** Variant of a variable product; price / sale_price / cost NULL = the product's value. Optional translatable `name` (Product AI title ideas). */
 class ProductVariant extends Model
 {
-    use Audited, HasImages, SoftDeletes;
+    use Audited, HasImages, HasTranslations, SoftDeletes;
 
-    protected $fillable = ['product_id', 'combination_hash', 'sku', 'barcode', 'weight', 'is_active', 'price', 'sale_price', 'cost', 'min_stock_alert_qty'];
+    protected array $translatable = ['name'];
+
+    protected $fillable = ['product_id', 'combination_hash', 'sku', 'name', 'barcode', 'weight', 'is_active', 'price', 'sale_price', 'cost', 'min_stock_alert_qty'];
 
     protected function casts(): array
     {
@@ -45,9 +48,13 @@ class ProductVariant extends Model
         return $this->belongsToMany(AttributeValue::class, 'product_variant_values')->withTrashed();
     }
 
-    /** "Red / XL" label from the loaded values. */
+    /** The variant's own name in the current locale when set, else the "Red / XL" label from the loaded values. */
     public function label(): string
     {
+        $name = trim((string) $this->getTranslation('name', app()->getLocale(), false));
+        if ($name !== '') {
+            return $name;
+        }
         $label = $this->values->map->value->implode(' / ');
 
         return $label !== '' ? $label : (string) $this->sku; // safety net: a variant without values

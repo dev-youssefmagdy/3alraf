@@ -41,23 +41,34 @@
                         </div>
                     </div>
                 @endif
+                @if ($group === 'ai')
+                    {{-- uses the SAVED settings; not part of the form submit --}}
+                    <div class="mt-5 border-t border-panel-border pt-4" data-ai-test data-url="{{ route('admin.system-settings.test-ai') }}">
+                        <p class="mb-2 text-sm text-panel-text-muted">{{ __('admin.system_settings.ai_test_hint') }}</p>
+                        <button type="button" class="btn btn-secondary" data-ai-test-send>{{ __('admin.system_settings.ai_test_button') }}</button>
+                    </div>
+                @endif
             </x-ui.form-section>
         @endforeach
         <x-ui.save-bar :cancel="route('admin.dashboard')" />
     </form>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var box = document.querySelector('[data-mail-test]');
-            if (!box) return;
-            var btn = box.querySelector('[data-mail-test-send]');
-            btn.addEventListener('click', function () {
-                btn.disabled = true;
-                fetch(box.dataset.url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', Accept: 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, body: JSON.stringify({to: document.getElementById('mail-test-to').value})})
-                    .then(function (r) { return r.json().then(function (d) { return [r.ok, d]; }); })
-                    .then(function (x) { var d = x[1], msg = d.message || (d.errors && Object.values(d.errors)[0][0]) || ''; x[0] ? window.toastr.success(msg) : window.toastr.error(msg); })
-                    .catch(function () { window.toastr.error(window.__t.error); })
-                    .finally(function () { btn.disabled = false; });
+            // test buttons (mail, AI): POST to data-url with the saved settings, toast the answer
+            [['[data-mail-test]', '[data-mail-test-send]', function () { return {to: document.getElementById('mail-test-to').value}; }],
+                ['[data-ai-test]', '[data-ai-test-send]', function () { return {}; }]].forEach(function (t) {
+                var box = document.querySelector(t[0]);
+                if (!box) return;
+                var btn = box.querySelector(t[1]);
+                btn.addEventListener('click', function () {
+                    btn.disabled = true;
+                    fetch(box.dataset.url, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', Accept: 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, body: JSON.stringify(t[2]())})
+                        .then(function (r) { return r.json().then(function (d) { return [r.ok, d]; }); })
+                        .then(function (x) { var d = x[1], msg = d.message || (d.errors && Object.values(d.errors)[0][0]) || ''; x[0] ? window.toastr.success(msg) : window.toastr.error(msg); })
+                        .catch(function () { window.toastr.error(window.__t.error); })
+                        .finally(function () { btn.disabled = false; });
+                });
             });
         });
     </script>

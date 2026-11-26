@@ -695,7 +695,7 @@ abstract class AppLocalizations {
   /// No description provided for @flashSale.
   ///
   /// In ar, this message translates to:
-  /// **'عروض خاطفة'**
+  /// **'العروض الخاطفة'**
   String get flashSale;
 
   /// No description provided for @flashEndsIn.

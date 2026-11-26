@@ -225,6 +225,16 @@ html[data-panel] { background: var(--p-bg); }
     [data-panel] .badge-warn { @apply bg-panel-warning-bg text-panel-warning-fg; }
     [data-panel] .badge-info { @apply bg-panel-info-bg text-panel-info-fg; }
     [data-panel] .badge-accent { @apply bg-panel-accent-soft text-panel-accent-text; }
+    /* price-source badges (product AI price table, plan 7.9): sm soft pill + dot; modifier = the API price_source value.
+       none = dashed outline + hollow dot, no fill, so it never reads as a value (or a zero price). Border uses text-subtle for 3:1. */
+    [data-panel] .badge-src { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-2 py-px text-[11px]/4 font-semibold; }
+    [data-panel] .badge-src::before { content: ''; @apply size-1.5 shrink-0 rounded-full bg-current; }
+    [data-panel] .badge-src-structured_data { @apply bg-panel-success-bg text-panel-success-fg; }
+    [data-panel] .badge-src-page_text { @apply bg-panel-info-bg text-panel-info-fg; }
+    [data-panel] .badge-src-snippet { @apply bg-panel-warning-bg text-panel-warning-fg; }
+    [data-panel] .badge-src-none { @apply border-dashed border-panel-text-subtle bg-transparent font-medium text-panel-text-muted; }
+    [data-panel] .badge-src-none::before { @apply border border-current bg-transparent; }
+    [data-panel] button.badge-src { @apply cursor-pointer hover:border-current aria-expanded:border-current; }
 
     /* ---- sidebar (Figma NavItem / NavGroup) ---- */
     [data-panel] .side-link { @apply flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm text-panel-sidebar-text transition duration-[120ms] hover:bg-white/10 hover:text-white; }

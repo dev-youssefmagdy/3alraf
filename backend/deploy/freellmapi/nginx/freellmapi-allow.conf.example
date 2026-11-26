@@ -1,0 +1,6 @@
+# IP allow-list for the FreeLLMAPI dashboard (/ and /api/). Copy to /etc/nginx/snippets/freellmapi-allow.conf,
+# put your own addresses, then uncomment the two include lines in llm.3alraf.com.conf and reload nginx.
+# Your current public IP: curl -4 https://ifconfig.me
+allow 203.0.113.10;      # office / home (example address: replace it)
+# allow 2001:db8::/32;   # IPv6 range (example)
+deny all;

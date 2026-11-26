@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Deploy 3alraf: pull, install, migrate, build, clear caches, reload services.
-# Usage: sudo ./deploy.sh [--no-pull] [--no-build] [--mcp] [--whatsapp] [--embedder]
+# Usage: sudo ./deploy.sh [--no-pull] [--no-build] [--mcp] [--whatsapp] [--embedder] [--freellm]
 #   --embedder  image-search embedder (image-embedder/): install/update its venv, export the model if missing, refresh the systemd unit, restart it
+#   --freellm   FreeLLMAPI gateway (backend/deploy/freellmapi → $FREELLM_DIR, default /opt/freellmapi): refresh the compose file,
+#               docker compose pull + up -d, then php artisan llm:check. The .env there (ENCRYPTION_KEY) is never touched.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,7 +11,8 @@ APP="$ROOT/backend"
 WEB_USER="www-data"
 PHP_FPM="php8.5-fpm"
 
-PULL=1; BUILD=1; MCP=0; WA=0; EMB=0
+PULL=1; BUILD=1; MCP=0; WA=0; EMB=0; FREELLM=0
+FREELLM_DIR="${FREELLM_DIR:-/opt/freellmapi}"
 for arg in "$@"; do
   case "$arg" in
     --no-pull) PULL=0 ;;
@@ -17,6 +20,7 @@ for arg in "$@"; do
     --mcp) MCP=1 ;;
     --whatsapp) WA=1 ;;
     --embedder) EMB=1 ;;
+    --freellm) FREELLM=1 ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -100,6 +104,23 @@ if [ "$EMB" -eq 1 ]; then
   EMB_URL="${EMB_URL:-http://127.0.0.1:8090}"
   for _ in $(seq 1 20); do curl -fsS "$EMB_URL/health" >/dev/null 2>&1 && break; sleep 1; done
   curl -fsS "$EMB_URL/health" && echo || echo "WARNING: embedder health check failed (journalctl -u 3alraf-embedder)"
+fi
+
+if [ "$FREELLM" -eq 1 ]; then
+  step "Updating FreeLLMAPI ($FREELLM_DIR)"
+  install -d -m 0750 "$FREELLM_DIR"
+  install -m 0644 "$APP/deploy/freellmapi/docker-compose.yml" "$FREELLM_DIR/docker-compose.yml"
+  install -m 0644 "$APP/deploy/freellmapi/.env.example" "$FREELLM_DIR/.env.example"
+  if [ ! -f "$FREELLM_DIR/.env" ]; then
+    echo "WARNING: $FREELLM_DIR/.env is missing (ENCRYPTION_KEY). See docs/FREELLMAPI_SETUP.md; FreeLLMAPI was not started."
+  else
+    (cd "$FREELLM_DIR" && docker compose pull && docker compose up -d --remove-orphans)
+    for _ in $(seq 1 30); do
+      [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/v1/models || true)" != "000" ] && break
+      sleep 1
+    done
+    artisan llm:check --no-search || echo "WARNING: llm:check reported problems (docker compose -f $FREELLM_DIR/docker-compose.yml logs --tail 50)"
+  fi
 fi
 
 step "Deploy finished at $(date)"
