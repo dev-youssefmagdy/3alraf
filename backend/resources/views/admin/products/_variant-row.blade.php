@@ -19,6 +19,9 @@
     <td class="px-1 py-2"><x-ui.uploader :name="'variants['.$i.'][image]'" :preview="$v['image'] ?? null" />
         @if (! empty($v['id']))
             @can('products.edit')<button type="button" class="mt-1 text-xs font-bold text-panel-accent-text underline" data-image-picker-open data-target-type="variant" data-target-id="{{ $v['id'] }}" aria-haspopup="dialog" aria-controls="image-picker">{{ __('admin.image_picker.find') }}</button>@endcan
+            @if ($aiConfigured ?? false)
+                @can('products.edit')<button type="button" class="mt-1 block text-xs font-bold text-panel-accent-text underline" data-product-ai-open data-tab="market" data-target-type="variant" data-target-id="{{ $v['id'] }}" aria-haspopup="dialog" aria-controls="product-ai">{{ __('admin.product_ai.variant_link') }}</button>@endcan
+            @endif
         @endif
     </td>
     <td class="px-1 py-2" data-field><input type="number" step="0.01" min="0" name="variants[{{ $i }}][price]" value="{{ $v['price'] ?? '' }}" class="form-control !w-24"></td>

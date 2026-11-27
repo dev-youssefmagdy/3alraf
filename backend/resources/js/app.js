@@ -17,6 +17,7 @@ import './lib/whatsapp';
 import './lib/phone-input';
 import './lib/image-search';
 import './lib/image-picker';
+import './lib/product-ai';
 import './lib/image-dropzone';
 
 // WhatsApp inbox: loaded as its own chunk, only on the chat page.

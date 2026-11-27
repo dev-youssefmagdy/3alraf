@@ -7,6 +7,8 @@
     ])->all() : [];
     $attrJson = $attributes->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'values' => $a->values->map(fn ($v) => ['id' => $v->id, 'name' => $v->value, 'color' => $v->color_hex])->all()])->values();
     $usedValueIds = collect($variantRows)->pluck('values')->flatten()->unique()->values();
+    // AI tools (PRODUCT_AI_FREELLMAPI_PLAN.md §7.1): the shortcuts, the variant links and the dialog exist only when the gateway is configured
+    $aiConfigured = $editing && app(\App\Services\Llm\FreeLlmClient::class)->configured();
 @endphp
 <x-layouts.admin :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')">
     <x-slot:header><x-ui.page-header :title="$editing ? __('admin.edit').': '.$product->name : __('admin.add_new')" /></x-slot:header>
@@ -21,6 +23,13 @@
         <x-draft-notice :model="$product" />
         <div class="space-y-5" data-ptab-panel="general" data-ptab-for="product">
             <x-ui.form-section :title="__('admin.general')" :cols="1" stacked>
+                @if ($aiConfigured)
+                    @can('products.edit')
+                        <x-slot:actions>
+                            <button type="button" class="btn-sm btn-secondary" data-product-ai-open data-tab="titles" data-target-type="product" aria-haspopup="dialog" aria-controls="product-ai">{{ __('admin.product_ai.open_titles') }}</button>
+                        </x-slot:actions>
+                    @endcan
+                @endif
                 <div class="space-y-4">
                     <x-ui.lang-tabs name="name" :label="__('admin.fields.name')" :languages="$languages" :values="$product->getTranslations('name')" />
                     <x-ui.lang-tabs name="description" type="textarea" :rows="6" :label="__('admin.fields.description')" :languages="$languages" :values="$product->getTranslations('description')" />
@@ -30,6 +39,13 @@
         </div>
         <div class="space-y-5" data-ptab-panel="pricing" data-ptab-for="product">
             <x-ui.form-section :title="__('admin.pricing')" :cols="1" stacked>
+                @if ($aiConfigured)
+                    @can('products.edit')
+                        <x-slot:actions>
+                            <button type="button" class="btn-sm btn-secondary" data-product-ai-open data-tab="market" data-target-type="product" aria-haspopup="dialog" aria-controls="product-ai">{{ __('admin.product_ai.open_market') }}</button>
+                        </x-slot:actions>
+                    @endcan
+                @endif
                 <p class="mb-3 text-xs text-panel-text-subtle">{{ __('admin.pricing_hint') }}</p>
                 <div data-price-group="product" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <x-ui.input name="price" type="number" step="0.01" min="0" :label="__('admin.fields.price')" :value="$product->price" />
@@ -114,6 +130,23 @@
                     :existing="$editing ? $product->images->map(fn ($img) => ['id' => $img->id, 'url' => $img->thumb_url])->all() : []" />
                 @unless ($editing)<p class="mt-2 text-xs text-panel-text-subtle">{{ __('admin.product_media.after_save') }}</p>@endunless
             </x-ui.form-section>
+
+            @if ($editing)
+                @can('products.edit')
+                    <x-ui.form-section :title="__('admin.product_ai.card_title')" :description="__('admin.product_ai.card_hint')" :cols="1" stacked data-product-ai-card>
+                        @unless ($aiConfigured)
+                            <x-ui.alert tone="info">{{ __('admin.product_ai.not_configured') }}</x-ui.alert>
+                        @endunless
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (['image' => 'ai-price-image', 'market' => 'ai-market-prices', 'titles' => 'ai-titles'] as $aiTab => $aiIcon)
+                                <button type="button" class="btn btn-secondary" @disabled(! $aiConfigured) @if ($aiConfigured) data-product-ai-open data-tab="{{ $aiTab }}" data-target-type="product" aria-haspopup="dialog" aria-controls="product-ai" @endif>
+                                    <x-ui.icon :name="$aiIcon" class="size-4" />{{ __('admin.product_ai.open_'.$aiTab) }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </x-ui.form-section>
+                @endcan
+            @endif
 
         </div>
         <div class="space-y-5" data-ptab-panel="variants" data-ptab-for="product">
@@ -222,6 +255,9 @@
         </div>
         @can('products.edit')
             @include('admin.products._image-picker', ['product' => $product])
+            @if ($aiConfigured)
+                @include('admin.products._product-ai', ['product' => $product])
+            @endif
         @endcan
     @endif
     @if ($editing && $product->price !== null)
