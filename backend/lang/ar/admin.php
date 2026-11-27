@@ -167,6 +167,10 @@ return [
         'mail_test_sent' => 'تم إرسال الرسالة التجريبية إلى :to. تحقّق من صندوق الوارد (وأيضاً البريد المزعج).',
         'mail_test_logged' => 'طريقة الإرسال «سجل فقط»: كُتبت الرسالة في ملف السجل ولم تُرسل فعلياً.',
         'mail_test_failed' => 'تعذّر الإرسال: :error',
+        'ai_test_hint' => 'احفظ الإعدادات أولاً، ثم اختبر الاتصال ببوابة الذكاء الاصطناعي (الأمر php artisan llm:check يعرض تفاصيل أكثر).',
+        'ai_test_button' => 'اختبار الاتصال',
+        'ai_test_ok' => 'تم الاتصال: :count نموذجًا متاحًا. ردّ نصي من :model.',
+        'ai_test_failed' => 'فشل الاتصال: :error',
         'groups' => [
             'mail' => 'البريد الإلكتروني (SMTP)',
             'app' => 'التطبيق',
@@ -175,6 +179,7 @@ return [
             'whatsapp' => 'بوابة واتساب',
             'reverb' => 'الإشعارات اللحظية (Reverb)',
             'meta' => 'واجهة ميتا للتسويق',
+            'ai' => 'أدوات الذكاء الاصطناعي (FreeLLMAPI)',
         ],
         'fields' => [
             'mail_mailer' => 'طريقة الإرسال',
@@ -229,6 +234,11 @@ return [
             'meta_min_daily_budget' => 'أدنى ميزانية يومية',
             'meta_max_daily_budget' => 'أقصى ميزانية يومية',
             'meta_max_lifetime_budget' => 'أقصى ميزانية إجمالية',
+            'freellm_base_url' => 'رابط FreeLLMAPI (على نفس الخادم: http://127.0.0.1:3001/v1)', 'freellm_api_key' => 'المفتاح الموحّد لـ FreeLLMAPI (freellmapi-…)',
+            'freellm_text_models' => 'نماذج النصوص بالترتيب (مفصولة بفواصل)', 'freellm_vision_models' => 'نماذج قراءة الصور بالترتيب (مفصولة بفواصل)', 'freellm_timeout' => 'مهلة كل طلب للنموذج (ثوانٍ)',
+            'product_ai_search_backends' => 'محركات البحث على الويب (مفصولة بفواصل)', 'product_ai_market_country' => 'دولة السوق (رمز ISO)', 'product_ai_currency' => 'عملة السوق (رمز ISO)',
+            'product_ai_marketplaces' => 'نطاقات المتاجر المعتمدة (مفصولة بفواصل)', 'product_ai_cache_hours' => 'مدة حفظ نتائج الأسعار والصور (ساعات)', 'product_ai_throttle_per_minute' => 'طلبات الذكاء الاصطناعي لكل مشرف في الدقيقة',
+            'product_ai_max_page_fetches' => 'صفحات الإعلانات المقروءة في كل بحث (8 كحد أقصى)',
         ],
     ],
     'drafts' => [
@@ -311,5 +321,20 @@ return [
         'imported_main' => 'تمت إضافة الصورة وجعلها الصورة الرئيسية.',
         'imported_variant' => 'تم تعيين الصورة كصورة للمتغير.',
         'error' => 'حدث خطأ. حاول مرة أخرى.',
+    ],
+    // Product AI tools (PRODUCT_AI_FREELLMAPI_PLAN.md). Backend messages only; the dialog strings (section 7.10) are added with the UI.
+    'product_ai' => [
+        'not_configured' => 'بوابة الذكاء الاصطناعي غير مُعدّة. ستعمل الأدوات بعد إعدادها (راجع docs/FREELLMAPI_SETUP.md).',
+        'error_gateway_down' => 'بوابة الذكاء الاصطناعي لا تستجيب. حاول بعد بضع دقائق.',
+        'error_quota' => 'نفدت الحصة المجانية للذكاء الاصطناعي حاليًا. حاول لاحقًا.',
+        'error_no_vision' => 'لا يوجد نموذج مفعّل يقرأ الصور. فعّل نموذجًا في البوابة أو ابحث بالنص.',
+        'error_throttled' => 'طلبات كثيرة. انتظر :seconds ثانية.',
+        'error_timeout' => 'استغرق الأمر وقتًا طويلًا. حاول مرة أخرى بنص بحث أقصر.',
+        'error_bad_answer' => 'تعذّرت قراءة رد الذكاء الاصطناعي. حاول مرة أخرى.',
+        'error' => 'حدث خطأ. حاول مرة أخرى.',
+        'no_primary' => 'هذا العنصر بلا صورة. ارفع صورة.',
+        'bad_variant' => 'هذا المتغير لا يتبع هذا المنتج.',
+        'image_unreadable' => 'تعذّرت قراءة هذه الصورة. استخدم صورة JPG أو PNG أو WebP.',
+        'saved' => 'تم حفظ العنوان (:lang) لـ :target.',
     ],
 ];

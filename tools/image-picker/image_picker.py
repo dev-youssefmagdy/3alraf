@@ -8,6 +8,7 @@ More engines can be added in ENGINES (one function each).
     python image_picker.py serve products.json            # local picker page at http://127.0.0.1:8765
     python image_picker.py serve --product "Whitening Cream 50ml" --brand Starville --variant Red --variant Blue
     python image_picker.py search "Starville whitening cream" -n 20   # print results as JSON
+    python image_picker.py text "Philips HD9200 price" -n 10 --backend google,bing,duckduckgo --region eg-ar   # web (text) results as JSON
 
 Picked images are saved under ./picked/<product>/<variant>/ and recorded in ./picked/selections.json together with
 the page each one came from. Search results are NOT free to use: keep only images the brand / supplier provides for
@@ -88,6 +89,60 @@ def _int(v) -> int | None:
         return int(v)
     except (TypeError, ValueError):
         return None
+
+
+# ---------------------------------------------------------------------------------------------- text (web) search
+
+TEXT_BACKENDS = ('google', 'bing', 'duckduckgo', 'brave', 'mojeek', 'yahoo', 'yandex', 'startpage')
+TEXT_CACHE_HOURS = 24
+
+
+def text_search(query: str, n: int, backends: list[str], region: str, cache_dir: Path | None) -> dict:
+    """Web results of each backend, merged and de-duplicated by URL. A backend that fails is reported in `errors`, the others still answer."""
+    merged, errors, seen = [], {}, set()
+    per_backend = {}
+    for name in backends:
+        try:
+            per_backend[name] = _text_cached(name, query, n, region, cache_dir)
+        except Exception as e:  # one backend failing (rate limit, captcha, network) must not break the others
+            errors[name] = f'{type(e).__name__}: {e}'[:200]
+            per_backend[name] = []
+    for i in range(max((len(v) for v in per_backend.values()), default=0)):
+        for name, rows in per_backend.items():
+            if i < len(rows):
+                key = _norm_url(rows[i]['url'])
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append({**rows[i], 'engine': name})
+    return {'query': query, 'region': region, 'results': merged[:n], 'errors': errors}
+
+
+def _text_backend(query: str, n: int, backend: str, region: str) -> list[dict]:
+    rows = DDGS().text(query, region=region, safesearch='moderate', max_results=n, backend=backend)
+    out = []
+    for r in rows or []:
+        url = r.get('href') or r.get('url') or ''
+        if not re.match(r'^https?://', url):
+            continue
+        out.append({'title': re.sub(r'\s+', ' ', (r.get('title') or '')).strip()[:300], 'url': url[:2048],
+                    'snippet': re.sub(r'\s+', ' ', (r.get('body') or r.get('snippet') or '')).strip()[:1000]})
+    return out
+
+
+def _text_cached(backend: str, query: str, n: int, region: str, cache_dir: Path | None) -> list[dict]:
+    if cache_dir is None:
+        return _text_backend(query, n, backend, region)
+    path = cache_dir / ('text-' + hashlib.sha1(f'{backend}|{region}|{query.lower().strip()}|{n}'.encode()).hexdigest() + '.json')
+    if path.exists() and time.time() - path.stat().st_mtime < TEXT_CACHE_HOURS * 3600:
+        return json.loads(path.read_text('utf-8'))
+    rows = _text_backend(query, n, backend, region)
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(rows, ensure_ascii=False), 'utf-8')
+    except OSError:  # a read-only cache dir only costs speed
+        pass
+    return rows
 
 
 # ---------------------------------------------------------------------------------------------- search + cache
@@ -399,7 +454,23 @@ def main() -> None:
     q.add_argument('--page', type=int, default=1)
     q.add_argument('--no-cache', action='store_true', help='do not read / write picked/.cache')
 
+    t = sub.add_parser('text', help='web (text) search, results as JSON [{title, url, snippet, engine}]')
+    t.add_argument('query')
+    t.add_argument('-n', type=int, default=10)
+    t.add_argument('--backend', default='google,bing,duckduckgo', help=f'comma list of: {", ".join(TEXT_BACKENDS)}')
+    t.add_argument('--region', default='eg-ar', help='ddgs region, e.g. eg-ar, eg-en, wt-wt')
+    t.add_argument('--no-cache', action='store_true', help='do not read / write picked/.cache')
+
     a = ap.parse_args()
+    if a.cmd == 'text':
+        backends = [b.strip() for b in a.backend.split(',') if b.strip() in TEXT_BACKENDS]
+        if not backends:
+            print(json.dumps({'query': a.query, 'results': [], 'errors': {'backend': f'no known backend; available: {", ".join(TEXT_BACKENDS)}'}}))
+            sys.exit(2)
+        cache = None if a.no_cache else ROOT / 'picked' / '.cache'
+        print(json.dumps(text_search(a.query.strip()[:300], max(1, min(50, a.n)), backends, a.region, cache), ensure_ascii=False, indent=2))
+        return
+
     engines = [e.strip() for e in a.engines.split(',') if e.strip() in ENGINES]
     if not engines:
         sys.exit(f'No known engine in --engines. Available: {", ".join(ENGINES)}')

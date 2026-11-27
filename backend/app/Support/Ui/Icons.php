@@ -102,6 +102,10 @@ final class Icons
             'list' => '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
             'refresh' => '<path d="M20 11a8 8 0 00-14.5-3.5L4 9M4 4v5h5M4 13a8 8 0 0014.5 3.5L20 15M20 20v-5h-5"/>',
             'sliders' => '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+            // AI product tools (plan 7.9): prices by image, marketplace prices, title ideas
+            'ai-price-image' => '<path d="M11 17H5a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v5"/><circle cx="12.5" cy="7" r="1.5"/><path d="M3 14l3.5-3.5L9 13"/><path d="M12 16.5V13a1 1 0 011-1h3.5l5 5-4.5 4.5z"/><circle cx="14.8" cy="14.8" r=".6"/>',
+            'ai-market-prices' => '<path d="M3 9l2-5h14l2 5"/><path d="M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/><path d="M5 12v8h7"/><circle cx="17" cy="17" r="3"/><path d="M19.2 19.2L21 21"/>',
+            'ai-titles' => '<path d="M3 6h8M3 12h11M3 18h16"/><path d="M18 3l1.2 2.8L22 7l-2.8 1.2L18 11l-1.2-2.8L14 7l2.8-1.2z"/>',
             'undo' => '<path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 010 10h-3"/>',
         ];
     }

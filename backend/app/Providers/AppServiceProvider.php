@@ -5,12 +5,24 @@ namespace App\Providers;
 use App\Listeners\Erp\PostOperationsEvents;
 use App\Listeners\Erp\PostOrderEvents;
 use App\Listeners\NotifyCustomerOfOrder;
+use App\Models\Admin;
+use App\Models\Bundle;
+use App\Models\Image;
+use App\Models\Marketer;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Observers\BundleEmbeddingObserver;
+use App\Observers\CatalogVisibilityObserver;
+use App\Observers\ImageEmbeddingObserver;
 use App\Services\Erp\Equity\ErpSettings;
+use App\Services\Marketing\Meta\MetaAudit;
 use App\Services\Push\LogPushDispatcher;
 use App\Services\Push\PushDispatcher;
 use App\Services\Whatsapp\Chat\MediaScanner;
 use App\Services\Whatsapp\Chat\NullMediaScanner;
+use App\Support\Marketing\MarketingPermissions;
+use App\Support\SystemSettings;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -29,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MediaScanner::class, NullMediaScanner::class);
         $this->app->bind(PushDispatcher::class, LogPushDispatcher::class);
         $this->app->scoped(ErpSettings::class);
-        $this->app->scoped(\App\Services\Marketing\Meta\MetaAudit::class);   // per-request acting user of the Meta audit log (P6)
+        $this->app->scoped(MetaAudit::class);   // per-request acting user of the Meta audit log (P6)
     }
 
     /**
@@ -38,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Former .env keys, now Admin → System settings (stored in `settings`); must run first so every later boot step sees them.
-        \App\Support\SystemSettings::apply();
+        SystemSettings::apply();
         // Site timezone (setting `timezone`): set once per process (web, console, queue), never per request. Missing while installing → app default (UTC).
         if (($tz = Setting::get('timezone')) && in_array($tz, timezone_identifiers_list(), true)) {
             config(['app.timezone' => $tz]);
@@ -48,20 +60,25 @@ class AppServiceProvider extends ServiceProvider
         $this->app->make('translator')->getLoader()->addPath(resource_path('lang-erp'));
         $this->registerLangShims();
         // Image search index (IMAGE_SEARCH_PLAN.md): new / replaced / deleted catalog images and bundle images keep their embeddings in step.
-        \App\Models\Image::observe(\App\Observers\ImageEmbeddingObserver::class);
-        \App\Models\Bundle::observe(\App\Observers\BundleEmbeddingObserver::class);
-        \App\Models\Product::observe(\App\Observers\CatalogVisibilityObserver::class);
-        \App\Models\ProductVariant::observe(\App\Observers\CatalogVisibilityObserver::class);
+        Image::observe(ImageEmbeddingObserver::class);
+        Bundle::observe(BundleEmbeddingObserver::class);
+        Product::observe(CatalogVisibilityObserver::class);
+        ProductVariant::observe(CatalogVisibilityObserver::class);
         RateLimiter::for('image-picker', fn (Request $r) => Limit::perMinute(max(1, (int) config('image_picker.throttle_per_minute', 20)))
             ->by('image-picker|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip())));
+        // Product AI tools: per admin; the 429 carries code "throttled" (the gateway's own 429 is "quota_exceeded")
+        RateLimiter::for('product-ai', fn (Request $r) => Limit::perMinute(max(1, (int) config('product_ai.throttle_per_minute', 10)))
+            ->by('product-ai|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip()))
+            ->response(fn (Request $request, array $headers) => response()->json(['success' => false, 'code' => 'throttled',
+                'message' => __('admin.product_ai.error_throttled', ['seconds' => (int) ($headers['Retry-After'] ?? 60)])], 429, $headers)));
         RateLimiter::for('image-search', fn (Request $r) => Limit::perMinute(max(1, (int) config('image_search.throttle_per_minute', 30)))
             ->by('image-search|'.($r->user('admin')?->getAuthIdentifier() ?? $r->ip())));
         // ERP-028: the ERP hub / sidebar item open for any ERP permission (reports-only accountant, view-only owners/assets...)
         Gate::define('erp.access', fn ($user) => method_exists($user, 'getAllPermissions')
             && $user->getAllPermissions()->contains(fn ($p) => str_starts_with($p->name, 'erp.') && $p->guard_name === 'admin'));
         // Marketer panel (/marketer): marketer accounts only, open for any marketing permission (MarketingPermissions::PANEL); each page has its own `can:`.
-        Gate::define('marketing.panel', fn ($user) => $user instanceof \App\Models\Marketer
-            && ($user->isOwner() || $user->getAllPermissions()->contains(fn ($p) => in_array($p->name, \App\Support\Marketing\MarketingPermissions::PANEL, true))));
+        Gate::define('marketing.panel', fn ($user) => $user instanceof Marketer
+            && ($user->isOwner() || $user->getAllPermissions()->contains(fn ($p) => in_array($p->name, MarketingPermissions::PANEL, true))));
         // Named limiters (docs/GAP_ANALYSIS §3); keyed per client IP (one shop, so no per-shop part).
         foreach (['cart' => 90, 'quote' => 60, 'checkout-validate' => 40, 'search' => 90, 'upload' => 10, 'returns' => 10, 'addresses' => 30, 'devices' => 30, 'payout' => 5, 'login-validate' => 30, 'webhooks' => 240] as $name => $perMinute) {
             RateLimiter::for($name, fn (Request $r) => Limit::perMinute($perMinute)->by($name.'|'.$r->ip()));
@@ -99,8 +116,8 @@ class AppServiceProvider extends ServiceProvider
         // Super admins (guard `admin`) bypass every admin permission check; `marketer-owner` (guard `marketer`) every marketer check.
         // Each role only exists on its own guard, so neither can reach the other panel.
         Gate::before(fn ($user) => match (true) {
-            $user instanceof \App\Models\Admin => $user->hasRole('super-admin') ? true : null,
-            $user instanceof \App\Models\Marketer => $user->isOwner() ? true : null,
+            $user instanceof Admin => $user->hasRole('super-admin') ? true : null,
+            $user instanceof Marketer => $user->isOwner() ? true : null,
             default => null,
         });
     }

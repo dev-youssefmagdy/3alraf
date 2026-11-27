@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -308,12 +310,33 @@ class _HeroCarousel extends StatelessWidget {
           button: true,
           child: GestureDetector(
             onTap: () => openLink(context, b.link),
-            child: NetworkImageX(
-              url: b.image,
-              width: double.infinity,
-              height: double.infinity,
-              semanticLabel: b.title,
-              cacheWidth: 720,
+            // Like the website, the banner is never cropped: the whole image
+            // is shown (contain) over a blurred cover copy of itself, so a
+            // banner whose proportions differ from the slot still fills it
+            // without flat bars. Same URL + cacheWidth = one cached decode.
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ExcludeSemantics(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: NetworkImageX(
+                      url: b.image,
+                      width: double.infinity,
+                      height: double.infinity,
+                      cacheWidth: 720,
+                    ),
+                  ),
+                ),
+                NetworkImageX(
+                  url: b.image,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.contain,
+                  semanticLabel: b.title,
+                  cacheWidth: 720,
+                ),
+              ],
             ),
           ),
         );

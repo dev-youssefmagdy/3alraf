@@ -73,6 +73,21 @@ final class SystemSettings
                 'reverb_server_host' => ['string', ['reverb.servers.reverb.host'], 'REVERB_SERVER_HOST'],
                 'reverb_server_port' => ['int', ['reverb.servers.reverb.port'], 'REVERB_SERVER_PORT'],
             ],
+            // Product AI tools through FreeLLMAPI (PRODUCT_AI_FREELLMAPI_PLAN.md, docs/FREELLMAPI_SETUP.md)
+            'ai' => [
+                'freellm_base_url' => ['string', ['product_ai.base_url'], 'FREELLM_BASE_URL'],
+                'freellm_api_key' => ['secret', ['product_ai.api_key'], 'FREELLM_API_KEY'],
+                'freellm_text_models' => ['csv', ['product_ai.models.text'], 'FREELLM_TEXT_MODELS'],
+                'freellm_vision_models' => ['csv', ['product_ai.models.vision'], 'FREELLM_VISION_MODELS'],
+                'freellm_timeout' => ['int', ['product_ai.timeout'], 'FREELLM_TIMEOUT'],
+                'product_ai_search_backends' => ['csv', ['product_ai.search.backends'], 'PRODUCT_AI_SEARCH_BACKENDS'],
+                'product_ai_market_country' => ['string', ['product_ai.market.country'], 'PRODUCT_AI_MARKET_COUNTRY'],
+                'product_ai_currency' => ['string', ['product_ai.market.currency'], 'PRODUCT_AI_CURRENCY'],
+                'product_ai_marketplaces' => ['csv', ['product_ai.marketplaces'], 'PRODUCT_AI_MARKETPLACES'],
+                'product_ai_cache_hours' => ['int', ['product_ai.cache_hours'], 'PRODUCT_AI_CACHE_HOURS'],
+                'product_ai_throttle_per_minute' => ['int', ['product_ai.throttle_per_minute'], 'PRODUCT_AI_THROTTLE'],
+                'product_ai_max_page_fetches' => ['int', ['product_ai.pages.max_per_run'], 'PRODUCT_AI_MAX_PAGE_FETCHES'],
+            ],
             'meta' => [
                 'meta_graph_version' => ['string', ['meta.graph_version'], 'META_GRAPH_VERSION'],
                 'meta_graph_url' => ['string', ['meta.graph_url'], 'META_GRAPH_URL'],
@@ -131,6 +146,9 @@ final class SystemSettings
         if (isset($stored['reverb_scheme'])) {
             $tls = $stored['reverb_scheme'] === 'https';
             config(['broadcasting.connections.reverb.options.useTLS' => $tls, 'reverb.apps.apps.0.options.useTLS' => $tls]);
+        }
+        if (isset($stored['freellm_base_url'])) {
+            config(['product_ai.base_url' => rtrim((string) $stored['freellm_base_url'], '/')]);
         }
         if (isset($stored['media_url'])) {
             config(['media.url' => rtrim((string) $stored['media_url'], '/')]);

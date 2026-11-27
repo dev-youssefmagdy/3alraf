@@ -1,0 +1,11 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.alraf.shop",
+    "sha256_cert_fingerprints": [
+      "CD:8D:E1:4B:E2:17:42:A4:74:28:5E:72:AE:D2:A3:50:9A:E7:6B:02:5C:7D:45:D9:BC:7D:C4:FA:2D:AD:AA:46",
+      "B0:2A:81:11:B1:73:15:81:A9:05:95:1F:EF:EE:68:77:0F:04:F0:51:6A:4C:DA:DB:F4:E6:38:4D:95:EE:E1:B2"
+    ]
+  }
+}]

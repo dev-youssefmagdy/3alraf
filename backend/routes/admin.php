@@ -49,6 +49,7 @@ use App\Http\Controllers\Admin\PackagingOptionController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\PrivateFileController;
+use App\Http\Controllers\Admin\ProductAiController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductListController;
 use App\Http\Controllers\Admin\ProductVideoController;
@@ -112,6 +113,7 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
         Route::post('settings/system/validate', [SystemSettingsController::class, 'validateForm'])->name('system-settings.validate');
         Route::put('settings/system', [SystemSettingsController::class, 'update'])->name('system-settings.update');
         Route::post('settings/system/test-mail', [SystemSettingsController::class, 'testMail'])->middleware('throttle:5,1')->name('system-settings.test-mail');
+        Route::post('settings/system/test-ai', [SystemSettingsController::class, 'testAi'])->middleware('throttle:5,1')->name('system-settings.test-ai');
 
         // Languages + products / categories / brands / tags / attributes
         Route::get('languages/datatable', [LanguageController::class, 'datatable'])->name('languages.datatable');
@@ -131,6 +133,17 @@ Route::prefix('admin')->middleware('admin.locale')->name('admin.')->group(functi
             ->controller(ImagePickerController::class)->group(function () {
                 Route::post('search', 'search')->middleware('throttle:image-picker')->name('search');
                 Route::post('import', 'import')->middleware('throttle:30,1')->name('import');
+            });
+        // AI tools (PRODUCT_AI_FREELLMAPI_PLAN.md): identify by photo, marketplace prices, title ideas through FreeLLMAPI (products.edit)
+        Route::prefix('products/{product}/ai')->whereNumber('product')->middleware('can:products.edit')->name('products.ai.')
+            ->controller(ProductAiController::class)->group(function () {
+                Route::get('status', 'status')->middleware('throttle:60,1')->name('status');
+                Route::middleware('throttle:product-ai')->group(function () {
+                    Route::post('identify', 'identify')->name('identify');
+                    Route::post('prices', 'prices')->name('prices');
+                    Route::post('titles', 'titles')->name('titles');
+                    Route::post('titles/apply', 'applyTitle')->name('titles.apply');
+                });
             });
         // Public gallery videos + shared image/video order (P8)
         Route::post('products/{product}/videos', [ProductVideoController::class, 'store'])->whereNumber('product')->name('products.videos.store');

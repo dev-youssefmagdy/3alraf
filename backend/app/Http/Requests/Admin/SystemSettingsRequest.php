@@ -42,6 +42,18 @@ class SystemSettingsRequest extends FormRequest
         $rules['mail_port'] = ['required', 'integer', 'min:1', 'max:65535'];
         $rules['mail_from_address'] = ['required', 'email', 'max:255'];
         $rules['mail_from_name'] = ['required', 'string', 'max:255'];
+        // AI (FreeLLMAPI): the base URL may be empty (tools off); the key is a secret (blank keeps the stored one)
+        $rules['freellm_base_url'] = ['nullable', 'url:http,https', 'max:255'];
+        $rules['freellm_text_models'] = ['required', 'string', 'max:500'];
+        $rules['freellm_vision_models'] = ['required', 'string', 'max:500'];
+        $rules['freellm_timeout'] = ['required', 'integer', 'min:5', 'max:120'];
+        $rules['product_ai_search_backends'] = ['required', 'string', 'max:200', 'regex:/^\s*[a-z]+(\s*,\s*[a-z]+)*\s*$/'];
+        $rules['product_ai_market_country'] = ['required', 'string', 'size:2', 'alpha'];
+        $rules['product_ai_currency'] = ['required', 'string', 'size:3', 'alpha'];
+        $rules['product_ai_marketplaces'] = ['nullable', 'string', 'max:2000'];
+        $rules['product_ai_cache_hours'] = ['required', 'integer', 'min:0', 'max:720'];
+        $rules['product_ai_throttle_per_minute'] = ['required', 'integer', 'min:1', 'max:120'];
+        $rules['product_ai_max_page_fetches'] = ['required', 'integer', 'min:0', 'max:8'];
         foreach (['media_disk', 'media_private_disk', 'app_fallback_locale', 'app_faker_locale', 'mobile_legacy_store_slug', 'meta_graph_version', 'meta_currency'] as $k) {
             $rules[$k] = ['required', 'string', 'max:100'];
         }
