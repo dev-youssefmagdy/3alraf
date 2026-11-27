@@ -88,7 +88,7 @@
                             <p data-pai-id-cached hidden class="mt-2 text-xs text-panel-text-subtle"></p>
                             <div class="mt-4 space-y-2">
                                 <label for="pai-image-query" class="form-label">{{ $t('search_text') }}</label>
-                                <input id="pai-image-query" data-pai-image-query type="text" maxlength="200" class="form-control" autocomplete="off" aria-describedby="pai-image-query-hint">
+                                <input id="pai-image-query" data-pai-image-query type="text" dir="auto" maxlength="200" class="form-control" autocomplete="off" aria-describedby="pai-image-query-hint">
                                 <p id="pai-image-query-hint" class="text-xs text-panel-text-subtle">{{ $t('search_text_hint') }}</p>
                                 <div data-pai-chips-wrap hidden>
                                     <p class="mb-1 text-xs font-bold text-panel-text-muted">{{ $t('other_queries') }}</p>
@@ -107,7 +107,7 @@
                 <div>
                     <form data-pai-market-form novalidate class="flex flex-wrap items-center gap-2">
                         <img data-pai-thumb hidden alt="" class="size-10 rounded-lg border border-panel-border bg-panel-surface object-contain">
-                        <input data-pai-query type="text" maxlength="200" class="form-control min-w-56 flex-1" aria-label="{{ $t('search_text') }}" aria-describedby="pai-market-hint" autocomplete="off">
+                        <input data-pai-query type="text" dir="auto" maxlength="200" class="form-control min-w-56 flex-1" aria-label="{{ $t('search_text') }}" aria-describedby="pai-market-hint" autocomplete="off">
                         <button type="submit" data-pai-run="market" class="btn btn-primary">{{ $t('search_prices') }}</button>
                     </form>
                     <p id="pai-market-hint" class="mt-1.5 text-xs text-panel-text-subtle">{{ $t('market_hint') }}</p>

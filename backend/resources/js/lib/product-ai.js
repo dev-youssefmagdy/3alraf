@@ -186,13 +186,15 @@ if (root) {
 
     // ---------------------------------------------------------------- price table (A1 + A2)
     const visibleRows = (rs) => (rs.data?.rows || []).filter((r) => rs.includeOther || r.allowed !== false);
-    function sortRows(rows, sort) {
+    /** "Price not shown" always last. By price, rows in another currency come after the market currency ones (numbers are not comparable). */
+    function sortRows(rows, sort, cur) {
         const name = (r) => String(r.marketplace || r.domain || '');
         const byName = (a, b) => name(a).localeCompare(name(b), uiLocale);
-        const priced = rows.filter((r) => priceOf(r) !== null);
+        const foreign = (r) => ((r.currency || cur) === cur ? 0 : 1);
+        const byPrice = (a, b) => foreign(a) - foreign(b) || (sort === 'price_desc' ? priceOf(b) - priceOf(a) : priceOf(a) - priceOf(b));
+        const priced = rows.filter((r) => priceOf(r) !== null).sort(sort === 'marketplace' ? byName : byPrice);
         const none = rows.filter((r) => priceOf(r) === null).sort(sort === 'marketplace' ? byName : () => 0);
-        priced.sort(sort === 'marketplace' ? byName : (a, b) => (sort === 'price_desc' ? priceOf(b) - priceOf(a) : priceOf(a) - priceOf(b)));
-        return [...priced, ...none]; // "Price not shown" always last
+        return [...priced, ...none];
     }
     /** Price status of a finished run: partial (failed engines / unread pages), empty (no listings / no prices) or plain success. */
     function priceStatus(rs) {
@@ -321,7 +323,7 @@ if (root) {
     }
     const titleCell = (r) => h('p', { class: 'line-clamp-2 text-panel-text', dir: 'auto', title: r.title || null, text: r.title || r.snippet || r.domain || '' });
     function tableView(rs, redraw) {
-        const rows = sortRows(visibleRows(rs), rs.sort);
+        const rows = sortRows(visibleRows(rs), rs.sort, rs.data.currency || MARKET_CURRENCY);
         const priceSorted = rs.sort === 'price_asc' || rs.sort === 'price_desc';
         const th = (text, extra = {}) => h('th', { scope: 'col', class: 'px-3 py-2 text-start text-xs font-bold text-panel-text-subtle', ...extra }, text);
         const sortBtn = h('button', { type: 'button', 'data-pai-price-sort': '', class: 'inline-flex items-center gap-1 font-bold hover:text-panel-text', text: t.col_price });
@@ -346,7 +348,7 @@ if (root) {
                 tbody));
     }
     function cardsView(rs) {
-        const rows = sortRows(visibleRows(rs), rs.sort);
+        const rows = sortRows(visibleRows(rs), rs.sort, rs.data.currency || MARKET_CURRENCY);
         return h('ul', { class: 'space-y-2 md:hidden' }, rows.map((r) => {
             const detail = quoteDetail(r, 'div', 'rounded-lg bg-panel-surface-sunken px-3 py-2 text-xs text-panel-text');
             return h('li', { class: 'space-y-1.5 rounded-xl border border-panel-border p-3 text-sm' },

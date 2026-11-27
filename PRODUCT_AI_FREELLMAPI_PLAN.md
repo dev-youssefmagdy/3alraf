@@ -619,6 +619,6 @@ el.className = `badge-src badge-src-${row.price_source ?? 'none'}`;
 - [x] 1 UI/UX (section 7, 2026-11-27)
 - [x] 2 Graphic (7.11, 2026-11-27)
 - [x] 3 AI dev (backend, deploy files, docs/FREELLMAPI_SETUP.md, tests; API in 3.1, 2026-11-27)
-- [ ] 4 Frontend
+- [x] 4 Frontend (card, dialog `_product-ai.blade.php`, `resources/js/lib/product-ai.js`, lang 7.10, `ProductAiFormTest`; 2026-11-27)
 - [ ] 5 QA
 - [ ] 6 QC
